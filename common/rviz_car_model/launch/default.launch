@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<launch>
+    <arg name="fixed_frame" default="base_link"/>
+    <!-- Transform: x y z qx qy qz qw -->
+    <arg name="transform" default="0 0 0 0 0 0 1"/>
+
+    <!--car model for ui display-->
+    <group>
+        <arg name="gui" default="False"/>
+        <!--<arg name="gui" default="True" />-->
+        <param name="use_gui" value="$(arg gui)"/>
+        <param name="robot_description" textfile="$(find rviz_car_model)/rviz/car_model/default.urdf"/>
+        <node pkg="joint_state_publisher" type="joint_state_publisher" name="joint_state_publisher"/>
+        <node pkg="robot_state_publisher" type="state_publisher" name="robot_state_publisher"/>
+    </group>
+
+    <!-- transform between user-defined base_frame to car's base_link -->
+    <node pkg="tf" type="static_transform_publisher" name="base_frame_broadcaster" args="$(arg transform) $(arg fixed_frame) ground_link 100" />
+
+</launch>

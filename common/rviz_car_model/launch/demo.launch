@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<launch>
+    <!-- Load rviz_car_model before rviz -->
+    <include file="$(find rviz_car_model)/launch/default.launch">
+        <arg name="fixed_frame" value="base_link"/>
+        <!-- x y z qx qy qz qw -->
+        <arg name="transform" value="0 0 0 0 0 0 1"/>
+    </include>
+
+    <!-- Launch rviz for visualization -->
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rviz_car_model)/rviz/kitti.rviz"/>
+
+</launch>

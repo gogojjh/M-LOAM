@@ -1,0 +1,22 @@
+<launch>
+
+    <arg name="bag_file_use" default="false" />
+    <arg name="config_file" default="$(find mloam)/../config/handheld_config.yaml" />
+    <arg name="base_link" default="base_link" />
+
+    <!-- Ros Bag -->
+    <param name="/use_sim_time" value="true" />
+    <group if="$(arg bag_file_use)">
+        <arg name="bag_file" default="/Monster/dataset/lidar_calibration/handheld/20190809/room1.bag" />
+        <node pkg="rosbag" type="play" name="rosbag" args="--clock --pause -r 1 $(arg bag_file)" output="screen"/>
+    </group>
+
+    <node pkg="mloam" type="mloam_node" name="mloam_node" args="$(arg config_file)" output="screen" />
+
+    <!-- publish static tf -->
+    <node name="static_tf_base_into_lidar_left" pkg="tf" type="static_transform_publisher"
+        args="0 0 0 0 0 0 $(arg base_link) velo_left 100"/>
+    <node name="static_tf_base_into_lidar_right" pkg="tf" type="static_transform_publisher"
+        args="0 0 0 0 0 0 $(arg base_link) velo_right 10"/>
+
+</launch>
