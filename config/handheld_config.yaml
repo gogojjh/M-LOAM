@@ -66,3 +66,13 @@ cloud1_topic: "/right/velodyne_points"
 
 laser_sync_threshold: 0.07
 roi_range: 0.1
+
+# odometry parameters
+scan_period: 0.1
+distance_sq_threshold: 25
+nearby_scan: 2.5
+
+
+
+
+#

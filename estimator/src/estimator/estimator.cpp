@@ -178,8 +178,8 @@ void Estimator::inputCloud(const double &t,
 
     // to parallize it?
     TicToc feature_ext_time;
-    feature_frame.push_back(feature_extract_.extractCloud(t, laser_cloud_in0));
-    feature_frame.push_back(feature_extract_.extractCloud(t, laser_cloud_in1));
+    feature_frame.push_back(f_extract_.extractCloud(t, laser_cloud_in0));
+    feature_frame.push_back(f_extract_.extractCloud(t, laser_cloud_in1));
     printf("featureExt time: %f ms \n", feature_ext_time.toc());
 
     mBuf.lock();
@@ -195,10 +195,10 @@ void Estimator::inputCloud(const double &t,
     const PointCloud &laser_cloud_in0)
 {
     input_cloud_cnt_++;
-    std::vector<cloudFeature> feature_frame;
 
+    std::vector<cloudFeature> feature_frame;
     TicToc feature_ext_time;
-    feature_frame.push_back(feature_extract_.extractCloud(t, laser_cloud_in0));
+    feature_frame.push_back(f_extract_.extractCloud(t, laser_cloud_in0));
     printf("featureExt time: %f ms \n", feature_ext_time.toc());
 
     mBuf.lock();
@@ -328,7 +328,11 @@ void Estimator::processMeasurements()
             cur_time_ = cur_feature_.first + td_;
             feature_buf_.pop();
 
-            // processCloud(cur_feature_);
+            for (size_t i = 0; i < cur_feature_.size(); i++)
+            {
+                cloudFeature &cloud_feature = cur_feature_[i];
+                lidar_tracker.trackCloud(t, cloud_feature);
+            }
 
             // prev_time_ = cur_time_;
             // printStatistics(*this, 0);
@@ -421,9 +425,58 @@ void Estimator::processIMU(double t, double dt, const Vector3d &linear_accelerat
     gyr_0 = angular_velocity;
 }
 
+void Estimator::processCloud()
+{
+    // solver_flag = INITIAL
+    // step 1: ego-motion estimation
+    // step 2: rotation calibration
+    // if success?
+        // step 3: translation calibration
+        // solver_flag = NON_LINEAR
+        // if solver_flag == NON_LINEAR
+            // step 4: optimization(), pose_graph()
+            // step 5: slideWindow()
+
+    ROS_DEBUG("new cloud coming ------------------------------------------");
+    ROS_DEBUG("Solving %d", frame_count);
+    if(ESTIMATE_EXTRINSIC == 2)
+    {
+        ROS_INFO("calibrating extrinsic param, rotation movement is needed");
+        // TODO: screw motion filter
+        if (frame_count != 0)
+        {
+            // feature_tracker.getCorresponding();
+            // vector<pair<Vector3d, Vector3d>> corres = f_manager.getCorresponding(frame_count - 1, frame_count);
+            Matrix3d calib_ric;
+            if (initial_ex_rotation.CalibrationExRotation(corres, pre_integrations[frame_count]->delta_q, calib_ric))
+            {
+                ROS_WARN("initial extrinsic rotation calib success");
+                ROS_WARN_STREAM("initial extrinsic rotation: " << endl << calib_ric);
+                ric[0] = calib_ric;
+                RIC[0] = calib_ric;
+                ESTIMATE_EXTRINSIC = 1;
+            }
+        }
+    }
+
+    // if (solver_flag == INITIAL)
+    // {
+    //     if(frame_count < WINDOW_SIZE)
+    //     {
+    //         frame_count++;
+    //         int prev_frame = frame_count - 1;
+    //         Ps[frame_count] = Ps[prev_frame];
+    //         Vs[frame_count] = Vs[prev_frame];
+    //         Rs[frame_count] = Rs[prev_frame];
+    //         Bas[frame_count] = Bas[prev_frame];
+    //         Bgs[frame_count] = Bgs[prev_frame];
+    //     }
+    // }
+
+}
+
 void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> &image, const double header)
 {
-    ROS_DEBUG("new image coming ------------------------------------------");
     ROS_DEBUG("Adding feature points %lu", image.size());
     if (f_manager.addFeatureCheckParallax(frame_count, image, td))
     {

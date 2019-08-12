@@ -50,6 +50,10 @@ int FLOW_BACK;
 int NUM_OF_LASER;
 int N_SCANS;
 
+float SCAN_PERIOD
+float DISTANCE_SQ_THRESHOLD
+float NEARBY_SCAN
+
 std::string CLOUD0_TOPIC, CLOUD1_TOPIC;
 float LASER_SYNC_THRESHOLD;
 double ROI_RANGE;
@@ -164,6 +168,10 @@ void readParameters(std::string config_file)
     LASER_SYNC_THRESHOLD = fsSettings["laser_sync_threshold"];
     N_SCANS = fsSettings["n_scans"];
     ROI_RANGE = fsSettings["roi_range"];
+
+    SCAN_PERIOD = fsSettings["scan_period"];
+    DISTANCE_SQ_THRESHOLD = fsSettings["distance_sq_threshold"];
+    NEARBY_SCAN = fsSettings["nearby_scan"];
 
     fsSettings.release();
 }

@@ -9,7 +9,7 @@
  * Author: Qin Tong (qintonguav@gmail.com)
  *******************************************************/
 
-#include "featureExtract.h"
+#include "feature_extract.h"
 
 using namespace common;
 

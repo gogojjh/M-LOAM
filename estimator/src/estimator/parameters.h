@@ -68,6 +68,10 @@ extern int FLOW_BACK;
 extern int NUM_OF_LASER;
 extern int N_SCANS;
 
+extern float SCAN_PERIOD;
+extern float DISTANCE_SQ_THRESHOLD;
+extern float NEARBY_SCAN;
+
 extern std::string CLOUD0_TOPIC, CLOUD1_TOPIC;
 extern float LASER_SYNC_THRESHOLD;
 extern double ROI_RANGE;

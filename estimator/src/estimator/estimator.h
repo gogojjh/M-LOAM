@@ -23,6 +23,9 @@
 #include "common/types/type.h"
 
 #include "parameters.h"
+#include "../featureExtract/feature_extract.h"
+#include "../lidarTracker/lidar_tracker.h"
+
 #include "feature_manager.h"
 #include "../utility/utility.h"
 #include "../utility/tic_toc.h"
@@ -37,7 +40,6 @@
 #include "../factor/projectionTwoFrameTwoCamFactor.h"
 #include "../factor/projectionOneFrameTwoCamFactor.h"
 #include "../featureTracker/feature_tracker.h"
-#include "../featureExtract/featureExtract.h"
 
 class Estimator
 {
@@ -192,7 +194,9 @@ class Estimator
 
     int input_cloud_cnt_;
 
-    FeatureExtract feature_extract_;
+    FeatureExtract f_extract_;
+
+    lidarTracker lidar_tracker_;
 
     std::queue<std::pair<double, std::vector<cloudFeature> > > feature_buf_;
 
