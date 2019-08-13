@@ -54,14 +54,15 @@ add_library(mloam_lib
     src/initial/initial_sfm.cpp
     src/initial/initial_ex_rotation.cpp
     src/featureTracker/feature_tracker.cpp
-    src/featureExtract/featureExtract.cpp)
+    src/featureExtract/feature_extract.cpp
+    src/lidarTracker/lidar_tracker.cpp)
 target_link_libraries(mloam_lib ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES})
 
 add_executable(mloam_node src/rosNodeTest.cpp)
 target_link_libraries(mloam_node mloam_lib)
 
-add_executable(kitti_odom_test src/KITTIOdomTest.cpp)
-target_link_libraries(kitti_odom_test mloam_lib)
+# add_executable(kitti_odom_test src/KITTIOdomTest.cpp)
+# target_link_libraries(kitti_odom_test mloam_lib)
 
-add_executable(kitti_gps_test src/KITTIGPSTest.cpp)
-target_link_libraries(kitti_gps_test mloam_lib)
+# add_executable(kitti_gps_test src/KITTIGPSTest.cpp)
+# target_link_libraries(kitti_gps_test mloam_lib)

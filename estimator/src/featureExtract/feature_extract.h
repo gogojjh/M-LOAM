@@ -34,8 +34,6 @@
 #include "../estimator/parameters.h"
 #include "../utility/tic_toc.h"
 
-typedef std::map<std::string, common::PointICloud> cloudFeature;
-
 class FeatureExtract
 {
 public:

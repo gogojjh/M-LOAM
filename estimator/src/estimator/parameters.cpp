@@ -50,9 +50,9 @@ int FLOW_BACK;
 int NUM_OF_LASER;
 int N_SCANS;
 
-float SCAN_PERIOD
-float DISTANCE_SQ_THRESHOLD
-float NEARBY_SCAN
+float SCAN_PERIOD;
+float DISTANCE_SQ_THRESHOLD;
+float NEARBY_SCAN;
 
 std::string CLOUD0_TOPIC, CLOUD1_TOPIC;
 float LASER_SYNC_THRESHOLD;
@@ -133,8 +133,8 @@ void readParameters(std::string config_file)
         fsSettings["body_T_laser0"] >> cv_T;
         // Eigen::Matrix4d T;
         // cv::cv2eigen(cv_T, T);
-        QBL.push_back(Eigen::Quaterniond(cv_T(0,3), cv_T(0,0), cv_T(0,1), cv_T(0,2));
-        TBL.push_back(Eigen::Vector3d(cv_T(0, 4), cv_T(0, 5), cv_T(0, 6)));
+        QBL.push_back(Eigen::Quaterniond(cv_T.ptr<double>(0)[3], cv_T.ptr<double>(0)[0], cv_T.ptr<double>(0)[1], cv_T.ptr<double>(0)[2]));
+        TBL.push_back(Eigen::Vector3d(cv_T.ptr<double>(0)[4], cv_T.ptr<double>(0)[5], cv_T.ptr<double>(0)[6]));
     }
 
     int pn = config_file.find_last_of('/');
@@ -165,8 +165,8 @@ void readParameters(std::string config_file)
         // cv::cv2eigen(cv_T, T);
         // RBL.push_back(T.block<3, 3>(0, 0));
         // TBL.push_back(T.block<3, 1>(0, 3));
-        QBL.push_back(Eigen::Quaterniond(cv_T(0,3), cv_T(0,0), cv_T(0,1), cv_T(0,2));
-        TBL.push_back(Eigen::Vector3d(cv_T(0, 4), cv_T(0, 5), cv_T(0, 6)));        
+        QBL.push_back(Eigen::Quaterniond(cv_T.ptr<double>(0)[3], cv_T.ptr<double>(0)[0], cv_T.ptr<double>(0)[1], cv_T.ptr<double>(0)[2]));
+        TBL.push_back(Eigen::Vector3d(cv_T.ptr<double>(0)[4], cv_T.ptr<double>(0)[5], cv_T.ptr<double>(0)[6]));
     }
 
     LASER_SYNC_THRESHOLD = fsSettings["laser_sync_threshold"];
@@ -178,4 +178,30 @@ void readParameters(std::string config_file)
     NEARBY_SCAN = fsSettings["nearby_scan"];
 
     fsSettings.release();
+}
+
+// -------------------------------
+
+Pose Pose::poseTransform(const Pose &pose1, const Pose &pose2)
+{
+    // t_w_curr = t_w_curr + q_w_curr * t_prev_cur;
+    // q_w_curr = q_w_curr * q_prev_cur;
+    return Pose(pose1.q_*pose2.q_, pose1.q_*pose2.t_+pose1.t_);
+}
+
+Pose Pose::operator + (const Pose &pose)
+{
+    return Pose(this->q_*pose.q_, this->q_*pose.t_+this->t_);
+}
+
+Pose Pose::operator = (const Pose &pose)
+{
+    return Pose(pose.q_, pose.t_);
+}
+
+ostream & operator << (ostream &out, const Pose &pose)
+{
+    out << "q: " << pose.q_.x() << " " << pose.q_.y() << " " << pose.q_.z() << " " << pose.q_.w()
+        << ", t: "<< pose.t_.transpose() << std::endl;
+    return out;
 }

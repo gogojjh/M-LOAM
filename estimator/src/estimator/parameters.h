@@ -9,14 +9,19 @@
 
 #pragma once
 
-#include <ros/ros.h>
+#include <iostream>
 #include <vector>
-#include <eigen3/Eigen/Dense>
-#include "../utility/utility.h"
-#include <opencv2/opencv.hpp>
-#include <opencv2/core/eigen.hpp>
 #include <fstream>
 #include <map>
+
+#include <ros/ros.h>
+
+#include <eigen3/Eigen/Dense>
+#include <opencv2/opencv.hpp>
+#include <opencv2/core/eigen.hpp>
+
+#include "../utility/utility.h"
+#include "common/types/type.h"
 
 using namespace std;
 
@@ -104,4 +109,27 @@ enum NoiseOrder
     O_GN = 3,
     O_AW = 6,
     O_GW = 9
+};
+
+typedef std::map<std::string, common::PointICloud> cloudFeature;
+
+class Pose
+{
+public:
+    Pose(): q_(Eigen::Quaterniond::Identity()), t_(Eigen::Vector3d::Zero()), T_(Eigen::Matrix4d::Identity()) {}
+    Pose(const Eigen::Quaterniond &q, const Eigen::Vector3d &t): q_(q), t_(t)
+    {
+        T_.setIdentity();
+        T_.topLeftCorner<3, 3>() = q_.toRotationMatrix();
+        T_.topRightCorner<3, 1>() = t_;
+    }
+    static Pose poseTransform(const Pose &pose1, const Pose &pose2);
+
+    Pose operator + (const Pose &pose);
+    Pose operator = (const Pose &pose);
+    friend ostream &operator << (ostream &out, const Pose &pose);
+
+    Eigen::Quaterniond q_;
+    Eigen::Vector3d t_;
+    Eigen::Matrix4d T_;
 };

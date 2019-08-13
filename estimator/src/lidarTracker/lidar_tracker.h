@@ -35,24 +35,17 @@
 #include "../featureExtract/feature_extract.h"
 #include "../utility/tic_toc.h"
 
-int corner_correspondence = 0;
-int plane_correspondence = 0;
-int skip_frame_num = 5;
-
-class lidarTracker
+class LidarTracker
 {
 public:
     LidarTracker();
 
-    void TransformToStart(common::PointI const *const pi, common::PointI *const po);
-    void TransformToEnd(common::PointI const *const pi, common::PointI *const po);
+    void TransformToStart(common::PointI const *const pi, common::PointI *const po, const Pose &pose);
+    void TransformToEnd(common::PointI const *const pi, common::PointI *const po, const Pose &pose);
 
-    void trackCloud(const cloudFeature &prev_cloud_feature, const cloudFeature &cur_cloud_feature);
+    Pose trackCloud(const cloudFeature &prev_cloud_feature, const cloudFeature &cur_cloud_feature, const Pose &pose_ini);
 
     bool b_track_inited_;
-
-    Eigen::Quaterniond q_;
-    Eigen::Vector3d t_;
 };
 
 
