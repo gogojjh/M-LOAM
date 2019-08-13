@@ -255,5 +255,27 @@ namespace common
         ClassifierParams classifier;
     }; // struct Parameters, containing all-kind Params
 
+    class Pose
+    {
+    public:
+        Pose(const Eigen::Quaterniond &q, const Eigen::Vector3d &t): q_(q), t_(t) {}
+        Pose transform(const Pose &pose)
+        {
+            // t_w_curr = t_w_curr + q_w_curr * t_prev_cur;
+            // q_w_curr = q_w_curr * q_prev_cur;
+            return Pose(q_*pose.q_, q_*pose.t_+t_);
+        }
+
+        friend ostream & operator << (ostream &out, const Pose &pose)
+        {
+            out << "q: " << pose.q_.x() << " " << pose.q_.y() << " " << pose.q_.z() << " " << pose.q_.w() <<
+                << ", t: "<< pose.t_.transpose() << std::endl;
+        }
+
+        Eigen::Quaterniond q_;
+        Eigen::Vector3d t_;
+    };
+
+
 }
 #endif /* _TYPE_H_ */

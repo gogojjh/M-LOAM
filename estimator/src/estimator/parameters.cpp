@@ -59,7 +59,9 @@ float LASER_SYNC_THRESHOLD;
 double ROI_RANGE;
 
 std::vector<Eigen::Matrix3d> RBL;
+std::vector<Eigen::Quaterniond> QBL;
 std::vector<Eigen::Vector3d> TBL;
+
 
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
@@ -113,7 +115,7 @@ void readParameters(std::string config_file)
     if (ESTIMATE_EXTRINSIC == 2)
     {
         ROS_WARN("have no prior about extrinsic param, calibrate extrinsic param");
-        RBL.push_back(Eigen::Matrix3d::Identity());
+        QBL.push_back(Eigen::Quaterniond::Identity());
         TBL.push_back(Eigen::Vector3d::Zero());
         EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "/extrinsic_parameter.csv";
     }
@@ -129,10 +131,10 @@ void readParameters(std::string config_file)
 
         cv::Mat cv_T;
         fsSettings["body_T_laser0"] >> cv_T;
-        Eigen::Matrix4d T;
-        cv::cv2eigen(cv_T, T);
-        RBL.push_back(T.block<3, 3>(0, 0));
-        TBL.push_back(T.block<3, 1>(0, 3));
+        // Eigen::Matrix4d T;
+        // cv::cv2eigen(cv_T, T);
+        QBL.push_back(Eigen::Quaterniond(cv_T(0,3), cv_T(0,0), cv_T(0,1), cv_T(0,2));
+        TBL.push_back(Eigen::Vector3d(cv_T(0, 4), cv_T(0, 5), cv_T(0, 6)));
     }
 
     int pn = config_file.find_last_of('/');
@@ -159,10 +161,12 @@ void readParameters(std::string config_file)
         STEREO = 1;
         cv::Mat cv_T;
         fsSettings["body_T_laser1"] >> cv_T;
-        Eigen::Matrix4d T;
-        cv::cv2eigen(cv_T, T);
-        RBL.push_back(T.block<3, 3>(0, 0));
-        TBL.push_back(T.block<3, 1>(0, 3));
+        // Eigen::Matrix4d T;
+        // cv::cv2eigen(cv_T, T);
+        // RBL.push_back(T.block<3, 3>(0, 0));
+        // TBL.push_back(T.block<3, 1>(0, 3));
+        QBL.push_back(Eigen::Quaterniond(cv_T(0,3), cv_T(0,0), cv_T(0,1), cv_T(0,2));
+        TBL.push_back(Eigen::Vector3d(cv_T(0, 4), cv_T(0, 5), cv_T(0, 6)));        
     }
 
     LASER_SYNC_THRESHOLD = fsSettings["laser_sync_threshold"];

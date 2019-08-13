@@ -77,6 +77,7 @@ extern float LASER_SYNC_THRESHOLD;
 extern double ROI_RANGE;
 
 extern std::vector<Eigen::Matrix3d> RBL;
+extern std::vector<Eigen::Quaterniond> QBL;
 extern std::vector<Eigen::Vector3d> TBL;
 
 void readParameters(std::string config_file);

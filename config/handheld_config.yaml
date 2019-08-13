@@ -13,22 +13,16 @@ estimate_extrinsic: 2   # 0  Have an accurate extrinsic parameters. We will trus
                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
 
 body_T_laser0: !!opencv-matrix
-   rows: 4
-   cols: 4
+   rows: 1
+   cols: 7
    dt: d
-   data: [1, 0, 0, 0,
-          0, 1, 0, 0,
-          0, 0, 1, 0,
-          0, 0, 0, 1]
+   data: [0, 0, 0, 1, 0, 0, 0]
 
 body_T_laser1: !!opencv-matrix
-   rows: 4
-   cols: 4
+   rows: 1
+   cols: 7
    dt: d
-   data: [1, 0, 0, 0,
-          0, 1, 0, 0,
-          0, 0, 1, 0,
-          0, 0, 0, 1]
+   data: [0, 0, 0, 1, 0, 0, 0]
 
 #Multiple thread support
 multiple_thread: 0

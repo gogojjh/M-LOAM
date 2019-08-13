@@ -184,9 +184,11 @@ class Estimator
 
     // --------------------------------
 
-    std::vector<Eigen::Matrix3d> rbl_;
-    std::vector<Eigen::Vector3d> tbl_;
-    std::vector<Eigen::Matrix4d> Tbl_;
+    bool b_system_inited_;
+
+    std::vector<common::Pose> pose_base_laser_;
+
+    std::vector<common::Pose> pose_prev_cur_, pose_laser_curr_;
 
     double prev_time_, cur_time_;
 
@@ -201,6 +203,7 @@ class Estimator
     std::queue<std::pair<double, std::vector<cloudFeature> > > feature_buf_;
 
     pair<double, std::vector<cloudFeature> > prev_feature_, cur_feature_;
+
 };
 
 

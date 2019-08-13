@@ -40,7 +40,10 @@ void Estimator::clearState()
 
     td_ = 0;
 
+    pose_base_laser_.clear();
     rbl_.clear(); tbl_.clear(); Tbl_.clear();
+
+    b_system_inited_ = false;
 
     while(!accBuf.empty())
         accBuf.pop();
@@ -109,16 +112,11 @@ void Estimator::setParameter()
 {
     mProcess.lock();
 
-    rbl_.resize(NUM_OF_LASER);
-    tbl_.resize(NUM_OF_LASER);
-    Tbl_.resize(NUM_OF_LASER);
+    pose_base_laser_.resize(NUM_OF_LASER);
     for (int i = 0; i < NUM_OF_LASER; i++)
     {
-        tbl_[i] = TBL[i];
-        rbl_[i] = RBL[i];
-        Tbl_[i].topLeftCorner<3, 3>() = rbl_[i];
-        Tbl_[i].topRightCorner<3, 1>() = tbl_[i];
-        cout << " extrinsic laser " << i << endl  << rbl_[i] << endl << tbl_[i].transpose() << endl;
+        pose_base_laser_[i] = Pose(QBL[i], TBL[i]);
+        cout << " extrinsic laser " << i << " is " << pose_base_laser_[i] << endl;
     }
 
     td_ = TD;
@@ -328,27 +326,43 @@ void Estimator::processMeasurements()
             cur_time_ = cur_feature_.first + td_;
             feature_buf_.pop();
 
-            for (size_t i = 0; i < cur_feature_.size(); i++)
+            if (!b_system_inited_)
             {
-                cloudFeature &cloud_feature = cur_feature_[i];
-                lidar_tracker.trackCloud(t, cloud_feature);
+                b_system_inited_ = true;
+                printf("System initialization finished \n");
+            } else
+            {
+                for (size_t i = 0; i < cur_feature_.size(); i++)
+                {
+                    cloudFeature &cur_cloud_feature = cur_feature_[i];
+                    cloudFeature &last_cloud_feature = prev_feature_[i];
+                    pose_prev_cur_[i] = lidar_tracker.trackCloud(cur_cloud_feature, last_cloud_feature, pose_prev_cur_[i]);
+                    pose_laser_curr_[i] = pose_laser_curr_[i].transform(pose_prev_cur_[i]);
+                }
             }
 
-            // prev_time_ = cur_time_;
+            prev_time_ = cur_time_;
+            prev_feature_ = cur_feature_;
+
             // printStatistics(*this, 0);
 
             std_msgs::Header header;
             header.frame_id = "base_link";
             header.stamp = ros::Time(cur_feature_.first);
-            // pubOdometry(*this, header);
-            // pubKeyPoses(*this, header);
-            // pubCameraPose(*this, header);
 
             printf("[estimator] publish point cloud\n");
             pubPointCloud(*this, header);
 
+            printf("[estimator] publis pose\n");
+            pubOdometry(*this, header);
+
+            // pubKeyPoses(*this, header);
+            // pubCameraPose(*this, header);
+
+
             // pubKeyframe(*this);
             // pubTF(*this, header);
+
         }
 
         if (!MULTIPLE_THREAD)

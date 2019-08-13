@@ -47,24 +47,12 @@ public:
     void TransformToStart(common::PointI const *const pi, common::PointI *const po);
     void TransformToEnd(common::PointI const *const pi, common::PointI *const po);
 
-    void trackCloud(const doublt &cur_time, const cloudFeature &cloud_feature);
+    void trackCloud(const cloudFeature &prev_cloud_feature, const cloudFeature &cur_cloud_feature);
 
     bool b_track_inited_;
 
-    pcl::KdTreeFLANN<common::PointI>::Ptr kdtree_corner_last_(new pcl::KdTreeFLANN<common::PointI>());
-    pcl::KdTreeFLANN<common::PointI>::Ptr kdtree_sutf_last_(new pcl::KdTreeFLANN<common::PointI>());
-
-    common::PointICloudPtr corner_points_last_, surf_points_last_;
-    int corner_points_last_num_, surf_points_last_num_;
-
-    // Transformation from current frame to world frame
-    Eigen::Quaterniond q_w_curr_;
-    Eigen::Vector3d t_w_curr_;
-
-    // q_curr_last(x, y, z, w), t_curr_last
-    double para_q_[4];
-    double para_t_[3];
-
+    Eigen::Quaterniond q_;
+    Eigen::Vector3d t_;
 };
 
 

@@ -39,6 +39,10 @@ extern ros::Publisher pub_corner_points_less_sharp;
 extern ros::Publisher pub_surf_points_flat;
 extern ros::Publisher pub_surf_points_less_flat;
 
+extern ros::Publisher pub_ext_base_to_laser;
+extern ros::Publisher pub_laser_odometry;
+extern ros::Publisher pub_laser_path;
+
 extern ros::Publisher pub_odometry;
 extern ros::Publisher pub_path, pub_pose;
 extern ros::Publisher pub_cloud, pub_map;

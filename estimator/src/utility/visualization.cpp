@@ -20,6 +20,10 @@ ros::Publisher pub_corner_points_less_sharp;
 ros::Publisher pub_surf_points_flat;
 ros::Publisher pub_surf_points_less_flat;
 
+ros::Publisher pub_ext_base_to_laser;
+ros::Publisher pub_laser_odometry;
+ros::Publisher pub_laser_path;
+
 ros::Publisher pub_odometry, pub_latest_odometry;
 ros::Publisher pub_path;
 ros::Publisher pub_point_cloud, pub_margin_cloud;
@@ -30,7 +34,7 @@ nav_msgs::Path path;
 
 ros::Publisher pub_keyframe_pose;
 ros::Publisher pub_keyframe_point;
-ros::Publisher pub_extrinsic;
+ros::Publisher pub_ext_base_to_laser;
 
 ros::Publisher pub_image_track;
 
@@ -60,13 +64,19 @@ void registerPub(ros::NodeHandle &nh)
     pub_surf_points_flat = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_flat", 100);
     pub_surf_points_less_flat = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_less_flat", 100);
 
-    // pub_extrinsic = n.advertise<nav_msgs::Odometry>("extrinsic", 1000);
+    for (size_t i = 0; i < NUM_OF_LASER; i++)
+    {
+        std::string extrinsic_topic, laser_odom_topic, laser_path_topic;
 
-    // pub_laser_cloud_corner_last = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_corner_last", 100);
-    // pub_laser_cloud_surf_last  = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surf_last", 100);
-    // pub_laser_cloud_full_res  = nh.advertise<sensor_msgs::PointCloud2>("/velodyne_cloud_3", 100);
-    // pub_laser_odometry  = nh.advertise<nav_msgs::Odometry>("/laser_odom_to_init", 100);
-    // pub_laser_path  = nh.advertise<nav_msgs::Path>("/laser_odom_path", 100);
+        extrinsic_topic = std::string("/ext_base_to_laser_") + std::to_string(i);
+        pub_ext_base_to_laser.push_back(n.advertise<nav_msgs::Odometry>(extrinsic_topic, 100));
+
+        laser_odom_topic = std::string("/laser_odom_to_world_") + std::to_string(i);
+        pub_laser_odometry.push_back(nh.advertise<nav_msgs::Odometry>(laser_odom_topic, 100));
+
+        laser_path_topic = std::string("/laser_odom_path_") + std::to_string(i);
+        pub_laser_path.push_back(nh.advertise<nav_msgs::Path>(laser_path_topic, 100));
+    }
 
     pub_latest_odometry = nh.advertise<nav_msgs::Odometry>("imu_propagate", 1000);
     pub_path = nh.advertise<nav_msgs::Path>("path", 1000);
@@ -176,56 +186,98 @@ void printStatistics(const Estimator &estimator, double t)
 
 void pubOdometry(const Estimator &estimator, const std_msgs::Header &header)
 {
-    if (estimator.solver_flag == Estimator::SolverFlag::NON_LINEAR)
+    if (estimator.solver_flag != Estimator::SolverFlag::LINEAR)
     {
-        nav_msgs::Odometry odometry;
-        odometry.header = header;
-        odometry.header.frame_id = "world";
-        odometry.child_frame_id = "world";
-        Quaterniond tmp_Q;
-        tmp_Q = Quaterniond(estimator.Rs[WINDOW_SIZE]);
-        odometry.pose.pose.position.x = estimator.Ps[WINDOW_SIZE].x();
-        odometry.pose.pose.position.y = estimator.Ps[WINDOW_SIZE].y();
-        odometry.pose.pose.position.z = estimator.Ps[WINDOW_SIZE].z();
-        odometry.pose.pose.orientation.x = tmp_Q.x();
-        odometry.pose.pose.orientation.y = tmp_Q.y();
-        odometry.pose.pose.orientation.z = tmp_Q.z();
-        odometry.pose.pose.orientation.w = tmp_Q.w();
-        odometry.twist.twist.linear.x = estimator.Vs[WINDOW_SIZE].x();
-        odometry.twist.twist.linear.y = estimator.Vs[WINDOW_SIZE].y();
-        odometry.twist.twist.linear.z = estimator.Vs[WINDOW_SIZE].z();
-        pub_odometry.publish(odometry);
+        for (size_t i = 0; i < NUM_OF_LASER; i++)
+        {
+            nav_msgs::Odometry ext_base_to_laser;
+            ext_base_to_laser.header = header;
+            ext_base_to_laser.header.frame_id = "/world";
+            ext_base_to_laser.child_frame_id = "/laser_init_" + std::to_string(i);
+            Pose &pose_base_laser = estimator->pose_base_laser_[i];
+            ext_base_to_laser.pose.pose.orientation.x = pose_base_laser.q_.x();
+            ext_base_to_laser.pose.pose.orientation.y = pose_base_laser.q_.y();
+            ext_base_to_laser.pose.pose.orientation.z = pose_base_laser.q_.z();
+            ext_base_to_laser.pose.pose.orientation.w = pose_base_laser.q_.w();
+            ext_base_to_laser.pose.pose.position.x = pose_base_laser.t_.x();
+            ext_base_to_laser.pose.pose.position.y = pose_base_laser.t_.y();
+            ext_base_to_laser.pose.pose.position.z = pose_base_laser.t_.z();
+            pub_ext_base_to_laser[i].publish(ext_base_to_laser);
 
-        geometry_msgs::PoseStamped pose_stamped;
-        pose_stamped.header = header;
-        pose_stamped.header.frame_id = "world";
-        pose_stamped.pose = odometry.pose.pose;
-        path.header = header;
-        path.header.frame_id = "world";
-        path.poses.push_back(pose_stamped);
-        pub_path.publish(path);
+            nav_msgs::Odometry laser_odometry;
+            laser_odometry.header = header;
+            laser_odometry.header.frame_id = "/world";
+            laser_odometry.child_frame_id = "/laser_odom_" + std::to_string(i);
+            Pose pose_w_curr_ = estimator->pose_base_laser_[i].transform(estimator->pose_laser_curr_[i]);
+            laser_odometry.pose.pose.orientation.x = pose_w_curr_.q_.x();
+            laser_odometry.pose.pose.orientation.y = pose_w_curr_.q_.y();
+            laser_odometry.pose.pose.orientation.z = pose_w_curr_.q_.z();
+            laser_odometry.pose.pose.orientation.w = pose_w_curr_.q_.w();
+            laser_odometry.pose.pose.position.x = pose_w_curr_.t_.x();
+            laser_odometry.pose.pose.position.y = pose_w_curr_.t_.y();
+            laser_odometry.pose.pose.position.z = pose_w_curr_.t_.z();
+            pub_laser_odometry[i].publish(laser_odometry);
 
-        // write result to file
-        ofstream foutC(VINS_RESULT_PATH, ios::app);
-        foutC.setf(ios::fixed, ios::floatfield);
-        foutC.precision(0);
-        foutC << header.stamp.toSec() * 1e9 << ",";
-        foutC.precision(5);
-        foutC << estimator.Ps[WINDOW_SIZE].x() << ","
-              << estimator.Ps[WINDOW_SIZE].y() << ","
-              << estimator.Ps[WINDOW_SIZE].z() << ","
-              << tmp_Q.w() << ","
-              << tmp_Q.x() << ","
-              << tmp_Q.y() << ","
-              << tmp_Q.z() << ","
-              << estimator.Vs[WINDOW_SIZE].x() << ","
-              << estimator.Vs[WINDOW_SIZE].y() << ","
-              << estimator.Vs[WINDOW_SIZE].z() << "," << endl;
-        foutC.close();
-        Eigen::Vector3d tmp_T = estimator.Ps[WINDOW_SIZE];
-        printf("time: %f, t: %f %f %f q: %f %f %f %f \n", header.stamp.toSec(), tmp_T.x(), tmp_T.y(), tmp_T.z(),
-                                                          tmp_Q.w(), tmp_Q.x(), tmp_Q.y(), tmp_Q.z());
+            geometry_msgs::PoseStamped laser_pose;
+            laser_pose.header = laser_odometry.header;
+            laser_pose.pose = laser_odometry.pose.pose;
+            laser_path.header.stamp = laser_odometry.header.stamp;
+            laser_path.poses.push_back(laser_pose);
+            laser_path.header.frame_id = "/world";
+            pub_laser_path[i].publish(laser_path);
+        }
     }
+
+    // if (estimator.solver_flag == Estimator::SolverFlag::NON_LINEAR)
+    // {
+    //     nav_msgs::Odometry odometry;
+    //     odometry.header = header;
+    //     odometry.header.frame_id = "world";
+    //     odometry.child_frame_id = "world";
+    //     Quaterniond tmp_Q;
+    //     tmp_Q = Quaterniond(estimator.Rs[WINDOW_SIZE]);
+    //     odometry.pose.pose.position.x = estimator.Ps[WINDOW_SIZE].x();
+    //     odometry.pose.pose.position.y = estimator.Ps[WINDOW_SIZE].y();
+    //     odometry.pose.pose.position.z = estimator.Ps[WINDOW_SIZE].z();
+    //     odometry.pose.pose.orientation.x = tmp_Q.x();
+    //     odometry.pose.pose.orientation.y = tmp_Q.y();
+    //     odometry.pose.pose.orientation.z = tmp_Q.z();
+    //     odometry.pose.pose.orientation.w = tmp_Q.w();
+    //     odometry.twist.twist.linear.x = estimator.Vs[WINDOW_SIZE].x();
+    //     odometry.twist.twist.linear.y = estimator.Vs[WINDOW_SIZE].y();
+    //     odometry.twist.twist.linear.z = estimator.Vs[WINDOW_SIZE].z();
+    //     pub_odometry.publish(odometry);
+    //
+    //     geometry_msgs::PoseStamped pose_stamped;
+    //     pose_stamped.header = header;
+    //     pose_stamped.header.frame_id = "world";
+    //     pose_stamped.pose = odometry.pose.pose;
+    //     path.header = header;
+    //     path.header.frame_id = "world";
+    //     path.poses.push_back(pose_stamped);
+    //     pub_path.publish(path);
+    //
+    //     // write result to file
+    //     ofstream foutC(VINS_RESULT_PATH, ios::app);
+    //     foutC.setf(ios::fixed, ios::floatfield);
+    //     foutC.precision(0);
+    //     foutC << header.stamp.toSec() * 1e9 << ",";
+    //     foutC.precision(5);
+    //     foutC << estimator.Ps[WINDOW_SIZE].x() << ","
+    //           << estimator.Ps[WINDOW_SIZE].y() << ","
+    //           << estimator.Ps[WINDOW_SIZE].z() << ","
+    //           << tmp_Q.w() << ","
+    //           << tmp_Q.x() << ","
+    //           << tmp_Q.y() << ","
+    //           << tmp_Q.z() << ","
+    //           << estimator.Vs[WINDOW_SIZE].x() << ","
+    //           << estimator.Vs[WINDOW_SIZE].y() << ","
+    //           << estimator.Vs[WINDOW_SIZE].z() << "," << endl;
+    //     foutC.close();
+    //     Eigen::Vector3d tmp_T = estimator.Ps[WINDOW_SIZE];
+    //     printf("time: %f, t: %f %f %f q: %f %f %f %f \n", header.stamp.toSec(), tmp_T.x(), tmp_T.y(), tmp_T.z(),
+    //                                                       tmp_Q.w(), tmp_Q.x(), tmp_Q.y(), tmp_Q.z());
+    // }
 }
 
 void pubKeyPoses(const Estimator &estimator, const std_msgs::Header &header)
@@ -343,7 +395,7 @@ void pubTF(const Estimator &estimator, const std_msgs::Header &header)
     odometry.pose.pose.orientation.y = tmp_q.y();
     odometry.pose.pose.orientation.z = tmp_q.z();
     odometry.pose.pose.orientation.w = tmp_q.w();
-    pub_extrinsic.publish(odometry);
+    pub_ext_base_to_laser.publish(odometry);
 
 }
 
