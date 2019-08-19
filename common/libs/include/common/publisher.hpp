@@ -17,6 +17,22 @@
 
 namespace common {
 
+    static void publishTF(const nav_msgs::Odometry &odom)
+    {
+        static tf::TransformBroadcaster br;
+        tf::Transform transform;
+        tf::Quaternion q;
+        transform.setOrigin(tf::Vector3(odom.pose.pose.position.x,
+                                        odom.pose.pose.position.y,
+                                        odom.pose.pose.position.z));
+        q.setW(odom.pose.pose.orientation.w);
+        q.setX(odom.pose.pose.orientation.x);
+        q.setY(odom.pose.pose.orientation.y);
+        q.setZ(odom.pose.pose.orientation.z);
+        transform.setRotation(q);
+        br.sendTransform(tf::StampedTransform(transform, odom.header.stamp, odom.header.frame_id, odom.child_frame_id));
+    }
+
     template <typename PointT>
     static void publishCloud(const ros::Publisher& publisher,
                              const std_msgs::Header& header,

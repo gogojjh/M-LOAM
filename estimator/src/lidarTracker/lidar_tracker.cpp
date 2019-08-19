@@ -100,15 +100,15 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
     Eigen::Map<Eigen::Vector3d> t_prev_cur(para_t);
 
     //-----------------
-    int corner_correspondence;
-    int plane_correspondence;
+    int num_corner_correspondence;
+    int num_plane_correspondence;
     int skip_frame_num = 5;
 
     TicToc t_opt;
     for (size_t opti_counter = 0; opti_counter < 2; ++opti_counter)
     {
-        corner_correspondence = 0;
-        plane_correspondence = 0;
+        num_corner_correspondence = 0;
+        num_plane_correspondence = 0;
 
         // -----------------
         // step 1: set ceres solver
@@ -205,7 +205,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
                     s = 1.0;
                 ceres::CostFunction *cost_function = LidarEdgeFactor::Create(curr_point, last_point_a, last_point_b, s);
                 problem.AddResidualBlock(cost_function, loss_function, para_q, para_t);
-                corner_correspondence++;
+                num_corner_correspondence++;
             }
         }
 
@@ -294,14 +294,14 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
                         s = 1.0;
                     ceres::CostFunction *cost_function = LidarPlaneFactor::Create(curr_point, last_point_a, last_point_b, last_point_c, s);
                     problem.AddResidualBlock(cost_function, loss_function, para_q, para_t);
-                    plane_correspondence++;
+                    num_plane_correspondence++;
                 }
             }
         }
 
-        printf("coner_correspondance %d, plane_correspondence %d \n", corner_correspondence, plane_correspondence);
-        printf("data association time %f ms \n", t_data.toc());
-        if ((corner_correspondence + plane_correspondence) < 10)
+        printf("iter: %d, coner_corre: %d, plane_corre: %d \n", opti_counter, num_corner_correspondence, num_plane_correspondence);
+        // printf("data association time %f ms \n", t_data.toc());
+        if ((num_corner_correspondence + num_plane_correspondence) < 10)
         {
             printf("less correspondence! *************************************************\n");
         }
@@ -314,11 +314,12 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         options.minimizer_progress_to_stdout = false;
         ceres::Solver::Summary summary;
         ceres::Solve(options, &problem, &summary);
-        printf("solver time %f ms \n", t_solver.toc());
+        // printf("solver time %f ms \n", t_solver.toc());
     }
-    printf("optimization twice time %f \n", t_opt.toc());
+    // printf("optimization twice time %f \n", t_opt.toc());
 
     Pose pose_prev_cur(q_prev_cur, t_prev_cur);
+    std::cout << "tracker transform: " << pose_prev_cur << std::endl;
     printf("whole tracker time %f ms \n", t_whole.toc());
 
     return pose_prev_cur;

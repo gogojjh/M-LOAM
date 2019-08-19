@@ -14,13 +14,9 @@
     <node pkg="mloam" type="mloam_node" name="mloam_node" args="$(arg config_file)" output="screen" />
 
     <!-- publish static tf -->
-    <node name="static_tf_base_into_lidar_left" pkg="tf" type="static_transform_publisher"
-        args="0 0 0 0 0 0 $(arg base_link) velo_left 100"/>
-    <node name="static_tf_base_into_lidar_right" pkg="tf" type="static_transform_publisher"
-        args="0 0 0 0 0 0 $(arg base_link) velo_right 10"/>
-    <node name="static_tf_laser_left_into_lidar_right" pkg="tf" type="static_transform_publisher"
-        args="0 0 0 0 0 0 /laser_init_0 velo_left 10"/>           
+    <!-- <node name="static_tf_laser_left_into_lidar_left" pkg="tf" type="static_transform_publisher"
+        args="0 0 0 0 0 0 /laser_0 velo_left 100"/>
     <node name="static_tf_laser_right_into_lidar_right" pkg="tf" type="static_transform_publisher"
-        args="0 0 0 0 0 0 /laser_init_1 velo_right 10"/>
+        args="0 0 0 0 0 0 /laser_1 velo_right 100"/> -->
 
 </launch>

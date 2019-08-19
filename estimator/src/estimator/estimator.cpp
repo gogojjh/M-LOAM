@@ -97,7 +97,9 @@ void Estimator::inputCloud(const double &t,
     m_buf_.lock();
     // TODO: to parallize it?
     TicToc feature_ext_time;
+    printf("LASER 0: \n");
     feature_frame.push_back(f_extract_.extractCloud(t, laser_cloud_in0));
+    printf("LASER 1: \n");
     feature_frame.push_back(f_extract_.extractCloud(t, laser_cloud_in1));
     printf("featureExt time: %f ms \n", feature_ext_time.toc());
 
@@ -106,7 +108,7 @@ void Estimator::inputCloud(const double &t,
 
     TicToc process_time;
     processMeasurements();
-    printf("process time: %f ms \n", process_time.toc());
+    printf("processMea time: %f ms \n", process_time.toc());
 }
 
 void Estimator::inputCloud(const double &t,
@@ -117,6 +119,7 @@ void Estimator::inputCloud(const double &t,
     m_buf_.lock();
     std::vector<cloudFeature> feature_frame;
     TicToc feature_ext_time;
+    printf("LASER 0: \n");
     feature_frame.push_back(f_extract_.extractCloud(t, laser_cloud_in0));
     printf("featureExt time: %f ms \n", feature_ext_time.toc());
 
@@ -125,16 +128,17 @@ void Estimator::inputCloud(const double &t,
 
     TicToc process_time;
     processMeasurements();
-    printf("process time: %f ms \n", process_time.toc());
+    printf("processMea time: %f ms \n", process_time.toc());
 }
 
 void Estimator::processMeasurements()
 {
     while (1)
     {
-        printf("process measurments\n");
+        printf("process measurments *********\n");
         if (!feature_buf_.empty())
         {
+            // cur_feature_.second.size() = NUM_OF_LASER
             cur_feature_ = feature_buf_.front();
             cur_time_ = cur_feature_.first + td_;
             feature_buf_.pop();
@@ -149,16 +153,20 @@ void Estimator::processMeasurements()
                 // estimate the relative transformations of each lidar
                 for (size_t i = 0; i < cur_feature_.second.size(); i++)
                 {
+                    printf("LASER %d:\n", i);
                     cloudFeature &cur_cloud_feature = cur_feature_.second[i];
                     cloudFeature &prev_cloud_feature = prev_feature_.second[i];
                     pose_prev_cur_[i] = lidar_tracker_.trackCloud(prev_cloud_feature, cur_cloud_feature, pose_prev_cur_[i]);
                     pose_laser_cur_[i] = pose_laser_cur_[i] + pose_prev_cur_[i];
+                    std::cout << "relative transform: " << pose_prev_cur_[i] << std::endl;
+                    std::cout << "current transform: " << pose_laser_cur_[i] << std::endl;
                 }
+                printf("mloam_tracker %f ms\n", t_mloam_tracker.toc());
             }
-            printf("mloam_tracker %f\n", t_mloam_tracker.toc());
 
             prev_time_ = cur_time_;
             prev_feature_.first = prev_time_;
+            // prev_feature_.second = cur_feature_.second;
             prev_feature_.second.clear();
             for (size_t i = 0; i < cur_feature_.second.size(); i++)
             {
@@ -174,13 +182,13 @@ void Estimator::processMeasurements()
             // printStatistics(*this, 0);
 
             std_msgs::Header header;
-            header.frame_id = "base_link";
+            header.frame_id = "world";
             header.stamp = ros::Time(cur_feature_.first);
 
-            printf("[estimator] publish point cloud\n");
+            // printf("[estimator] publish point cloud\n");
             pubPointCloud(*this, header);
 
-            printf("[estimator] publis pose\n");
+            // printf("[estimator] publis pose\n");
             pubOdometry(*this, header);
 
             // pubKeyPoses(*this, header);

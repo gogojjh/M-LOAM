@@ -126,7 +126,7 @@ public:
     static Pose poseTransform(const Pose &pose1, const Pose &pose2);
 
     Pose operator + (const Pose &pose);
-    Pose operator = (const Pose &pose);
+    // Pose operator = (const Pose &pose);
     friend ostream &operator << (ostream &out, const Pose &pose);
 
     Eigen::Quaterniond q_;

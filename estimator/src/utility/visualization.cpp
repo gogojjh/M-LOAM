@@ -14,16 +14,21 @@ using namespace Eigen;
 
 using namespace common;
 
+// pointcloud
 ros::Publisher pub_laser_cloud;
 ros::Publisher pub_corner_points_sharp;
 ros::Publisher pub_corner_points_less_sharp;
 ros::Publisher pub_surf_points_flat;
 ros::Publisher pub_surf_points_less_flat;
 
-std::vector<ros::Publisher> v_pub_ext_base_to_laser;
+// odometry
+ros::Publisher pub_ext_base_to_sensor;
 std::vector<ros::Publisher> v_pub_laser_odometry;
 std::vector<ros::Publisher> v_pub_laser_path;
 
+std::vector<nav_msgs::Path> v_laser_path;
+
+// should be deleted
 ros::Publisher pub_odometry, pub_latest_odometry;
 ros::Publisher pub_path;
 ros::Publisher pub_point_cloud, pub_margin_cloud;
@@ -60,19 +65,16 @@ void registerPub(ros::NodeHandle &nh)
     pub_surf_points_flat = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_flat", 100);
     pub_surf_points_less_flat = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_less_flat", 100);
 
+    pub_ext_base_to_sensor = nh.advertise<nav_msgs::Odometry>("/ext_base_to_sensor", 100);
     for (size_t i = 0; i < NUM_OF_LASER; i++)
     {
-        std::string extrinsic_topic, laser_odom_topic, laser_path_topic;
-
-        extrinsic_topic = std::string("/ext_base_to_laser_") + std::to_string(i);
-        v_pub_ext_base_to_laser.push_back(nh.advertise<nav_msgs::Odometry>(extrinsic_topic, 100));
-
-        laser_odom_topic = std::string("/laser_odom_to_world_") + std::to_string(i);
+        std::string laser_odom_topic, laser_path_topic;
+        laser_odom_topic = std::string("/laser_odom_") + std::to_string(i);
         v_pub_laser_odometry.push_back(nh.advertise<nav_msgs::Odometry>(laser_odom_topic, 100));
-
         laser_path_topic = std::string("/laser_odom_path_") + std::to_string(i);
         v_pub_laser_path.push_back(nh.advertise<nav_msgs::Path>(laser_path_topic, 100));
     }
+    v_laser_path.resize(NUM_OF_LASER);
 }
 
 void pubPointCloud(const Estimator &estimator, const std_msgs::Header &header)
@@ -155,12 +157,13 @@ void pubOdometry(const Estimator &estimator, const std_msgs::Header &header)
             ext_base_to_laser.pose.pose.position.x = pose_base_laser.t_.x();
             ext_base_to_laser.pose.pose.position.y = pose_base_laser.t_.y();
             ext_base_to_laser.pose.pose.position.z = pose_base_laser.t_.z();
-            v_pub_ext_base_to_laser[i].publish(ext_base_to_laser);
+            pub_ext_base_to_sensor.publish(ext_base_to_laser);
+            publishTF(ext_base_to_laser);
 
             nav_msgs::Odometry laser_odometry;
             laser_odometry.header = header;
-            laser_odometry.header.frame_id = "/world";
-            laser_odometry.child_frame_id = "/laser_odom_" + std::to_string(i);
+            laser_odometry.header.frame_id = "/laser_init_" + std::to_string(i);
+            laser_odometry.child_frame_id = "/laser_" + std::to_string(i);
             Pose pose_w_curr_ = Pose::poseTransform(estimator.pose_base_laser_[i], estimator.pose_laser_cur_[i]);
             laser_odometry.pose.pose.orientation.x = pose_w_curr_.q_.x();
             laser_odometry.pose.pose.orientation.y = pose_w_curr_.q_.y();
@@ -170,16 +173,15 @@ void pubOdometry(const Estimator &estimator, const std_msgs::Header &header)
             laser_odometry.pose.pose.position.y = pose_w_curr_.t_.y();
             laser_odometry.pose.pose.position.z = pose_w_curr_.t_.z();
             v_pub_laser_odometry[i].publish(laser_odometry);
+            publishTF(laser_odometry);
 
             geometry_msgs::PoseStamped laser_pose;
             laser_pose.header = laser_odometry.header;
             laser_pose.pose = laser_odometry.pose.pose;
-
-            nav_msgs::Path laser_path;
-            laser_path.header.stamp = laser_odometry.header.stamp;
-            laser_path.poses.push_back(laser_pose);
-            laser_path.header.frame_id = "/world";
-            v_pub_laser_path[i].publish(laser_path);
+            v_laser_path[i].header.stamp = laser_odometry.header.stamp;
+            v_laser_path[i].poses.push_back(laser_pose);
+            v_laser_path[i].header.frame_id = "/world";
+            v_pub_laser_path[i].publish(v_laser_path[i]);
         }
     }
 

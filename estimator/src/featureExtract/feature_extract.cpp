@@ -131,7 +131,7 @@ void FeatureExtract::cloudRearrange(const PointCloud &laser_cloud_in)
         laser_cloud_scans_[scan_id].push_back(point);
     }
     cloud_size_ = count;
-    printf("points size: %d ********* \n",  cloud_size_);
+    // printf("points size: %d ********* \n",  cloud_size_);
 }
 
 cloudFeature FeatureExtract::extractCloud(const double &cur_time, const PointCloud &laser_cloud_in)
@@ -151,7 +151,7 @@ cloudFeature FeatureExtract::extractCloud(const double &cur_time, const PointClo
         *laser_cloud += laser_cloud_scans_[i];
         scan_end_ind[i] = laser_cloud->size() - 6;
     }
-    printf("prepare time %f ms \n", t_prepare_.toc());
+    // printf("prepare time %f ms \n", t_prepare_.toc());
 
     for (int i = 5; i < cloud_size_ - 5; i++)
     {
@@ -294,12 +294,12 @@ cloudFeature FeatureExtract::extractCloud(const double &cur_time, const PointClo
         dosn_size_filter.filter(surf_points_less_flat_scanDS);
         surf_points_less_flat += surf_points_less_flat_scanDS;
     }
-    printf("sort q time %f ms \n", t_q_sort);
-    printf("seperate points time %f ms \n", t_pts_.toc());
+    // printf("sort q time %f ms \n", t_q_sort);
+    // printf("seperate points time %f ms \n", t_pts_.toc());
 
-    printf("scan registration time %f ms \n", t_whole_.toc());
+    printf("whole scan registration time %f ms \n", t_whole_.toc());
     if(t_whole_.toc() > 100)
-        ROS_WARN("scan registration process over 100ms");
+        ROS_WARN("whole scan registration process over 100ms");
 
     cloudFeature cloud_feature;
     // cloud_feature.find("key")->first/ second
