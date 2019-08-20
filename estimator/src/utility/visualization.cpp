@@ -178,9 +178,8 @@ void pubOdometry(const Estimator &estimator, const std_msgs::Header &header)
             geometry_msgs::PoseStamped laser_pose;
             laser_pose.header = laser_odometry.header;
             laser_pose.pose = laser_odometry.pose.pose;
-            v_laser_path[i].header.stamp = laser_odometry.header.stamp;
+            v_laser_path[i].header = laser_odometry.header;
             v_laser_path[i].poses.push_back(laser_pose);
-            v_laser_path[i].header.frame_id = "/world";
             v_pub_laser_path[i].publish(v_laser_path[i]);
         }
     }

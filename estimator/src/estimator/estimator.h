@@ -47,7 +47,7 @@ class Estimator
     Estimator();
     ~Estimator();
 
-    void inputCloud(const double &t, const common::PointCloud &laser_cloud_in0, const common::PointCloud &laser_cloud_in1);
+    void inputCloud(const double &t, const std::vector<common::PointCloud> &v_laser_cloud_in);
     void inputCloud(const double &t, const common::PointCloud &laser_cloud_in0);
 
     void setParameter();

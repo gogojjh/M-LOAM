@@ -89,6 +89,7 @@ void sync_process()
         if(STEREO)
         {
             pcl::PointCloud<pcl::PointXYZ> laser_cloud0, laser_cloud1;
+            std::vector<pcl::PointCloud<pcl::PointXYZ> >v_laser_cloud;
             std_msgs::Header header;
             double time = 0;
             m_buf.lock();
@@ -112,9 +113,13 @@ void sync_process()
                 {
                     time = cloud0_buf.front()->header.stamp.toSec();
                     header = cloud0_buf.front()->header;
+
                     laser_cloud0 = getCloudFromMsg(cloud0_buf.front());
+                    v_laser_cloud.push_back(laser_cloud0);
                     cloud0_buf.pop();
+
                     laser_cloud1 = getCloudFromMsg(cloud1_buf.front());
+                    v_laser_cloud.push_back(laser_cloud1);
                     cloud1_buf.pop();
                     printf("find laser_cloud0: %d, laser_cloud1: %d \n", laser_cloud0.points.size(), laser_cloud1.points.size());
                 }
@@ -123,7 +128,7 @@ void sync_process()
             if ((laser_cloud0.points.size() != 0) && (laser_cloud1.points.size() != 0))
             {
                 // cout << "estimator" << endl;
-                estimator.inputCloud(time, laser_cloud0, laser_cloud1);
+                estimator.inputCloud(time, v_laser_cloud);
             }
         }
         else

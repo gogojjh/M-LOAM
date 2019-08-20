@@ -88,8 +88,7 @@ void Estimator::changeSensorType(int use_imu, int use_stereo)
 }
 
 void Estimator::inputCloud(const double &t,
-    const PointCloud &laser_cloud_in0,
-    const PointCloud &laser_cloud_in1)
+    const std::vector<PointCloud> &v_laser_cloud_in)
 {
     frame_cnt_++;
     std::vector<cloudFeature> feature_frame;
@@ -97,12 +96,12 @@ void Estimator::inputCloud(const double &t,
     m_buf_.lock();
     // TODO: to parallize it?
     TicToc feature_ext_time;
-    printf("LASER 0: \n");
-    feature_frame.push_back(f_extract_.extractCloud(t, laser_cloud_in0));
-    printf("LASER 1: \n");
-    feature_frame.push_back(f_extract_.extractCloud(t, laser_cloud_in1));
+    for (size_t i = 0; i < v_laser_cloud_in.size(); i++)
+    {
+        printf("[LASER %d]: \n", i);
+        feature_frame.push_back(f_extract_.extractCloud(t, v_laser_cloud_in[i]));
+    }
     printf("featureExt time: %f ms \n", feature_ext_time.toc());
-
     feature_buf_.push(make_pair(t, feature_frame));
     m_buf_.unlock();
 
@@ -153,11 +152,11 @@ void Estimator::processMeasurements()
                 // estimate the relative transformations of each lidar
                 for (size_t i = 0; i < cur_feature_.second.size(); i++)
                 {
-                    printf("LASER %d:\n", i);
+                    printf("[LASER %d]:\n", i);
                     cloudFeature &cur_cloud_feature = cur_feature_.second[i];
                     cloudFeature &prev_cloud_feature = prev_feature_.second[i];
                     pose_prev_cur_[i] = lidar_tracker_.trackCloud(prev_cloud_feature, cur_cloud_feature, pose_prev_cur_[i]);
-                    pose_laser_cur_[i] = pose_laser_cur_[i] + pose_prev_cur_[i];
+                    pose_laser_cur_[i] = pose_laser_cur_[i] * pose_prev_cur_[i];
                     std::cout << "relative transform: " << pose_prev_cur_[i] << std::endl;
                     std::cout << "current transform: " << pose_laser_cur_[i] << std::endl;
                 }

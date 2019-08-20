@@ -111,12 +111,23 @@ void readParameters(std::string config_file)
     std::ofstream fout(VINS_RESULT_PATH, std::ios::out);
     fout.close();
 
+    NUM_OF_LASER = fsSettings["num_of_laser"];
+    printf("Laser number %d\n", NUM_OF_LASER);
+    if(NUM_OF_LASER != 1 && NUM_OF_LASER != 2)
+    {
+        printf("num_of_cam should be 1 or 2\n");
+        assert(0);
+    }
+
     ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];
     if (ESTIMATE_EXTRINSIC == 2)
     {
         ROS_WARN("have no prior about extrinsic param, calibrate extrinsic param");
-        QBL.push_back(Eigen::Quaterniond::Identity());
-        TBL.push_back(Eigen::Vector3d::Zero());
+        for (size_t i = 0; i < NUM_OF_LASER; i++)
+        {
+            QBL.push_back(Eigen::Quaterniond::Identity());
+            TBL.push_back(Eigen::Vector3d::Zero());
+        }
         EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "/extrinsic_parameter.csv";
     }
     else
@@ -135,8 +146,15 @@ void readParameters(std::string config_file)
         // cv::cv2eigen(cv_T, T);
         QBL.push_back(Eigen::Quaterniond(cv_T.ptr<double>(0)[3], cv_T.ptr<double>(0)[0], cv_T.ptr<double>(0)[1], cv_T.ptr<double>(0)[2]));
         TBL.push_back(Eigen::Vector3d(cv_T.ptr<double>(0)[4], cv_T.ptr<double>(0)[5], cv_T.ptr<double>(0)[6]));
+        if(NUM_OF_LASER == 2)
+        {
+            STEREO = 1;
+            cv::Mat cv_T;
+            fsSettings["body_T_laser1"] >> cv_T;
+            QBL.push_back(Eigen::Quaterniond(cv_T.ptr<double>(0)[3], cv_T.ptr<double>(0)[0], cv_T.ptr<double>(0)[1], cv_T.ptr<double>(0)[2]));
+            TBL.push_back(Eigen::Vector3d(cv_T.ptr<double>(0)[4], cv_T.ptr<double>(0)[5], cv_T.ptr<double>(0)[6]));
+        }
     }
-
     int pn = config_file.find_last_of('/');
     std::string configPath = config_file.substr(0, pn);
 
@@ -146,28 +164,6 @@ void readParameters(std::string config_file)
         ROS_INFO_STREAM("Unsynchronized sensors, online estimate time offset, initial td: " << TD);
     else
         ROS_INFO_STREAM("Synchronized sensors, fix time offset: " << TD);
-
-    NUM_OF_LASER = fsSettings["num_of_laser"];
-    printf("Laser number %d\n", NUM_OF_LASER);
-
-    if(NUM_OF_LASER != 1 && NUM_OF_LASER != 2)
-    {
-        printf("num_of_cam should be 1 or 2\n");
-        assert(0);
-    }
-
-    if(NUM_OF_LASER == 2)
-    {
-        STEREO = 1;
-        cv::Mat cv_T;
-        fsSettings["body_T_laser1"] >> cv_T;
-        // Eigen::Matrix4d T;
-        // cv::cv2eigen(cv_T, T);
-        // RBL.push_back(T.block<3, 3>(0, 0));
-        // TBL.push_back(T.block<3, 1>(0, 3));
-        QBL.push_back(Eigen::Quaterniond(cv_T.ptr<double>(0)[3], cv_T.ptr<double>(0)[0], cv_T.ptr<double>(0)[1], cv_T.ptr<double>(0)[2]));
-        TBL.push_back(Eigen::Vector3d(cv_T.ptr<double>(0)[4], cv_T.ptr<double>(0)[5], cv_T.ptr<double>(0)[6]));
-    }
 
     LASER_SYNC_THRESHOLD = fsSettings["laser_sync_threshold"];
     N_SCANS = fsSettings["n_scans"];
@@ -189,15 +185,10 @@ Pose Pose::poseTransform(const Pose &pose1, const Pose &pose2)
     return Pose(pose1.q_*pose2.q_, pose1.q_*pose2.t_+pose1.t_);
 }
 
-Pose Pose::operator + (const Pose &pose)
+Pose Pose::operator * (const Pose &pose)
 {
     return Pose(this->q_*pose.q_, this->q_*pose.t_+this->t_);
 }
-
-// Pose Pose::operator = (const Pose &pose)
-// {
-//     return Pose(pose.q_, pose.t_);
-// }
 
 ostream & operator << (ostream &out, const Pose &pose)
 {

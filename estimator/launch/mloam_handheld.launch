@@ -1,6 +1,6 @@
 <launch>
 
-    <arg name="bag_file_use" default="false" />
+    <arg name="bag_file_use" default="true" />
     <arg name="config_file" default="$(find mloam)/../config/handheld_config.yaml" />
     <arg name="base_link" default="base_link" />
 
@@ -8,7 +8,7 @@
     <param name="/use_sim_time" value="true" />
     <group if="$(arg bag_file_use)">
         <arg name="bag_file" default="/Monster/dataset/lidar_calibration/handheld/20190809/room1.bag" />
-        <node pkg="rosbag" type="play" name="rosbag" args="--clock --pause -r 1 $(arg bag_file)" output="screen"/>
+        <node pkg="rosbag" type="play" name="rosbag" args="--clock --pause -r 1 $(arg bag_file)" />
     </group>
 
     <node pkg="mloam" type="mloam_node" name="mloam_node" args="$(arg config_file)" output="screen" />
