@@ -162,16 +162,19 @@ void pubOdometry(const Estimator &estimator, const std_msgs::Header &header)
 
             nav_msgs::Odometry laser_odometry;
             laser_odometry.header = header;
+            // laser_odometry.header.frame_id = "world";
+            // laser_odometry.child_frame_id = "/laser_" + std::to_string(i);
+            // Pose pose_w_curr = Pose::poseTransform(estimator.pose_base_laser_[i], estimator.pose_laser_cur_[i]);
             laser_odometry.header.frame_id = "/laser_init_" + std::to_string(i);
             laser_odometry.child_frame_id = "/laser_" + std::to_string(i);
-            Pose pose_w_curr_ = Pose::poseTransform(estimator.pose_base_laser_[i], estimator.pose_laser_cur_[i]);
-            laser_odometry.pose.pose.orientation.x = pose_w_curr_.q_.x();
-            laser_odometry.pose.pose.orientation.y = pose_w_curr_.q_.y();
-            laser_odometry.pose.pose.orientation.z = pose_w_curr_.q_.z();
-            laser_odometry.pose.pose.orientation.w = pose_w_curr_.q_.w();
-            laser_odometry.pose.pose.position.x = pose_w_curr_.t_.x();
-            laser_odometry.pose.pose.position.y = pose_w_curr_.t_.y();
-            laser_odometry.pose.pose.position.z = pose_w_curr_.t_.z();
+            Pose pose_laser_curr = estimator.pose_laser_cur_[i];
+            laser_odometry.pose.pose.orientation.x = pose_laser_curr.q_.x();
+            laser_odometry.pose.pose.orientation.y = pose_laser_curr.q_.y();
+            laser_odometry.pose.pose.orientation.z = pose_laser_curr.q_.z();
+            laser_odometry.pose.pose.orientation.w = pose_laser_curr.q_.w();
+            laser_odometry.pose.pose.position.x = pose_laser_curr.t_.x();
+            laser_odometry.pose.pose.position.y = pose_laser_curr.t_.y();
+            laser_odometry.pose.pose.position.z = pose_laser_curr.t_.z();
             v_pub_laser_odometry[i].publish(laser_odometry);
             publishTF(laser_odometry);
 
