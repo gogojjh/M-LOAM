@@ -13,7 +13,7 @@
 
 #include "initial_extrinsics.h"
 
-using Eigen;
+using namespace Eigen;
 
 double EPSILON_R = 0.01;
 double EPSILON_T = 0.01;
@@ -26,7 +26,7 @@ InitialExtrinsics::InitialExtrinsics()
     full_cov_rot_state_ = false;
 }
 
-InitialExtrinsics::clearState()
+void InitialExtrinsics::clearState()
 {
     calib_bl_.resize(NUM_OF_LASER);
 
@@ -38,7 +38,7 @@ bool InitialExtrinsics::setCovRotation(const size_t &idx)
 {
     assert(idx < cov_rot_state_.size());
     cov_rot_state_[idx] = true;
-    if (!(std::find(cov_rot_state_.begin(), cov_rot_state_.end(), false)))
+    if (std::find(cov_rot_state_.begin(), cov_rot_state_.end(), false) == cov_rot_state_.end())
     {
         full_cov_rot_state_ = true;
     }
@@ -103,7 +103,7 @@ bool InitialExtrinsics::calibExRotation(
         Pose &pose_data = v_pose_data_filter[i];
 
         Quaterniond r1 = pose_ref.q_;
-        Quaterniond r2 = (calib_bl_[idx].q_ * pose_data.q_ * calib_bl_[idx].inverse().q_).q_;
+        Quaterniond r2 = calib_bl_[idx].q_ * pose_data.q_ * calib_bl_[idx].inverse().q_;
         double angular_distance = 180 / M_PI * r1.angularDistance(r2);
         ROS_DEBUG("%d %f", i, angular_distance);
         double huber = angular_distance > 5.0 ? 5.0 / angular_distance : 1.0;
@@ -160,7 +160,7 @@ void InitialExtrinsics::decomposeE(cv::Mat E,
     t2 = -svd.u.col(2);
 }
 
-void initialExtrinsics::saveScrewMotion(const std::string &filename)
+void InitialExtrinsics::saveScrewMotion(const std::string &filename)
 {
     try
     {

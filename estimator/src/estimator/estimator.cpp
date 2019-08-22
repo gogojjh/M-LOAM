@@ -152,6 +152,7 @@ void Estimator::processMeasurements()
                 {
                     pose_prev_cur_[i].push_back(Pose());
                     pose_laser_cur_[i].push_back(Pose());
+                    std::cout << *(pose_prev_cur_[i].end()-1) << std::endl;
                 }
             } else
             {
@@ -160,12 +161,12 @@ void Estimator::processMeasurements()
                     printf("[LASER %d]:\n", i);
                     cloudFeature &cur_cloud_feature = cur_feature_.second[i];
                     cloudFeature &prev_cloud_feature = prev_feature_.second[i];
-                    Pose pose_rlt = lidar_tracker_.trackCloud(prev_cloud_feature, cur_cloud_feature, *pose_prev_cur_[i].end());
+                    Pose pose_rlt = lidar_tracker_.trackCloud(prev_cloud_feature, cur_cloud_feature, *(pose_prev_cur_[i].end()-1));
                     pose_prev_cur_[i].push_back(pose_rlt);
-                    pose_laser_cur_[i].push_back(*pose_laser_cur_[i].end() * pose_rlt);
+                    pose_laser_cur_[i].push_back(*(pose_laser_cur_[i].end()-1) * pose_rlt);
 
                     std::cout << "relative transform: " << pose_rlt << std::endl;
-                    std::cout << "current transform: " << *pose_laser_cur_[i].end() << std::endl;
+                    std::cout << "current transform: " << *(pose_laser_cur_[i].end()-1) << std::endl;
                 }
                 printf("mloam_tracker %f ms\n", t_mloam_tracker.toc());
             }
