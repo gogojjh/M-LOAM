@@ -88,6 +88,8 @@ class Estimator
     // pose from laser at k=K-1 to laser at k=K
     std::vector<std::vector<Pose> > pose_prev_cur_;
 
+    std::vector<Pose> pose_ext_;
+
     double prev_time_, cur_time_;
 
     double td_;

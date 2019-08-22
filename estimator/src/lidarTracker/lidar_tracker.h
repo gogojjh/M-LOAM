@@ -44,8 +44,6 @@ public:
     void TransformToEnd(common::PointI const *const pi, common::PointI *const po, const Pose &pose);
 
     Pose trackCloud(const cloudFeature &prev_cloud_feature, const cloudFeature &cur_cloud_feature, const Pose &pose_ini);
-
-    bool b_track_inited_;
 };
 
 

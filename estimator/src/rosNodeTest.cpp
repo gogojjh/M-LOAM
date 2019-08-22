@@ -86,7 +86,7 @@ void sync_process()
 {
     while(1)
     {
-        if(STEREO)
+        if(NUM_OF_LASER == 2)
         {
             pcl::PointCloud<pcl::PointXYZ> laser_cloud0, laser_cloud1;
             std::vector<pcl::PointCloud<pcl::PointXYZ> >v_laser_cloud;
@@ -131,7 +131,7 @@ void sync_process()
                 estimator.inputCloud(time, v_laser_cloud);
             }
         }
-        else
+        else if (NUM_OF_LASER == 1)
         {
             pcl::PointCloud<pcl::PointXYZ> laser_cloud0;
             std_msgs::Header header;

@@ -141,18 +141,11 @@ void readParameters(std::string config_file)
             ROS_WARN(" fix extrinsic param ");
 
         cv::Mat cv_T;
-        fsSettings["body_T_laser0"] >> cv_T;
-        // Eigen::Matrix4d T;
-        // cv::cv2eigen(cv_T, T);
-        QBL.push_back(Eigen::Quaterniond(cv_T.ptr<double>(0)[3], cv_T.ptr<double>(0)[0], cv_T.ptr<double>(0)[1], cv_T.ptr<double>(0)[2]));
-        TBL.push_back(Eigen::Vector3d(cv_T.ptr<double>(0)[4], cv_T.ptr<double>(0)[5], cv_T.ptr<double>(0)[6]));
-        if(NUM_OF_LASER == 2)
+        fsSettings["body_T_laser"] >> cv_T;
+        for (size_t i = 0; i < NUM_OF_LASER; i++)
         {
-            STEREO = 1;
-            cv::Mat cv_T;
-            fsSettings["body_T_laser1"] >> cv_T;
-            QBL.push_back(Eigen::Quaterniond(cv_T.ptr<double>(0)[3], cv_T.ptr<double>(0)[0], cv_T.ptr<double>(0)[1], cv_T.ptr<double>(0)[2]));
-            TBL.push_back(Eigen::Vector3d(cv_T.ptr<double>(0)[4], cv_T.ptr<double>(0)[5], cv_T.ptr<double>(0)[6]));
+            QBL.push_back(Eigen::Quaterniond(cv_T.ptr<double>(i)[3], cv_T.ptr<double>(i)[0], cv_T.ptr<double>(i)[1], cv_T.ptr<double>(i)[2]));
+            TBL.push_back(Eigen::Vector3d(cv_T.ptr<double>(i)[4], cv_T.ptr<double>(i)[5], cv_T.ptr<double>(i)[6]));
         }
     }
     int pn = config_file.find_last_of('/');

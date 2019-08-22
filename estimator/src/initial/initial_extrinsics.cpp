@@ -18,20 +18,24 @@ using namespace Eigen;
 double EPSILON_R = 0.01;
 double EPSILON_T = 0.01;
 
-InitialExtrinsics::InitialExtrinsics()
-{
-    calib_bl_.resize(NUM_OF_LASER);
-
-    cov_rot_state_ = std::vector<bool>(NUM_OF_LASER, false);
-    full_cov_rot_state_ = false;
-}
+InitialExtrinsics::InitialExtrinsics() {}
 
 void InitialExtrinsics::clearState()
 {
+    calib_bl_.clear();
+    cov_rot_state_.clear();
+    v_rot_cov_.clear();
+}
+
+void InitialExtrinsics::setParameter()
+{
     calib_bl_.resize(NUM_OF_LASER);
 
-    cov_rot_state_ = std::vector<bool>(NUM_OF_LASER, false);
+    cov_rot_state_.resize(NUM_OF_LASER);
+    for (size_t i = 0; i < cov_rot_state_.size(); i++) cov_rot_state_[i] = false;
     full_cov_rot_state_ = false;
+
+    v_rot_cov_.resize(NUM_OF_LASER);
 }
 
 bool InitialExtrinsics::setCovRotation(const size_t &idx)
@@ -46,10 +50,16 @@ bool InitialExtrinsics::setCovRotation(const size_t &idx)
 
 bool InitialExtrinsics::checkScrewMotion(const Pose &pose_ref, const Pose &pose_data)
 {
+
     AngleAxisd ang_axis_ref(pose_ref.q_);
     AngleAxisd ang_axis_data(pose_data.q_);
     double r_dis = abs(ang_axis_ref.angle() - ang_axis_data.angle());
     double t_dis = abs(pose_ref.t_.dot(ang_axis_ref.axis()) - pose_data.t_.dot(ang_axis_data.axis()));
+
+    // std::cout << "ref pose : " << pose_ref << std::endl;
+    // std::cout << "data pose : " << pose_data << std::endl;
+    // printf("r_dis: %f, t_dis: %f \n", r_dis, t_dis);
+
     v_rd_.push_back(r_dis);
     v_td_.push_back(t_dis);
     if ((r_dis < EPSILON_R) && (t_dis < EPSILON_T))
@@ -69,6 +79,8 @@ bool InitialExtrinsics::calibExRotation(
     assert(v_pose_ref.size() == v_pose_data.size());
     assert(idx < cov_rot_state_.size());
 
+    printf("frame_cnt before: %d\n", v_pose_ref.size());
+
     std::vector<Pose> v_pose_ref_filter, v_pose_data_filter;
     v_pose_ref_filter.resize(v_pose_ref.size());
     v_pose_data_filter.resize(v_pose_ref.size());
@@ -78,7 +90,6 @@ bool InitialExtrinsics::calibExRotation(
     size_t j = 0;
     for (size_t i = 0; i < v_pose_ref.size(); i++)
     {
-        double ad;
         if (checkScrewMotion(v_pose_ref[i], v_pose_data[i]))
         {
             v_pose_ref_filter[j] = v_pose_ref[i];
@@ -93,8 +104,11 @@ bool InitialExtrinsics::calibExRotation(
     }
     size_t frame_cnt = v_pose_ref_filter.size();
 
+    printf("frame_cnt after: %d\n", frame_cnt);
+
     // -------------------------------
     // initial rotation
+    TicToc t_calib_rot;
     MatrixXd A(frame_cnt * 4, 4); // a cumulative Q matrix
     A.setZero();
     for (int i = 0; i < frame_cnt; i++)
@@ -123,7 +137,7 @@ bool InitialExtrinsics::calibExRotation(
         R.block<1, 3>(3, 0) = -q.transpose();
         R(3, 3) = w;
 
-        A.block<4, 4>((i - 1) * 4, 0) = huber * (L - R);
+        A.block<4, 4>(i * 4, 0) = huber * (L - R);
     }
 
     JacobiSVD<MatrixXd> svd(A, ComputeFullU | ComputeFullV);
@@ -134,6 +148,9 @@ bool InitialExtrinsics::calibExRotation(
     //cout << ric << endl;
     calib_bl_[idx].q_ = Quaterniond(x);
     Vector3d rot_cov = svd.singularValues().tail<3>(); // singular value
+    printf("calib ext rot: %f ms\n", t_calib_rot.toc());
+
+    v_rot_cov_[idx].push_back(rot_cov(1));
     if (frame_cnt >= WINDOW_SIZE && rot_cov(1) > 0.25)
     {
         calib_result = calib_bl_[idx];
@@ -160,17 +177,20 @@ void InitialExtrinsics::decomposeE(cv::Mat E,
     t2 = -svd.u.col(2);
 }
 
-void InitialExtrinsics::saveScrewMotion(const std::string &filename)
+void InitialExtrinsics::saveStatistics(const std::string &filename)
 {
     try
     {
         csvfile csv(filename.c_str());
-        // Hearer
-        csv << "i" << "rd" << "td" << endrow;
-        // Data
-        for (size_t i = 0; i < v_rd_.size(); i++)
+        csv << "i" << "laser_0" << endrow; // Hearer
+        for (size_t i = 0; i < v_rot_cov_[0].size(); i++)
         {
-            csv << i << v_rd_[i] << v_td_[i] << endrow;
+            csv << i << v_rot_cov_[0][i] << endrow;
+        }
+        csv << "i" << "laser_1" << endrow; // Hearer
+        for (size_t i = 0; i < v_rot_cov_[1].size(); i++)
+        {
+            csv << i << v_rot_cov_[1][i] << endrow;
         }
     }
     catch (const std::exception &ex)

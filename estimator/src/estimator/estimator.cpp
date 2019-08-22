@@ -47,6 +47,10 @@ void Estimator::clearState()
     pose_prev_cur_.clear();
     pose_base_laser_.clear();
 
+    pose_ext_.clear();
+
+    initial_extrinsics_.clearState();
+
     m_process_.unlock();
 }
 
@@ -70,6 +74,10 @@ void Estimator::setParameter()
         init_thread_flag_ = true;
         process_thread_ = std::thread(&Estimator::processMeasurements, this);
     }
+
+    pose_ext_.resize(NUM_OF_LASER);
+
+    initial_extrinsics_.setParameter();
 
     m_process_.unlock();
 }
@@ -152,7 +160,6 @@ void Estimator::processMeasurements()
                 {
                     pose_prev_cur_[i].push_back(Pose());
                     pose_laser_cur_[i].push_back(Pose());
-                    std::cout << *(pose_prev_cur_[i].end()-1) << std::endl;
                 }
             } else
             {
@@ -191,6 +198,7 @@ void Estimator::processMeasurements()
             if (ESTIMATE_EXTRINSIC == 2)
             {
                 ROS_INFO("calibrating extrinsic param, rotation movement is needed");
+                TicToc t_calib_ext;
                 if (frame_cnt_ != 0)
                 {
                     for (size_t i = 0; i < NUM_OF_LASER; i++)
@@ -200,19 +208,20 @@ void Estimator::processMeasurements()
                             (initial_extrinsics_.calibExRotation(pose_prev_cur_[0], pose_prev_cur_[i], i, calib_ext)))
                         {
                             initial_extrinsics_.setCovRotation(i);
-                            ROS_WARN_STREAM("initial extrinsic rotation of laser " << i << ": " << calib_ext << std::endl);
-                            ROS_WARN_STREAM("number of poses " << frame_cnt_ << std::endl);
+                            ROS_WARN_STREAM("initial extrinsic rotation of laser " << i << ": " << calib_ext);
+                            ROS_WARN_STREAM("number of poses " << frame_cnt_);
+                            pose_ext_[i].q_ = calib_ext.q_;
                             QBL[i] = calib_ext.q_;
-                            initial_extrinsics_.saveScrewMotion("/home/jjiao/catkin_ws/src/localization/M-LOAM/log/screw_motion.csv");
-                            std::cin.get();
+                            initial_extrinsics_.saveStatistics("/home/jjiao/catkin_ws/src/localization/M-LOAM/log/initial_extrinsics.csv");
                         }
                     }
-                    // if (initial_extrinsics_.full_cov_rot_state_)
-                    // {
-                    //     ROS_WARN("all initial extrinsic rotation calib success");
-                    //     ESTIMATE_EXTRINSIC = 1;
-                    // }
+                    if (initial_extrinsics_.full_cov_rot_state_)
+                    {
+                        ROS_WARN("all initial extrinsic rotation calib success");
+                        ESTIMATE_EXTRINSIC = 1;
+                    }
                 }
+                printf("whole calib rot %f ms\n", t_calib_ext.toc());
             }
 
             // -----------------
@@ -224,6 +233,12 @@ void Estimator::processMeasurements()
             // {
             //
             // }
+
+            // TODO: give extrinsics from base to laser
+            for (size_t i = 0; i < NUM_OF_LASER; i++)
+            {
+                pose_base_laser_[i].q_ = QBL[i];
+            }
 
             // -----------------
             // print and publish current result

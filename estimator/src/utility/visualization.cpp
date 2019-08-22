@@ -167,7 +167,7 @@ void pubOdometry(const Estimator &estimator, const std_msgs::Header &header)
             // Pose pose_w_curr = Pose::poseTransform(estimator.pose_base_laser_[i], estimator.pose_laser_cur_[i]);
             laser_odometry.header.frame_id = "/laser_init_" + std::to_string(i);
             laser_odometry.child_frame_id = "/laser_" + std::to_string(i);
-            Pose pose_laser_curr = *estimator.pose_laser_cur_[i].end();
+            Pose pose_laser_curr = *(estimator.pose_laser_cur_[i].end()-1);
             laser_odometry.pose.pose.orientation.x = pose_laser_curr.q_.x();
             laser_odometry.pose.pose.orientation.y = pose_laser_curr.q_.y();
             laser_odometry.pose.pose.orientation.z = pose_laser_curr.q_.z();
