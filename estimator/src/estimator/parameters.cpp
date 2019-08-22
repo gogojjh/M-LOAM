@@ -175,24 +175,3 @@ void readParameters(std::string config_file)
 
     fsSettings.release();
 }
-
-// -------------------------------
-
-Pose Pose::poseTransform(const Pose &pose1, const Pose &pose2)
-{
-    // t12 = t1 + q1 * t2;
-    // q12 = q1 * q2;
-    return Pose(pose1.q_*pose2.q_, pose1.q_*pose2.t_+pose1.t_);
-}
-
-Pose Pose::operator * (const Pose &pose)
-{
-    return Pose(this->q_*pose.q_, this->q_*pose.t_+this->t_);
-}
-
-ostream & operator << (ostream &out, const Pose &pose)
-{
-    out << "q: " << pose.q_.x() << " " << pose.q_.y() << " " << pose.q_.z() << " " << pose.q_.w()
-        << ", t: "<< pose.t_.transpose();
-    return out;
-}

@@ -40,6 +40,7 @@ catkin_package()
 add_library(mloam_lib
     src/estimator/parameters.cpp
     src/estimator/estimator.cpp
+    src/estimator/pose.cpp
     src/estimator/feature_manager.cpp
     src/factor/pose_local_parameterization.cpp
     src/factor/projectionTwoFrameOneCamFactor.cpp
@@ -53,9 +54,11 @@ add_library(mloam_lib
     src/initial/initial_aligment.cpp
     src/initial/initial_sfm.cpp
     src/initial/initial_ex_rotation.cpp
+    src/initial/initial_extrinsics.cpp
     src/featureTracker/feature_tracker.cpp
     src/featureExtract/feature_extract.cpp
-    src/lidarTracker/lidar_tracker.cpp)
+    src/lidarTracker/lidar_tracker.cpp
+    )
 target_link_libraries(mloam_lib ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES})
 
 add_executable(mloam_node src/rosNodeTest.cpp)

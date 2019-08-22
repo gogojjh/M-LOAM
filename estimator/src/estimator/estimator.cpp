@@ -43,9 +43,9 @@ void Estimator::clearState()
 
     solver_flag_ = INITIAL;
 
-    pose_base_laser_.clear();
     pose_laser_cur_.clear();
     pose_prev_cur_.clear();
+    pose_base_laser_.clear();
 
     m_process_.unlock();
 }
@@ -54,15 +54,14 @@ void Estimator::setParameter()
 {
     m_process_.lock();
 
+    pose_laser_cur_.resize(NUM_OF_LASER);
+    pose_prev_cur_.resize(NUM_OF_LASER);
     pose_base_laser_.resize(NUM_OF_LASER);
     for (int i = 0; i < NUM_OF_LASER; i++)
     {
         pose_base_laser_[i] = Pose(QBL[i], TBL[i]);
         cout << " extrinsic base_to_laser_" << i << " is " << pose_base_laser_[i] << endl;
     }
-
-    pose_laser_cur_.resize(NUM_OF_LASER);
-    pose_prev_cur_.resize(NUM_OF_LASER);
 
     td_ = TD;
     std::cout << "MULTIPLE_THREAD is " << MULTIPLE_THREAD << '\n';
@@ -137,28 +136,36 @@ void Estimator::processMeasurements()
         printf("process measurments *********\n");
         if (!feature_buf_.empty())
         {
-            // cur_feature_.second.size() = NUM_OF_LASER
+            // assert(cur_feature_.second.size() = NUM_OF_LASER)
             cur_feature_ = feature_buf_.front();
             cur_time_ = cur_feature_.first + td_;
             feature_buf_.pop();
 
+            // -----------------
+            // feature tracker: estimate the relative transformations of each lidar
             TicToc t_mloam_tracker;
             if (!b_system_inited_)
             {
                 b_system_inited_ = true;
                 printf("System initialization finished \n");
+                for (size_t i = 0; i < NUM_OF_LASER; i++)
+                {
+                    pose_prev_cur_[i].push_back(Pose());
+                    pose_laser_cur_[i].push_back(Pose());
+                }
             } else
             {
-                // estimate the relative transformations of each lidar
-                for (size_t i = 0; i < cur_feature_.second.size(); i++)
+                for (size_t i = 0; i < NUM_OF_LASER; i++)
                 {
                     printf("[LASER %d]:\n", i);
                     cloudFeature &cur_cloud_feature = cur_feature_.second[i];
                     cloudFeature &prev_cloud_feature = prev_feature_.second[i];
-                    pose_prev_cur_[i] = lidar_tracker_.trackCloud(prev_cloud_feature, cur_cloud_feature, pose_prev_cur_[i]);
-                    pose_laser_cur_[i] = pose_laser_cur_[i] * pose_prev_cur_[i];
-                    std::cout << "relative transform: " << pose_prev_cur_[i] << std::endl;
-                    std::cout << "current transform: " << pose_laser_cur_[i] << std::endl;
+                    Pose pose_rlt = lidar_tracker_.trackCloud(prev_cloud_feature, cur_cloud_feature, *pose_prev_cur_[i].end());
+                    pose_prev_cur_[i].push_back(pose_rlt);
+                    pose_laser_cur_[i].push_back(*pose_laser_cur_[i].end() * pose_rlt);
+
+                    std::cout << "relative transform: " << pose_rlt << std::endl;
+                    std::cout << "current transform: " << *pose_laser_cur_[i].end() << std::endl;
                 }
                 printf("mloam_tracker %f ms\n", t_mloam_tracker.toc());
             }
@@ -178,8 +185,49 @@ void Estimator::processMeasurements()
                 prev_feature_.second.push_back(tmp_cloud_feature);
             }
 
-            // printStatistics(*this, 0);
+            // -----------------
+            // perform calibration
+            if (ESTIMATE_EXTRINSIC == 2)
+            {
+                ROS_INFO("calibrating extrinsic param, rotation movement is needed");
+                if (frame_cnt_ != 0)
+                {
+                    for (size_t i = 0; i < NUM_OF_LASER; i++)
+                    {
+                        Pose calib_ext;
+                        if ((!initial_extrinsics_.cov_rot_state_[i]) &&
+                            (initial_extrinsics_.calibExRotation(pose_prev_cur_[0], pose_prev_cur_[i], i, calib_ext)))
+                        {
+                            initial_extrinsics_.setCovRotation(i);
+                            ROS_WARN_STREAM("initial extrinsic rotation of laser " << i << ": " << calib_ext << std::endl);
+                            ROS_WARN_STREAM("number of poses " << frame_cnt_ << std::endl);
+                            QBL[i] = calib_ext.q_;
+                            initial_extrinsics_.saveScrewMotion("/home/jjiao/catkin_ws/src/localization/M-LOAM/log/screw_motion.csv");
+                            std::cin.get();
+                        }
+                    }
+                    // if (initial_extrinsics_.full_cov_rot_state_)
+                    // {
+                    //     ROS_WARN("all initial extrinsic rotation calib success");
+                    //     ESTIMATE_EXTRINSIC = 1;
+                    // }
+                }
+            }
 
+            // -----------------
+            // if (solver_flag_ == INITIAL)
+            // {
+            //
+            // }
+            // else
+            // {
+            //
+            // }
+
+            // -----------------
+            // print and publish current result
+
+            // printStatistics(*this, 0);
             std_msgs::Header header;
             header.frame_id = "world";
             header.stamp = ros::Time(cur_feature_.first);

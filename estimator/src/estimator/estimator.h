@@ -25,6 +25,7 @@
 #include "parameters.h"
 #include "../featureExtract/feature_extract.h"
 #include "../lidarTracker/lidar_tracker.h"
+#include "../initial/initial_extrinsics.h"
 
 #include "feature_manager.h"
 #include "../utility/utility.h"
@@ -81,10 +82,11 @@ class Estimator
 
     // extrinsic from pose to laser
     std::vector<Pose> pose_base_laser_;
+
     // pose from laser at k=0 to laser at k=K
-    std::vector<Pose> pose_laser_cur_;
+    std::vector<std::vector<Pose> > pose_laser_cur_;
     // pose from laser at k=K-1 to laser at k=K
-    std::vector<Pose> pose_prev_cur_;
+    std::vector<std::vector<Pose> > pose_prev_cur_;
 
     double prev_time_, cur_time_;
 
@@ -95,6 +97,8 @@ class Estimator
     FeatureExtract f_extract_;
 
     LidarTracker lidar_tracker_;
+
+    InitialExtrinsics initial_extrinsics_;
 
     std::queue<std::pair<double, std::vector<cloudFeature> > > feature_buf_;
 

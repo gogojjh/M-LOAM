@@ -13,6 +13,7 @@
 #include <vector>
 #include <fstream>
 #include <map>
+#include <cassert>
 
 #include <ros/ros.h>
 
@@ -20,8 +21,10 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/eigen.hpp>
 
+#include "pose.h"
 #include "../utility/utility.h"
 #include "common/types/type.h"
+#include "common/csvfile.h"
 
 using namespace std;
 
@@ -112,24 +115,3 @@ enum NoiseOrder
 };
 
 typedef std::map<std::string, common::PointICloud> cloudFeature;
-
-class Pose
-{
-public:
-    Pose(): q_(Eigen::Quaterniond::Identity()), t_(Eigen::Vector3d::Zero()), T_(Eigen::Matrix4d::Identity()) {}
-    Pose(const Eigen::Quaterniond &q, const Eigen::Vector3d &t): q_(q), t_(t)
-    {
-        T_.setIdentity();
-        T_.topLeftCorner<3, 3>() = q_.toRotationMatrix();
-        T_.topRightCorner<3, 1>() = t_;
-    }
-    static Pose poseTransform(const Pose &pose1, const Pose &pose2);
-
-    Pose operator * (const Pose &pose);
-    // Pose operator = (const Pose &pose);
-    friend ostream &operator << (ostream &out, const Pose &pose);
-
-    Eigen::Quaterniond q_;
-    Eigen::Vector3d t_;
-    Eigen::Matrix4d T_;
-};
