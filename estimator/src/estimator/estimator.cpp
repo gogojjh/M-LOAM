@@ -194,7 +194,7 @@ void Estimator::processMeasurements()
             }
 
             // -----------------
-            // perform calibration
+            // perform calib initial rotation
             if (ESTIMATE_EXTRINSIC == 2)
             {
                 ROS_INFO("calibrating extrinsic param, rotation movement is needed");
@@ -211,7 +211,9 @@ void Estimator::processMeasurements()
                             ROS_WARN_STREAM("initial extrinsic rotation of laser " << i << ": " << calib_ext);
                             ROS_WARN_STREAM("number of poses " << frame_cnt_);
                             pose_ext_[i].q_ = calib_ext.q_;
+                            pose_ext_[i].t_ = calib_ext.t_;
                             QBL[i] = calib_ext.q_;
+                            TBL[i] = calib_ext.t_;
                             initial_extrinsics_.saveStatistics("/home/jjiao/catkin_ws/src/localization/M-LOAM/log/initial_extrinsics.csv");
                         }
                     }

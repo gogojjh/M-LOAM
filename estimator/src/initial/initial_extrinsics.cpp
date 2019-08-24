@@ -55,7 +55,6 @@ bool InitialExtrinsics::checkScrewMotion(const Pose &pose_ref, const Pose &pose_
     AngleAxisd ang_axis_data(pose_data.q_);
     double r_dis = abs(ang_axis_ref.angle() - ang_axis_data.angle());
     double t_dis = abs(pose_ref.t_.dot(ang_axis_ref.axis()) - pose_data.t_.dot(ang_axis_data.axis()));
-
     // std::cout << "ref pose : " << pose_ref << std::endl;
     // std::cout << "data pose : " << pose_data << std::endl;
     // printf("r_dis: %f, t_dis: %f \n", r_dis, t_dis);
@@ -66,6 +65,21 @@ bool InitialExtrinsics::checkScrewMotion(const Pose &pose_ref, const Pose &pose_
         return true;
     else
         return false;
+}
+
+void InitialExtrinsics::calibExTranslation(
+    const std::vector<Pose> &v_pose_ref,
+    const std::vector<Pose> &v_pose_data,
+    const size_t &idx
+)
+{
+    size_t frame_cnt = v_pose_ref_filter.size();
+    for (size_t i = 0; i < frame_cnt; i++)
+    {
+        Pose &pose_ref = v_pose_ref_filter[i];
+        Pose &pose_data = v_pose_data_filter[i];
+        
+    }
 }
 
 bool InitialExtrinsics::calibExRotation(
@@ -153,6 +167,7 @@ bool InitialExtrinsics::calibExRotation(
     v_rot_cov_[idx].push_back(rot_cov(1));
     if (frame_cnt >= WINDOW_SIZE && rot_cov(1) > 0.25)
     {
+        calibExTranslation(v_pose_ref_filter, v_pose_data_filter, idx);
         calib_result = calib_bl_[idx];
         return true;
     }
