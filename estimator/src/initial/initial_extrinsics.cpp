@@ -70,16 +70,24 @@ bool InitialExtrinsics::checkScrewMotion(const Pose &pose_ref, const Pose &pose_
 void InitialExtrinsics::calibExTranslation(
     const std::vector<Pose> &v_pose_ref,
     const std::vector<Pose> &v_pose_data,
-    const size_t &idx
-)
+    const size_t &idx,
+    const Quaterniond &ini_q)
 {
     size_t frame_cnt = v_pose_ref_filter.size();
+    Eigen::MatrixXd A(frame_cnt * 3, 3);
+    A.setZero();
+    Eigen::MatrixXd b(frame_cnt * 3, 1);
+    b.setZero();
     for (size_t i = 0; i < frame_cnt; i++)
     {
         Pose &pose_ref = v_pose_ref_filter[i];
         Pose &pose_data = v_pose_data_filter[i];
-        
+        A.block<3, 3>(i * 3, 0) = pose_ref.q_.toRotationMatrix() - Eigen::Matrix3d::Identity();
+        b.block<3, 1>(i * 3, 0) = calib_bl_[idx].q_ * pose_data.t_ - pose_ref.t_;
     }
+    Eigen::Vector3d x;
+    x = A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b);
+    calib_bl_[idx] = Pose(calib_bl_[idx].q_, x);
 }
 
 bool InitialExtrinsics::calibExRotation(
