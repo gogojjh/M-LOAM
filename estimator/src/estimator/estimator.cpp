@@ -132,7 +132,7 @@ void Estimator::inputCloud(const double &t,
 
     TicToc process_time;
     processMeasurements();
-    ROS_WARN_STREAM("processMea time: " << process_time.toc() << "ms");
+    ROS_WARN_STREAM("frame: " << frame_cnt_ << " ,processMea time: " << process_time.toc() << "ms");
 }
 
 void Estimator::processMeasurements()
@@ -142,9 +142,9 @@ void Estimator::processMeasurements()
         printf("process measurments *********\n");
         if (!feature_buf_.empty())
         {
-            // assert(cur_feature_.second.size() = NUM_OF_LASER)
             cur_feature_ = feature_buf_.front();
             cur_time_ = cur_feature_.first + td_;
+            assert(cur_feature_.second.size() == NUM_OF_LASER);
 
             m_buf_.lock();
             feature_buf_.pop();

@@ -285,19 +285,19 @@ void InitialExtrinsics::saveStatistics(const std::vector<std::vector<Pose> > &v_
         // orientation
         for (size_t idx = 0; idx < NUM_OF_LASER; idx ++)
         {
-            for (size_t j = 0; j < v_pose[idx].size(); j++)
+            for (auto iter = v_pose[idx].begin(); iter != v_pose[idx].end(); iter++)
             {
-                fout << Eigen::AngleAxisd(v_pose[idx][j].q_).angle() << ",";
-                if (j == v_pose[idx].size() - 1) fout << std::endl;
+                fout << Eigen::AngleAxisd(iter->q_).angle() << ",";
+                if (iter == v_pose[idx].end() - 1) fout << std::endl;
             }
         }
         // rot_cov
         for (size_t idx = 0; idx < NUM_OF_LASER; idx ++)
         {
-            for (size_t j = 0; j < v_rot_cov_[idx].size(); j++)
+            for (auto iter = v_rot_cov_[idx].begin(); iter != v_rot_cov_[idx].end(); iter++)
             {
-                fout << v_rot_cov_[idx][j] << ",";
-                if (j == v_rot_cov_[idx].size() - 1) fout << std::endl;
+                fout << *iter << ",";
+                if (iter == v_rot_cov_[idx].end() - 1) fout << std::endl;
             }
         }
         fout.close();

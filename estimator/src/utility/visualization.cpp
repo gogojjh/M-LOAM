@@ -83,6 +83,9 @@ void pubPointCloud(const Estimator &estimator, const std_msgs::Header &header)
     for (size_t i = 0; i < estimator.cur_feature_.second.size(); i++)
     {
         cloudFeature cloud_feature_trans = transformCloudFeature(estimator.cur_feature_.second[i], estimator.calib_base_laser_[i].T_.cast<float>());
+        for (auto &p: cloud_feature_trans["laser_cloud"].points)
+            p.intensity = 255.0 * i / NUM_OF_LASER;
+            
         laser_cloud += cloud_feature_trans["laser_cloud"];
         corner_points_sharp += cloud_feature_trans["corner_points_sharp"];
         corner_points_less_sharp += cloud_feature_trans["corner_points_less_sharp"];
