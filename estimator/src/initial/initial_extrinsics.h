@@ -18,6 +18,8 @@
 #include <ros/console.h>
 
 #include "common/types/type.h"
+#include "common/algos/math.hpp"
+
 #include "../estimator/parameters.h"
 #include "../utility/tic_toc.h"
 #include "../utility/utility.h"
@@ -32,13 +34,17 @@ public:
 
 	bool calibExRotation(const std::vector<Pose> &v_pose_ref, const std::vector<Pose> &v_pose_data, const size_t &idx, Pose &calib_result);
 	void calibExTranslation(const std::vector<Pose> &v_pose_ref, const std::vector<Pose> &v_pose_data, const size_t &idx);
+	void calibExTranslationPlanar(const std::vector<Pose> &v_pose_ref, const std::vector<Pose> &v_pose_data, const size_t &idx);
+
 	void calibTimeDelay(const std::vector<Pose> &v_pose_ref, const std::vector<Pose> &v_pose_data, const size_t &idx);
 
-	bool checkScrewMotion(const Pose &pose_ref, const Pose &pose_data);
 	bool setCovRotation(const size_t &idx);
+	bool checkScrewMotion(const Pose &pose_ref, const Pose &pose_data);
 	void saveStatistics(const std::vector<std::vector<Pose> > &v_pose);
 
 	void decomposeE(cv::Mat E, cv::Mat_<double> &R1, cv::Mat_<double> &R2, cv::Mat_<double> &t1, cv::Mat_<double> &t2);
+
+	size_t frame_cnt_;
 
 	std::vector<Pose> calib_bl_;
 

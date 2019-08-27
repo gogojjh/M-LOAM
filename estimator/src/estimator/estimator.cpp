@@ -111,7 +111,7 @@ void Estimator::inputCloud(const double &t,
 
     TicToc process_time;
     processMeasurements();
-    printf("processMea time: %f ms \n", process_time.toc());
+    ROS_WARN_STREAM("processMea time: " << process_time.toc() << "ms");
 }
 
 void Estimator::inputCloud(const double &t,
@@ -132,7 +132,7 @@ void Estimator::inputCloud(const double &t,
 
     TicToc process_time;
     processMeasurements();
-    printf("processMea time: %f ms \n", process_time.toc());
+    ROS_WARN_STREAM("processMea time: " << process_time.toc() << "ms");
 }
 
 void Estimator::processMeasurements()
@@ -226,7 +226,7 @@ void Estimator::processMeasurements()
                         solver_flag_ = NON_LINEAR;
                     }
                 }
-                ROS_WARN_STREAM("whole initialize extrinsics %fms", t_calib_ext.toc());
+                printf("whole initialize extrinsics %fms\n", t_calib_ext.toc());
             }
 
             // -----------------
@@ -236,8 +236,7 @@ void Estimator::processMeasurements()
 
             } else if (solver_flag_ == NON_LINEAR)
             {
-                TicToc t_solver;
-
+                TicToc t_solve;
                 ROS_DEBUG("solver costs: %fms", t_solve.toc());
             }
 

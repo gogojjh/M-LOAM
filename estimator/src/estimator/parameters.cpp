@@ -63,6 +63,8 @@ std::vector<Eigen::Quaterniond> QBL;
 std::vector<Eigen::Vector3d> TBL;
 std::vector<double> TDBL;
 
+int PLANAR_MOVEMENT;
+
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
 {
@@ -167,6 +169,8 @@ void readParameters(std::string config_file)
     SCAN_PERIOD = fsSettings["scan_period"];
     DISTANCE_SQ_THRESHOLD = fsSettings["distance_sq_threshold"];
     NEARBY_SCAN = fsSettings["nearby_scan"];
+
+    PLANAR_MOVEMENT = fsSettings["planar_movement"];
 
     fsSettings.release();
 }

@@ -90,6 +90,8 @@ extern std::vector<Eigen::Quaterniond> QBL;
 extern std::vector<Eigen::Vector3d> TBL;
 extern std::vector<double> TDBL;
 
+extern int PLANAR_MOVEMENT;
+
 void readParameters(std::string config_file);
 
 enum SIZE_PARAMETERIZATION

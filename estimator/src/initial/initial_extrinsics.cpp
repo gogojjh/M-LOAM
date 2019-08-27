@@ -37,6 +37,8 @@ void InitialExtrinsics::setParameter()
     full_cov_rot_state_ = false;
 
     v_rot_cov_.resize(NUM_OF_LASER);
+
+    frame_cnt_ = 0;
 }
 
 bool InitialExtrinsics::setCovRotation(const size_t &idx)
@@ -78,7 +80,7 @@ bool InitialExtrinsics::calibExRotation(
     assert(v_pose_ref.size() == v_pose_data.size());
     assert(idx < cov_rot_state_.size());
 
-    printf("frame_cnt before: %d\n", v_pose_ref.size());
+    printf("frame_cnt_ before: %d\n", v_pose_ref.size());
 
     std::vector<Pose> v_pose_ref_filter, v_pose_data_filter;
     v_pose_ref_filter.resize(v_pose_ref.size());
@@ -101,37 +103,37 @@ bool InitialExtrinsics::calibExRotation(
         v_pose_ref_filter.resize(j);
         v_pose_data_filter.resize(j);
     }
-    size_t frame_cnt = v_pose_ref_filter.size();
 
-    printf("frame_cnt after: %d\n", frame_cnt);
+    frame_cnt_ = v_pose_ref_filter.size();
+    printf("frame_cnt_ after: %d\n", frame_cnt_);
 
     // -------------------------------
     // initial rotation
     TicToc t_calib_rot;
-    MatrixXd A(frame_cnt * 4, 4); // a cumulative Q matrix
+    Eigen::MatrixXd A(frame_cnt_ * 4, 4); // a cumulative Q matrix
     A.setZero();
-    for (int i = 0; i < frame_cnt; i++)
+    for (int i = 0; i < frame_cnt_; i++)
     {
         Pose &pose_ref = v_pose_ref_filter[i];
         Pose &pose_data = v_pose_data_filter[i];
 
-        Quaterniond r1 = pose_ref.q_;
-        Quaterniond r2 = calib_bl_[idx].q_ * pose_data.q_ * calib_bl_[idx].inverse().q_;
+        Eigen::Quaterniond r1 = pose_ref.q_;
+        Eigen::Quaterniond r2 = calib_bl_[idx].q_ * pose_data.q_ * calib_bl_[idx].inverse().q_;
         double angular_distance = 180 / M_PI * r1.angularDistance(r2);
         ROS_DEBUG("%d %f", i, angular_distance);
         double huber = angular_distance > 5.0 ? 5.0 / angular_distance : 1.0;
 
-        Matrix4d L, R; // Q1 and Q2 to represent the quaternion representation
+        Eigen::Matrix4d L, R; // Q1 and Q2 to represent the quaternion representation
         double w = pose_ref.q_.w();
-        Vector3d q = pose_ref.q_.vec();
-        L.block<3, 3>(0, 0) = w * Matrix3d::Identity() + Utility::skewSymmetric(q);
+        Eigen::Vector3d q = pose_ref.q_.vec();
+        L.block<3, 3>(0, 0) = w * Eigen::Matrix3d::Identity() + Utility::skewSymmetric(q);
         L.block<3, 1>(0, 3) = q;
         L.block<1, 3>(3, 0) = -q.transpose();
         L(3, 3) = w;
 
         w = pose_data.q_.w();
         q = pose_data.q_.vec();
-        R.block<3, 3>(0, 0) = w * Matrix3d::Identity() - Utility::skewSymmetric(q);
+        R.block<3, 3>(0, 0) = w * Eigen::Matrix3d::Identity() - Utility::skewSymmetric(q);
         R.block<3, 1>(0, 3) = q;
         R.block<1, 3>(3, 0) = -q.transpose();
         R(3, 3) = w;
@@ -139,27 +141,68 @@ bool InitialExtrinsics::calibExRotation(
         A.block<4, 4>(i * 4, 0) = huber * (L - R);
     }
 
-    JacobiSVD<MatrixXd> svd(A, ComputeFullU | ComputeFullV);
-    Matrix<double, 4, 1> x = svd.matrixV().col(3);
-    // Quaterniond estimated_R(x);
-    // rbl[idx] = estimated_R.toRotationMatrix().inverse();
+    Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeFullU | Eigen::ComputeFullV);
     //cout << svd.singularValues().transpose() << endl;
-    //cout << ric << endl;
-    calib_bl_[idx].q_ = Quaterniond(x);
+
+    if (PLANAR_MOVEMENT)
+    {
+        // estimateRyx
+        Eigen::Vector4d t1 = svd.matrixV().block<4,1>(0,2);
+        Eigen::Vector4d t2 = svd.matrixV().block<4,1>(0,3);
+        // solve constraint for q_yz: xy = -zw
+        double s[2];
+        if (!common::solveQuadraticEquation(t1(0) * t1(1) + t1(2) * t1(3),
+                                        t1(0) * t2(1) + t1(1) * t2(0) + t1(2) * t2(3) + t1(3) * t2(2),
+                                        t2(0) * t2(1) + t2(2) * t2(3),
+                                        s[0], s[1]))
+        {
+            std::cout << "# ERROR: Quadratic equation cannot be solved due to negative determinant." << std::endl;
+            return false;
+        }
+        std::vector<Eigen::Quaterniond> q_yx;
+        q_yx.resize(2);
+        double yaw[2];
+        for (int i = 0; i < 2; ++i)
+        {
+            double t = s[i] * s[i] * t1.dot(t1) + 2 * s[i] * t1.dot(t2) + t2.dot(t2);
+            // solve constraint ||q_yx|| = 1
+            double b = sqrt(1.0 / t);
+            double a = s[i] * b;
+            q_yx[i].coeffs() = a * t1 + b * t2; // [w x y z]
+            Eigen::Vector3d euler_angles = q_yx[i].toRotationMatrix().eulerAngles(2, 1, 0);
+            yaw[0] = euler_angles(0);
+        }
+        if (fabs(yaw[0]) < fabs(yaw[1]))
+            calib_bl_[idx].q_ = q_yx[0];
+        else
+            calib_bl_[idx].q_ = q_yx[1];
+    } else
+    {
+        Eigen::Matrix<double, 4, 1> x = svd.matrixV().col(3);
+        calib_bl_[idx].q_ = Eigen::Quaterniond(x);
+    }
+
     Vector3d rot_cov = svd.singularValues().tail<3>(); // singular value
     printf("calib ext rot: %f ms\n", t_calib_rot.toc());
-
     v_rot_cov_[idx].push_back(rot_cov(1));
-    if (frame_cnt >= WINDOW_SIZE && rot_cov(1) > 0.25)
+
+    if (frame_cnt_ >= WINDOW_SIZE && rot_cov(1) > 0.25)
     {
-        calibExTranslation(v_pose_ref_filter, v_pose_data_filter, idx);
+        if (PLANAR_MOVEMENT)
+            calibExTranslationPlanar(v_pose_ref_filter, v_pose_data_filter, idx);
+        else
+            calibExTranslation(v_pose_ref_filter, v_pose_data_filter, idx);
+
         if (ESTIMATE_TD)
             calibTimeDelay(v_pose_ref_filter, v_pose_data_filter, idx);
+
         calib_result = calib_bl_[idx];
         return true;
     }
     else
+    {
         return false;
+    }
 }
 
 void InitialExtrinsics::calibExTranslation(
@@ -167,21 +210,43 @@ void InitialExtrinsics::calibExTranslation(
     const std::vector<Pose> &v_pose_data,
     const size_t &idx)
 {
-    size_t frame_cnt = v_pose_ref.size();
-    Eigen::MatrixXd A(frame_cnt * 3, 3);
-    A.setZero();
-    Eigen::MatrixXd b(frame_cnt * 3, 1);
-    b.setZero();
-    for (size_t i = 0; i < frame_cnt; i++)
+    const Eigen::Quaterniond &q_zyx = calib_bl_[idx].q_;
+    Eigen::MatrixXd A = Eigen::MatrixXd::Zero(frame_cnt_ * 3, 3);
+    Eigen::MatrixXd b = Eigen::MatrixXd::Zero(frame_cnt_ * 3, 1);
+    for (size_t i = 0; i < frame_cnt_; i++)
     {
-        const Pose &pose_ref = v_pose_ref[i];
-        const Pose &pose_data = v_pose_data[i];
-        A.block<3, 3>(i * 3, 0) = pose_ref.q_.toRotationMatrix() - Eigen::Matrix3d::Identity();
-        b.block<3, 1>(i * 3, 0) = calib_bl_[idx].q_ * pose_data.t_ - pose_ref.t_;
+        A.block<3, 3>(i * 3, 0) = v_pose_ref[i].q_.toRotationMatrix() - Eigen::Matrix3d::Identity();
+        b.block<3, 1>(i * 3, 0) = q_zyx * v_pose_data[i].t_ - v_pose_ref[i].t_;
     }
     Eigen::Vector3d x;
     x = A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b);
-    calib_bl_[idx] = Pose(calib_bl_[idx].q_, x);
+    calib_bl_[idx] = Pose(q_zyx, x);
+}
+
+void InitialExtrinsics::calibExTranslationPlanar(
+    const std::vector<Pose> &v_pose_ref,
+    const std::vector<Pose> &v_pose_data,
+    const size_t &idx)
+{
+    const Eigen::Quaterniond &q_yx = calib_bl_[idx].q_;
+    Eigen::MatrixXd G = Eigen::MatrixXd::Zero(frame_cnt_ * 2, 4);
+    Eigen::MatrixXd w = Eigen::MatrixXd::Zero(frame_cnt_ * 2, 1);
+    for (int i = 0; i < frame_cnt_; ++i)
+    {
+        Eigen::Matrix2d J = v_pose_ref[i].q_.toRotationMatrix().block<2,2>(0, 0) - Eigen::Matrix2d::Identity();
+        Eigen::Vector3d n = q_yx.toRotationMatrix().row(2);
+        Eigen::Vector3d p = q_yx * (v_pose_data[i].t_ - v_pose_data[i].t_.dot(n) * n);
+        Eigen::Matrix2d K;
+        K << p(0), -p(1), p(1), p(0);
+        G.block<2,2>(i * 2, 0) = J;
+        G.block<2,2>(i * 2, 2) = K;
+        w.block<2,1>(i * 2, 0) = v_pose_ref[i].t_.block<2,1>(0,0);
+    }
+    Eigen::Vector4d m = G.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(w);
+    Eigen::Vector3d x(-m(0), -m(1), 0);
+    double yaw = atan2(m(3), m(2));
+    Eigen::Quaterniond q_z(Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ()));
+    calib_bl_[idx] = Pose(q_z*q_yx, x);
 }
 
 void InitialExtrinsics::calibTimeDelay(

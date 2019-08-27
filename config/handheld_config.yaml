@@ -70,6 +70,8 @@ scan_period: 0.1
 distance_sq_threshold: 25
 nearby_scan: 2.5
 
+# movement type
+planar_movement: 0
 
 
 
