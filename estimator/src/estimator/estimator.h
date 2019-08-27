@@ -81,7 +81,8 @@ class Estimator
     bool b_system_inited_;
 
     // extrinsic from base to laser
-    std::vector<Pose> pose_base_laser_;
+    std::vector<Pose> calib_base_laser_;
+    
     // pose from laser at k=0 to laser at k=K
     std::vector<std::vector<Pose> > pose_laser_cur_;
     // pose from laser at k=K-1 to laser at k=K

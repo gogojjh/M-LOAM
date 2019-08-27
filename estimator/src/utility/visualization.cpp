@@ -82,7 +82,7 @@ void pubPointCloud(const Estimator &estimator, const std_msgs::Header &header)
     PointICloud laser_cloud, corner_points_sharp, corner_points_less_sharp, surf_points_flat, surf_points_less_flat;
     for (size_t i = 0; i < estimator.cur_feature_.second.size(); i++)
     {
-        cloudFeature cloud_feature_trans = transformCloudFeature(estimator.cur_feature_.second[i], estimator.pose_base_laser_[i].T_.cast<float>());
+        cloudFeature cloud_feature_trans = transformCloudFeature(estimator.cur_feature_.second[i], estimator.calib_base_laser_[i].T_.cast<float>());
         laser_cloud += cloud_feature_trans["laser_cloud"];
         corner_points_sharp += cloud_feature_trans["corner_points_sharp"];
         corner_points_less_sharp += cloud_feature_trans["corner_points_less_sharp"];
@@ -111,21 +111,21 @@ void printStatistics(const Estimator &estimator, double t)
         fout.precision(5);
         for (int i = 0; i < NUM_OF_LASER; i++)
         {
-            fout << estimator.pose_base_laser_[i].q_.x() << ","
-                << estimator.pose_base_laser_[i].q_.y() << ","
-                << estimator.pose_base_laser_[i].q_.z() << ","
-                << estimator.pose_base_laser_[i].q_.w() << ","
-                << estimator.pose_base_laser_[i].t_(0) << ","
-                << estimator.pose_base_laser_[i].t_(1) << ","
-                << estimator.pose_base_laser_[i].t_(2) << std::endl;
+            fout << estimator.calib_base_laser_[i].q_.x() << ","
+                << estimator.calib_base_laser_[i].q_.y() << ","
+                << estimator.calib_base_laser_[i].q_.z() << ","
+                << estimator.calib_base_laser_[i].q_.w() << ","
+                << estimator.calib_base_laser_[i].t_(0) << ","
+                << estimator.calib_base_laser_[i].t_(1) << ","
+                << estimator.calib_base_laser_[i].t_(2) << std::endl;
         }
 
     //     cv::FileStorage fs(EX_CALIB_RESULT_PATH, cv::FileStorage::WRITE);
     //         //ROS_DEBUG("calibration result for camera %d", i);
-    //         ROS_DEBUG_STREAM("extirnsic tic: " << estimator.pose_base_laser_[i].t_.transpose());
-    //         ROS_DEBUG_STREAM("extrinsic ric: " << Utility::R2ypr(estimator.pose_base_laser_[i].q_.toRotationMatrix()).transpose());
+    //         ROS_DEBUG_STREAM("extirnsic tic: " << estimator.calib_base_laser_[i].t_.transpose());
+    //         ROS_DEBUG_STREAM("extrinsic ric: " << Utility::R2ypr(estimator.calib_base_laser_[i].q_.toRotationMatrix()).transpose());
     //
-    //         eigen_T.block<3, 3>(0, 0) = estimator.pose_base_laser_[i].q_;
+    //         eigen_T.block<3, 3>(0, 0) = estimator.calib_base_laser_[i].q_;
     //         eigen_T.block<3, 1>(0, 3) = estimator.tic[i];
     //         cv::Mat cv_T;
     //         cv::eigen2cv(eigen_T, cv_T);
@@ -163,7 +163,7 @@ void pubOdometry(const Estimator &estimator, const std_msgs::Header &header)
             ext_base_to_laser.header = header;
             ext_base_to_laser.header.frame_id = "/world";
             ext_base_to_laser.child_frame_id = "/laser_init_" + std::to_string(i);
-            Pose pose_base_laser = estimator.pose_base_laser_[i];
+            Pose pose_base_laser = estimator.calib_base_laser_[i];
             ext_base_to_laser.pose.pose.orientation.x = pose_base_laser.q_.x();
             ext_base_to_laser.pose.pose.orientation.y = pose_base_laser.q_.y();
             ext_base_to_laser.pose.pose.orientation.z = pose_base_laser.q_.z();
@@ -178,7 +178,7 @@ void pubOdometry(const Estimator &estimator, const std_msgs::Header &header)
             laser_odometry.header = header;
             // laser_odometry.header.frame_id = "world";
             // laser_odometry.child_frame_id = "/laser_" + std::to_string(i);
-            // Pose pose_w_curr = Pose::poseTransform(estimator.pose_base_laser_[i], estimator.pose_laser_cur_[i]);
+            // Pose pose_w_curr = Pose::poseTransform(estimator.calib_base_laser_[i], estimator.pose_laser_cur_[i]);
             laser_odometry.header.frame_id = "/laser_init_" + std::to_string(i);
             laser_odometry.child_frame_id = "/laser_" + std::to_string(i);
             Pose pose_laser_curr = *(estimator.pose_laser_cur_[i].end()-1);

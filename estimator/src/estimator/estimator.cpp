@@ -46,7 +46,7 @@ void Estimator::clearState()
     pose_laser_cur_.clear();
     pose_prev_cur_.clear();
     // pose_ext_.clear();
-    pose_base_laser_.clear();
+    calib_base_laser_.clear();
 
     initial_extrinsics_.clearState();
 
@@ -59,22 +59,21 @@ void Estimator::setParameter()
 
     pose_laser_cur_.resize(NUM_OF_LASER);
     pose_prev_cur_.resize(NUM_OF_LASER);
-    pose_base_laser_.resize(NUM_OF_LASER);
+    calib_base_laser_.resize(NUM_OF_LASER);
     for (int i = 0; i < NUM_OF_LASER; i++)
     {
-        pose_base_laser_[i] = Pose(QBL[i], TBL[i], TDBL[i]);
-        cout << " given extrinsic base_to_laser_" << i << ": " << pose_base_laser_[i] << endl;
+        calib_base_laser_[i] = Pose(QBL[i], TBL[i], TDBL[i]);
+        cout << " given extrinsic base_to_laser_" << i << ": " << calib_base_laser_[i] << endl;
     }
 
-    td_ = TD;
+    initial_extrinsics_.setParameter();
+
     std::cout << "MULTIPLE_THREAD is " << MULTIPLE_THREAD << '\n';
     if (MULTIPLE_THREAD && !init_thread_flag_)
     {
         init_thread_flag_ = true;
         process_thread_ = std::thread(&Estimator::processMeasurements, this);
     }
-
-    initial_extrinsics_.setParameter();
 
     m_process_.unlock();
 }
@@ -146,10 +145,14 @@ void Estimator::processMeasurements()
             // assert(cur_feature_.second.size() = NUM_OF_LASER)
             cur_feature_ = feature_buf_.front();
             cur_time_ = cur_feature_.first + td_;
+
+            m_buf_.lock();
             feature_buf_.pop();
+            m_buf_.unlock();
 
             // -----------------
             // feature tracker: estimate the relative transformations of each lidar
+            m_process_.lock();
             TicToc t_mloam_tracker;
             if (!b_system_inited_)
             {
@@ -193,7 +196,7 @@ void Estimator::processMeasurements()
             }
 
             // -----------------
-            // perform calib initial rotation
+            // initialize extrinsics
             if (ESTIMATE_EXTRINSIC == 2)
             {
                 ROS_INFO("calibrating extrinsic param, rotation movement is needed");
@@ -207,9 +210,9 @@ void Estimator::processMeasurements()
                             (initial_extrinsics_.calibExRotation(pose_prev_cur_[0], pose_prev_cur_[i], i, calib_result)))
                         {
                             initial_extrinsics_.setCovRotation(i);
-                            ROS_WARN_STREAM("number of poses " << frame_cnt_);
-                            ROS_WARN_STREAM("initial extrinsic of laser " << i << ": " << calib_result);
-                            pose_base_laser_[i] = Pose(calib_result.q_, calib_result.t_, calib_result.td_);
+                            ROS_WARN_STREAM("number of poses: " << frame_cnt_);
+                            ROS_WARN_STREAM("initial extrinsic of laser_" << i << ": " << calib_result);
+                            calib_base_laser_[i] = Pose(calib_result.q_, calib_result.t_, calib_result.td_);
                             QBL[i] = calib_result.q_;
                             TBL[i] = calib_result.t_;
                             TDBL[i] = calib_result.td_;
@@ -223,28 +226,23 @@ void Estimator::processMeasurements()
                         solver_flag_ = NON_LINEAR;
                     }
                 }
-                printf("whole calib rot %f ms\n", t_calib_ext.toc());
+                ROS_WARN_STREAM("whole initialize extrinsics %fms", t_calib_ext.toc());
             }
 
             // -----------------
-            // if (solver_flag_ == INITIAL)
-            // {
-            //
-            // }
-            // else
-            // {
-            //
-            // }
+            // nonlinear optimization
+            if (solver_flag_ == INITIAL)
+            {
 
-            // TODO: give extrinsics from base to laser
-            // for (size_t i = 0; i < NUM_OF_LASER; i++)
-            // {
-            //     pose_base_laser_[i].q_ = QBL[i];
-            // }
+            } else if (solver_flag_ == NON_LINEAR)
+            {
+                TicToc t_solver;
+
+                ROS_DEBUG("solver costs: %fms", t_solve.toc());
+            }
 
             // -----------------
             // print and publish current result
-
             printStatistics(*this, 0);
 
             std_msgs::Header header;
@@ -260,10 +258,10 @@ void Estimator::processMeasurements()
             // pubKeyPoses(*this, header);
             // pubCameraPose(*this, header);
 
-
             // pubKeyframe(*this);
             // pubTF(*this, header);
 
+            m_process_.unlock();
         }
 
         if (!MULTIPLE_THREAD)
