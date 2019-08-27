@@ -31,9 +31,12 @@ public:
 	void setParameter();
 
 	bool calibExRotation(const std::vector<Pose> &v_pose_ref, const std::vector<Pose> &v_pose_data, const size_t &idx, Pose &calib_result);
+	void calibExTranslation(const std::vector<Pose> &v_pose_ref, const std::vector<Pose> &v_pose_data, const size_t &idx);
+	void calibTimeDelay(const std::vector<Pose> &v_pose_ref, const std::vector<Pose> &v_pose_data, const size_t &idx);
+
 	bool checkScrewMotion(const Pose &pose_ref, const Pose &pose_data);
 	bool setCovRotation(const size_t &idx);
-	void saveStatistics(const std::string &filename);
+	void saveStatistics(const std::vector<std::vector<Pose> > &v_pose);
 
 	void decomposeE(cv::Mat E, cv::Mat_<double> &R1, cv::Mat_<double> &R2, cv::Mat_<double> &t1, cv::Mat_<double> &t2);
 

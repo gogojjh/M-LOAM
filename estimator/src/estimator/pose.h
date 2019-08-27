@@ -23,8 +23,8 @@ using namespace std;
 class Pose
 {
 public:
-    Pose(): q_(Eigen::Quaterniond::Identity()), t_(Eigen::Vector3d::Zero()), T_(Eigen::Matrix4d::Identity()), dt_(0) {}
-    Pose(const Eigen::Quaterniond &q, const Eigen::Vector3d &t, const double &dt=0): q_(q), t_(t), dt_(dt)
+    Pose(): q_(Eigen::Quaterniond::Identity()), t_(Eigen::Vector3d::Zero()), T_(Eigen::Matrix4d::Identity()), td_(0) {}
+    Pose(const Eigen::Quaterniond &q, const Eigen::Vector3d &t, const double &td=0): q_(q), t_(t), td_(td)
     {
         T_.setIdentity();
         T_.topLeftCorner<3, 3>() = q_.toRotationMatrix();
@@ -34,7 +34,6 @@ public:
     static Pose poseTransform(const Pose &pose1, const Pose &pose2);
 
     Pose inverse();
-
     Pose operator * (const Pose &pose);
     // Pose operator = (const Pose &pose);
     friend ostream &operator << (ostream &out, const Pose &pose);
@@ -44,5 +43,5 @@ public:
     Eigen::Vector3d t_;
     Eigen::Matrix4d T_;
 
-    double dt_;
+    double td_;
 };

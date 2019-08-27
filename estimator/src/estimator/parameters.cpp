@@ -61,7 +61,7 @@ double ROI_RANGE;
 std::vector<Eigen::Matrix3d> RBL;
 std::vector<Eigen::Quaterniond> QBL;
 std::vector<Eigen::Vector3d> TBL;
-
+std::vector<double> TDBL;
 
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
@@ -151,12 +151,14 @@ void readParameters(std::string config_file)
     int pn = config_file.find_last_of('/');
     std::string configPath = config_file.substr(0, pn);
 
-    TD = fsSettings["td"];
+    cv::Mat cv_TD;
+    fsSettings["td"] >> cv_TD;
+    for (size_t i = 0; i < NUM_OF_LASER; i++) TDBL.push_back(cv_TD.ptr<double>(0)[i]);
     ESTIMATE_TD = fsSettings["estimate_td"];
     if (ESTIMATE_TD)
-        ROS_INFO_STREAM("Unsynchronized sensors, online estimate time offset, initial td: " << TD);
+        ROS_INFO_STREAM("Unsynchronized sensors, online estimate time offset");
     else
-        ROS_INFO_STREAM("Synchronized sensors, fix time offset: " << TD);
+        ROS_INFO_STREAM("Synchronized sensors, fix time offset");
 
     LASER_SYNC_THRESHOLD = fsSettings["laser_sync_threshold"];
     N_SCANS = fsSettings["n_scans"];

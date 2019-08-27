@@ -45,9 +45,8 @@ void Estimator::clearState()
 
     pose_laser_cur_.clear();
     pose_prev_cur_.clear();
+    // pose_ext_.clear();
     pose_base_laser_.clear();
-
-    pose_ext_.clear();
 
     initial_extrinsics_.clearState();
 
@@ -63,8 +62,8 @@ void Estimator::setParameter()
     pose_base_laser_.resize(NUM_OF_LASER);
     for (int i = 0; i < NUM_OF_LASER; i++)
     {
-        pose_base_laser_[i] = Pose(QBL[i], TBL[i]);
-        cout << " extrinsic base_to_laser_" << i << " is " << pose_base_laser_[i] << endl;
+        pose_base_laser_[i] = Pose(QBL[i], TBL[i], TDBL[i]);
+        cout << " given extrinsic base_to_laser_" << i << ": " << pose_base_laser_[i] << endl;
     }
 
     td_ = TD;
@@ -74,8 +73,6 @@ void Estimator::setParameter()
         init_thread_flag_ = true;
         process_thread_ = std::thread(&Estimator::processMeasurements, this);
     }
-
-    pose_ext_.resize(NUM_OF_LASER);
 
     initial_extrinsics_.setParameter();
 
@@ -98,10 +95,11 @@ void Estimator::inputCloud(const double &t,
     const std::vector<PointCloud> &v_laser_cloud_in)
 {
     frame_cnt_++;
-    std::vector<cloudFeature> feature_frame;
+    printf("%d \n", frame_cnt_);
 
-    m_buf_.lock();
     // TODO: to parallize it?
+    m_buf_.lock();
+    std::vector<cloudFeature> feature_frame;
     TicToc feature_ext_time;
     for (size_t i = 0; i < v_laser_cloud_in.size(); i++)
     {
@@ -121,6 +119,7 @@ void Estimator::inputCloud(const double &t,
     const PointCloud &laser_cloud_in0)
 {
     frame_cnt_++;
+    printf("%d \n", frame_cnt_);
 
     m_buf_.lock();
     std::vector<cloudFeature> feature_frame;
@@ -203,24 +202,25 @@ void Estimator::processMeasurements()
                 {
                     for (size_t i = 0; i < NUM_OF_LASER; i++)
                     {
-                        Pose calib_ext;
+                        Pose calib_result;
                         if ((!initial_extrinsics_.cov_rot_state_[i]) &&
-                            (initial_extrinsics_.calibExRotation(pose_prev_cur_[0], pose_prev_cur_[i], i, calib_ext)))
+                            (initial_extrinsics_.calibExRotation(pose_prev_cur_[0], pose_prev_cur_[i], i, calib_result)))
                         {
                             initial_extrinsics_.setCovRotation(i);
-                            ROS_WARN_STREAM("initial extrinsic rotation of laser " << i << ": " << calib_ext);
                             ROS_WARN_STREAM("number of poses " << frame_cnt_);
-                            pose_ext_[i].q_ = calib_ext.q_;
-                            pose_ext_[i].t_ = calib_ext.t_;
-                            QBL[i] = calib_ext.q_;
-                            TBL[i] = calib_ext.t_;
-                            initial_extrinsics_.saveStatistics("/home/jjiao/catkin_ws/src/localization/M-LOAM/log/initial_extrinsics.csv");
+                            ROS_WARN_STREAM("initial extrinsic of laser " << i << ": " << calib_result);
+                            pose_base_laser_[i] = Pose(calib_result.q_, calib_result.t_, calib_result.td_);
+                            QBL[i] = calib_result.q_;
+                            TBL[i] = calib_result.t_;
+                            TDBL[i] = calib_result.td_;
                         }
                     }
                     if (initial_extrinsics_.full_cov_rot_state_)
                     {
                         ROS_WARN("all initial extrinsic rotation calib success");
+                        initial_extrinsics_.saveStatistics(pose_prev_cur_);
                         ESTIMATE_EXTRINSIC = 1;
+                        solver_flag_ = NON_LINEAR;
                     }
                 }
                 printf("whole calib rot %f ms\n", t_calib_ext.toc());
@@ -237,15 +237,16 @@ void Estimator::processMeasurements()
             // }
 
             // TODO: give extrinsics from base to laser
-            for (size_t i = 0; i < NUM_OF_LASER; i++)
-            {
-                pose_base_laser_[i].q_ = QBL[i];
-            }
+            // for (size_t i = 0; i < NUM_OF_LASER; i++)
+            // {
+            //     pose_base_laser_[i].q_ = QBL[i];
+            // }
 
             // -----------------
             // print and publish current result
 
-            // printStatistics(*this, 0);
+            printStatistics(*this, 0);
+
             std_msgs::Header header;
             header.frame_id = "world";
             header.stamp = ros::Time(cur_feature_.first);
@@ -272,3 +273,7 @@ void Estimator::processMeasurements()
         std::this_thread::sleep_for(dura);
     }
 }
+
+
+
+//

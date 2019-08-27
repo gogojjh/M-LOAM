@@ -10,6 +10,7 @@
 #pragma once
 
 #include <iostream>
+#include <iomanip>
 #include <vector>
 #include <fstream>
 #include <map>
@@ -87,6 +88,7 @@ extern double ROI_RANGE;
 extern std::vector<Eigen::Matrix3d> RBL;
 extern std::vector<Eigen::Quaterniond> QBL;
 extern std::vector<Eigen::Vector3d> TBL;
+extern std::vector<double> TDBL;
 
 void readParameters(std::string config_file);
 

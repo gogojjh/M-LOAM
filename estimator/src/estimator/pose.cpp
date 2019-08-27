@@ -29,6 +29,6 @@ Pose Pose::operator * (const Pose &pose)
 ostream & operator << (ostream &out, const Pose &pose)
 {
     out << "q: " << pose.q_.x() << " " << pose.q_.y() << " " << pose.q_.z() << " " << pose.q_.w()
-        << ", t: " << pose.t_.transpose() << ", dt: " << pose.dt_;
+        << ", t: " << pose.t_.transpose() << ", td: " << pose.td_;
     return out;
 }

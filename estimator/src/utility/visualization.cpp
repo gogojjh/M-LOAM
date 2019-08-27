@@ -100,20 +100,32 @@ void printStatistics(const Estimator &estimator, double t)
 {
     if (estimator.solver_flag_ != Estimator::SolverFlag::NON_LINEAR)
         return;
+
     //printf("position: %f, %f, %f\r", estimator.Ps[WINDOW_SIZE].x(), estimator.Ps[WINDOW_SIZE].y(), estimator.Ps[WINDOW_SIZE].z());
     // ROS_DEBUG_STREAM("position: " << estimator.Ps[WINDOW_SIZE].transpose());
     // ROS_DEBUG_STREAM("orientation: " << estimator.Vs[WINDOW_SIZE].transpose());
-    // if (ESTIMATE_EXTRINSIC)
-    // {
+    if (ESTIMATE_EXTRINSIC)
+    {
+        ofstream fout(EX_CALIB_RESULT_PATH.c_str(), ios::out);
+        fout.setf(ios::fixed, ios::floatfield);
+        fout.precision(5);
+        for (int i = 0; i < NUM_OF_LASER; i++)
+        {
+            fout << estimator.pose_base_laser_[i].q_.x() << ","
+                << estimator.pose_base_laser_[i].q_.y() << ","
+                << estimator.pose_base_laser_[i].q_.z() << ","
+                << estimator.pose_base_laser_[i].q_.w() << ","
+                << estimator.pose_base_laser_[i].t_(0) << ","
+                << estimator.pose_base_laser_[i].t_(1) << ","
+                << estimator.pose_base_laser_[i].t_(2) << std::endl;
+        }
+
     //     cv::FileStorage fs(EX_CALIB_RESULT_PATH, cv::FileStorage::WRITE);
-    //     for (int i = 0; i < NUM_OF_CAM; i++)
-    //     {
     //         //ROS_DEBUG("calibration result for camera %d", i);
-    //         ROS_DEBUG_STREAM("extirnsic tic: " << estimator.tic[i].transpose());
-    //         ROS_DEBUG_STREAM("extrinsic ric: " << Utility::R2ypr(estimator.ric[i]).transpose());
+    //         ROS_DEBUG_STREAM("extirnsic tic: " << estimator.pose_base_laser_[i].t_.transpose());
+    //         ROS_DEBUG_STREAM("extrinsic ric: " << Utility::R2ypr(estimator.pose_base_laser_[i].q_.toRotationMatrix()).transpose());
     //
-    //         Eigen::Matrix4d eigen_T = Eigen::Matrix4d::Identity();
-    //         eigen_T.block<3, 3>(0, 0) = estimator.ric[i];
+    //         eigen_T.block<3, 3>(0, 0) = estimator.pose_base_laser_[i].q_;
     //         eigen_T.block<3, 1>(0, 3) = estimator.tic[i];
     //         cv::Mat cv_T;
     //         cv::eigen2cv(eigen_T, cv_T);
@@ -123,7 +135,8 @@ void printStatistics(const Estimator &estimator, double t)
     //             fs << "body_T_cam1" << cv_T ;
     //     }
     //     fs.release();
-    // }
+        fout.close();
+    }
     //
     // static double sum_of_time = 0;
     // static int sum_of_calculation = 0;
@@ -141,7 +154,8 @@ void printStatistics(const Estimator &estimator, double t)
 
 void pubOdometry(const Estimator &estimator, const std_msgs::Header &header)
 {
-    if (estimator.solver_flag_ == Estimator::SolverFlag::INITIAL)
+    if ((estimator.solver_flag_ == Estimator::SolverFlag::INITIAL) ||
+        (estimator.solver_flag_ == Estimator::SolverFlag::NON_LINEAR))
     {
         for (size_t i = 0; i < NUM_OF_LASER; i++)
         {

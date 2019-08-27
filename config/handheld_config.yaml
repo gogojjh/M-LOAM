@@ -1,11 +1,12 @@
 %YAML:1.0
 
+###############################################
 #common parameters
 imu: 0
 num_of_cam: 2
 
 imu_topic: ""
-output_path: "/home/jjiao/catkin_ws/output"
+output_path: "/home/jjiao/catkin_ws/src/localization/M-LOAM/log/"
 
 #Multiple thread support
 multiple_thread: 0
@@ -30,10 +31,8 @@ acc_w: 0.001         # accelerometer bias random work noise standard deviation. 
 gyr_w: 1.0e-4       # gyroscope bias random work noise standard deviation.     #4.0e-5
 g_norm: 9.81007     # gravity magnitude
 
-#unsynchronization parameters
-estimate_td: 0                      # online estimate time offset between camera and imu
-td: 0.0                             # initial value of time offset. unit: s. readed image clock + td = real image clock (IMU clock)
 
+###############################################
 # laser parameters
 num_of_laser: 2
 n_scans: 16
@@ -47,17 +46,18 @@ body_T_laser: !!opencv-matrix
    rows: 2
    cols: 7
    dt: d
-   # data: [0, 0, 0, 1, 0, 0, 0,
-   #        0, 0, 0, 1, 0, 0, 0] # qx qy qz qw px py pz
-   data: [-0.257443, 0.001306, -0.006396, 0.966271, -0.014772, 0.268227, -0.000462,
-          0.257476, 0.002049, 0.006198, 0.966263, 0.014772, -0.268227, 0.000462]
+   data: [0, 0, 0, 1, 0, 0, 0,
+          0, 0, 0, 1, 0, 0, 0] # qx qy qz qw px py pz
+   # data: [-0.257443, 0.001306, -0.006396, 0.966271, -0.014772, 0.268227, -0.000462,
+   #        0.257476, 0.002049, 0.006198, 0.966263, 0.014772, -0.268227, 0.000462]
 
-# body_T_laser: !!opencv-matrix
-#    rows: 1
-#    cols: 7
-#    dt: d
-#    data: [0, 0, 0, 1, 0, 0, 0]
-   # data: [0.257476, 0.002049, 0.006198, 0.966263, 0.014772, -0.268227, 0.000462]
+#unsynchronization parameters
+estimate_td: 1                      # online estimate time offset between camera and imu
+td: !!opencv-matrix                 # initial value of time offset. unit: s. readed image clock + td = real image clock (IMU clock)
+   rows: 1
+   cols: 2
+   dt: d
+   data: [0, 0]
 
 cloud0_topic: "/left/velodyne_points"
 cloud1_topic: "/right/velodyne_points"
