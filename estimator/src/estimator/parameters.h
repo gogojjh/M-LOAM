@@ -30,7 +30,6 @@
 using namespace std;
 
 const double FOCAL_LENGTH = 460.0;
-const int WINDOW_SIZE = 10;
 const int NUM_OF_F = 1000;
 //#define UNIT_SPHERE_ERROR
 
@@ -76,6 +75,8 @@ extern int FLOW_BACK;
 // LiDAR
 extern int NUM_OF_LASER;
 extern int N_SCANS;
+
+extern int WINDOW_SIZE;
 
 extern float SCAN_PERIOD;
 extern float DISTANCE_SQ_THRESHOLD;

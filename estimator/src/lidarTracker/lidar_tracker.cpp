@@ -115,6 +115,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         //ceres::LossFunction *loss_function = NULL;
         ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1);
         ceres::LocalParameterization *q_parameterization = new ceres::EigenQuaternionParameterization();
+
         ceres::Problem::Options problem_options;
         ceres::Problem problem(problem_options);
         problem.AddParameterBlock(para_q, 4, q_parameterization);

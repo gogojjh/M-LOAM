@@ -37,10 +37,15 @@ g_norm: 9.81007     # gravity magnitude
 num_of_laser: 2
 n_scans: 16
 
+# window sizes
+window_size: 7
+opt_window_size: 5
+
 # Extrinsic parameter between IMU and Camera.
 estimate_extrinsic: 2   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
+opt_extrinsic: 1
 
 body_T_laser: !!opencv-matrix
    rows: 2
@@ -52,7 +57,9 @@ body_T_laser: !!opencv-matrix
    #        0.257476, 0.002049, 0.006198, 0.966263, 0.014772, -0.268227, 0.000462]
 
 #unsynchronization parameters
-estimate_td: 1                      # online estimate time offset between camera and imu
+estimate_td: 0                      # 0 have an accurate time offset among sensors
+                                    # 1 online estimate time offset among sensors
+
 td: !!opencv-matrix                 # initial value of time offset. unit: s. readed image clock + td = real image clock (IMU clock)
    rows: 1
    cols: 2

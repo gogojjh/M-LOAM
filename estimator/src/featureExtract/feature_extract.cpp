@@ -25,6 +25,10 @@ bool comp (int i,int j) { return (cloud_curvature[i] < cloud_curvature[j]); }
 FeatureExtract::FeatureExtract()
 {
     half_passed_ = false;
+
+    down_size_filter_corner_.setLeafSize(0.2, 0.2, 0.2);
+    down_size_filter_surf_.setLeafSize(0.4, 0.4, 0.4);
+    down_size_filter_map_.setLeafSize(0.6, 0.6, 0.6);
 }
 
 void FeatureExtract::cloudRearrange(const PointCloud &laser_cloud_in)
@@ -288,10 +292,10 @@ cloudFeature FeatureExtract::extractCloud(const double &cur_time, const PointClo
             }
         }
         PointICloud surf_points_less_flat_scanDS;
-        pcl::VoxelGrid<PointI> dosn_size_filter;
-        dosn_size_filter.setInputCloud(surf_points_less_flat_scan);
-        dosn_size_filter.setLeafSize(0.2, 0.2, 0.2);
-        dosn_size_filter.filter(surf_points_less_flat_scanDS);
+        pcl::VoxelGrid<PointI> down_size_filter;
+        down_size_filter.setInputCloud(surf_points_less_flat_scan);
+        down_size_filter.setLeafSize(0.2, 0.2, 0.2);
+        down_size_filter.filter(surf_points_less_flat_scanDS);
         surf_points_less_flat += surf_points_less_flat_scanDS;
     }
     // printf("sort q time %f ms \n", t_q_sort);

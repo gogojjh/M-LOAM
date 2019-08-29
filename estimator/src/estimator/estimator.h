@@ -30,6 +30,7 @@
 #include "feature_manager.h"
 #include "../utility/utility.h"
 #include "../utility/tic_toc.h"
+#include "../utility/CircularBuffer.h"
 #include "../initial/solve_5pts.h"
 #include "../initial/initial_sfm.h"
 #include "../initial/initial_alignment.h"
@@ -82,7 +83,7 @@ class Estimator
 
     // extrinsic from base to laser
     std::vector<Pose> calib_base_laser_;
-    
+
     // pose from laser at k=0 to laser at k=K
     std::vector<std::vector<Pose> > pose_laser_cur_;
     // pose from laser at k=K-1 to laser at k=K
@@ -104,6 +105,17 @@ class Estimator
     std::queue<std::pair<double, std::vector<cloudFeature> > > feature_buf_;
 
     pair<double, std::vector<cloudFeature> > prev_feature_, cur_feature_;
+
+    std::vector<CircularBuffer<std_msgs::Header> > header_;
+
+    std::vector<CircularBuffer<common::PointICloud> > laser_cloud_stack_;
+    std::vector<CircularBuffer<common::PointICloud> > corner_points_stack_;
+    std::vector<CircularBuffer<common::PointICloud> > surf_points_stack_;
+
+    // CircularBuffer{WINDOW_SIZE + 1};
+    // CircularBuffer{WINDOW_SIZE + 1};
+    // CircularBuffer{WINDOW_SIZE + 1};
+
 
 };
 

@@ -50,6 +50,11 @@ void Estimator::clearState()
 
     initial_extrinsics_.clearState();
 
+    header_.clear();
+    laser_cloud_stack_.clear();
+    corner_points_stack_.clear();
+    surf_points_stack_.clear();
+
     m_process_.unlock();
 }
 
@@ -67,6 +72,18 @@ void Estimator::setParameter()
     }
 
     initial_extrinsics_.setParameter();
+
+    header_.resize(NUM_OF_LASER);
+    laser_cloud_stack_.resize(NUM_OF_LASER);
+    corner_points_stack_.resize(NUM_OF_LASER);
+    surf_points_stack_.resize(NUM_OF_LASER);
+    for (int i = 0; i < NUM_OF_LASER; i++)
+    {
+        header_[i].resize(WINDOW_SIZE + 1);
+        laser_cloud_stack_[i].resize(WINDOW_SIZE + 1);
+        corner_points_stack_[i].resize(WINDOW_SIZE + 1);
+        surf_points_stack_[i].resize(WINDOW_SIZE + 1);
+    }
 
     std::cout << "MULTIPLE_THREAD is " << MULTIPLE_THREAD << '\n';
     if (MULTIPLE_THREAD && !init_thread_flag_)
@@ -182,7 +199,6 @@ void Estimator::processMeasurements()
 
             prev_time_ = cur_time_;
             prev_feature_.first = prev_time_;
-            // prev_feature_.second = cur_feature_.second;
             prev_feature_.second.clear();
             for (size_t i = 0; i < cur_feature_.second.size(); i++)
             {
@@ -194,6 +210,7 @@ void Estimator::processMeasurements()
                 }
                 prev_feature_.second.push_back(tmp_cloud_feature);
             }
+            // prev_feature_.second = cur_feature_.second;
 
             // -----------------
             // initialize extrinsics
@@ -231,14 +248,40 @@ void Estimator::processMeasurements()
 
             // -----------------
             // nonlinear optimization
-            if (solver_flag_ == INITIAL)
+            switch (solver_flag_)
             {
+                case INITIAL:
+                {
+                    break;
+                }
+                case NON_LINEAR:
+                {
+                    // local optimization: optimize the relative LiDAR measurments
+                    TicToc t_solve;
 
-            } else if (solver_flag_ == NON_LINEAR)
-            {
-                TicToc t_solve;
-                ROS_DEBUG("solver costs: %fms", t_solve.toc());
+                    // lidar_optimizer_.OptimizeLocalMap(cur_feature_);
+                    // pose_world_laser_[];
+
+                    // for (size_t i = 0; i < NUM_OF_LASER; i++)
+                    // {
+                    //     PointICloud corner_points_stack_downsampled_;
+                    //     PointICloud &corner_points = cur_feature_.second[i]["corner_points_less_sharp"];
+                    //     f_extract_.down_size_filter_corner_.setInputCloud(boost::make_share<PointICloud>(corner_points));
+                    //     f_extract_.down_size_filter_corner_.filter(corner_points_stack_downsampled_);
+                    //     corner_points_stack_[i].push(corner_points_stack_downsampled_);
+                    //     corner_points_stack_size_[i].push(corner_points_stack_downsampled_.size());
+                    //
+                    //     PointICloud surf_points_stack_downsampled_;
+                    //     PointICloud &surf_points = cur_feature_.second[i]["surf_points_less_flat"];
+                    //     f_extract_.down_size_filter_surf_.setInputCloud(boost::make_share<PointICloud>(surf_points));
+                    //     f_extract_.down_size_filter_surf_.filter(surf_points_stack_downsampled_);
+                    //     surf_points_stack_[i].push(surf_points_stack_downsampled_);
+                    //     surf_points_stack_size_[i].push(surf_points_stack_downsampled_.size());
+                    // }
+                    ROS_DEBUG("solver costs: %fms", t_solve.toc());
+                }
             }
+
 
             // -----------------
             // print and publish current result

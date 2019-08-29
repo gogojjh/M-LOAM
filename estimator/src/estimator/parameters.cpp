@@ -50,6 +50,8 @@ int FLOW_BACK;
 int NUM_OF_LASER;
 int N_SCANS;
 
+int WINDOW_SIZE;
+
 float SCAN_PERIOD;
 float DISTANCE_SQ_THRESHOLD;
 float NEARBY_SCAN;
@@ -120,6 +122,8 @@ void readParameters(std::string config_file)
         printf("num_of_cam should be 1 or 2\n");
         assert(0);
     }
+
+    WINDOW_SIZE = fsSettings["window_size"];
 
     ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];
     if (ESTIMATE_EXTRINSIC == 2)
