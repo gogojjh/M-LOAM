@@ -38,7 +38,7 @@ void InitialExtrinsics::setParameter()
 
     v_rot_cov_.resize(NUM_OF_LASER);
 
-    frame_cnt_ = 0;
+    pose_cnt_ = 0;
 }
 
 bool InitialExtrinsics::setCovRotation(const size_t &idx)
@@ -80,7 +80,7 @@ bool InitialExtrinsics::calibExRotation(
     assert(v_pose_ref.size() == v_pose_data.size());
     assert(idx < cov_rot_state_.size());
 
-    printf("frame_cnt_ before: %d\n", v_pose_ref.size());
+    printf("pose_cnt_ before: %d\n", v_pose_ref.size());
 
     std::vector<Pose> v_pose_ref_filter, v_pose_data_filter;
     v_pose_ref_filter.resize(v_pose_ref.size());
@@ -104,15 +104,15 @@ bool InitialExtrinsics::calibExRotation(
         v_pose_data_filter.resize(j);
     }
 
-    frame_cnt_ = v_pose_ref_filter.size();
-    printf("frame_cnt_ after: %d\n", frame_cnt_);
+    pose_cnt_ = v_pose_ref_filter.size();
+    printf("pose_cnt_ after: %d\n", pose_cnt_);
 
     // -------------------------------
     // initial rotation
     TicToc t_calib_rot;
-    Eigen::MatrixXd A(frame_cnt_ * 4, 4); // a cumulative Q matrix
+    Eigen::MatrixXd A(pose_cnt_ * 4, 4); // a cumulative Q matrix
     A.setZero();
-    for (int i = 0; i < frame_cnt_; i++)
+    for (int i = 0; i < pose_cnt_; i++)
     {
         Pose &pose_ref = v_pose_ref_filter[i];
         Pose &pose_data = v_pose_data_filter[i];
@@ -186,7 +186,7 @@ bool InitialExtrinsics::calibExRotation(
     printf("calib ext rot: %f ms\n", t_calib_rot.toc());
     v_rot_cov_[idx].push_back(rot_cov(1));
 
-    if (frame_cnt_ >= WINDOW_SIZE && rot_cov(1) > 0.25)
+    if (pose_cnt_ >= WINDOW_SIZE && rot_cov(1) > 0.25)
     {
         if (PLANAR_MOVEMENT)
             calibExTranslationPlanar(v_pose_ref_filter, v_pose_data_filter, idx);
@@ -211,9 +211,9 @@ void InitialExtrinsics::calibExTranslation(
     const size_t &idx)
 {
     const Eigen::Quaterniond &q_zyx = calib_bl_[idx].q_;
-    Eigen::MatrixXd A = Eigen::MatrixXd::Zero(frame_cnt_ * 3, 3);
-    Eigen::MatrixXd b = Eigen::MatrixXd::Zero(frame_cnt_ * 3, 1);
-    for (size_t i = 0; i < frame_cnt_; i++)
+    Eigen::MatrixXd A = Eigen::MatrixXd::Zero(pose_cnt_ * 3, 3);
+    Eigen::MatrixXd b = Eigen::MatrixXd::Zero(pose_cnt_ * 3, 1);
+    for (size_t i = 0; i < pose_cnt_; i++)
     {
         A.block<3, 3>(i * 3, 0) = v_pose_ref[i].q_.toRotationMatrix() - Eigen::Matrix3d::Identity();
         b.block<3, 1>(i * 3, 0) = q_zyx * v_pose_data[i].t_ - v_pose_ref[i].t_;
@@ -229,9 +229,9 @@ void InitialExtrinsics::calibExTranslationPlanar(
     const size_t &idx)
 {
     const Eigen::Quaterniond &q_yx = calib_bl_[idx].q_;
-    Eigen::MatrixXd G = Eigen::MatrixXd::Zero(frame_cnt_ * 2, 4);
-    Eigen::MatrixXd w = Eigen::MatrixXd::Zero(frame_cnt_ * 2, 1);
-    for (int i = 0; i < frame_cnt_; ++i)
+    Eigen::MatrixXd G = Eigen::MatrixXd::Zero(pose_cnt_ * 2, 4);
+    Eigen::MatrixXd w = Eigen::MatrixXd::Zero(pose_cnt_ * 2, 1);
+    for (int i = 0; i < pose_cnt_; ++i)
     {
         Eigen::Matrix2d J = v_pose_ref[i].q_.toRotationMatrix().block<2,2>(0, 0) - Eigen::Matrix2d::Identity();
         Eigen::Vector3d n = q_yx.toRotationMatrix().row(2);

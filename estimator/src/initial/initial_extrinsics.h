@@ -44,7 +44,7 @@ public:
 
 	void decomposeE(cv::Mat E, cv::Mat_<double> &R1, cv::Mat_<double> &R2, cv::Mat_<double> &t1, cv::Mat_<double> &t2);
 
-	size_t frame_cnt_;
+	size_t pose_cnt_;
 
 	std::vector<Pose> calib_bl_;
 

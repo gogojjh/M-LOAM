@@ -82,10 +82,10 @@ void pubPointCloud(const Estimator &estimator, const std_msgs::Header &header)
     PointICloud laser_cloud, corner_points_sharp, corner_points_less_sharp, surf_points_flat, surf_points_less_flat;
     for (size_t i = 0; i < estimator.cur_feature_.second.size(); i++)
     {
-        cloudFeature cloud_feature_trans = transformCloudFeature(estimator.cur_feature_.second[i], estimator.calib_base_laser_[i].T_.cast<float>());
-        for (auto &p: cloud_feature_trans["laser_cloud"].points)
-            p.intensity = 255.0 * i / NUM_OF_LASER;
-            
+        Pose pose_ext(estimator.qbl_[i], estimator.tbl_[i], estimator.tdbl_[i]);
+        cloudFeature cloud_feature_trans = transformCloudFeature(estimator.cur_feature_.second[i], pose_ext.T_.cast<float>());
+        for (auto &p: cloud_feature_trans["laser_cloud"].points) p.intensity = 255.0 * i / NUM_OF_LASER;
+
         laser_cloud += cloud_feature_trans["laser_cloud"];
         corner_points_sharp += cloud_feature_trans["corner_points_sharp"];
         corner_points_less_sharp += cloud_feature_trans["corner_points_less_sharp"];
@@ -114,13 +114,13 @@ void printStatistics(const Estimator &estimator, double t)
         fout.precision(5);
         for (int i = 0; i < NUM_OF_LASER; i++)
         {
-            fout << estimator.calib_base_laser_[i].q_.x() << ","
-                << estimator.calib_base_laser_[i].q_.y() << ","
-                << estimator.calib_base_laser_[i].q_.z() << ","
-                << estimator.calib_base_laser_[i].q_.w() << ","
-                << estimator.calib_base_laser_[i].t_(0) << ","
-                << estimator.calib_base_laser_[i].t_(1) << ","
-                << estimator.calib_base_laser_[i].t_(2) << std::endl;
+            fout << estimator.qbl_[i].x() << ","
+                << estimator.qbl_[i].y() << ","
+                << estimator.qbl_[i].z() << ","
+                << estimator.qbl_[i].w() << ","
+                << estimator.tbl_[i](0) << ","
+                << estimator.tbl_[i](1) << ","
+                << estimator.tbl_[i](2) << std::endl;
         }
 
     //     cv::FileStorage fs(EX_CALIB_RESULT_PATH, cv::FileStorage::WRITE);
@@ -162,18 +162,17 @@ void pubOdometry(const Estimator &estimator, const std_msgs::Header &header)
     {
         for (size_t i = 0; i < NUM_OF_LASER; i++)
         {
-            nav_msgs::Odometry ext_base_to_laser;
-            ext_base_to_laser.header = header;
-            ext_base_to_laser.header.frame_id = "/world";
-            ext_base_to_laser.child_frame_id = "/laser_init_" + std::to_string(i);
-            Pose pose_base_laser = estimator.calib_base_laser_[i];
-            ext_base_to_laser.pose.pose.orientation.x = pose_base_laser.q_.x();
-            ext_base_to_laser.pose.pose.orientation.y = pose_base_laser.q_.y();
-            ext_base_to_laser.pose.pose.orientation.z = pose_base_laser.q_.z();
-            ext_base_to_laser.pose.pose.orientation.w = pose_base_laser.q_.w();
-            ext_base_to_laser.pose.pose.position.x = pose_base_laser.t_.x();
-            ext_base_to_laser.pose.pose.position.y = pose_base_laser.t_.y();
-            ext_base_to_laser.pose.pose.position.z = pose_base_laser.t_.z();
+            nav_msgs::Odometry ext_base_to_sensor;
+            ext_base_to_sensor.header = header;
+            ext_base_to_sensor.header.frame_id = "/world";
+            ext_base_to_sensor.child_frame_id = "/laser_init_" + std::to_string(i);
+            ext_base_to_sensor.pose.pose.orientation.x = estimator.qbl_[i].x();
+            ext_base_to_sensor.pose.pose.orientation.y = estimator.qbl_[i].y();
+            ext_base_to_sensor.pose.pose.orientation.z = estimator.qbl_[i].z();
+            ext_base_to_sensor.pose.pose.orientation.w = estimator.qbl_[i].w();
+            ext_base_to_sensor.pose.pose.position.x = estimator.tbl_[i](0);
+            ext_base_to_sensor.pose.pose.position.y = estimator.tbl_[i](1);
+            ext_base_to_sensor.pose.pose.position.z = estimator.tbl_[i](2);
             pub_ext_base_to_sensor.publish(ext_base_to_laser);
             publishTF(ext_base_to_laser);
 
