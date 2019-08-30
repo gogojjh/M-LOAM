@@ -292,10 +292,8 @@ cloudFeature FeatureExtract::extractCloud(const double &cur_time, const PointClo
             }
         }
         PointICloud surf_points_less_flat_scanDS;
-        pcl::VoxelGrid<PointI> down_size_filter;
-        down_size_filter.setInputCloud(surf_points_less_flat_scan);
-        down_size_filter.setLeafSize(0.2, 0.2, 0.2);
-        down_size_filter.filter(surf_points_less_flat_scanDS);
+        down_size_filter_corner_.setInputCloud(surf_points_less_flat_scan);
+        down_size_filter_corner_.filter(surf_points_less_flat_scanDS);
         surf_points_less_flat += surf_points_less_flat_scanDS;
     }
     // printf("sort q time %f ms \n", t_q_sort);

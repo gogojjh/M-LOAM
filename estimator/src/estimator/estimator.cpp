@@ -45,14 +45,17 @@ void Estimator::clearState()
 
     pose_laser_cur_.clear();
     pose_prev_cur_.clear();
-    pose_ext_.clear();
+
+    qbl_.clear();
+    tbl_.clear();
+    tdbl_.clear();
 
     initial_extrinsics_.clearState();
 
-    header_.clear();
-    laser_cloud_stack_.clear();
-    corner_points_stack_.clear();
-    surf_points_stack_.clear();
+    // header_.clear();
+    // laser_cloud_stack_.clear();
+    // corner_points_stack_.clear();
+    // surf_points_stack_.clear();
 
     m_process_.unlock();
 }
@@ -63,26 +66,31 @@ void Estimator::setParameter()
 
     pose_laser_cur_.resize(NUM_OF_LASER);
     pose_prev_cur_.resize(NUM_OF_LASER);
-    pose_ext_.resize(NUM_OF_LASER);
+
+    qbl_.resize(NUM_OF_LASER);
+    tbl_.resize(NUM_OF_LASER);
+    tdbl_.resize(NUM_OF_LASER);
     for (int i = 0; i < NUM_OF_LASER; i++)
     {
-        pose_ext_[i] = Pose(QBL[i], TBL[i], TDBL[i]);
-        cout << " given extrinsic base_to_laser_" << i << ": " << pose_ext_[i] << endl;
+        qbl_[i] = QBL[i];
+        tbl_[i] = TBL[i];
+        tdbl_[i] = TDBL[i];
+        cout << " given extrinsic base_to_laser_" << i << ": " << Pose(QBL[i], TBL[i], TDBL[i]) << endl;
     }
 
     initial_extrinsics_.setParameter();
 
-    header_.resize(NUM_OF_LASER);
-    laser_cloud_stack_.resize(NUM_OF_LASER);
-    corner_points_stack_.resize(NUM_OF_LASER);
-    surf_points_stack_.resize(NUM_OF_LASER);
-    for (int i = 0; i < NUM_OF_LASER; i++)
-    {
-        header_[i].resize(WINDOW_SIZE + 1);
-        laser_cloud_stack_[i].resize(WINDOW_SIZE + 1);
-        corner_points_stack_[i].resize(WINDOW_SIZE + 1);
-        surf_points_stack_[i].resize(WINDOW_SIZE + 1);
-    }
+    // header_.resize(NUM_OF_LASER);
+    // laser_cloud_stack_.resize(NUM_OF_LASER);
+    // corner_points_stack_.resize(NUM_OF_LASER);
+    // surf_points_stack_.resize(NUM_OF_LASER);
+    // for (int i = 0; i < NUM_OF_LASER; i++)
+    // {
+    //     header_[i].resize(WINDOW_SIZE + 1);
+    //     laser_cloud_stack_[i].resize(WINDOW_SIZE + 1);
+    //     corner_points_stack_[i].resize(WINDOW_SIZE + 1);
+    //     surf_points_stack_[i].resize(WINDOW_SIZE + 1);
+    // }
 
     std::cout << "MULTIPLE_THREAD is " << MULTIPLE_THREAD << '\n';
     if (MULTIPLE_THREAD && !init_thread_flag_)
@@ -110,7 +118,7 @@ void Estimator::inputCloud(const double &t,
     const std::vector<PointCloud> &v_laser_cloud_in)
 {
     input_cloud_cnt_++;
-    printf("%d \n", input_cloud_cnt_);
+    ROS_WARN("input cloud: %d", input_cloud_cnt_);
 
     // TODO: to parallize it?
     m_buf_.lock();
@@ -134,7 +142,7 @@ void Estimator::inputCloud(const double &t,
     const PointCloud &laser_cloud_in0)
 {
     input_cloud_cnt_++;
-    printf("%d \n", input_cloud_cnt_);
+    ROS_WARN("input cloud: %d", input_cloud_cnt_);
 
     m_buf_.lock();
     std::vector<cloudFeature> feature_frame;
@@ -217,29 +225,33 @@ void Estimator::processMeasurements()
             {
                 case INITIAL:
                 {
-                    if (lidar_optimizer_.cir_buf_cnt_ == WINDOW_SIZE)
-                    {
+                    // if (b_system_inited_)
+                    // if (lidar_optimizer_.cir_buf_cnt_ == WINDOW_SIZE)
+                    // {
                         // -----------------
                         // initialize extrinsics
                         if (ESTIMATE_EXTRINSIC == 2)
                         {
-                            ROS_INFO("calibrating extrinsic param, rotation movement is needed");
+                            printf("calibrating extrinsic param, rotation movement is needed \n");
                             TicToc t_calib_ext;
+                            for (size_t i = 0; i < NUM_OF_LASER; i++)
+                                initial_extrinsics_.addPose(*(pose_prev_cur_[i].end()-1), i);
+
                             for (size_t i = 0; i < NUM_OF_LASER; i++)
                             {
                                 Pose calib_result;
                                 if ((!initial_extrinsics_.cov_rot_state_[i]) &&
-                                    (initial_extrinsics_.calibExRotation(pose_prev_cur_[0], pose_prev_cur_[i], i, calib_result)))
+                                    (initial_extrinsics_.calibExRotation(0, i, calib_result)))
                                 {
                                     initial_extrinsics_.setCovRotation(i);
-                                    ROS_WARN_STREAM("number of pose: " << pose_prev_cur_[0].size());
+                                    ROS_WARN_STREAM("number of pose: " << initial_extrinsics_.frame_cnt_);
                                     ROS_WARN_STREAM("initial extrinsic of laser_" << i << ": " << calib_result);
                                     qbl_[i] = calib_result.q_;
                                     tbl_[i] = calib_result.t_;
-                                    tdbl_[i] = calib_result.td_;
+                                    // tdbl_[i] = calib_result.td_;
                                     QBL[i] = calib_result.q_;
                                     TBL[i] = calib_result.t_;
-                                    TDBL[i] = calib_result.td_;
+                                    // TDBL[i] = calib_result.td_;
                                 }
                             }
                             if (initial_extrinsics_.full_cov_rot_state_)
@@ -247,17 +259,17 @@ void Estimator::processMeasurements()
                                 ROS_WARN("all initial extrinsic rotation calib success");
                                 ESTIMATE_EXTRINSIC = 1;
                                 solver_flag_ = NON_LINEAR;
-                                initial_extrinsics_.saveStatistics(pose_prev_cur_);
-                                lidar_optimizer_.OptimizeLocalMap(pose_prev_cur_);
+                                initial_extrinsics_.saveStatistics();
+                                // lidar_optimizer_.OptimizeLocalMap();
                             }
                             printf("whole initialize extrinsics %fms\n", t_calib_ext.toc());
                         }
-                        lidar_optimizer_.SlidingWindow();
-                    } else
-                    {
-                        lidar_optimizer_.slidingWindow();
-                        lidar_optimizer_.cir_buf_cnt_++;
-                    }
+                    //     lidar_optimizer_.SlidingWindow();
+                    // } else
+                    // {
+                    //     lidar_optimizer_.slidingWindow();
+                    //     lidar_optimizer_.cir_buf_cnt_++;
+                    // }
                     break;
                 }
                 case NON_LINEAR:

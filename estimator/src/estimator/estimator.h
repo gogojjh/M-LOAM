@@ -88,6 +88,10 @@ class Estimator
 
     std::vector<std::vector<Pose> > pose_base_cur_;
 
+    std::vector<Eigen::Quaterniond> qbl_;
+    std::vector<Eigen::Vector3d> tbl_;
+    std::vector<double> tdbl_;
+
     double prev_time_, cur_time_;
 
     double td_;
@@ -103,18 +107,6 @@ class Estimator
     std::queue<std::pair<double, std::vector<cloudFeature> > > feature_buf_;
 
     pair<double, std::vector<cloudFeature> > prev_feature_, cur_feature_;
-
-    std::vector<CircularBuffer<std_msgs::Header> > header_;
-
-    std::vector<CircularBuffer<common::PointICloud> > laser_cloud_stack_;
-    std::vector<CircularBuffer<common::PointICloud> > corner_points_stack_;
-    std::vector<CircularBuffer<common::PointICloud> > surf_points_stack_;
-
-    // CircularBuffer{WINDOW_SIZE + 1};
-    // CircularBuffer{WINDOW_SIZE + 1};
-    // CircularBuffer{WINDOW_SIZE + 1};
-
-
 };
 
 

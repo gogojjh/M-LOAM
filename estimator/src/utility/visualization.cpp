@@ -82,7 +82,7 @@ void pubPointCloud(const Estimator &estimator, const std_msgs::Header &header)
     PointICloud laser_cloud, corner_points_sharp, corner_points_less_sharp, surf_points_flat, surf_points_less_flat;
     for (size_t i = 0; i < estimator.cur_feature_.second.size(); i++)
     {
-        Pose pose_ext(estimator.qbl_[i], estimator.tbl_[i], estimator.tdbl_[i]);
+        Pose pose_ext(estimator.qbl_[i], estimator.tbl_[i]);
         cloudFeature cloud_feature_trans = transformCloudFeature(estimator.cur_feature_.second[i], pose_ext.T_.cast<float>());
         for (auto &p: cloud_feature_trans["laser_cloud"].points) p.intensity = 255.0 * i / NUM_OF_LASER;
 
@@ -173,8 +173,8 @@ void pubOdometry(const Estimator &estimator, const std_msgs::Header &header)
             ext_base_to_sensor.pose.pose.position.x = estimator.tbl_[i](0);
             ext_base_to_sensor.pose.pose.position.y = estimator.tbl_[i](1);
             ext_base_to_sensor.pose.pose.position.z = estimator.tbl_[i](2);
-            pub_ext_base_to_sensor.publish(ext_base_to_laser);
-            publishTF(ext_base_to_laser);
+            pub_ext_base_to_sensor.publish(ext_base_to_sensor);
+            publishTF(ext_base_to_sensor);
 
             nav_msgs::Odometry laser_odometry;
             laser_odometry.header = header;

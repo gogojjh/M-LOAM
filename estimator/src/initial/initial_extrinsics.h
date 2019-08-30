@@ -32,21 +32,20 @@ public:
 	void clearState();
 	void setParameter();
 
-	bool calibExRotation(const std::vector<Pose> &v_pose_ref, const std::vector<Pose> &v_pose_data, const size_t &idx, Pose &calib_result);
-	void calibExTranslation(const std::vector<Pose> &v_pose_ref, const std::vector<Pose> &v_pose_data, const size_t &idx);
-	void calibExTranslationPlanar(const std::vector<Pose> &v_pose_ref, const std::vector<Pose> &v_pose_data, const size_t &idx);
+	void addPose(const Pose &pose, const size_t &idx);
 
-	void calibTimeDelay(const std::vector<Pose> &v_pose_ref, const std::vector<Pose> &v_pose_data, const size_t &idx);
+	bool calibExRotation(const size_t &idx_ref, const size_t &idx_data, Pose &calib_result);
+	void calibExTranslation(const size_t &idx_ref, const size_t &idx_data);
+	void calibExTranslationPlanar(const size_t &idx_ref, const size_t &idx_data);
+	void calibTimeDelay(const size_t &idx_ref, const size_t &idx_data);
 
 	bool setCovRotation(const size_t &idx);
 	bool checkScrewMotion(const Pose &pose_ref, const Pose &pose_data);
-	void saveStatistics(const std::vector<std::vector<Pose> > &v_pose);
+	void saveStatistics();
 
 	void decomposeE(cv::Mat E, cv::Mat_<double> &R1, cv::Mat_<double> &R2, cv::Mat_<double> &t1, cv::Mat_<double> &t2);
 
-	size_t pose_cnt_;
-
-	std::vector<Pose> calib_bl_;
+	std::vector<Pose> calib_ext_;
 
 	std::vector<double> v_rd_;
 	std::vector<double> v_td_;
@@ -55,4 +54,11 @@ public:
 
 	std::vector<bool> cov_rot_state_;
 	bool full_cov_rot_state_;
+
+	std::vector<std::vector<Pose> > v_pose_;
+	// v_pose_[idx_ref][indices_[idx_data][i]], v_pose_[idx_data][indices_[idx_data][i]] as the screw motion pair
+	std::vector<std::vector<int> > indices_;
+
+
+	size_t frame_cnt_, pose_cnt_;
 };

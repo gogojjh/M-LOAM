@@ -41,11 +41,11 @@ public:
     void cloudRearrange(const common::PointCloud &laser_cloud_in);
     cloudFeature extractCloud(const double &cur_time, const common::PointCloud &laser_cloud_in);
 
-    pcl::VoxelGrid<pcl::PointI> down_size_filter_corner_;
-    pcl::VoxelGrid<pcl::PointI> down_size_filter_surf_;
-    pcl::VoxelGrid<pcl::PointI> down_size_filter_map_;
-
     std::vector<common::PointICloud> laser_cloud_scans_;
+    pcl::VoxelGrid<common::PointI> down_size_filter_corner_;
+    pcl::VoxelGrid<common::PointI> down_size_filter_surf_;
+    pcl::VoxelGrid<common::PointI> down_size_filter_map_;
+    
     int cloud_size_;
     bool half_passed_;
     TicToc t_whole_, t_prepare_, t_pts_;
