@@ -76,7 +76,10 @@ extern int FLOW_BACK;
 extern int NUM_OF_LASER;
 extern int N_SCANS;
 
+extern int IDX_REF;
+
 extern int WINDOW_SIZE;
+extern int OPT_WINDOW_SIZE;
 
 extern float SCAN_PERIOD;
 extern float DISTANCE_SQ_THRESHOLD;

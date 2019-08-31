@@ -42,7 +42,7 @@ window_size: 7
 opt_window_size: 5
 
 # Extrinsic parameter between IMU and Camera.
-estimate_extrinsic: 2   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+estimate_extrinsic: 1   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
 opt_extrinsic: 1
@@ -51,10 +51,10 @@ body_T_laser: !!opencv-matrix
    rows: 2
    cols: 7
    dt: d
-   data: [0, 0, 0, 1, 0, 0, 0,
-          0, 0, 0, 1, 0, 0, 0] # qx qy qz qw px py pz
-   # data: [-0.257443, 0.001306, -0.006396, 0.966271, -0.014772, 0.268227, -0.000462,
-   #        0.257476, 0.002049, 0.006198, 0.966263, 0.014772, -0.268227, 0.000462]
+   # data: [0, 0, 0, 1, 0, 0, 0,
+   #        0, 0, 0, 1, 0, 0, 0] # qx qy qz qw px py pz
+   data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
+          0.37105, 0.00235, 0.05587, 0.92693, 0.02267, -0.60669, -0.19812]
 
 #unsynchronization parameters
 estimate_td: 0                      # 0 have an accurate time offset among sensors
@@ -65,6 +65,8 @@ td: !!opencv-matrix                 # initial value of time offset. unit: s. rea
    cols: 2
    dt: d
    data: [0, 0]
+
+idx_ref: 0
 
 cloud0_topic: "/left/velodyne_points"
 cloud1_topic: "/right/velodyne_points"

@@ -50,7 +50,10 @@ int FLOW_BACK;
 int NUM_OF_LASER;
 int N_SCANS;
 
+int IDX_REF;
+
 int WINDOW_SIZE;
+int OPT_WINDOW_SIZE;
 
 float SCAN_PERIOD;
 float DISTANCE_SQ_THRESHOLD;
@@ -124,6 +127,7 @@ void readParameters(std::string config_file)
     }
 
     WINDOW_SIZE = fsSettings["window_size"];
+    OPT_WINDOW_SIZE = fsSettings["opt_window_size"];
 
     ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];
     if (ESTIMATE_EXTRINSIC == 2)
@@ -169,6 +173,8 @@ void readParameters(std::string config_file)
     LASER_SYNC_THRESHOLD = fsSettings["laser_sync_threshold"];
     N_SCANS = fsSettings["n_scans"];
     ROI_RANGE = fsSettings["roi_range"];
+
+    IDX_REF = fsSettings["idx_ref"];
 
     SCAN_PERIOD = fsSettings["scan_period"];
     DISTANCE_SQ_THRESHOLD = fsSettings["distance_sq_threshold"];

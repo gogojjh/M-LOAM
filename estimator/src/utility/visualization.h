@@ -33,12 +33,17 @@
 
 #include "common/publisher.hpp"
 
+// point cloud
 extern ros::Publisher pub_laser_cloud;
 extern ros::Publisher pub_corner_points_sharp;
 extern ros::Publisher pub_corner_points_less_sharp;
 extern ros::Publisher pub_surf_points_flat;
 extern ros::Publisher pub_surf_points_less_flat;
 
+// local map
+extern std::vector<ros::Publisher> v_pub_surf_points_local_map;
+
+// odometry
 extern std::vector<ros::Publisher> v_pub_ext_base_to_laser;
 extern std::vector<ros::Publisher> v_pub_laser_odometry;
 extern std::vector<ros::Publisher> v_pub_laser_path;
@@ -63,7 +68,7 @@ void pubTrackImage(const cv::Mat &imgTrack, const double t);
 
 void printStatistics(const Estimator &estimator, double t);
 
-void pubOdometry(const Estimator &estimator, const std_msgs::Header &header);
+void pubOdometry(const Estimator &estimator, const double &time);
 
 void pubInitialGuess(const Estimator &estimator, const std_msgs::Header &header);
 
@@ -71,7 +76,7 @@ void pubKeyPoses(const Estimator &estimator, const std_msgs::Header &header);
 
 void pubCameraPose(const Estimator &estimator, const std_msgs::Header &header);
 
-void pubPointCloud(const Estimator &estimator, const std_msgs::Header &header);
+void pubPointCloud(const Estimator &estimator, const double &time);
 
 void pubTF(const Estimator &estimator, const std_msgs::Header &header);
 

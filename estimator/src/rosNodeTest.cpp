@@ -152,7 +152,6 @@ void sync_process()
                 estimator.inputCloud(time, laser_cloud0);
             }
         }
-
         std::chrono::milliseconds dura(2);
         std::this_thread::sleep_for(dura);
     }

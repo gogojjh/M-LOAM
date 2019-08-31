@@ -20,6 +20,10 @@
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/Geometry>
 
+#include <pcl/common/transforms.h>
+#include <pcl/search/impl/flann_search.hpp>
+#include <pcl/filters/extract_indices.h>
+
 #include "common/types/type.h"
 
 #include "parameters.h"
@@ -49,17 +53,27 @@ class Estimator
     Estimator();
     ~Estimator();
 
+    void clearState();
+    void setParameter();
+
     void inputCloud(const double &t, const std::vector<common::PointCloud> &v_laser_cloud_in);
     void inputCloud(const double &t, const common::PointCloud &laser_cloud_in0);
 
-    void setParameter();
-
     // interface
     void processMeasurements();
+    void process();
+
+    // slide window and marginalization
+    void slideWindow();
+
+    // build local map
+    void buildLocalMap();
+
+    // process localmap optimization
+    void optimizeLocalMap();
+
     void changeSensorType(int use_imu, int use_stereo);
 
-    // internal
-    void clearState();
 
     enum SolverFlag
     {
@@ -80,17 +94,33 @@ class Estimator
     bool b_system_inited_;
 
     // extrinsic from base to laser
-    std::vector<Pose> pose_ext_;
-    // pose from laser at k=0 to laser at k=K
-    std::vector<std::vector<Pose> > pose_laser_cur_;
-    // pose from laser at k=K-1 to laser at k=K
-    std::vector<std::vector<Pose> > pose_prev_cur_;
+    // std::vector<Pose> pose_ext_;
+    // std::vector<Pose> pose_prev_cur_;
+    // std::vector<Pose> pose_base_cur_;
 
-    std::vector<std::vector<Pose> > pose_base_cur_;
+    // pose from laser at k=0 to laser at k=K
+    std::vector<Pose> pose_laser_cur_;
+    // pose from laser at k=K-1 to laser at k=K
+    std::vector<Pose> pose_rlt_;
 
     std::vector<Eigen::Quaterniond> qbl_;
     std::vector<Eigen::Vector3d> tbl_;
     std::vector<double> tdbl_;
+
+    // slide window
+    // xx[cir_buf_cnt_] indicates the newest variables and measurements
+    bool ini_fixed_local_map_;
+
+    size_t cir_buf_cnt_;
+
+    CircularBuffer<Eigen::Quaterniond> Qs_;
+    CircularBuffer<Eigen::Vector3d> Ts_;
+    CircularBuffer<std_msgs::Header> Header_;
+    std::vector<CircularBuffer<common::PointICloud> > surf_points_stack_, corner_points_stack_;
+    std::vector<CircularBuffer<int> > surf_points_stack_size_, corner_points_stack_size_;
+
+    std::vector<common::PointICloud> surf_points_local_map_, surf_points_local_map_filtered_;
+    std::vector<common::PointICloud> corner_points_local_map_, corner_points_local_map_filtered_;
 
     double prev_time_, cur_time_;
 
