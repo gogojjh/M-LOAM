@@ -82,6 +82,8 @@ nearby_scan: 2.5
 # movement type
 planar_movement: 0
 
-
+# feature corresponding paprameters
+min_match_sq_dis: 1.0
+min_plane_dis: 0.2
 
 #

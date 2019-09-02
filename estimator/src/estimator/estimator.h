@@ -138,7 +138,7 @@ class Estimator
 
     pair<double, std::vector<cloudFeature> > prev_feature_, cur_feature_;
 
-    std::vector<std::vector<MapSurfFeature> > cur_localmap_surf_feature_;
+    std::vector<std::vector<std::vector<PointPlaneFeature> > > surf_map_features_;
 };
 
 

@@ -30,6 +30,11 @@ public:
         T_.topLeftCorner<3, 3>() = q_.toRotationMatrix();
         T_.topRightCorner<3, 1>() = t_;
     }
+    Pose(const Eigen::Matrix4d &T, const double &td=0): T_(T), td_(td)
+    {
+        q_ = Eigen::Quaterniond(T.topLeftCorner<3, 3>());
+        t_ = T.topRightCorner<3, 1>();
+    }
 
     static Pose poseTransform(const Pose &pose1, const Pose &pose2);
 

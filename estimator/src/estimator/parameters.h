@@ -22,6 +22,11 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/eigen.hpp>
 
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/kdtree/kdtree_flann.h>
+
 #include "pose.h"
 #include "../utility/utility.h"
 #include "common/types/type.h"
@@ -96,6 +101,9 @@ extern std::vector<double> TDBL;
 
 extern int PLANAR_MOVEMENT;
 
+extern float MIN_MATCH_SQ_DIS;
+extern float MIN_PLANE_DIS;
+
 void readParameters(std::string config_file);
 
 enum SIZE_PARAMETERIZATION
@@ -123,3 +131,13 @@ enum NoiseOrder
 };
 
 typedef std::map<std::string, common::PointICloud> cloudFeature;
+
+class PointPlaneFeature
+{
+public:
+    double score_;
+    Eigen::Vector3d point_;
+    Eigen::Vector4d coeffs_;
+
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+};

@@ -67,8 +67,11 @@ void Estimator::clearState()
 
     surf_points_local_map_.clear();
     surf_points_local_map_filtered_.clear();
-    corner_points_local_map_.clear();
-    corner_points_local_map_filtered_.clear();
+    // corner_points_local_map_.clear();
+    // corner_points_local_map_filtered_.clear();
+
+    surf_map_features_.clear();
+    // corner_map_features_.clear();
 
     m_process_.unlock();
 }
@@ -362,8 +365,19 @@ void Estimator::process()
 
 void Estimator::optimizeLocalMap()
 {
-    
-
+    // for (size_t n = 0; n < NUM_OF_LASER; n++)
+    // {
+    //     for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1)
+    //     {
+    //         for (size_t j = 0; j < cur_localmap_surf_feature_[n].size(); j++)
+    //         {
+    //             MapSurfFeature &feature = cur_localmap_surf_feature_[n][i];
+    //             PointI &p = surf_points_stack_[n][i][feature.idx];
+    //             CostFunction *cost_function = xxx(p, feature.norm);
+    //             problem.addResidualBlock();
+    //         }
+    //     }
+    // }
 }
 
 void Estimator::buildLocalMap()
@@ -371,7 +385,6 @@ void Estimator::buildLocalMap()
     TicToc t_build_local_map;
     int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
     Pose pose_pivot(Qs_[pivot_idx], Ts_[pivot_idx]);
-
     // -----------------
     // build static local map using fixed poses
     PointICloud surf_points_transformed;
@@ -408,14 +421,18 @@ void Estimator::buildLocalMap()
         // corner_points_local_map_[n].clear();
         // corner_points_local_map_filtered_[n].clear();
     }
+    std::vector<Pose> pose_local;
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
         Pose pose_ext = Pose(qbl_[n], tbl_[n]);
-        for (size_t i = pivot_idx; i < WINDOW_SIZE; i++)
+        for (size_t i = 0; i < WINDOW_SIZE + 1; i++)
         {
             Pose pose_i(Qs_[i], Ts_[i]);
             Eigen::Affine3d transform_pivot_i;
             transform_pivot_i.matrix() = (pose_pivot.T_ * pose_ext.T_).inverse() * (pose_i.T_ * pose_ext.T_);
+            pose_local.push_back(Pose(transform_pivot_i.matrix()));
+            if ((i < pivot_idx) || (i == WINDOW_SIZE)) continue;
+
             pcl::transformPointCloud(surf_points_stack_[n][i], surf_points_transformed, transform_pivot_i.cast<float>());
             for (auto &p: surf_points_transformed.points) p.intensity = i;
             surf_points_local_map_[n] += surf_points_transformed;
@@ -431,25 +448,27 @@ void Estimator::buildLocalMap()
     printf("build local map: %fms\n", t_build_local_map.toc());
 
     // -----------------
-    // calculate features
+    // calculate features and correspondences from localmap to i
     TicToc t_local_map_extract;
+    surf_map_features_.clear();
+    surf_map_features_.resize(NUM_OF_LASER);
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
+        surf_map_features_[n].resize(OPT_WINDOW_SIZE);
         pcl::KdTreeFLANN<PointI>::Ptr kdtree_surf_points_local_map(new pcl::KdTreeFLANN<PointI>());
-        kdtree_surf_points_local_map.setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_filtered_[n]);
+        kdtree_surf_points_local_map->setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_filtered_[n]));
         // pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_points_local_map(new pcl::KdTreeFLANN<PointI>());
-        // kdtree_corner_points_local_map.setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_filtered_[n]);
-        for (size_t i = pivot_idx; i < WINDOW_SIZE; i++)
+        // kdtree_corner_points_local_map->setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_filtered_[n]));
+        for (size_t i = pivot_idx; i <= WINDOW_SIZE; i++)
         {
-            if (i != WINDOW_SIZE)
-            {
-                f_extract_.extractSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
-                                            surf_points_stack_[n][i], features);
-            } else
-            {
-                // calculateDistance(surf_points_local_map_filtered_[n], surf_points_stack_[n][idx]);
-            }
-
+            printf("Laser %d, %d window: extract local map with size: \n", n, i, surf_points_local_map_filtered_[n].size());
+            f_extract_.extractSurfFromMap(kdtree_surf_points_local_map,
+                                        surf_points_local_map_filtered_[n], surf_points_stack_[n][i],
+                                        pose_local[i], surf_map_features_[n][i]);
+            // f_extract_.extractCornerFromMap(kdtree_corner_points_local_map,
+                                        // corner_points_local_map_filtered_[n], corner_points_stack_[n][i],
+                                        // pose_local[i], corner_map_features_[n][i]);
+            printf("number of extracted features: %d\n", surf_map_features_[n][i].size());
         }
     }
     printf("extract local map: %fms\n", t_local_map_extract.toc());

@@ -70,6 +70,9 @@ std::vector<double> TDBL;
 
 int PLANAR_MOVEMENT;
 
+float MIN_MATCH_SQ_DIS;
+float MIN_PLANE_DIS;
+
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
 {
@@ -181,6 +184,9 @@ void readParameters(std::string config_file)
     NEARBY_SCAN = fsSettings["nearby_scan"];
 
     PLANAR_MOVEMENT = fsSettings["planar_movement"];
+
+    MIN_MATCH_SQ_DIS = fsSettings["min_match_sq_dis"];
+    MIN_PLANE_DIS = fsSettings["min_plane_dis"];
 
     fsSettings.release();
 }

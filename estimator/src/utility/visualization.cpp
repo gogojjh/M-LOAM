@@ -77,9 +77,9 @@ void registerPub(ros::NodeHandle &nh)
         laser_path_topic = std::string("/laser_odom_path_") + std::to_string(i);
         v_pub_laser_path.push_back(nh.advertise<nav_msgs::Path>(laser_path_topic, 100));
 
-        std::string laser_surf_points_local_map_topic;
-        laser_surf_points_local_map_topic = std::string("/surf_local_map_") + std::to_string(i);
-        v_pub_surf_points_local_map.push_back(nh.advertise<sensor_msgs::PointCloud2>(laser_surf_points_local_map_topic, 100));
+        std::string surf_points_local_map_topic;
+        surf_points_local_map_topic = std::string("/surf_local_map_") + std::to_string(i);
+        v_pub_surf_points_local_map.push_back(nh.advertise<sensor_msgs::PointCloud2>(surf_points_local_map_topic, 100));
     }
     v_laser_path.resize(NUM_OF_LASER);
 }
@@ -111,7 +111,7 @@ void pubPointCloud(const Estimator &estimator, const double &time)
     for (size_t i = 0; i < NUM_OF_LASER; i++)
     {
         header.frame_id = "laser_" + std::to_string(i);
-        publishCloud(v_pub_surf_points_local_map[i], header, estimator.surf_points_local_map_[i]);
+        publishCloud(v_pub_surf_points_local_map[i], header, estimator.surf_points_local_map_filtered_[i]);
     }
 
 }
