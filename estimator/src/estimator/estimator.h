@@ -137,6 +137,8 @@ class Estimator
     std::queue<std::pair<double, std::vector<cloudFeature> > > feature_buf_;
 
     pair<double, std::vector<cloudFeature> > prev_feature_, cur_feature_;
+
+    std::vector<std::vector<MapSurfFeature> > cur_localmap_surf_feature_;
 };
 
 

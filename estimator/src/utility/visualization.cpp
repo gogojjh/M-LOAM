@@ -94,7 +94,7 @@ void pubPointCloud(const Estimator &estimator, const double &time)
     {
         Pose pose_ext(estimator.qbl_[i], estimator.tbl_[i]);
         cloudFeature cloud_feature_trans = transformCloudFeature(estimator.cur_feature_.second[i], pose_ext.T_.cast<float>());
-        for (auto &p: cloud_feature_trans["laser_cloud"].points) p.intensity = 255.0 * i / NUM_OF_LASER;
+        for (auto &p: cloud_feature_trans["laser_cloud"].points) p.intensity = i;
 
         laser_cloud += cloud_feature_trans["laser_cloud"];
         corner_points_sharp += cloud_feature_trans["corner_points_sharp"];
@@ -244,7 +244,8 @@ void pubOdometry(const Estimator &estimator, const double &time)
         laser_odometry.header.stamp = ros::Time(time);
         laser_odometry.header.frame_id = "/laser_init_0";
         laser_odometry.child_frame_id = "/laser_0";
-        Pose pose_laser_cur(estimator.Qs_.last(), estimator.Ts_.last());
+        int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
+        Pose pose_laser_cur(estimator.Qs_[pivot_idx], estimator.Ts_[pivot_idx]);
         laser_odometry.pose.pose.orientation.x = pose_laser_cur.q_.x();
         laser_odometry.pose.pose.orientation.y = pose_laser_cur.q_.y();
         laser_odometry.pose.pose.orientation.z = pose_laser_cur.q_.z();

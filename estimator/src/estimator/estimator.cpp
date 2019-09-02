@@ -274,7 +274,6 @@ void Estimator::process()
             {
                 ROS_WARN("all initial extrinsic rotation calib success");
                 ESTIMATE_EXTRINSIC = 1;
-                solver_flag_ = NON_LINEAR;
                 initial_extrinsics_.saveStatistics();
                 // lidar_optimizer_.OptimizeLocalMap();
             }
@@ -282,7 +281,7 @@ void Estimator::process()
         }
     }
 
-    // save newest point cloud
+    // get newest point cloud
     Header_[cir_buf_cnt_].stamp = ros::Time(cur_feature_.first);
     PointICloud cloud_downsampled_;
     for (size_t i = 0; i < NUM_OF_LASER; i++)
@@ -300,7 +299,6 @@ void Estimator::process()
     }
 
     // -----------------
-    // nonlinear optimization
     switch (solver_flag_)
     {
         // INITIAL: multi-LiDAR individual tracking
@@ -345,6 +343,7 @@ void Estimator::process()
         }
     }
 
+    // swap features
     prev_time_ = cur_time_;
     prev_feature_.first = prev_time_;
     prev_feature_.second.clear();
@@ -359,6 +358,12 @@ void Estimator::process()
         prev_feature_.second.push_back(tmp_cloud_feature);
     }
     // prev_feature_.second = cur_feature_.second;
+}
+
+void Estimator::optimizeLocalMap()
+{
+    
+
 }
 
 void Estimator::buildLocalMap()
@@ -382,14 +387,14 @@ void Estimator::buildLocalMap()
                 Eigen::Affine3d transform_pivot_i;
                 transform_pivot_i.matrix() = (pose_pivot.T_ * pose_ext.T_).inverse() * (pose_i.T_ * pose_ext.T_);
                 pcl::transformPointCloud(surf_points_stack_[n][i], surf_points_transformed, transform_pivot_i.cast<float>());
-                for (auto &p: surf_points_transformed.points) p.intensity = 1.0 * i / WINDOW_SIZE;
+                for (auto &p: surf_points_transformed.points) p.intensity = i;
                 surf_points_tmp += surf_points_transformed;
                 // pcl::transformPointCloud(corner_points_stack_[n][idx], corner_points_transformed, transform_pivot_i);
                 // corner_points_tmp[n] += corner_points_transformed;
             }
             surf_points_stack_[n][pivot_idx] = surf_points_tmp;
-            printf("Laser_%d: initialize a local map size: %d\n", surf_points_stack_[n][pivot_idx].size());
             // corner_points_stack_[n][pivot_idx] = corner_points_tmp[n];
+            printf("Laser_%d: initialize a local map size: %d\n", surf_points_stack_[n][pivot_idx].size());
         }
         ini_fixed_local_map_ = true;
     }
@@ -412,7 +417,7 @@ void Estimator::buildLocalMap()
             Eigen::Affine3d transform_pivot_i;
             transform_pivot_i.matrix() = (pose_pivot.T_ * pose_ext.T_).inverse() * (pose_i.T_ * pose_ext.T_);
             pcl::transformPointCloud(surf_points_stack_[n][i], surf_points_transformed, transform_pivot_i.cast<float>());
-            for (auto &p: surf_points_transformed.points) p.intensity = 1.0 * i / WINDOW_SIZE;
+            for (auto &p: surf_points_transformed.points) p.intensity = i;
             surf_points_local_map_[n] += surf_points_transformed;
             // pcl::transformPointCloud(corner_points_stack_[n][idx], corner_points_transformed, transform_pivot_i);
             // for (auto &p: corner_points_transformed.points) p.intensity = 255.0 * i / WINDOW_SIZE;
@@ -430,27 +435,24 @@ void Estimator::buildLocalMap()
     TicToc t_local_map_extract;
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
-        // pcl::KdTreeFLANN<PointI>::Ptr kdtree_surf_points_local_map(new pcl::KdTreeFLANN<PointI>());
-        // kdtree_surf_points_local_map.setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_filtered_[n]);
-        // for (size_t i = pivot_idx; i < WINDOW_SIZE; i++)
-        // {
-        //     if (i != WINDOW_SIZE)
-        //     {
-        //         f_extract_.extractLocalMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
-        //             surf_points_stack_[n][i], features);
-        //     } else
-        //     {
-        //         calculateDistance(surf_points_local_map_filtered_[n], surf_points_stack_[n][idx]);
-        //     }
-        //
-        // }
+        pcl::KdTreeFLANN<PointI>::Ptr kdtree_surf_points_local_map(new pcl::KdTreeFLANN<PointI>());
+        kdtree_surf_points_local_map.setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_filtered_[n]);
+        // pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_points_local_map(new pcl::KdTreeFLANN<PointI>());
+        // kdtree_corner_points_local_map.setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_filtered_[n]);
+        for (size_t i = pivot_idx; i < WINDOW_SIZE; i++)
+        {
+            if (i != WINDOW_SIZE)
+            {
+                f_extract_.extractSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
+                                            surf_points_stack_[n][i], features);
+            } else
+            {
+                // calculateDistance(surf_points_local_map_filtered_[n], surf_points_stack_[n][idx]);
+            }
+
+        }
     }
     printf("extract local map: %fms\n", t_local_map_extract.toc());
-}
-
-void Estimator::optimizeLocalMap()
-{
-
 }
 
 // push new state and measurements in the sliding window
@@ -458,9 +460,7 @@ void Estimator::optimizeLocalMap()
 void Estimator::slideWindow()
 {
     TicToc t_solid_window;
-    printf("Slide Window ...\n");
-    printf("cir_buf_cnt_: %d\n", cir_buf_cnt_);
-
+    printf("Slide Window, cir_buf_cnt_: %d\n", cir_buf_cnt_);
     if (ini_fixed_local_map_)
     {
         int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
@@ -485,19 +485,16 @@ void Estimator::slideWindow()
             extract.setNegative(true);
             extract.filter(surf_points_filtered);
             surf_points_stack_[n][i] = surf_points_filtered + surf_points_stack_[n][i];
-            // surf_points_filtered += surf_points_stack_[n][i];
-            // surf_points_stack_[n][i] = surf_points_filtered;
         }
     }
-    // Qs_[cir_buf_cnt_] = Qs_[cir_buf_cnt_-1]
     Qs_.push(Qs_.last());
     Ts_.push(Ts_.last());
-    std::cout << "pose: " << Pose(Qs_.last(), Ts_.last()) << std::endl;
     Header_.push(Header_.last());
+    // std::cout << "pose: " << Pose(Qs_.last(), Ts_.last()) << std::endl;
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
-        printf("Laser: %d, current surf size: %d\n", n, surf_points_stack_size_[n].last());
-        printf("Laser: %d, localmap size: %d\n", n, surf_points_local_map_[n].size());
+        // printf("Laser: %d, current surf size: %d\n", n, surf_points_stack_size_[n].last());
+        // printf("Laser: %d, localmap size: %d\n", n, surf_points_local_map_[n].size());
         surf_points_stack_[n].push(surf_points_stack_[n].last());
         surf_points_stack_size_[n].push(surf_points_stack_size_[n].last());
     }
