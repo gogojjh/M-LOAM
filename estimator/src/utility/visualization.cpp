@@ -92,8 +92,10 @@ void pubPointCloud(const Estimator &estimator, const double &time)
     PointICloud laser_cloud, corner_points_sharp, corner_points_less_sharp, surf_points_flat, surf_points_less_flat;
     for (size_t i = 0; i < estimator.cur_feature_.second.size(); i++)
     {
-        Pose pose_ext(estimator.qbl_[i], estimator.tbl_[i]);
-        cloudFeature cloud_feature_trans = transformCloudFeature(estimator.cur_feature_.second[i], pose_ext.T_.cast<float>());
+        Pose pose_pivot(estimator.Qs_[WINDOW_SIZE - OPT_WINDOW_SIZE], estimator.Ts_[WINDOW_SIZE - OPT_WINDOW_SIZE]);
+        Pose pose_j(estimator.Qs_[estimator.cir_buf_cnt_], estimator.Ts_[estimator.cir_buf_cnt_]);
+        Pose pose_ext_pivot_j = Pose(estimator.qbl_[i], estimator.tbl_[i]) * (pose_pivot.inverse() * pose_j);
+        cloudFeature cloud_feature_trans = transformCloudFeature(estimator.cur_feature_.second[i], pose_ext_pivot_j.T_.cast<float>());
         for (auto &p: cloud_feature_trans["laser_cloud"].points) p.intensity = i;
 
         laser_cloud += cloud_feature_trans["laser_cloud"];

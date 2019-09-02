@@ -131,6 +131,7 @@ void readParameters(std::string config_file)
 
     WINDOW_SIZE = fsSettings["window_size"];
     OPT_WINDOW_SIZE = fsSettings["opt_window_size"];
+    printf("window_size: %d, opt_window_size: %d", WINDOW_SIZE, OPT_WINDOW_SIZE);
 
     ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];
     if (ESTIMATE_EXTRINSIC == 2)

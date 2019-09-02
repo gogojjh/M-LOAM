@@ -54,7 +54,7 @@ body_T_laser: !!opencv-matrix
    # data: [0, 0, 0, 1, 0, 0, 0,
    #        0, 0, 0, 1, 0, 0, 0] # qx qy qz qw px py pz
    data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-          0.37105, 0.00235, 0.05587, 0.92693, 0.02267, -0.60669, -0.19812]
+          0.37829, 0.00261, 0.04710, 0.92448, 0.02268, -0.60745, -0.22227]
 
 #unsynchronization parameters
 estimate_td: 0                      # 0 have an accurate time offset among sensors

@@ -220,22 +220,22 @@ void Estimator::processMeasurements()
 void Estimator::process()
 {
     // -----------------
-    if (ESTIMATE_EXTRINSIC == 2)
+    if (!b_system_inited_)
     {
-        // feature tracker: estimate the relative transformations of each lidar
-        if (!b_system_inited_)
+        b_system_inited_ = true;
+        printf("System initialization finished \n");
+        for (size_t i = 0; i < NUM_OF_LASER; i++)
         {
-            b_system_inited_ = true;
-            printf("System initialization finished \n");
-            for (size_t i = 0; i < NUM_OF_LASER; i++)
-            {
-                pose_rlt_[i] = Pose();
-                // pose_prev_cur_[i].push_back(Pose());
-                pose_laser_cur_[i] = Pose();
-            }
-        } else
+            pose_rlt_[i] = Pose();
+            // pose_prev_cur_[i].push_back(Pose());
+            pose_laser_cur_[i] = Pose();
+        }
+    } else
+    {
+        TicToc t_mloam_tracker;
+        if (ESTIMATE_EXTRINSIC == 2)
         {
-            TicToc t_mloam_tracker;
+            // feature tracker: estimate the relative transformations of each lidar
             for (size_t i = 0; i < NUM_OF_LASER; i++)
             {
                 printf("[LASER %d]:\n", i);
@@ -249,40 +249,56 @@ void Estimator::process()
                 std::cout << "current transform: " << pose_laser_cur_[i] << std::endl;
             }
             printf("mloam_tracker %fms\n", t_mloam_tracker.toc());
-        }
-        // initialize extrinsics
-        for (size_t i = 0; i < NUM_OF_LASER; i++) initial_extrinsics_.addPose(pose_rlt_[i], i);
-        if (cir_buf_cnt_ == WINDOW_SIZE)
-        {
-            TicToc t_calib_ext;
-            printf("calibrating extrinsic param, rotation movement is needed \n");
-            for (size_t i = 0; i < NUM_OF_LASER; i++)
+
+            // initialize extrinsics
+            for (size_t i = 0; i < NUM_OF_LASER; i++) initial_extrinsics_.addPose(pose_rlt_[i], i);
+            if (cir_buf_cnt_ == WINDOW_SIZE)
             {
-                Pose calib_result;
-                if ((!initial_extrinsics_.cov_rot_state_[i]) &&
-                    (initial_extrinsics_.calibExRotation(IDX_REF, i, calib_result)))
+                TicToc t_calib_ext;
+                printf("calibrating extrinsic param, rotation movement is needed \n");
+                for (size_t i = 0; i < NUM_OF_LASER; i++)
                 {
-                    initial_extrinsics_.setCovRotation(i);
-                    ROS_WARN_STREAM("number of pose: " << initial_extrinsics_.frame_cnt_);
-                    ROS_WARN_STREAM("initial extrinsic of laser_" << i << ": " << calib_result);
-                    qbl_[i] = calib_result.q_;
-                    tbl_[i] = calib_result.t_;
-                    // tdbl_[i] = calib_result.td_;
-                    QBL[i] = calib_result.q_;
-                    TBL[i] = calib_result.t_;
-                    // TDBL[i] = calib_result.td_;
+                    Pose calib_result;
+                    if ((!initial_extrinsics_.cov_rot_state_[i]) &&
+                        (initial_extrinsics_.calibExRotation(IDX_REF, i, calib_result)))
+                    {
+                        initial_extrinsics_.setCovRotation(i);
+                        ROS_WARN_STREAM("number of pose: " << initial_extrinsics_.frame_cnt_);
+                        ROS_WARN_STREAM("initial extrinsic of laser_" << i << ": " << calib_result);
+                        qbl_[i] = calib_result.q_;
+                        tbl_[i] = calib_result.t_;
+                        // tdbl_[i] = calib_result.td_;
+                        QBL[i] = calib_result.q_;
+                        TBL[i] = calib_result.t_;
+                        // TDBL[i] = calib_result.td_;
+                    }
                 }
+                if (initial_extrinsics_.full_cov_rot_state_)
+                {
+                    ROS_WARN("all initial extrinsic rotation calib success");
+                    ESTIMATE_EXTRINSIC = 1;
+                    initial_extrinsics_.saveStatistics();
+                    // lidar_optimizer_.OptimizeLocalMap();
+                }
+                printf("whole initialize extrinsics %fms\n", t_calib_ext.toc());
             }
-            if (initial_extrinsics_.full_cov_rot_state_)
-            {
-                ROS_WARN("all initial extrinsic rotation calib success");
-                ESTIMATE_EXTRINSIC = 1;
-                initial_extrinsics_.saveStatistics();
-                // lidar_optimizer_.OptimizeLocalMap();
-            }
-            printf("whole initialize extrinsics %fms\n", t_calib_ext.toc());
+        }
+        else if (ESTIMATE_EXTRINSIC != 2)
+        {
+            cloudFeature &cur_cloud_feature = cur_feature_.second[IDX_REF];
+            cloudFeature &prev_cloud_feature = prev_feature_.second[IDX_REF];
+            pose_rlt_[IDX_REF] = lidar_tracker_.trackCloud(prev_cloud_feature, cur_cloud_feature, pose_rlt_[IDX_REF]);
+            pose_laser_cur_[IDX_REF] = Pose(Qs_[cir_buf_cnt_-1], Ts_[cir_buf_cnt_-1]) * pose_rlt_[IDX_REF];
+            std::cout << "relative transform: " << pose_rlt_[IDX_REF] << std::endl;
+            std::cout << "current transform: " << pose_laser_cur_[IDX_REF] << std::endl;
+            printf("mloam_tracker %fms\n", t_mloam_tracker.toc());
         }
     }
+
+    // get newest pose
+    // Qs[cir_buf_cnt_] = Qs.last()
+    Qs_[cir_buf_cnt_] = pose_laser_cur_[IDX_REF].q_;
+    Ts_[cir_buf_cnt_] = pose_laser_cur_[IDX_REF].t_;
 
     // get newest point cloud
     Header_[cir_buf_cnt_].stamp = ros::Time(cur_feature_.first);
@@ -307,9 +323,7 @@ void Estimator::process()
         // INITIAL: multi-LiDAR individual tracking
         case INITIAL:
         {
-            // Qs[cir_buf_cnt_] = Qs.last()
-            Qs_[cir_buf_cnt_] = pose_laser_cur_[IDX_REF].q_;
-            Ts_[cir_buf_cnt_] = pose_laser_cur_[IDX_REF].t_;
+            printf("INITIAL\n");
             slideWindow();
             if (cir_buf_cnt_ < WINDOW_SIZE)
             {
@@ -325,15 +339,8 @@ void Estimator::process()
         case NON_LINEAR:
         {
             // local optimization: optimize the relative LiDAR measurments
+            printf("NON_LINEAR\n");
             TicToc t_solve;
-            cloudFeature &cur_cloud_feature = cur_feature_.second[IDX_REF];
-            cloudFeature &prev_cloud_feature = prev_feature_.second[IDX_REF];
-            pose_rlt_[IDX_REF] = lidar_tracker_.trackCloud(prev_cloud_feature, cur_cloud_feature, pose_rlt_[IDX_REF]);
-            Pose pose_cur = Pose(Qs_.last(), Ts_.last()) * pose_rlt_[IDX_REF];
-            std::cout << "relative transform: " << pose_rlt_[IDX_REF] << std::endl;
-            std::cout << "current transform: " << pose_cur << std::endl;
-            Qs_[cir_buf_cnt_] = pose_cur.q_;
-            Ts_[cir_buf_cnt_] = pose_cur.t_;
 
             buildLocalMap();
             optimizeLocalMap();
@@ -401,13 +408,14 @@ void Estimator::buildLocalMap()
                 transform_pivot_i.matrix() = (pose_pivot.T_ * pose_ext.T_).inverse() * (pose_i.T_ * pose_ext.T_);
                 pcl::transformPointCloud(surf_points_stack_[n][i], surf_points_transformed, transform_pivot_i.cast<float>());
                 for (auto &p: surf_points_transformed.points) p.intensity = i;
+
                 surf_points_tmp += surf_points_transformed;
                 // pcl::transformPointCloud(corner_points_stack_[n][idx], corner_points_transformed, transform_pivot_i);
                 // corner_points_tmp[n] += corner_points_transformed;
             }
             surf_points_stack_[n][pivot_idx] = surf_points_tmp;
             // corner_points_stack_[n][pivot_idx] = corner_points_tmp[n];
-            printf("Laser_%d: initialize a local map size: %d\n", surf_points_stack_[n][pivot_idx].size());
+            printf("Laser_%d: initialize a local map size: %d\n", n, surf_points_stack_[n][pivot_idx].size());
         }
         ini_fixed_local_map_ = true;
     }
@@ -430,6 +438,7 @@ void Estimator::buildLocalMap()
             Pose pose_i(Qs_[i], Ts_[i]);
             Eigen::Affine3d transform_pivot_i;
             transform_pivot_i.matrix() = (pose_pivot.T_ * pose_ext.T_).inverse() * (pose_i.T_ * pose_ext.T_);
+            // std::cout << transform_pivot_i.matrix() << std::endl;
             pose_local.push_back(Pose(transform_pivot_i.matrix()));
             if ((i < pivot_idx) || (i == WINDOW_SIZE)) continue;
 
@@ -444,6 +453,7 @@ void Estimator::buildLocalMap()
         f_extract_.down_size_filter_surf_.filter(surf_points_local_map_filtered_[n]);
         // down_size_filter_corner_.setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_));
         // down_size_filter_corner_.filter(corner_points_local_map_filtered_);
+        printf("Laser_%d, size of local map %d\n", n, surf_points_stack_[n].size());
     }
     printf("build local map: %fms\n", t_build_local_map.toc());
 
@@ -454,21 +464,22 @@ void Estimator::buildLocalMap()
     surf_map_features_.resize(NUM_OF_LASER);
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
-        surf_map_features_[n].resize(OPT_WINDOW_SIZE);
+        surf_map_features_[n].resize(WINDOW_SIZE + 1);
         pcl::KdTreeFLANN<PointI>::Ptr kdtree_surf_points_local_map(new pcl::KdTreeFLANN<PointI>());
         kdtree_surf_points_local_map->setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_filtered_[n]));
         // pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_points_local_map(new pcl::KdTreeFLANN<PointI>());
         // kdtree_corner_points_local_map->setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_filtered_[n]));
-        for (size_t i = pivot_idx; i <= WINDOW_SIZE; i++)
+        for (size_t i = pivot_idx + 1; i <= WINDOW_SIZE; i++)
         {
-            printf("Laser %d, %d window: extract local map with size: \n", n, i, surf_points_local_map_filtered_[n].size());
+            // printf("Laser_%d, %dth window, size of input cloud is %d\n", n, i, surf_points_stack_[n][i].size());
+            // std::cout << "local pose: " << pose_local[i] << std::endl;
             f_extract_.extractSurfFromMap(kdtree_surf_points_local_map,
                                         surf_points_local_map_filtered_[n], surf_points_stack_[n][i],
                                         pose_local[i], surf_map_features_[n][i]);
             // f_extract_.extractCornerFromMap(kdtree_corner_points_local_map,
                                         // corner_points_local_map_filtered_[n], corner_points_stack_[n][i],
                                         // pose_local[i], corner_map_features_[n][i]);
-            printf("number of extracted features: %d\n", surf_map_features_[n][i].size());
+            // printf("number of extracted features: %d\n", surf_map_features_[n][i].size());
         }
     }
     printf("extract local map: %fms\n", t_local_map_extract.toc());
@@ -506,16 +517,16 @@ void Estimator::slideWindow()
             surf_points_stack_[n][i] = surf_points_filtered + surf_points_stack_[n][i];
         }
     }
-    Qs_.push(Qs_.last());
-    Ts_.push(Ts_.last());
-    Header_.push(Header_.last());
+    Qs_.push(Qs_[cir_buf_cnt_]);
+    Ts_.push(Ts_[cir_buf_cnt_]);
+    Header_.push(Header_[cir_buf_cnt_]);
     // std::cout << "pose: " << Pose(Qs_.last(), Ts_.last()) << std::endl;
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
         // printf("Laser: %d, current surf size: %d\n", n, surf_points_stack_size_[n].last());
         // printf("Laser: %d, localmap size: %d\n", n, surf_points_local_map_[n].size());
-        surf_points_stack_[n].push(surf_points_stack_[n].last());
-        surf_points_stack_size_[n].push(surf_points_stack_size_[n].last());
+        surf_points_stack_[n].push(surf_points_stack_[n][cir_buf_cnt_]);
+        surf_points_stack_size_[n].push(surf_points_stack_size_[n][cir_buf_cnt_]);
     }
     printf("slide window: %fms\n", t_solid_window.toc());
 }
