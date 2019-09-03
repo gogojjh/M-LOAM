@@ -86,4 +86,10 @@ planar_movement: 0
 min_match_sq_dis: 1.0
 min_plane_dis: 0.2
 
+# mariginalization
+marginalization_factor: 1
+point_distance_factor: 1
+
+
+
 #

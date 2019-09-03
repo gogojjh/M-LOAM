@@ -73,6 +73,9 @@ int PLANAR_MOVEMENT;
 float MIN_MATCH_SQ_DIS;
 float MIN_PLANE_DIS;
 
+int MARGINALIZATION_FACTOR;
+int POINT_DISTANCE_FACTOR;
+
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
 {
@@ -188,6 +191,9 @@ void readParameters(std::string config_file)
 
     MIN_MATCH_SQ_DIS = fsSettings["min_match_sq_dis"];
     MIN_PLANE_DIS = fsSettings["min_plane_dis"];
+
+    MARGINALIZATION_FACTOR = fsSettings["marginalization_factor"];
+    POINT_DISTANCE_FACTOR = fsSettings["point_distance_factor"];
 
     fsSettings.release();
 }

@@ -342,7 +342,6 @@ void Estimator::process()
             printf("NON_LINEAR\n");
             TicToc t_solve;
 
-            buildLocalMap();
             optimizeLocalMap();
             slideWindow();
 
@@ -368,23 +367,6 @@ void Estimator::process()
         prev_feature_.second.push_back(tmp_cloud_feature);
     }
     // prev_feature_.second = cur_feature_.second;
-}
-
-void Estimator::optimizeLocalMap()
-{
-    // for (size_t n = 0; n < NUM_OF_LASER; n++)
-    // {
-    //     for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1)
-    //     {
-    //         for (size_t j = 0; j < cur_localmap_surf_feature_[n].size(); j++)
-    //         {
-    //             MapSurfFeature &feature = cur_localmap_surf_feature_[n][i];
-    //             PointI &p = surf_points_stack_[n][i][feature.idx];
-    //             CostFunction *cost_function = xxx(p, feature.norm);
-    //             problem.addResidualBlock();
-    //         }
-    //     }
-    // }
 }
 
 void Estimator::buildLocalMap()
@@ -453,7 +435,7 @@ void Estimator::buildLocalMap()
         f_extract_.down_size_filter_surf_.filter(surf_points_local_map_filtered_[n]);
         // down_size_filter_corner_.setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_));
         // down_size_filter_corner_.filter(corner_points_local_map_filtered_);
-        printf("Laser_%d, size of local map %d\n", n, surf_points_stack_[n].size());
+        printf("Laser_%d, size of local map %d (filtered) %d\n", n, surf_points_local_map_[n].size(), surf_points_local_map_filtered_[n].size());
     }
     printf("build local map: %fms\n", t_build_local_map.toc());
 
@@ -469,7 +451,7 @@ void Estimator::buildLocalMap()
         kdtree_surf_points_local_map->setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_filtered_[n]));
         // pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_points_local_map(new pcl::KdTreeFLANN<PointI>());
         // kdtree_corner_points_local_map->setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_filtered_[n]));
-        for (size_t i = pivot_idx + 1; i <= WINDOW_SIZE; i++)
+        for (size_t i = pivot_idx; i <= WINDOW_SIZE; i++)
         {
             // printf("Laser_%d, %dth window, size of input cloud is %d\n", n, i, surf_points_stack_[n][i].size());
             // std::cout << "local pose: " << pose_local[i] << std::endl;
@@ -483,6 +465,231 @@ void Estimator::buildLocalMap()
         }
     }
     printf("extract local map: %fms\n", t_local_map_extract.toc());
+}
+
+void Estimator::optimizeLocalMap()
+{
+    if (cir_buf_cnt_ < WINDOW_SIZE)
+    {
+        ROS_WARN("enter optimization before enough count: %d < %d", cir_buf_cnt_, WINDOW_SIZE);
+        return;
+    }
+
+    TicToc t_prep_solver;
+    vector2Double();
+    // -----------------
+    // ceres: set lossfunction and problem
+    ceres::LossFunction *loss_function;
+    // loss_function = new ceres::HuberLoss(0.5);
+    loss_function = new ceres::CauchyLoss(1.0);
+    ceres::Problem problem;
+
+    // ****************************************************
+    // -----------------
+    // ceres: add parameter block
+    for (size_t i = 0; i < WINDOW_SIZE + 1; i++)
+    {
+        ceres::LocalParameterization *local_parameterization = new PoseLocalParameterization();
+        problem.AddParameterBlock(para_pose_[i], SIZE_POSE, local_parameterization);
+    }
+    for (size_t i = 0; i < NUM_OF_LASER; i++)
+    {
+        ceres::LocalParameterization *local_parameterization = new PoseLocalParameterization();
+        problem.AddParameterBlock(para_ex_pose_[i], SIZE_POSE, local_parameterization);
+        if ((ESTIMATE_EXTRINSIC) && (OPT_EXTRINSIC))
+        {
+            ROS_INFO("estimate extrinsic param");
+        } else
+        {
+            ROS_INFO("fix extrinsic param");
+            problem.setParameterBlockConstant(para_ex_pose_[i]);
+        }
+        if (i == IDX_REF) problem.setParameterBlockConstant(para_ex_pose_[i]);
+    }
+    for (size_t i = 0; i < NUM_OF_LASER; i++)
+    {
+        problem.AddParameterBlock(para_td_[i], 1);
+        if (!ESTIMATE_TD)
+        {
+            problem.setParameterBlockConstant(para_td_[i]);
+        }
+    }
+
+    // ****************************************************
+    // -----------------
+    // ceres: add marginalization error of previous parameter blocks
+    if ((MARGINALIZATION_FACTOR) && (last_marginalization_info_))
+    {
+        MarginalizationFactor *marginalization_factor = new MarginalizationFactor(last_marginalization_info_);
+        problem.addResidualBlock(marginalization_factor, NULL, last_marginalization_parameter_blocks_);
+    }
+    // -----------------
+    // ceres: add residual block within the sliding window
+    if (POINT_PLANE_FACTOR)
+    {
+        for (size_t n = 0; n < NUM_OF_LASER; n++)
+        {
+            size_t pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
+            for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
+            {
+                std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i];
+                for (auto &feature: features_frame)
+                {
+                    const double &s = feature.score_;
+                    const Eigen::Vector3d &p_data = feature.point_;
+                    const Eigen::Vector4d &coeff_ref = feature.coeffs_;
+                    ceres::CostFunction *cost_function = LidarPivotPointPlaneFactor::Create(p_data, coeff_ref, s);
+                    problem.AddResidualBlock(cost_function, loss_function,
+                        para_pose_[0], para_pose_[i], para_ex_pose_[n]);
+                }
+            }
+        }
+    }
+
+    if (POINT_EDGE_FACTOR)
+    {
+    }
+    printf("prepare ceres %fms\n", t_prep_solver);
+
+    // -----------------
+    // ceres: set options and solve the non-linear equation
+    ceres::Solver::Options options;
+    options.linear_solver_type = ceres::DENSE_SCHUR;
+    //options.num_threads = 2;
+    options.trust_region_strategy_type = ceres::DOGLEG;
+    // options.trust_region_strategy_type = ceres::LEVENBEGR_MARQUARDT;
+    options.max_num_iterations = NUM_ITERATIONS;
+    //options.use_explicit_schur_complement = true;
+    //options.minimizer_progress_to_stdout = true;
+    //options.use_nonmonotonic_steps = true;
+    // if (marginalization_flag == MARGIN_OLD)
+    //     options.max_solver_time_in_seconds = SOLVER_TIME * 4.0 / 5.0;
+    // else
+    //     options.max_solver_time_in_seconds = SOLVER_TIME;
+    options.max_solver_time_in_seconds = 0.10;
+
+    // TODO: calculate region residual before optimization
+    // RegionResidual();
+
+    TicToc t_solver;
+    ceres::Solver::Summary summary;
+    ceres::Solve(options, &problem, &summary);
+    //cout << summary.BriefReport() << endl;
+    ROS_DEBUG("Iterations : %d", static_cast<int>(summary.iterations.size()));
+    printf("solver costs: %f \n", t_solver.toc());
+
+    double2Vector();
+
+    //! TODO
+    // ****************************************************
+    // ceres: marginalization of current parameter block
+    if (MARGINALIZATION_FACTOR)
+    {
+        TicToc t_whole_marginalization;
+        MarginalizationInfo *marginalization_info = new MarginalizationInfo();
+        vector2Double();
+        // set prior error of the marginalized parameter block
+        if (last_marginalization_info_)
+        {
+            std::vector<int> drop_set;
+            for (int i = 0; i < static_cast<int>(last_marginalization_parameter_blocks_.size()); i++)
+            {
+                // indicate the dropped pose to calculate the relatd residuals
+                if (last_marginalization_parameter_blocks_[i] == para_pose_[0])
+                    drop_set.push_back(i);
+            }
+            // construct marginlization_factor ???
+            MarginalizationFactor *marginalization_factor = new MarginalizationFactor(last_marginalization_info_);
+            ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(marginalization_factor, NULL,
+                last_marginalization_parameter_blocks_, drop_set);
+            marginalization_info->AddResidualBlockInfo(residual_block_info);
+        }
+        // set point-to-plane prior error
+        if (POINT_DISTANCE_FACTOR)
+        {
+            size_t pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
+            for (size_t n = 0; n < NUM_OF_LASER; n++)
+            {
+                for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
+                {
+                    std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i];
+                    for (auto &feature: features_frame)
+                    {
+                        const double &s = feature.score_;
+                        const Eigen::Vector3d &p_data = feature.point_;
+                        const Eigen::Vector4d &coeff_ref = feature.coeffs_;
+                        ceres::CostFunction *cost_function = LidarPivotPointPlaneFactor::Create(p_data, coeff_ref, s);
+                        ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(cost_function, loss_function,
+                            para_pose_[0], para_pose_[i], para_ex_pose_[n], std::vector<int>{0});
+                        marginalization_info->AddResidualBlockInfo(residual_block_info);
+                    }
+                }
+            }
+        }
+
+        // merge all the ResidualBlockInfo to the marginalization_info
+        // calculate the residuals and jacobian of all ResidualBlockInfo, will be as the starting linear point of next optimization
+        TicToc t_pre_margin;
+        marginalization_info->PreMarginalize();
+        ROS_DEBUG_STREAM("pre marginalization: " << t_pre_margin.Toc() << " ms");
+
+        TicToc t_margin;
+        marginalization_info->Marginalize();
+        ROS_DEBUG_STREAM("marginalization: " << t_margin.Toc() << " ms");
+
+        //! indicate shared memory of parameter blocks except for the dropped state
+        std::unordered_map<long, double *> addr_shift;
+        for (size_t i = 1; i < WINDOW_SIZE + 1; i++)
+        {
+            addr_shift[reinterpret_cast<long>(para_pose_[i])] = para_pose_[i - 1];
+        }
+        for (size_t n = 0; n < NUM_OF_LASER; n++)
+        {
+            addr_shift[reinterpret_cast<long>(para_ex_pose_[n])] = para_ex_pose_[n];
+        }
+        vector<double *> parameter_blocks = marginalization_info->GetParameterBlocks(addr_shift);
+        if (last_marginalization_info_)
+        {
+            delete last_marginalization_info_;
+        }
+        last_marginalization_info_ = marginalization_info;
+        last_marginalization_parameter_blocks = parameter_blocks;
+        ROS_DEBUG_STREAM("whole marginalization costs: " << t_whole_marginalization.Toc() << " ms");
+    }
+}
+
+void Estimator::vector2Double()
+{
+    size_t pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
+    for (size_t i = pivot_idx; i < WINDOW_SIZE + 1; i++)
+    {
+        para_pose_[i][0] = Ts_[i](0);
+        para_pose_[i][1] = Ts_[i](1);
+        para_pose_[i][2] = Ts_[i](2);
+        para_pose_[i][3] = Qs_[i].x();
+        para_pose_[i][4] = Qs_[i].y();
+        para_pose_[i][5] = Qs_[i].z();
+        para_pose_[i][6] = Qs_[i].w();
+    }
+    for (size_t i = 0; i < NUM_OF_LASER; i++)
+    {
+        para_ex_pose_[i][0] = tbl_[i](0);
+        para_ex_pose_[i][1] = tbl_[i](1);
+        para_ex_pose_[i][2] = tbl_[i](2);
+        para_ex_pose_[i][3] = qbl_[i].x();
+        para_ex_pose_[i][4] = qbl_[i].y();
+        para_ex_pose_[i][5] = qbl_[i].z();
+        para_ex_pose_[i][6] = qbl_[i].w();
+    }
+    for (size_t i = 0; i < NUM_OF_LASER; i++)
+    {
+        para_td_[i] = tdbl_[i];
+    }
+}
+
+void Estimator::double2Vector()
+{
+
 }
 
 // push new state and measurements in the sliding window

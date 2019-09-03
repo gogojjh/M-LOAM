@@ -321,7 +321,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
 
     Pose pose_prev_cur(q_prev_cur, t_prev_cur);
     // std::cout << "tracker transform: " << pose_prev_cur << std::endl;
-    printf("whole tracker time %f ms \n", t_whole.toc());
+    // printf("whole tracker time %f ms \n", t_whole.toc());
 
     return pose_prev_cur;
 }

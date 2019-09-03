@@ -25,9 +25,8 @@ bool comp (int i,int j) { return (cloud_curvature[i] < cloud_curvature[j]); }
 FeatureExtract::FeatureExtract()
 {
     half_passed_ = false;
-
     down_size_filter_corner_.setLeafSize(0.2, 0.2, 0.2);
-    down_size_filter_surf_.setLeafSize(0.4, 0.4, 0.4);
+    down_size_filter_surf_.setLeafSize(0.2, 0.2, 0.2);
     down_size_filter_map_.setLeafSize(0.6, 0.6, 0.6);
 }
 
@@ -310,9 +309,8 @@ cloudFeature FeatureExtract::extractCloud(const double &cur_time, const PointClo
     // printf("sort q time %f ms \n", t_q_sort);
     // printf("seperate points time %f ms \n", t_pts_.toc());
 
-    printf("whole scan registration time %f ms \n", t_whole_.toc());
-    if(t_whole_.toc() > 100)
-        ROS_WARN("whole scan registration process over 100ms");
+    printf("whole scan registration time %fms \n", t_whole_.toc());
+    if(t_whole_.toc() > 100) ROS_WARN("whole scan registration process over 100ms");
 
     cloudFeature cloud_feature;
     // cloud_feature.find("key")->first/ second
@@ -465,6 +463,8 @@ void FeatureExtract::extractSurfFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &kdt
 
     // TODO: extract plane coefficients and correspondences from surf map
     size_t cloud_size = cloud_data.points.size();
+    features.resize(cloud_size);
+    size_t cloud_cnt = 0;
     for (size_t i = 0; i < cloud_size; i++)
     {
         PointI point_ori = cloud_data.points[i];
@@ -533,11 +533,13 @@ void FeatureExtract::extractSurfFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &kdt
                     feature.score_ = s;
                     feature.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
                     feature.coeffs_ = coeff;
-                    features.push_back(feature);
+                    features[cloud_cnt] = feature;
+                    cloud_cnt++;
                 }
             }
         }
     }
+    features.resize(cloud_cnt);
 }
 
 //

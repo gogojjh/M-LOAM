@@ -104,6 +104,9 @@ extern int PLANAR_MOVEMENT;
 extern float MIN_MATCH_SQ_DIS;
 extern float MIN_PLANE_DIS;
 
+extern int MARGINALIZATION_FACTOR;
+extern int POINT_DISTANCE_FACTOR;
+
 void readParameters(std::string config_file);
 
 enum SIZE_PARAMETERIZATION
