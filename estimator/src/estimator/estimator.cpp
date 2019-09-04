@@ -73,6 +73,8 @@ void Estimator::clearState()
     surf_map_features_.clear();
     // corner_map_features_.clear();
 
+    last_marginalization_info_ = nullptr;
+
     m_process_.unlock();
 }
 
@@ -123,6 +125,18 @@ void Estimator::setParameter()
         init_thread_flag_ = true;
         process_thread_ = std::thread(&Estimator::processMeasurements, this);
     }
+
+    para_pose_ = new double *[OPT_WINDOW_SIZE + 1];
+    for (int i = 0; i < OPT_WINDOW_SIZE + 1; i++)
+    {
+        para_pose_[i] = new double[SIZE_POSE];
+    }
+    para_ex_pose_ = new double *[NUM_OF_LASER];
+    for (int i = 0; i < NUM_OF_LASER; i++)
+    {
+        para_ex_pose_[i] = new double[SIZE_POSE];
+    }
+    para_td_ = new double [NUM_OF_LASER];
 
     m_process_.unlock();
 }
@@ -461,7 +475,7 @@ void Estimator::buildLocalMap()
             // f_extract_.extractCornerFromMap(kdtree_corner_points_local_map,
                                         // corner_points_local_map_filtered_[n], corner_points_stack_[n][i],
                                         // pose_local[i], corner_map_features_[n][i]);
-            // printf("number of extracted features: %d\n", surf_map_features_[n][i].size());
+            // printf("number of extracted features: %d\n", corner_map_features_[n][i].size());
         }
     }
     printf("extract local map: %fms\n", t_local_map_extract.toc());
@@ -474,7 +488,6 @@ void Estimator::optimizeLocalMap()
         ROS_WARN("enter optimization before enough count: %d < %d", cir_buf_cnt_, WINDOW_SIZE);
         return;
     }
-
     TicToc t_prep_solver;
     vector2Double();
     // -----------------
@@ -496,22 +509,22 @@ void Estimator::optimizeLocalMap()
     {
         ceres::LocalParameterization *local_parameterization = new PoseLocalParameterization();
         problem.AddParameterBlock(para_ex_pose_[i], SIZE_POSE, local_parameterization);
-        if ((ESTIMATE_EXTRINSIC) && (OPT_EXTRINSIC))
+        if ((ESTIMATE_EXTRINSIC) && (!OPTIMAL_EXTRINSIC))
         {
             ROS_INFO("estimate extrinsic param");
         } else
         {
             ROS_INFO("fix extrinsic param");
-            problem.setParameterBlockConstant(para_ex_pose_[i]);
+            problem.SetParameterBlockConstant(para_ex_pose_[i]);
         }
-        if (i == IDX_REF) problem.setParameterBlockConstant(para_ex_pose_[i]);
+        if (i == IDX_REF) problem.SetParameterBlockConstant(para_ex_pose_[i]);
     }
     for (size_t i = 0; i < NUM_OF_LASER; i++)
     {
-        problem.AddParameterBlock(para_td_[i], 1);
+        problem.AddParameterBlock(&para_td_[i], 1);
         if (!ESTIMATE_TD)
         {
-            problem.setParameterBlockConstant(para_td_[i]);
+            problem.SetParameterBlockConstant(&para_td_[i]);
         }
     }
 
@@ -521,8 +534,10 @@ void Estimator::optimizeLocalMap()
     if ((MARGINALIZATION_FACTOR) && (last_marginalization_info_))
     {
         MarginalizationFactor *marginalization_factor = new MarginalizationFactor(last_marginalization_info_);
-        problem.addResidualBlock(marginalization_factor, NULL, last_marginalization_parameter_blocks_);
+        problem.AddResidualBlock(marginalization_factor, NULL, last_marginalization_parameter_blocks_);
     }
+
+    buildLocalMap();
     // -----------------
     // ceres: add residual block within the sliding window
     if (POINT_PLANE_FACTOR)
@@ -538,9 +553,9 @@ void Estimator::optimizeLocalMap()
                     const double &s = feature.score_;
                     const Eigen::Vector3d &p_data = feature.point_;
                     const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-                    ceres::CostFunction *cost_function = LidarPivotPointPlaneFactor::Create(p_data, coeff_ref, s);
-                    problem.AddResidualBlock(cost_function, loss_function,
-                        para_pose_[0], para_pose_[i], para_ex_pose_[n]);
+                    ceres::CostFunction *cost_function = new ceres::AutoDiffCostFunction
+            			<LidarPivotPointPlaneFactor, 1, 7, 7, 7>(new LidarPivotPointPlaneFactor(point, coeff, s)));
+                    problem.AddResidualBlock(cost_function, loss_function, para_pose_[0], para_pose_[i], para_ex_pose_[n]);
                 }
             }
         }
@@ -580,7 +595,6 @@ void Estimator::optimizeLocalMap()
 
     double2Vector();
 
-    //! TODO
     // ****************************************************
     // ceres: marginalization of current parameter block
     if (MARGINALIZATION_FACTOR)
@@ -588,7 +602,7 @@ void Estimator::optimizeLocalMap()
         TicToc t_whole_marginalization;
         MarginalizationInfo *marginalization_info = new MarginalizationInfo();
         vector2Double();
-        // set prior error of the marginalized parameter block
+        // indicate the marginalized parameter blocks
         if (last_marginalization_info_)
         {
             std::vector<int> drop_set;
@@ -602,10 +616,10 @@ void Estimator::optimizeLocalMap()
             MarginalizationFactor *marginalization_factor = new MarginalizationFactor(last_marginalization_info_);
             ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(marginalization_factor, NULL,
                 last_marginalization_parameter_blocks_, drop_set);
-            marginalization_info->AddResidualBlockInfo(residual_block_info);
+            marginalization_info->addResidualBlockInfo(residual_block_info);
         }
-        // set point-to-plane prior error
-        if (POINT_DISTANCE_FACTOR)
+        // set marginalized residuals over the marginalized states
+        if (POINT_PLANE_FACTOR)
         {
             size_t pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
             for (size_t n = 0; n < NUM_OF_LASER; n++)
@@ -618,24 +632,26 @@ void Estimator::optimizeLocalMap()
                         const double &s = feature.score_;
                         const Eigen::Vector3d &p_data = feature.point_;
                         const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-                        ceres::CostFunction *cost_function = LidarPivotPointPlaneFactor::Create(p_data, coeff_ref, s);
+                        ceres::CostFunction *cost_function = new ceres::AutoDiffCostFunction
+                			<LidarPivotPointPlaneFactor, 1, 7, 7, 7>(new LidarPivotPointPlaneFactor(point, coeff, s)));
                         ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(cost_function, loss_function,
-                            para_pose_[0], para_pose_[i], para_ex_pose_[n], std::vector<int>{0});
-                        marginalization_info->AddResidualBlockInfo(residual_block_info);
+                            vector<double *>{para_pose_[0], para_pose_[i], para_ex_pose_[n]}, std::vector<int>{0});
+                        marginalization_info->addResidualBlockInfo(residual_block_info);
                     }
                 }
             }
         }
 
-        // merge all the ResidualBlockInfo to the marginalization_info
-        // calculate the residuals and jacobian of all ResidualBlockInfo, will be as the starting linear point of next optimization
+        //! calculate the residuals and jacobian of all ResidualBlockInfo over the marginalized parameter blocks,
+        //! for next iteration, the linearization point is assured and fixed
+        //! adjust the memory of H and b to implement the Schur complement
         TicToc t_pre_margin;
-        marginalization_info->PreMarginalize();
-        ROS_DEBUG_STREAM("pre marginalization: " << t_pre_margin.Toc() << " ms");
+        marginalization_info->preMarginalize();
+        ROS_DEBUG_STREAM("pre marginalization: " << t_pre_margin.toc() << " ms");
 
         TicToc t_margin;
-        marginalization_info->Marginalize();
-        ROS_DEBUG_STREAM("marginalization: " << t_margin.Toc() << " ms");
+        marginalization_info->marginalize();
+        ROS_DEBUG_STREAM("marginalization: " << t_margin.toc() << " ms");
 
         //! indicate shared memory of parameter blocks except for the dropped state
         std::unordered_map<long, double *> addr_shift;
@@ -647,14 +663,14 @@ void Estimator::optimizeLocalMap()
         {
             addr_shift[reinterpret_cast<long>(para_ex_pose_[n])] = para_ex_pose_[n];
         }
-        vector<double *> parameter_blocks = marginalization_info->GetParameterBlocks(addr_shift);
+        vector<double *> parameter_blocks = marginalization_info->getParameterBlocks(addr_shift);
         if (last_marginalization_info_)
         {
             delete last_marginalization_info_;
         }
         last_marginalization_info_ = marginalization_info;
-        last_marginalization_parameter_blocks = parameter_blocks;
-        ROS_DEBUG_STREAM("whole marginalization costs: " << t_whole_marginalization.Toc() << " ms");
+        last_marginalization_parameter_blocks_ = parameter_blocks;
+        ROS_DEBUG_STREAM("whole marginalization costs: " << t_whole_marginalization.toc() << "ms");
     }
 }
 
@@ -663,13 +679,13 @@ void Estimator::vector2Double()
     size_t pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
     for (size_t i = pivot_idx; i < WINDOW_SIZE + 1; i++)
     {
-        para_pose_[i][0] = Ts_[i](0);
-        para_pose_[i][1] = Ts_[i](1);
-        para_pose_[i][2] = Ts_[i](2);
-        para_pose_[i][3] = Qs_[i].x();
-        para_pose_[i][4] = Qs_[i].y();
-        para_pose_[i][5] = Qs_[i].z();
-        para_pose_[i][6] = Qs_[i].w();
+        para_pose_[i-pivot_idx][0] = Ts_[i](0);
+        para_pose_[i-pivot_idx][1] = Ts_[i](1);
+        para_pose_[i-pivot_idx][2] = Ts_[i](2);
+        para_pose_[i-pivot_idx][3] = Qs_[i].x();
+        para_pose_[i-pivot_idx][4] = Qs_[i].y();
+        para_pose_[i-pivot_idx][5] = Qs_[i].z();
+        para_pose_[i-pivot_idx][6] = Qs_[i].w();
     }
     for (size_t i = 0; i < NUM_OF_LASER; i++)
     {
@@ -689,7 +705,21 @@ void Estimator::vector2Double()
 
 void Estimator::double2Vector()
 {
-
+    size_t pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
+    for (size_t i = 0; i < OPT_WINDOW_SIZE + 1; i++)
+    {
+        Ts_[i+pivot_idx] = Eigen::Vector3d(para_pose_[i][0], para_pose_[i][1], para_pose_[i][2]);
+        Qs_[i+pivot_idx] = Eigen::Quaterniond(para_pose_[i][6], para_pose_[i][3], para_pose_[i][4], para_pose_[i][5]);
+    }
+    for (size_t i = 0; i < NUM_OF_LASER; i++)
+    {
+        tbl_[i] = Eigen::Vector3d(para_ex_pose_[i][0], para_ex_pose_[i][1], para_ex_pose_[i][2]);
+        qbl_[i] = Eigen::Quaterniond(para_ex_pose_[i][6], para_ex_pose_[i][5], para_ex_pose_[i][4], para_ex_pose_[i][3]);
+    }
+    for (size_t i = 0; i < NUM_OF_LASER; i++)
+    {
+        tdbl_[i] = para_td_[i];
+    }
 }
 
 // push new state and measurements in the sliding window

@@ -74,7 +74,10 @@ float MIN_MATCH_SQ_DIS;
 float MIN_PLANE_DIS;
 
 int MARGINALIZATION_FACTOR;
-int POINT_DISTANCE_FACTOR;
+int POINT_PLANE_FACTOR;
+int POINT_EDGE_FACTOR;
+
+int OPTIMAL_EXTRINSIC;
 
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
@@ -137,6 +140,7 @@ void readParameters(std::string config_file)
     printf("window_size: %d, opt_window_size: %d", WINDOW_SIZE, OPT_WINDOW_SIZE);
 
     ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];
+    OPTIMAL_EXTRINSIC = fsSettings["optimal_extrinsic"];
     if (ESTIMATE_EXTRINSIC == 2)
     {
         ROS_WARN("have no prior about extrinsic param, calibrate extrinsic param");
@@ -193,7 +197,8 @@ void readParameters(std::string config_file)
     MIN_PLANE_DIS = fsSettings["min_plane_dis"];
 
     MARGINALIZATION_FACTOR = fsSettings["marginalization_factor"];
-    POINT_DISTANCE_FACTOR = fsSettings["point_distance_factor"];
+    POINT_PLANE_FACTOR = fsSettings["point_plane_factor"];
+    POINT_EDGE_FACTOR = fsSettings["point_edge_factor"];
 
     fsSettings.release();
 }

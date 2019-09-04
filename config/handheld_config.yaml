@@ -45,7 +45,7 @@ opt_window_size: 5
 estimate_extrinsic: 1   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
-opt_extrinsic: 1
+optimal_extrinsic: 0
 
 body_T_laser: !!opencv-matrix
    rows: 2
@@ -88,7 +88,8 @@ min_plane_dis: 0.2
 
 # mariginalization
 marginalization_factor: 1
-point_distance_factor: 1
+point_plane_factor: 1
+point_edge_factor: 0
 
 
 

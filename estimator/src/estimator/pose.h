@@ -26,6 +26,7 @@ public:
     Pose(): q_(Eigen::Quaterniond::Identity()), t_(Eigen::Vector3d::Zero()), T_(Eigen::Matrix4d::Identity()), td_(0) {}
     Pose(const Eigen::Quaterniond &q, const Eigen::Vector3d &t, const double &td=0): q_(q), t_(t), td_(td)
     {
+        q_.normalize();
         T_.setIdentity();
         T_.topLeftCorner<3, 3>() = q_.toRotationMatrix();
         T_.topRightCorner<3, 1>() = t_;
@@ -33,6 +34,7 @@ public:
     Pose(const Eigen::Matrix4d &T, const double &td=0): T_(T), td_(td)
     {
         q_ = Eigen::Quaterniond(T.topLeftCorner<3, 3>());
+        q_.normalize();
         t_ = T.topRightCorner<3, 1>();
     }
 

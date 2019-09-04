@@ -105,7 +105,10 @@ extern float MIN_MATCH_SQ_DIS;
 extern float MIN_PLANE_DIS;
 
 extern int MARGINALIZATION_FACTOR;
-extern int POINT_DISTANCE_FACTOR;
+extern int POINT_PLANE_FACTOR;
+extern int POINT_EDGE_FACTOR;
+
+extern int OPTIMAL_EXTRINSIC;
 
 void readParameters(std::string config_file);
 
