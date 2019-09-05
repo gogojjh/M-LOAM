@@ -553,8 +553,7 @@ void Estimator::optimizeLocalMap()
                     const double &s = feature.score_;
                     const Eigen::Vector3d &p_data = feature.point_;
                     const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-                    ceres::CostFunction *cost_function = new ceres::AutoDiffCostFunction
-            			<LidarPivotPointPlaneFactor, 1, 7, 7, 7>(new LidarPivotPointPlaneFactor(point, coeff, s)));
+                    ceres::CostFunction *cost_function = LidarPivotPointPlaneFactor::Create(p_data, coeff_ref, s);
                     problem.AddResidualBlock(cost_function, loss_function, para_pose_[0], para_pose_[i], para_ex_pose_[n]);
                 }
             }
@@ -632,8 +631,7 @@ void Estimator::optimizeLocalMap()
                         const double &s = feature.score_;
                         const Eigen::Vector3d &p_data = feature.point_;
                         const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-                        ceres::CostFunction *cost_function = new ceres::AutoDiffCostFunction
-                			<LidarPivotPointPlaneFactor, 1, 7, 7, 7>(new LidarPivotPointPlaneFactor(point, coeff, s)));
+                        ceres::CostFunction *cost_function = LidarPivotPointPlaneFactor::Create(p_data, coeff_ref, s);
                         ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(cost_function, loss_function,
                             vector<double *>{para_pose_[0], para_pose_[i], para_ex_pose_[n]}, std::vector<int>{0});
                         marginalization_info->addResidualBlockInfo(residual_block_info);

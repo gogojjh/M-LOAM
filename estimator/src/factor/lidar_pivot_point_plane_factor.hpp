@@ -5,44 +5,49 @@
 #include <Eigen/Eigen>
 #include <Eigen/Dense>
 
-struct LidarPivotPointPlaneFactor
+class LidarPivotPointPlaneFactor
 {
+public:
 	LidarPivotPointPlaneFactor(Eigen::Vector3d point, Eigen::Vector4d coeff, double s)
     	: point_(point), coeff_(coeff), s_(s) {}
 
 	template <typename T>
-	bool operator()(T const *const *parameters, T *residuals) const
+	bool operator()(const T* const param_a, const T* const param_b, const T* const param_ext, T *residuals) const
 	{
-		Eigen::Matrix<T, 3, 1> T_pivot(parameters[0][0], parameters[0][1], parameters[0][2]);
-		Eigen::Quaternion<T> Q_pivot(parameters[0][6], parameters[0][3], parameters[0][4], parameters[0][5]);
-		Eigen::Matrix<T, 3, 1> T_i(parameters[1][0], parameters[1][1], parameters[1][2]);
-		Eigen::Quaternion<T> Q_i(parameters[1][6], parameters[1][3], parameters[1][4], parameters[1][5]);
-		Eigen::Matrix<T, 3, 1> T_ext(parameters[2][0], parameters[2][1], parameters[2][2]);
-		Eigen::Quaternion<T> Q_ext(parameters[2][6], parameters[2][3], parameters[2][4], parameters[2][5]);
+		Eigen::Matrix<T, 3, 1> T_a(param_a[0], param_a[1], param_a[2]);
+		Eigen::Quaternion<T> Q_a(param_a[6], param_a[3], param_a[4], param_a[5]);
+		Eigen::Matrix<T, 3, 1> T_b(param_b[0], param_b[1], param_b[2]);
+		Eigen::Quaternion<T> Q_b(param_b[6], param_b[3], param_b[4], param_b[5]);
+		Eigen::Matrix<T, 3, 1> T_ext(param_ext[0], param_ext[1], param_ext[2]);
+		Eigen::Quaternion<T> Q_ext(param_ext[6], param_ext[3], param_ext[4], param_ext[5]);
 
-		Eigen::Quaternion<T> Q_pivot_ext = Q_pivot * Q_ext.conjugate();
-	    Eigen::Matrix<T, 3, 1> T_pivot_ext = T_pivot - Q_pivot_ext * T_ext;
-	    Eigen::Quaternion<T> Q_i_ext = Q_i * Q_ext.conjugate();
-	    Eigen::Matrix<T, 3, 1> T_i_ext = T_i - Q_i_ext * T_i;
-	    Eigen::Quaternion<T> Q_i_pivot = Q_pivot_ext.conjugate() * Q_i_ext;
-	    Eigen::Matrix<T, 3, 1> T_i_pivot = Q_pivot_ext.conjugate() * (T_i_ext - T_pivot_ext);
+		Eigen::Quaternion<T> Q_ext_a = Q_a * Q_ext;
+	    Eigen::Matrix<T, 3, 1> T_ext_a = T_a + Q_a * T_ext;
+	    Eigen::Quaternion<T> Q_ext_b = Q_b * Q_ext;
+	    Eigen::Matrix<T, 3, 1> T_ext_b = T_b + Q_b * T_ext;
+	    Eigen::Quaternion<T> Q_ext_ab = Q_ext_b * Q_ext_a.conjugate();
+	    Eigen::Matrix<T, 3, 1> T_ext_ab = T_ext_b - Q_ext_ab * T_ext_a;
 
-		Eigen::Matrix<T, 3, 1> w(coeff_(0), coeff_(1), coeff_(2));
-		T d = coeff_(3);
-		T r = T((w.transpose() * (Q_i_pivot * point_.cast<T>() + T_i_pivot) + d) * T(s_));
+		Eigen::Matrix<T, 3, 1> w(T(coeff_(0)), T(coeff_(1)), T(coeff_(2)));
+		T d = T(coeff_(3));
+		Eigen::Matrix<T, 3, 1> p(T(point_(0)), T(point_(1)), T(point_(2)));
+		T r = T((w.dot(Q_ext_ab * p + T_ext_ab) + T(d)) * T(s_));
 		residuals[0] = r;
 		return true;
 	}
 
-	// static ceres::CostFunction *Create(const Eigen::Vector3d point, const Eigen::Vector4d coeff, const double s)
-	// {
-	// 	return (new ceres::AutoDiffCostFunction
-	// 		<LidarPivotPointPlaneFactor, 1, 7, 7, 7>(new LidarPivotPointPlaneFactor(point, coeff, s)));
-	// }
+	static ceres::CostFunction *Create(const Eigen::Vector3d &point, const Eigen::Vector4d &coeff, const double &s)
+	{
+		return (new ceres::AutoDiffCostFunction<LidarPivotPointPlaneFactor, 1, 7, 7, 7>(
+			new LidarPivotPointPlaneFactor(point, coeff, s)));
+	}
 
-	Eigen::Vector3d point_;
-	Eigen::Vector4d coeff_;
-	double s_;
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+private:
+	const Eigen::Vector3d point_;
+	const Eigen::Vector4d coeff_;
+	const double s_;
 };
 
 // TODO: with jacobian derivation
