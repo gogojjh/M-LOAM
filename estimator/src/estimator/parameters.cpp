@@ -137,7 +137,7 @@ void readParameters(std::string config_file)
 
     WINDOW_SIZE = fsSettings["window_size"];
     OPT_WINDOW_SIZE = fsSettings["opt_window_size"];
-    printf("window_size: %d, opt_window_size: %d", WINDOW_SIZE, OPT_WINDOW_SIZE);
+    printf("window_size: %d, opt_window_size: %d\n", WINDOW_SIZE, OPT_WINDOW_SIZE);
 
     ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];
     OPTIMAL_EXTRINSIC = fsSettings["optimal_extrinsic"];
@@ -155,7 +155,7 @@ void readParameters(std::string config_file)
     {
         if ( ESTIMATE_EXTRINSIC == 1)
         {
-            ROS_WARN(" Optimize extrinsic param around initial guess!");
+            ROS_WARN("Please optimize extrinsic param around initial guess!");
             EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "/extrinsic_parameter.csv";
         }
         if (ESTIMATE_EXTRINSIC == 0)
