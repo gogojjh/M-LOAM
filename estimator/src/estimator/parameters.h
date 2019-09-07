@@ -110,6 +110,8 @@ extern int POINT_EDGE_FACTOR;
 
 extern int OPTIMAL_EXTRINSIC;
 
+extern int EVALUATE_RESIDUAL;
+
 void readParameters(std::string config_file);
 
 enum SIZE_PARAMETERIZATION

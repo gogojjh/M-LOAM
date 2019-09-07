@@ -31,7 +31,8 @@ public:
 		Eigen::Matrix<T, 3, 1> w(T(coeff_(0)), T(coeff_(1)), T(coeff_(2)));
 		T d = T(coeff_(3));
 		Eigen::Matrix<T, 3, 1> p(T(point_(0)), T(point_(1)), T(point_(2)));
-		T r = T((w.dot(Q_ext_ab * p + T_ext_ab) + T(d)) * T(s_));
+		// T r = T((w.dot(Q_ext_ab * p + T_ext_ab) + T(d)) * T(s_));
+		T r = T(w.dot(Q_ext_ab * p + T_ext_ab) + T(d));
 		residuals[0] = r;
 		return true;
 	}

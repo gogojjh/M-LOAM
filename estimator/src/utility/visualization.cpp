@@ -22,6 +22,7 @@ ros::Publisher pub_surf_points_flat;
 ros::Publisher pub_surf_points_less_flat;
 
 // local map
+std::vector<ros::Publisher> v_pub_surf_points_pivot;
 std::vector<ros::Publisher> v_pub_surf_points_local_map;
 
 // odometry
@@ -69,13 +70,18 @@ void registerPub(ros::NodeHandle &nh)
     pub_surf_points_less_flat = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_less_flat", 100);
 
     pub_ext_base_to_sensor = nh.advertise<nav_msgs::Odometry>("/ext_base_to_sensor", 100);
-    for (size_t i = 0; i < NUM_OF_LASER; i++)
+
+    for (int i = 0; i < NUM_OF_LASER; i++)
     {
         std::string laser_odom_topic, laser_path_topic;
         laser_odom_topic = std::string("/laser_odom_") + std::to_string(i);
         v_pub_laser_odometry.push_back(nh.advertise<nav_msgs::Odometry>(laser_odom_topic, 100));
         laser_path_topic = std::string("/laser_odom_path_") + std::to_string(i);
         v_pub_laser_path.push_back(nh.advertise<nav_msgs::Path>(laser_path_topic, 100));
+
+        std::string surf_points_pivot;
+        surf_points_pivot = std::string("/surf_points_pivot_") + std::to_string(i);
+        v_pub_surf_points_pivot.push_back(nh.advertise<sensor_msgs::PointCloud2>(surf_points_pivot, 100));
 
         std::string surf_points_local_map_topic;
         surf_points_local_map_topic = std::string("/surf_local_map_") + std::to_string(i);
@@ -114,8 +120,8 @@ void pubPointCloud(const Estimator &estimator, const double &time)
     {
         header.frame_id = "laser_" + std::to_string(i);
         publishCloud(v_pub_surf_points_local_map[i], header, estimator.surf_points_local_map_filtered_[i]);
+        publishCloud(v_pub_surf_points_pivot[i], header, estimator.surf_points_stack_[i][WINDOW_SIZE - OPT_WINDOW_SIZE + 1]);
     }
-
 }
 
 void printStatistics(const Estimator &estimator, double t)

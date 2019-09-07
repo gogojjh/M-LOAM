@@ -48,6 +48,7 @@ namespace common
         bool setValueById(unsigned int dimesion_id, const FeatureElementType& value)
         {
             feature_elements_.at(dimesion_id).value = value;
+            return true;
         }
 
         size_t size() const

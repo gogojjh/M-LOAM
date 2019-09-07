@@ -173,16 +173,19 @@ namespace common {
         empty_markers.markers.push_back(clear_marker);
         publisher.publish(empty_markers);
 
-        if (objects_array.size() <= 0) {
+        if (objects_array.size() <= 0)
+        {
             ROS_WARN("Publish empty object marker.");
             return;
         }
-        else {
+        else
+        {
             ROS_INFO("Publishing %u objects markers.", objects_array.size());
         }
 
         visualization_msgs::MarkerArray object_markers;
-        for (size_t obj = 0u; obj < objects_array.size(); ++obj) {
+        for (size_t obj = 0u; obj < objects_array.size(); ++obj)
+        {
             /*
              * @note Apollo's Object Coordinate
              *          |x
@@ -306,7 +309,6 @@ namespace common {
 
             object_markers.markers.push_back(dir_arrow);
         }
-
         publisher.publish(object_markers);
     }
 
@@ -340,7 +342,7 @@ namespace common {
             return;
         }
         else {
-            ROS_INFO("Publishing %u clusters markers.", clusters_array.size());
+            ROS_INFO("Publishing %d clusters markers.", clusters_array.size());
         }
 
         visualization_msgs::MarkerArray cluster_markers;

@@ -79,6 +79,8 @@ int POINT_EDGE_FACTOR;
 
 int OPTIMAL_EXTRINSIC;
 
+int EVALUATE_RESIDUAL;
+
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
 {
@@ -144,7 +146,7 @@ void readParameters(std::string config_file)
     if (ESTIMATE_EXTRINSIC == 2)
     {
         ROS_WARN("have no prior about extrinsic param, calibrate extrinsic param");
-        for (size_t i = 0; i < NUM_OF_LASER; i++)
+        for (int i = 0; i < NUM_OF_LASER; i++)
         {
             QBL.push_back(Eigen::Quaterniond::Identity());
             TBL.push_back(Eigen::Vector3d::Zero());
@@ -163,7 +165,7 @@ void readParameters(std::string config_file)
 
         cv::Mat cv_T;
         fsSettings["body_T_laser"] >> cv_T;
-        for (size_t i = 0; i < NUM_OF_LASER; i++)
+        for (int i = 0; i < NUM_OF_LASER; i++)
         {
             QBL.push_back(Eigen::Quaterniond(cv_T.ptr<double>(i)[3], cv_T.ptr<double>(i)[0], cv_T.ptr<double>(i)[1], cv_T.ptr<double>(i)[2]));
             TBL.push_back(Eigen::Vector3d(cv_T.ptr<double>(i)[4], cv_T.ptr<double>(i)[5], cv_T.ptr<double>(i)[6]));
@@ -174,7 +176,7 @@ void readParameters(std::string config_file)
 
     cv::Mat cv_TD;
     fsSettings["td"] >> cv_TD;
-    for (size_t i = 0; i < NUM_OF_LASER; i++) TDBL.push_back(cv_TD.ptr<double>(0)[i]);
+    for (int i = 0; i < NUM_OF_LASER; i++) TDBL.push_back(cv_TD.ptr<double>(0)[i]);
     ESTIMATE_TD = fsSettings["estimate_td"];
     if (ESTIMATE_TD)
         ROS_INFO_STREAM("Unsynchronized sensors, online estimate time offset");
@@ -199,6 +201,8 @@ void readParameters(std::string config_file)
     MARGINALIZATION_FACTOR = fsSettings["marginalization_factor"];
     POINT_PLANE_FACTOR = fsSettings["point_plane_factor"];
     POINT_EDGE_FACTOR = fsSettings["point_edge_factor"];
+
+    EVALUATE_RESIDUAL = fsSettings["evaluate_residual"];
 
     fsSettings.release();
 }
