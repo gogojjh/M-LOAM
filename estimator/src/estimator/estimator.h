@@ -74,6 +74,7 @@ class Estimator
     void optimizeLocalMap();
     void vector2Double();
     void double2Vector();
+    void printParameter();
 
     void changeSensorType(int use_imu, int use_stereo);
 
@@ -123,7 +124,9 @@ class Estimator
     std::vector<CircularBuffer<int> > surf_points_stack_size_, corner_points_stack_size_;
 
     std::vector<common::PointICloud> surf_points_local_map_, surf_points_local_map_filtered_;
+    std::vector<common::PointICloud> surf_points_pivot_map_;
     std::vector<common::PointICloud> corner_points_local_map_, corner_points_local_map_filtered_;
+    std::vector<common::PointICloud> corner_points_pivot_map_;
 
     double prev_time_, cur_time_;
 

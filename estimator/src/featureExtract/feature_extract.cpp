@@ -341,6 +341,7 @@ void FeatureExtract::extractCornerFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &k
 
     // TODO: extract edge coefficients and correspondences from edge map
     size_t cloud_size = cloud_data.points.size();
+    features.resize(cloud_size);
     for (size_t i = 0; i < cloud_size; i++)
     {
         PointI point_ori = cloud_data.points[i];
@@ -526,7 +527,7 @@ void FeatureExtract::extractSurfFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &kdt
                 {
                     is_in_laser_fov = true;
                 }
-                // is_in_laser_fov = true;
+                is_in_laser_fov = true;
                 if (s > 0.1 && is_in_laser_fov)
                 {
                     PointPlaneFeature feature;
@@ -541,5 +542,10 @@ void FeatureExtract::extractSurfFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &kdt
     }
     features.resize(cloud_cnt);
 }
+
+
+
+
+
 
 //

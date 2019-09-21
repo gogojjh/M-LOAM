@@ -9,31 +9,59 @@ class LidarPivotPointPlaneFactor
 {
 public:
 	LidarPivotPointPlaneFactor(Eigen::Vector3d point, Eigen::Vector4d coeff, double s)
-    	: point_(point), coeff_(coeff), s_(s) {}
+    	: point_(point), coeff_(coeff), s_(s){}
 
 	template <typename T>
 	bool operator()(const T* const param_a, const T* const param_b, const T* const param_ext, T *residuals) const
 	{
-		Eigen::Matrix<T, 3, 1> T_a(param_a[0], param_a[1], param_a[2]);
 		Eigen::Quaternion<T> Q_a(param_a[6], param_a[3], param_a[4], param_a[5]);
-		Eigen::Matrix<T, 3, 1> T_b(param_b[0], param_b[1], param_b[2]);
+		Eigen::Matrix<T, 3, 1> t_a(param_a[0], param_a[1], param_a[2]);
 		Eigen::Quaternion<T> Q_b(param_b[6], param_b[3], param_b[4], param_b[5]);
-		Eigen::Matrix<T, 3, 1> T_ext(param_ext[0], param_ext[1], param_ext[2]);
+		Eigen::Matrix<T, 3, 1> t_b(param_b[0], param_b[1], param_b[2]);
 		Eigen::Quaternion<T> Q_ext(param_ext[6], param_ext[3], param_ext[4], param_ext[5]);
+		Eigen::Matrix<T, 3, 1> t_ext(param_ext[0], param_ext[1], param_ext[2]);
 
 		Eigen::Quaternion<T> Q_ext_a = Q_a * Q_ext;
-	    Eigen::Matrix<T, 3, 1> T_ext_a = T_a + Q_a * T_ext;
+	    Eigen::Matrix<T, 3, 1> t_ext_a = Q_a * t_ext + t_a;
 	    Eigen::Quaternion<T> Q_ext_b = Q_b * Q_ext;
-	    Eigen::Matrix<T, 3, 1> T_ext_b = T_b + Q_b * T_ext;
-	    Eigen::Quaternion<T> Q_ext_ab = Q_ext_b * Q_ext_a.conjugate();
-	    Eigen::Matrix<T, 3, 1> T_ext_ab = T_ext_b - Q_ext_ab * T_ext_a;
+	    Eigen::Matrix<T, 3, 1> t_ext_b = Q_b * t_ext + t_b;
+	    Eigen::Quaternion<T> Q_ext_ab = Q_ext_a.conjugate() * Q_ext_b;
+		Eigen::Matrix<T, 3, 1> t_ext_ab = Q_ext_a.conjugate() * (t_ext_b - t_ext_a);
 
 		Eigen::Matrix<T, 3, 1> w(T(coeff_(0)), T(coeff_(1)), T(coeff_(2)));
 		T d = T(coeff_(3));
 		Eigen::Matrix<T, 3, 1> p(T(point_(0)), T(point_(1)), T(point_(2)));
-		// T r = T((w.dot(Q_ext_ab * p + T_ext_ab) + T(d)) * T(s_));
-		T r = T(w.dot(Q_ext_ab * p + T_ext_ab) + T(d));
+		T r = T(w.dot(Q_ext_ab * p + t_ext_ab) + T(d));
 		residuals[0] = r;
+
+		// Eigen::Quaternion<T> Q_a(param_a[6], param_a[3], param_a[4], param_a[5]);
+		// Eigen::Matrix<T, 3, 1> t_a(param_a[0], param_a[1], param_a[2]);
+		// Eigen::Matrix<T, 4, 4> T_a = Eigen::Matrix<T, 4, 4>::Identity();
+		// T_a.template topLeftCorner<3, 3>() = Q_a.toRotationMatrix();
+		// T_a.template topRightCorner<3, 1>() = t_a;
+		//
+		// Eigen::Quaternion<T> Q_b(param_b[6], param_b[3], param_b[4], param_b[5]);
+		// Eigen::Matrix<T, 3, 1> t_b(param_b[0], param_b[1], param_b[2]);
+		// Eigen::Matrix<T, 4, 4> T_b = Eigen::Matrix<T, 4, 4>::Identity();
+		// T_b.template topLeftCorner<3, 3>() = Q_b.toRotationMatrix();
+		// T_b.template topRightCorner<3, 1>() = t_b;
+		//
+		// Eigen::Quaternion<T> Q_ext(param_ext[6], param_ext[3], param_ext[4], param_ext[5]);
+		// Eigen::Matrix<T, 3, 1> t_ext(param_ext[0], param_ext[1], param_ext[2]);
+		// Eigen::Matrix<T, 4, 4> T_ext = Eigen::Matrix<T, 4, 4>::Identity();
+		// T_ext.template topLeftCorner<3, 3>() = Q_ext.toRotationMatrix();
+		// T_ext.template topRightCorner<3, 1>() = t_ext;
+		//
+		// Eigen::Matrix<T, 4, 4> T_ext_a = T_a * T_ext;
+		// Eigen::Matrix<T, 4, 4> T_ext_b = T_b * T_ext;
+		// Eigen::Matrix<T, 4, 4> T_ext_ab = T_a.inverse() * T_b;
+		//
+		// Eigen::Matrix<T, 3, 1> w(T(coeff_(0)), T(coeff_(1)), T(coeff_(2)));
+		// T d = T(coeff_(3));
+		// Eigen::Matrix<T, 3, 1> p(T(point_(0)), T(point_(1)), T(point_(2)));
+		// T r = T(w.dot(T_ext_ab.template topLeftCorner<3, 3>() * p + T_ext_ab.template topRightCorner<3, 1>()) + T(d));
+		// residuals[0] = r;
+
 		return true;
 	}
 

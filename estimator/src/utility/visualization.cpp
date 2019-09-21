@@ -96,12 +96,14 @@ void pubPointCloud(const Estimator &estimator, const double &time)
     header.frame_id = "laser_" + std::to_string(IDX_REF);
     header.stamp = ros::Time(time);
     PointICloud laser_cloud, corner_points_sharp, corner_points_less_sharp, surf_points_flat, surf_points_less_flat;
-    for (size_t i = 0; i < estimator.cur_feature_.second.size(); i++)
+    int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
+    for (size_t i = 0; i < estimator.cur_feature_.second.size() - 1; i++)
     {
-        Pose pose_pivot(estimator.Qs_[WINDOW_SIZE - OPT_WINDOW_SIZE], estimator.Ts_[WINDOW_SIZE - OPT_WINDOW_SIZE]);
+        Pose pose_ext = Pose(estimator.qbl_[i], estimator.tbl_[i]);
+        Pose pose_pivot(estimator.Qs_[pivot_idx], estimator.Ts_[pivot_idx]);
         Pose pose_j(estimator.Qs_[estimator.cir_buf_cnt_], estimator.Ts_[estimator.cir_buf_cnt_]);
-        Pose pose_ext_pivot_j = Pose(estimator.qbl_[i], estimator.tbl_[i]) * (pose_pivot.inverse() * pose_j);
-        cloudFeature cloud_feature_trans = transformCloudFeature(estimator.cur_feature_.second[i], pose_ext_pivot_j.T_.cast<float>());
+        Eigen::Matrix4d transform_pivot_j = (pose_pivot.T_ * pose_ext.T_).inverse() * (pose_j.T_ * pose_ext.T_);
+        cloudFeature cloud_feature_trans = transformCloudFeature(estimator.cur_feature_.second[i], transform_pivot_j.cast<float>());
         for (auto &p: cloud_feature_trans["laser_cloud"].points) p.intensity = i;
 
         laser_cloud += cloud_feature_trans["laser_cloud"];
@@ -116,11 +118,12 @@ void pubPointCloud(const Estimator &estimator, const double &time)
     publishCloud(pub_surf_points_flat, header, surf_points_flat);
     publishCloud(pub_surf_points_less_flat, header, surf_points_less_flat);
 
-    for (size_t i = 0; i < NUM_OF_LASER; i++)
+    for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
-        header.frame_id = "laser_" + std::to_string(i);
-        publishCloud(v_pub_surf_points_local_map[i], header, estimator.surf_points_local_map_filtered_[i]);
-        publishCloud(v_pub_surf_points_pivot[i], header, estimator.surf_points_stack_[i][WINDOW_SIZE - OPT_WINDOW_SIZE + 1]);
+        header.frame_id = "laser_" + std::to_string(n);
+        // publishCloud(v_pub_surf_points_local_map[i], header, estimator.surf_points_local_map_filtered_[i]);
+        publishCloud(v_pub_surf_points_local_map[n], header, estimator.surf_points_local_map_[n]);
+        publishCloud(v_pub_surf_points_pivot[n], header, estimator.surf_points_pivot_map_[n]);
     }
 }
 
