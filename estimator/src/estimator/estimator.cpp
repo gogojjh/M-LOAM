@@ -334,6 +334,7 @@ void Estimator::process()
         surf_points_stack_[i][cir_buf_cnt_] = cloud_downsampled_;
         surf_points_stack_size_[i][cir_buf_cnt_] = cloud_downsampled_.size();
     }
+    // printSlideWindow();
 
     // -----------------
     switch (solver_flag_)
@@ -341,12 +342,16 @@ void Estimator::process()
         // INITIAL: multi-LiDAR individual tracking
         case INITIAL:
         {
-            printf("INITIAL\n");
+            printf("[INITIAL]\n");
             slideWindow();
             if (cir_buf_cnt_ < WINDOW_SIZE)
             {
                 cir_buf_cnt_++;
-            } else
+                if (cir_buf_cnt_ == WINDOW_SIZE)
+                {
+                    slideWindow(); // TODO: a bug in the buffer push() function which needs to be fixed
+                }
+            }
             if ((cir_buf_cnt_ == WINDOW_SIZE) && (ESTIMATE_EXTRINSIC != 2))
             {
                 solver_flag_ = NON_LINEAR;
@@ -357,18 +362,17 @@ void Estimator::process()
         case NON_LINEAR:
         {
             // local optimization: optimize the relative LiDAR measurments
-            printf("NON_LINEAR\n");
+            printf("[NON_LINEAR]\n");
             TicToc t_solve;
 
             optimizeLocalMap();
             slideWindow();
 
-            // lidar_optimizer_.OptimizeLocalMap(cur_feature_);
-            // pose_world_laser_[];
             ROS_DEBUG("solver costs: %fms", t_solve.toc());
             break;
         }
     }
+    // printf("size: %d, capacity: %d\n", Qs_.size(), Qs_.capacity());
 
     // swap features
     prev_time_ = cur_time_;
@@ -384,6 +388,7 @@ void Estimator::process()
         }
         prev_feature_.second.push_back(tmp_cloud_feature);
     }
+    // or
     // prev_feature_.second = cur_feature_.second;
 }
 
@@ -495,6 +500,7 @@ void Estimator::optimizeLocalMap()
     }
     TicToc t_prep_solver;
     vector2Double();
+    printParameter();
 
     // -----------------
     // ceres: set lossfunction and problem
@@ -563,8 +569,7 @@ void Estimator::optimizeLocalMap()
         size_t pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
         for (int n = 0; n < NUM_OF_LASER - 1; n++)
         {
-            // for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
-            for (size_t i = pivot_idx + 1; i < pivot_idx + 2; i++)
+            for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
             {
                 std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i];
                 printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size());
@@ -589,8 +594,6 @@ void Estimator::optimizeLocalMap()
     printf("prepare ceres %fms\n", t_prep_solver.toc());
 
     printf("Before optimization\n");
-    printParameter();
-
     // -----------------
     // ceres: set options and solve the non-linear equation
     ceres::Solver::Options options;
@@ -628,6 +631,8 @@ void Estimator::optimizeLocalMap()
         }
     }
 
+    return;
+
     TicToc t_solver;
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
@@ -660,11 +665,9 @@ void Estimator::optimizeLocalMap()
         }
     }
 
-    double2Vector();
     printf("After optimization\n");
+    double2Vector();
     printParameter();
-
-    return;
 
     // ****************************************************
     // ceres: marginalization of current parameter block
@@ -798,6 +801,7 @@ void Estimator::double2Vector()
 
 void Estimator::printParameter()
 {
+    printf("print optimized window (p -> j) ************************\n");
     for (size_t i = 0; i < OPT_WINDOW_SIZE + 1; i++)
     {
         std::cout << "Pose: " << " " <<
@@ -873,6 +877,16 @@ void Estimator::slideWindow()
         surf_points_stack_size_[n].push(surf_points_stack_size_[n][cir_buf_cnt_]);
     }
     printf("slide window: %fms\n", t_solid_window.toc());
+}
+
+void Estimator::printSlideWindow()
+{
+    printf("print slide window (0 -> j) ************************\n");
+    for (size_t i = 0; i < cir_buf_cnt_ + 1; i++)
+    {
+        Pose pose(Qs_[i], Ts_[i]);
+        std::cout << i << ": " << pose << std::endl;
+    }
 }
 
 //

@@ -66,6 +66,7 @@ class Estimator
 
     // slide window and marginalization
     void slideWindow();
+    void printSlideWindow();
 
     // build local map
     void buildLocalMap();

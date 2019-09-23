@@ -27,6 +27,7 @@
 #ifndef LIO_CIRCULARBUFFER_H_
 #define LIO_CIRCULARBUFFER_H_
 
+#include <cstdio>
 #include <cstdlib>
 #include <vector>
 #include <Eigen/Eigen>
