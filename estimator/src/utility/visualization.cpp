@@ -121,8 +121,8 @@ void pubPointCloud(const Estimator &estimator, const double &time)
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
         header.frame_id = "laser_" + std::to_string(n);
-        // publishCloud(v_pub_surf_points_local_map[i], header, estimator.surf_points_local_map_filtered_[i]);
-        publishCloud(v_pub_surf_points_local_map[n], header, estimator.surf_points_local_map_[n]);
+        publishCloud(v_pub_surf_points_local_map[n], header, estimator.surf_points_local_map_filtered_[n]);
+        // publishCloud(v_pub_surf_points_local_map[n], header, estimator.surf_points_local_map_[n]);
         publishCloud(v_pub_surf_points_pivot[n], header, estimator.surf_points_pivot_map_[n]);
     }
 }

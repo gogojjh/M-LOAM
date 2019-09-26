@@ -11,11 +11,16 @@
 
 #include <thread>
 #include <mutex>
+#include <unordered_map>
+#include <queue>
+
+#include <gflags/gflags.h>
+#include <glog/logging.h>
+
 #include <std_msgs/Header.h>
 #include <std_msgs/Float32.h>
 #include <ceres/ceres.h>
-#include <unordered_map>
-#include <queue>
+
 #include <opencv2/core/eigen.hpp>
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/Geometry>
@@ -33,6 +38,8 @@
 
 #include "feature_manager.h"
 #include "../utility/utility.h"
+#include "../utility/visualization.h"
+#include "../utility/cloud_visualizer.h"
 #include "../utility/tic_toc.h"
 #include "../utility/CircularBuffer.h"
 #include "../initial/solve_5pts.h"
@@ -130,21 +137,16 @@ class Estimator
     std::vector<common::PointICloud> corner_points_pivot_map_;
 
     double prev_time_, cur_time_;
-
     double td_;
 
     int input_cloud_cnt_;
 
     FeatureExtract f_extract_;
-
     LidarTracker lidar_tracker_;
-
     InitialExtrinsics initial_extrinsics_;
 
     std::queue<std::pair<double, std::vector<cloudFeature> > > feature_buf_;
-
     pair<double, std::vector<cloudFeature> > prev_feature_, cur_feature_;
-
     std::vector<std::vector<std::vector<PointPlaneFeature> > > surf_map_features_;
 
     double **para_pose_;
@@ -154,6 +156,8 @@ class Estimator
     // for marginalization
     MarginalizationInfo *last_marginalization_info_;
     vector<double *> last_marginalization_parameter_blocks_;
+
+    PlaneNormalVisualizer plane_normal_visualizer_;
 };
 
 

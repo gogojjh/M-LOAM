@@ -19,6 +19,9 @@
 #include <mutex>
 #include <iomanip>
 
+#include <gflags/gflags.h>
+#include <glog/logging.h>
+
 #include <opencv2/opencv.hpp>
 
 #include <pcl_conversions/pcl_conversions.h>
@@ -38,6 +41,7 @@
 #include "estimator/estimator.h"
 #include "estimator/parameters.h"
 #include "utility/visualization.h"
+#include "utility/cloud_visualizer.h"
 
 using namespace std;
 
@@ -170,20 +174,25 @@ void restart_callback(const std_msgs::BoolConstPtr &restart_msg)
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "mloam_node");
-    ros::NodeHandle n("~");
-    ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
-
-    if(argc != 2)
+    if(argc != 3)
     {
-        cout << "please intput: rosrun mlod mlod_node [config file] " << endl
-             << "for example: rosrun mloam mloam_node "
+        cout << "please intput: rosrun mlod mlod_node [log file] [config file] " << endl
+             << "for example: "
+             << "rosrun mloam mloam_node "
+             << "~/catkin_ws/src/M-LOAM/log/mloam_log.txt"
              << "~/catkin_ws/src/M-LOAM/config/handheld_config.yaml" << endl;
         return 1;
     }
 
-    string config_file = argv[1];
-    cout << "config_file: " << argv[1] << endl;
+    google::InitGoogleLogging(argv[0]);
+    google::ParseCommandLineFlags(&argc, &argv, true);
+
+    ros::init(argc, argv, "mloam_node");
+    ros::NodeHandle n("~");
+    ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
+
+    string config_file = argv[2];
+    cout << "config_file: " << argv[2] << endl;
 
     readParameters(config_file);
     estimator.setParameter();
@@ -201,6 +210,11 @@ int main(int argc, char **argv)
     ros::Subscriber sub_restart = n.subscribe("/mlod_restart", 100, restart_callback);
 
     std::thread sync_thread{sync_process};
+    if (PCL_VIEWER)
+    {
+        boost::thread cloud_visualer(boost::bind(&PlaneNormalVisualizer::Spin, &(estimator.plane_normal_vis_)))
+    }
+
     ros::spin();
 
     return 0;

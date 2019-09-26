@@ -112,6 +112,8 @@ extern int OPTIMAL_EXTRINSIC;
 
 extern int EVALUATE_RESIDUAL;
 
+extern int PCL_VIEWER;
+
 void readParameters(std::string config_file);
 
 enum SIZE_PARAMETERIZATION

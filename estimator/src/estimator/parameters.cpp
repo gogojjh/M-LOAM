@@ -81,6 +81,8 @@ int OPTIMAL_EXTRINSIC;
 
 int EVALUATE_RESIDUAL;
 
+int PCL_VIEWER;
+
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
 {
@@ -203,6 +205,8 @@ void readParameters(std::string config_file)
     POINT_EDGE_FACTOR = fsSettings["point_edge_factor"];
 
     EVALUATE_RESIDUAL = fsSettings["evaluate_residual"];
+
+    PCL_VIEWER = fsSettings["pcl_viewer"];
 
     fsSettings.release();
 }

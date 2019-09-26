@@ -8,7 +8,6 @@
  *******************************************************/
 
 #include "estimator.h"
-#include "../utility/visualization.h"
 
 using namespace common;
 
@@ -462,6 +461,15 @@ void Estimator::buildLocalMap()
         printf("Laser_%d, filtered local map %d -> %d\n", n, surf_points_local_map_[n].size(), surf_points_local_map_filtered_[n].size());
     }
     printf("build local map: %fms\n", t_build_local_map.toc());
+    if (PCL_VIEWER)
+    {
+        if (plane_normal_visualizer_.init_)
+        {
+            PointCloud::Ptr point_world_xyz(new PointCloud);
+            pcl::copyPointCloud(surf_points_local_map_filtered_[0], *point_world_xyz);
+            plane_normal_visualizer_.UpdateCloud(point_world_xyz, "cloud_all");
+        }
+    }
 
     // -----------------
     // calculate features and correspondences from p+1 to j
@@ -470,7 +478,7 @@ void Estimator::buildLocalMap()
     surf_map_features_.resize(NUM_OF_LASER);
     for (int n = 0; n < NUM_OF_LASER; n++)
     {
-        surf_map_features_[n].resize(WINDOW_SIZE + 1);
+        surf_map_features_[n].resize(OPT_WINDOW_SIZE - 1);
         pcl::KdTreeFLANN<PointI>::Ptr kdtree_surf_points_local_map(new pcl::KdTreeFLANN<PointI>());
         kdtree_surf_points_local_map->setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_filtered_[n]));
         // pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_points_local_map(new pcl::KdTreeFLANN<PointI>());
@@ -482,10 +490,36 @@ void Estimator::buildLocalMap()
             // std::cout << "local pose: " << pose_local[i] << std::endl;
             // printf("Laser_%d, %dth window, size of input cloud is %d\n", n, i, surf_points_stack_[n][i].size());
 
-            // f_extract_.extractCornerFromMap(kdtree_corner_points_local_map,
-                                        // corner_points_local_map_filtered_[n], corner_points_stack_[n][i],
-                                        // pose_local[i], corner_map_features_[n][i]);
+            // f_extract_.extractCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
+            //  corner_points_stack_[n][i], pose_local[i], corner_map_features_[n][i]);
             // printf("number of extracted features: %d\n", corner_map_features_[n][i].size());
+
+            if (PCL_VIEWER)
+            {
+                // std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d> > plane_coeffs;
+                // PointCloud::Ptr tmp_cloud_sel(new PointCloud); // surf_points_stack_[n][i]
+                // NormalCloud::Ptr tmp_normals_sel(new NormalCloud); // surf_points_local_map_filtered_[n]
+                // for (auto &f : surf_map_features_[n][i])
+                // {
+                //     PointI p_ori;
+                //     p_ori.x = f.point_.x();
+                //     p_ori.y = f.point_.y();
+                //     p_ori.z = f.point_.z();
+                //     PointI p_sel;
+                //     f_extract_.PointAssociateToMap(p_ori, p_sel, pose_local[i]);
+                //     tmp_cloud_sel->push_back(Point{p_sel.x, p_sel.y, p_sel.z});
+                //     tmp_normals_sel->push_back(Normal{float(f.coeffs_.x()), float(f.coeffs_.y()), float(f.coeffs_.z())});
+                //     // Eigen::Vector4d coeffs_normalized = f.coeffs;
+                //     // double s_normal = coeffs_normalized.head<3>().norm();
+                //     // coeffs_normalized = coeffs_normalized / s_normal;
+                //     // plane_coeffs.push_back(coeffs_normalized);
+                //     //        DLOG(INFO) << p_sel.x * f.coeffs.x() + p_sel.y * f.coeffs.y() + p_sel.z * f.coeffs.z() + f.coeffs.w();
+                // }
+                // if (plane_normal_visualizer_.init_)
+                // {
+                //     plane_normal_visualizer_.UpdateCloudAndNormals(tmp_cloud_sel, tmp_normals_sel, 10, "cloud1", "normal1");
+                // }
+            }
         }
     }
     printf("extract local map: %fms\n", t_local_map_extract.toc());
@@ -572,7 +606,7 @@ void Estimator::optimizeLocalMap()
             for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
             {
                 std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i];
-                printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size());
+                // printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size());
                 for (auto &feature: features_frame)
                 {
                     const double &s = feature.score_;
@@ -593,7 +627,6 @@ void Estimator::optimizeLocalMap()
     }
     printf("prepare ceres %fms\n", t_prep_solver.toc());
 
-    printf("Before optimization\n");
     // -----------------
     // ceres: set options and solve the non-linear equation
     ceres::Solver::Options options;
@@ -607,6 +640,7 @@ void Estimator::optimizeLocalMap()
     //options.use_nonmonotonic_steps = true;
     options.max_solver_time_in_seconds = SOLVER_TIME;
 
+    printf("Before optimization\n");
     if (EVALUATE_RESIDUAL)
     {
         ///< Bef
@@ -617,7 +651,7 @@ void Estimator::optimizeLocalMap()
             e_option.parameter_blocks = para_ids;
             e_option.residual_blocks = res_ids_proj;
             problem.Evaluate(e_option, &cost, NULL, NULL, NULL);
-            printf("residual bef_proj: %f\n", cost);
+            printf("residual bef_proj: %f ----------------------\n", cost);
         }
         if (MARGINALIZATION_FACTOR)
         {
@@ -641,6 +675,7 @@ void Estimator::optimizeLocalMap()
     ROS_DEBUG("Iterations : %d", static_cast<int>(summary.iterations.size()));
     printf("solver costs: %fms\n", t_solver.toc());
 
+    printf("After optimization\n");
     if (EVALUATE_RESIDUAL)
     {
         ///< Aft
@@ -651,7 +686,7 @@ void Estimator::optimizeLocalMap()
             e_option.parameter_blocks = para_ids;
             e_option.residual_blocks = res_ids_proj;
             problem.Evaluate(e_option, &cost, NULL, NULL, NULL);
-            printf("residual aft_proj: %f\n", cost);
+            printf("residual aft_proj: %f ----------------------\n", cost);
         }
         if (MARGINALIZATION_FACTOR)
         {
@@ -665,7 +700,6 @@ void Estimator::optimizeLocalMap()
         }
     }
 
-    printf("After optimization\n");
     double2Vector();
     printParameter();
 
