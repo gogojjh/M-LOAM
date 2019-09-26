@@ -38,7 +38,6 @@
 
 #include "feature_manager.h"
 #include "../utility/utility.h"
-#include "../utility/visualization.h"
 #include "../utility/cloud_visualizer.h"
 #include "../utility/tic_toc.h"
 #include "../utility/CircularBuffer.h"
@@ -157,7 +156,7 @@ class Estimator
     MarginalizationInfo *last_marginalization_info_;
     vector<double *> last_marginalization_parameter_blocks_;
 
-    PlaneNormalVisualizer plane_normal_visualizer_;
+    PlaneNormalVisualizer plane_normal_vis_;
 };
 
 

@@ -1,9 +1,12 @@
 #pragma once
 
+#include <thread>
+#include <mutex>
+#include <chrono>
+
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
-#include <boost/thread/thread.hpp>
 #include <pcl/common/common_headers.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/io/pcd_io.h>
@@ -42,7 +45,7 @@ public:
 
     boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer_;
     //  pcl::visualization::PCLVisualizer* viewer;
-    boost::mutex m_;
+    std::mutex m_vis_;
     bool init_ = false;
     bool first_ = false;
 

@@ -8,6 +8,7 @@
  *******************************************************/
 
 #include "estimator.h"
+#include "../utility/visualization.h"
 
 using namespace common;
 
@@ -193,6 +194,7 @@ void Estimator::inputCloud(const double &t,
     m_buf_.unlock();
 
     TicToc process_time;
+    // TODO: if MULTIPLE_THREAD
     processMeasurements();
     ROS_WARN_STREAM("frame: " << input_cloud_cnt_ << ", processMea time: " << process_time.toc() << "ms");
 }
@@ -229,8 +231,7 @@ void Estimator::processMeasurements()
         if (!MULTIPLE_THREAD)
             break;
 
-        std::chrono::milliseconds dura(2);
-        std::this_thread::sleep_for(dura);
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
 }
 
@@ -463,11 +464,12 @@ void Estimator::buildLocalMap()
     printf("build local map: %fms\n", t_build_local_map.toc());
     if (PCL_VIEWER)
     {
-        if (plane_normal_visualizer_.init_)
+        printf("[PlaneNormalVisualizer] update cloud\n");
+        if (plane_normal_vis_.init_)
         {
             PointCloud::Ptr point_world_xyz(new PointCloud);
             pcl::copyPointCloud(surf_points_local_map_filtered_[0], *point_world_xyz);
-            plane_normal_visualizer_.UpdateCloud(point_world_xyz, "cloud_all");
+            plane_normal_vis_.UpdateCloud(point_world_xyz, "cloud_all");
         }
     }
 
@@ -478,7 +480,7 @@ void Estimator::buildLocalMap()
     surf_map_features_.resize(NUM_OF_LASER);
     for (int n = 0; n < NUM_OF_LASER; n++)
     {
-        surf_map_features_[n].resize(OPT_WINDOW_SIZE - 1);
+        surf_map_features_[n].resize(WINDOW_SIZE + 1);
         pcl::KdTreeFLANN<PointI>::Ptr kdtree_surf_points_local_map(new pcl::KdTreeFLANN<PointI>());
         kdtree_surf_points_local_map->setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_filtered_[n]));
         // pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_points_local_map(new pcl::KdTreeFLANN<PointI>());
@@ -493,33 +495,34 @@ void Estimator::buildLocalMap()
             // f_extract_.extractCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
             //  corner_points_stack_[n][i], pose_local[i], corner_map_features_[n][i]);
             // printf("number of extracted features: %d\n", corner_map_features_[n][i].size());
+        }
+    }
 
-            if (PCL_VIEWER)
-            {
-                // std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d> > plane_coeffs;
-                // PointCloud::Ptr tmp_cloud_sel(new PointCloud); // surf_points_stack_[n][i]
-                // NormalCloud::Ptr tmp_normals_sel(new NormalCloud); // surf_points_local_map_filtered_[n]
-                // for (auto &f : surf_map_features_[n][i])
-                // {
-                //     PointI p_ori;
-                //     p_ori.x = f.point_.x();
-                //     p_ori.y = f.point_.y();
-                //     p_ori.z = f.point_.z();
-                //     PointI p_sel;
-                //     f_extract_.PointAssociateToMap(p_ori, p_sel, pose_local[i]);
-                //     tmp_cloud_sel->push_back(Point{p_sel.x, p_sel.y, p_sel.z});
-                //     tmp_normals_sel->push_back(Normal{float(f.coeffs_.x()), float(f.coeffs_.y()), float(f.coeffs_.z())});
-                //     // Eigen::Vector4d coeffs_normalized = f.coeffs;
-                //     // double s_normal = coeffs_normalized.head<3>().norm();
-                //     // coeffs_normalized = coeffs_normalized / s_normal;
-                //     // plane_coeffs.push_back(coeffs_normalized);
-                //     //        DLOG(INFO) << p_sel.x * f.coeffs.x() + p_sel.y * f.coeffs.y() + p_sel.z * f.coeffs.z() + f.coeffs.w();
-                // }
-                // if (plane_normal_visualizer_.init_)
-                // {
-                //     plane_normal_visualizer_.UpdateCloudAndNormals(tmp_cloud_sel, tmp_normals_sel, 10, "cloud1", "normal1");
-                // }
-            }
+    // TODO: visualize the correspondences between single frame point cloud and local map
+    if (PCL_VIEWER)
+    {
+        std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d> > plane_coeffs;
+        PointCloud::Ptr tmp_cloud_sel(new PointCloud); // surf_points_stack_[n][i]
+        NormalCloud::Ptr tmp_normals_sel(new NormalCloud); // surf_points_local_map_filtered_[n]
+        for (auto &f : surf_map_features_[0][pivot_idx + 3])
+        {
+            PointI p_ori;
+            p_ori.x = f.point_.x();
+            p_ori.y = f.point_.y();
+            p_ori.z = f.point_.z();
+            PointI p_sel;
+            f_extract_.pointAssociateToMap(p_ori, p_sel, pose_local[pivot_idx + 3]);
+            tmp_cloud_sel->push_back(Point{p_sel.x, p_sel.y, p_sel.z});
+            tmp_normals_sel->push_back(Normal{float(f.coeffs_.x()), float(f.coeffs_.y()), float(f.coeffs_.z())});
+            // Eigen::Vector4d coeffs_normalized = f.coeffs;
+            // double s_normal = coeffs_normalized.head<3>().norm();
+            // coeffs_normalized = coeffs_normalized / s_normal;
+            // plane_coeffs.push_back(coeffs_normalized);
+            //        DLOG(INFO) << p_sel.x * f.coeffs.x() + p_sel.y * f.coeffs.y() + p_sel.z * f.coeffs.z() + f.coeffs.w();
+        }
+        if (plane_normal_vis_.init_)
+        {
+            plane_normal_vis_.UpdateCloudAndNormals(tmp_cloud_sel, tmp_normals_sel, 10, "cloud1", "normal1");
         }
     }
     printf("extract local map: %fms\n", t_local_map_extract.toc());
@@ -665,7 +668,7 @@ void Estimator::optimizeLocalMap()
         }
     }
 
-    return;
+    // return;
 
     TicToc t_solver;
     ceres::Solver::Summary summary;

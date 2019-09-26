@@ -8,7 +8,8 @@ void PlaneNormalVisualizer::UpdateCloud(PointCloud::ConstPtr cloud,
                                         std::string cloud_name,
                                         std::vector<double> cloud_color)
 {
-    boost::mutex::scoped_lock lk(m_);
+    m_vis_.lock();
+    // boost::mutex::scoped_lock lk(m_);
     //  DLOG(INFO) << ">>>>>>> update <<<<<<<";
     //  DLOG(INFO) << cloud->size();
     if (cloud->size() == 0)
@@ -27,6 +28,7 @@ void PlaneNormalVisualizer::UpdateCloud(PointCloud::ConstPtr cloud,
                                                  cloud_color[2],
                                                  cloud_name);
     }
+    m_vis_.unlock();
 }
 
 void PlaneNormalVisualizer::UpdateCloudAndNormals(PointCloud::ConstPtr cloud,
@@ -37,8 +39,8 @@ void PlaneNormalVisualizer::UpdateCloudAndNormals(PointCloud::ConstPtr cloud,
                                                   std::vector<double> cloud_color,
                                                   std::vector<double> normals_color)
 {
-    boost::mutex::scoped_lock lk(m_);
-
+    m_vis_.lock();
+    // boost::mutex::scoped_lock lk(m_);
     //  DLOG(INFO) << ">>>>>>> update <<<<<<<";
     //  DLOG(INFO) << cloud->size();
     //  DLOG(INFO) << normals->size();
@@ -66,13 +68,15 @@ void PlaneNormalVisualizer::UpdateCloudAndNormals(PointCloud::ConstPtr cloud,
                                            normals_color[1],
                                            normals_color[2],
                                            normals_name);
+    m_vis_.unlock();
 }
 
 void PlaneNormalVisualizer::UpdateLines(PointCloud::ConstPtr cloud1,
                                         PointCloud::ConstPtr cloud2,
                                         std::vector<double> line_color)
 {
-    boost::mutex::scoped_lock lk(m_);
+    m_vis_.lock();
+    // boost::mutex::scoped_lock lk(m_);
     //  DLOG(INFO) << ">>>>>>> update <<<<<<<";
     int num_cloud1 = cloud1->size();
     int num_cloud2 = cloud2->size();
@@ -103,12 +107,14 @@ void PlaneNormalVisualizer::UpdateLines(PointCloud::ConstPtr cloud1,
                                             line_name);
         line_names_.push_back(line_name);
     }
+    m_vis_.unlock();
 }
 
 void PlaneNormalVisualizer::UpdatePlanes(const std::vector<Eigen::Vector4d,
                                                            Eigen::aligned_allocator<Eigen::Vector4d>> &plane_coeffs)
 {
-    boost::mutex::scoped_lock lk(m_);
+    m_vis_.lock();
+    // boost::mutex::scoped_lock lk(m_);
     //  DLOG(INFO) << ">>>>>>> update <<<<<<<";
     int size = plane_coeffs.size();
     if (size == 0)
@@ -138,6 +144,7 @@ void PlaneNormalVisualizer::UpdatePlanes(const std::vector<Eigen::Vector4d,
         viewer_->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 0.01, plane_name);
         plane_names_.push_back(plane_name);
     }
+    m_vis_.unlock();
 }
 
 PlaneNormalVisualizer::PlaneNormalVisualizer()
@@ -153,20 +160,24 @@ PlaneNormalVisualizer::PlaneNormalVisualizer()
 
 void PlaneNormalVisualizer::Spin()
 {
-    boost::mutex::scoped_lock lk(m_);
+    m_vis_.lock();
+    // std::mutex::scoped_lock lk(m_);
     viewer_ = boost::make_shared<pcl::visualization::PCLVisualizer>("3D Debug Viewer");
     viewer_->setBackgroundColor(0, 0, 0);
     viewer_->addCoordinateSystem(1.0);
-    viewer_->addText("debugger by Kitkat7", 10, 10, "debugger text", 0);
+    viewer_->addText("debugger by developer", 10, 10, "debugger text", 0);
     viewer_->initCameraParameters();
     init_ = true;
+    m_vis_.unlock();
     while (!viewer_->wasStopped())
     {
-        {
-          boost::mutex::scoped_lock lk(m_);
-        //      DLOG(INFO) << ">>>>>>> spin <<<<<<<";
-          viewer_->spinOnce(100);
-        }
-        boost::this_thread::sleep(boost::posix_time::microseconds(10000));
+        // std::mutex::scoped_lock lk(m_);
+        DLOG(INFO) << ">>>>>>> spin <<<<<<<";
+        // std::cout << ">>>>>>> spin <<<<<<<";
+        m_vis_.lock();
+        viewer_->spinOnce(100);
+        m_vis_.unlock();
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        // boost::this_thread::sleep(boost::posix_time::microseconds(10000));
     }
 }
