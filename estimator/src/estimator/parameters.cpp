@@ -82,6 +82,7 @@ int OPTIMAL_EXTRINSIC;
 int EVALUATE_RESIDUAL;
 
 int PCL_VIEWER;
+int PCL_VIEWER_NORMAL_RATIO;
 
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
@@ -207,6 +208,7 @@ void readParameters(std::string config_file)
     EVALUATE_RESIDUAL = fsSettings["evaluate_residual"];
 
     PCL_VIEWER = fsSettings["pcl_viewer"];
+    PCL_VIEWER_NORMAL_RATIO = fsSettings["pcl_viewer_normal_ratio"];
 
     fsSettings.release();
 }

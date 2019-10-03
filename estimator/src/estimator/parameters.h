@@ -113,6 +113,7 @@ extern int OPTIMAL_EXTRINSIC;
 extern int EVALUATE_RESIDUAL;
 
 extern int PCL_VIEWER;
+extern int PCL_VIEWER_NORMAL_RATIO;
 
 void readParameters(std::string config_file);
 

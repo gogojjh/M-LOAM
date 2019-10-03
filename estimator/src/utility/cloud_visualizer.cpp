@@ -18,10 +18,12 @@ void PlaneNormalVisualizer::UpdateCloud(PointCloud::ConstPtr cloud,
         return;
     }
 
+    // TODO
+    viewer_->removePointCloud(cloud_name, 0);
     if (!viewer_->updatePointCloud(cloud, cloud_name))
     {
         viewer_->addPointCloud<Point>(cloud, cloud_name);
-        viewer_->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, cloud_name);
+        viewer_->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 5, cloud_name);
         viewer_->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_COLOR,
                                                  cloud_color[0],
                                                  cloud_color[1],
@@ -51,6 +53,7 @@ void PlaneNormalVisualizer::UpdateCloudAndNormals(PointCloud::ConstPtr cloud,
         return;
     }
 
+    viewer_->removePointCloud(cloud_name, 0);
     if (!viewer_->updatePointCloud(cloud, cloud_name))
     {
         viewer_->addPointCloud<Point>(cloud, cloud_name);
@@ -62,7 +65,7 @@ void PlaneNormalVisualizer::UpdateCloudAndNormals(PointCloud::ConstPtr cloud,
                                                  cloud_name);
     }
     viewer_->removePointCloud(normals_name, 0);
-    viewer_->addPointCloudNormals<Point, Normal>(cloud, normals, ds_ratio, 0.5, normals_name);
+    viewer_->addPointCloudNormals<Point, Normal>(cloud, normals, ds_ratio, 0.5, normals_name); // cloud, normal, normal_ratio, length, name
     viewer_->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_COLOR,
                                            normals_color[0],
                                            normals_color[1],
