@@ -53,9 +53,9 @@ extern double BIAS_ACC_THRESHOLD;
 extern double BIAS_GYR_THRESHOLD;
 extern double SOLVER_TIME;
 extern int NUM_ITERATIONS;
-extern std::string EX_CALIB_RESULT_PATH;
-extern std::string VINS_RESULT_PATH;
 extern std::string OUTPUT_FOLDER;
+extern std::string MLOAM_RESULT_PATH;
+extern std::string EX_CALIB_RESULT_PATH;
 extern std::string IMU_TOPIC;
 extern double TD;
 extern int ESTIMATE_TD;
@@ -114,6 +114,8 @@ extern int EVALUATE_RESIDUAL;
 
 extern int PCL_VIEWER;
 extern int PCL_VIEWER_NORMAL_RATIO;
+
+extern int OPTIMAL_ODOMETRY;
 
 void readParameters(std::string config_file);
 

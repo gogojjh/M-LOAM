@@ -31,7 +31,7 @@ public:
 		Eigen::Matrix<T, 3, 1> w(T(coeff_(0)), T(coeff_(1)), T(coeff_(2)));
 		T d = T(coeff_(3));
 		Eigen::Matrix<T, 3, 1> p(T(point_(0)), T(point_(1)), T(point_(2)));
-		T r = T(w.dot(Q_ext_ab * p + t_ext_ab) + T(d));
+		T r = T(w.dot(Q_ext_ab * p + t_ext_ab) + T(d)) * T(s_);
 		residuals[0] = r;
 
 		// Eigen::Quaternion<T> Q_a(param_a[6], param_a[3], param_a[4], param_a[5]);

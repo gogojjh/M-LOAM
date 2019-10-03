@@ -545,6 +545,7 @@ void Estimator::optimizeLocalMap()
     // printParameter();
 
     // -----------------
+    size_t pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
     // ceres: set lossfunction and problem
     ceres::LossFunction *loss_function;
     // loss_function = new ceres::HuberLoss(0.5);
@@ -578,7 +579,7 @@ void Estimator::optimizeLocalMap()
         }
         if (i == IDX_REF) problem.SetParameterBlockConstant(para_ex_pose_[i]);
     }
-    problem.SetParameterBlockConstant(para_ex_pose_[1]);
+    // problem.SetParameterBlockConstant(para_ex_pose_[1]);
 
     for (int i = 0; i < NUM_OF_LASER; i++)
     {
@@ -611,7 +612,6 @@ void Estimator::optimizeLocalMap()
     std::vector<ceres::internal::ResidualBlock *> res_ids_proj;
     if (POINT_PLANE_FACTOR)
     {
-        size_t pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
         for (int n = 0; n < NUM_OF_LASER - 1; n++)
         // for (int n = 0; n < NUM_OF_LASER - 1; n++)
         {
@@ -678,8 +678,10 @@ void Estimator::optimizeLocalMap()
         }
     }
 
-    // return;
-    // sleep(10);
+    if (!OPTIMAL_ODOMETRY)
+    {
+        return;
+    }
 
     TicToc t_solver;
     ceres::Solver::Summary summary;
@@ -716,7 +718,6 @@ void Estimator::optimizeLocalMap()
 
     double2Vector();
     printParameter();
-
     // buildLocalMap();
 
     // ****************************************************
@@ -745,12 +746,11 @@ void Estimator::optimizeLocalMap()
         // set marginalized residuals over the marginalized states
         if (POINT_PLANE_FACTOR)
         {
-            size_t pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
             for (int n = 0; n < NUM_OF_LASER; n++)
             {
-                for (size_t i = 1; i < OPT_WINDOW_SIZE + 1; i++)
+                for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
                 {
-                    std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i + pivot_idx];
+                    std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i];
                     for (auto &feature: features_frame)
                     {
                         const double &s = feature.score_;
@@ -758,7 +758,7 @@ void Estimator::optimizeLocalMap()
                         const Eigen::Vector4d &coeff_ref = feature.coeffs_;
                         ceres::CostFunction *cost_function = LidarPivotPointPlaneFactor::Create(p_data, coeff_ref, s);
                         ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(cost_function, loss_function,
-                            vector<double *>{para_pose_[0], para_pose_[i], para_ex_pose_[n]}, std::vector<int>{0});
+                            vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]}, std::vector<int>{0});
                         marginalization_info->addResidualBlockInfo(residual_block_info);
                     }
                 }
@@ -778,9 +778,9 @@ void Estimator::optimizeLocalMap()
 
         //! indicate shared memory of parameter blocks except for the dropped state
         std::unordered_map<long, double *> addr_shift;
-        for (size_t i = 1; i < OPT_WINDOW_SIZE + 1; i++)
+        for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
         {
-            addr_shift[reinterpret_cast<long>(para_pose_[i])] = para_pose_[i - 1];
+            addr_shift[reinterpret_cast<long>(para_pose_[i - pivot_idx])] = para_pose_[i - pivot_idx - 1];
         }
         for (int n = 0; n < NUM_OF_LASER; n++)
         {
@@ -851,28 +851,28 @@ void Estimator::double2Vector()
 
 void Estimator::printParameter()
 {
-    printf("print optimized window (p -> j) ************************\n");
+    // printf("print optimized window (p -> j) ************************\n");
     for (size_t i = 0; i < OPT_WINDOW_SIZE + 1; i++)
     {
         std::cout << "Pose: " << " " <<
-            para_pose_[i][0] << " " <<
-            para_pose_[i][1] << " " <<
-            para_pose_[i][2] << " " <<
             para_pose_[i][3] << " " <<
             para_pose_[i][4] << " " <<
             para_pose_[i][5] << " " <<
-            para_pose_[i][6] << std::endl;
+            para_pose_[i][6] << " " <<
+            para_pose_[i][0] << " " <<
+            para_pose_[i][1] << " " <<
+            para_pose_[i][2] << std::endl;
     }
     for (int i = 0; i < NUM_OF_LASER; i++)
     {
         std::cout << "Ext: " << " " <<
-            para_ex_pose_[i][0] << " " <<
-            para_ex_pose_[i][1] << " " <<
-            para_ex_pose_[i][2] << " " <<
             para_ex_pose_[i][3] << " " <<
             para_ex_pose_[i][4] << " " <<
             para_ex_pose_[i][5] << " " <<
-            para_ex_pose_[i][6] << std::endl;
+            para_ex_pose_[i][6] << " " <<
+            para_ex_pose_[i][0] << " " <<
+            para_ex_pose_[i][1] << " " <<
+            para_ex_pose_[i][2] << std::endl;
     }
     // for (int i = 0; i < NUM_OF_LASER; i++)
     // {

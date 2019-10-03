@@ -26,9 +26,9 @@ int NUM_ITERATIONS;
 int ESTIMATE_EXTRINSIC;
 int ESTIMATE_TD;
 int ROLLING_SHUTTER;
-std::string EX_CALIB_RESULT_PATH;
-std::string VINS_RESULT_PATH;
 std::string OUTPUT_FOLDER;
+std::string MLOAM_RESULT_PATH;
+std::string EX_CALIB_RESULT_PATH;
 std::string IMU_TOPIC;
 int ROW, COL;
 double TD;
@@ -84,6 +84,8 @@ int EVALUATE_RESIDUAL;
 int PCL_VIEWER;
 int PCL_VIEWER_NORMAL_RATIO;
 
+int OPTIMAL_ODOMETRY;
+
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
 {
@@ -127,9 +129,9 @@ void readParameters(std::string config_file)
     MIN_PARALLAX = MIN_PARALLAX / FOCAL_LENGTH;
 
     fsSettings["output_path"] >> OUTPUT_FOLDER;
-    VINS_RESULT_PATH = OUTPUT_FOLDER + "mloam.csv";
-    std::cout << "result path " << VINS_RESULT_PATH << std::endl;
-    std::ofstream fout(VINS_RESULT_PATH, std::ios::out);
+    MLOAM_RESULT_PATH = OUTPUT_FOLDER + "mloam.csv";
+    std::cout << "result path " << MLOAM_RESULT_PATH << std::endl;
+    std::ofstream fout(MLOAM_RESULT_PATH, std::ios::out);
     fout.close();
 
     NUM_OF_LASER = fsSettings["num_of_laser"];
@@ -209,6 +211,8 @@ void readParameters(std::string config_file)
 
     PCL_VIEWER = fsSettings["pcl_viewer"];
     PCL_VIEWER_NORMAL_RATIO = fsSettings["pcl_viewer_normal_ratio"];
+
+    OPTIMAL_ODOMETRY = fsSettings["optimal_odometry"];
 
     fsSettings.release();
 }

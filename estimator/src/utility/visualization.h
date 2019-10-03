@@ -27,7 +27,6 @@
 #include <eigen3/Eigen/Dense>
 #include "../estimator/estimator.h"
 #include "../estimator/parameters.h"
-#include <fstream>
 
 #include <pcl/common/transforms.h>
 

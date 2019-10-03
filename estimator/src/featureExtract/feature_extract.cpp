@@ -504,8 +504,7 @@ void FeatureExtract::extractSurfFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &kdt
                 // pd2 smaller, s larger
                 double pd2 = norm(0) * point_sel.x + norm(1) * point_sel.y + norm(2) * point_sel.z + negative_OA_dot_norm;
                 double s = 1 - 0.9f * fabs(pd2) / sqrt(sqrSum(point_sel.x, point_sel.y, point_sel.z));
-                // s = 1.0;
-                Eigen::Vector4d coeff(s*norm(0), s*norm(1), s*norm(2), s*negative_OA_dot_norm);
+                Eigen::Vector4d coeff(norm(0), norm(1), norm(2), negative_OA_dot_norm);
 
                 bool is_in_laser_fov = false;
                 PointI transform_pos;
@@ -529,7 +528,7 @@ void FeatureExtract::extractSurfFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &kdt
                     is_in_laser_fov = true;
                 }
                 // TODO: please comment it
-                is_in_laser_fov = true;
+                // is_in_laser_fov = true;
                 if (s > 0.1 && is_in_laser_fov)
                 {
                     PointPlaneFeature feature;

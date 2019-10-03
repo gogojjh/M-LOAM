@@ -97,14 +97,14 @@ void pubPointCloud(const Estimator &estimator, const double &time)
     header.stamp = ros::Time(time);
     PointICloud laser_cloud, corner_points_sharp, corner_points_less_sharp, surf_points_flat, surf_points_less_flat;
     int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
-    for (size_t i = 0; i < estimator.cur_feature_.second.size() - 1; i++)
+    for (size_t n = 0; n < estimator.cur_feature_.second.size() - 1; n++)
     {
-        Pose pose_ext = Pose(estimator.qbl_[i], estimator.tbl_[i]);
+        Pose pose_ext = Pose(estimator.qbl_[n], estimator.tbl_[n]);
         Pose pose_pivot(estimator.Qs_[pivot_idx], estimator.Ts_[pivot_idx]);
         Pose pose_j(estimator.Qs_[estimator.cir_buf_cnt_], estimator.Ts_[estimator.cir_buf_cnt_]);
         Eigen::Matrix4d transform_pivot_j = (pose_pivot.T_ * pose_ext.T_).inverse() * (pose_j.T_ * pose_ext.T_);
-        cloudFeature cloud_feature_trans = transformCloudFeature(estimator.cur_feature_.second[i], transform_pivot_j.cast<float>());
-        for (auto &p: cloud_feature_trans["laser_cloud"].points) p.intensity = i;
+        cloudFeature cloud_feature_trans = transformCloudFeature(estimator.cur_feature_.second[n], transform_pivot_j.cast<float>());
+        for (auto &p: cloud_feature_trans["laser_cloud"].points) p.intensity = n;
 
         laser_cloud += cloud_feature_trans["laser_cloud"];
         corner_points_sharp += cloud_feature_trans["corner_points_sharp"];
@@ -121,9 +121,14 @@ void pubPointCloud(const Estimator &estimator, const double &time)
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
         header.frame_id = "laser_" + std::to_string(n);
-        publishCloud(v_pub_surf_points_local_map[n], header, estimator.surf_points_local_map_filtered_[n]);
+        Pose pose_ext = Pose(estimator.qbl_[n], estimator.tbl_[n]);
+
+        // PointICloud surf_local_map_trans;
+        // pcl::transformPointCloud(estimator.surf_points_local_map_filtered_[n], surf_local_map_trans, pose_ext.T_.cast<float>());
+        // publishCloud(v_pub_surf_points_local_map[n], header, surf_local_map_trans);
+        publishCloud(v_pub_surf_points_local_map[n], header, estimator.surf_points_local_map_filtered_[n]);        
         // publishCloud(v_pub_surf_points_local_map[n], header, estimator.surf_points_local_map_[n]);
-        publishCloud(v_pub_surf_points_pivot[n], header, estimator.surf_points_pivot_map_[n]);
+        // publishCloud(v_pub_surf_points_pivot[n], header, estimator.surf_points_pivot_map_[n]);
     }
 }
 
@@ -150,37 +155,24 @@ void printStatistics(const Estimator &estimator, double t)
                 << estimator.tbl_[i](1) << ", "
                 << estimator.tbl_[i](2) << std::endl;
         }
-
-    //     cv::FileStorage fs(EX_CALIB_RESULT_PATH, cv::FileStorage::WRITE);
-    //         //ROS_DEBUG("calibration result for camera %d", i);
-    //         ROS_DEBUG_STREAM("extirnsic tic: " << estimator.calib_base_laser_[i].t_.transpose());
-    //         ROS_DEBUG_STREAM("extrinsic ric: " << Utility::R2ypr(estimator.calib_base_laser_[i].q_.toRotationMatrix()).transpose());
-    //
-    //         eigen_T.block<3, 3>(0, 0) = estimator.calib_base_laser_[i].q_;
-    //         eigen_T.block<3, 1>(0, 3) = estimator.tic[i];
-    //         cv::Mat cv_T;
-    //         cv::eigen2cv(eigen_T, cv_T);
-    //         if(i == 0)
-    //             fs << "body_T_cam0" << cv_T ;
-    //         else
-    //             fs << "body_T_cam1" << cv_T ;
-    //     }
-    //     fs.release();
         fout.close();
     }
-    //
-    // static double sum_of_time = 0;
-    // static int sum_of_calculation = 0;
-    // sum_of_time += t;
-    // sum_of_calculation++;
-    // ROS_DEBUG("vo solver costs: %f ms", t);
-    // ROS_DEBUG("average of time %f ms", sum_of_time / sum_of_calculation);
-    //
-    // sum_of_path += (estimator.Ps[WINDOW_SIZE] - last_path).norm();
-    // last_path = estimator.Ps[WINDOW_SIZE];
-    // ROS_DEBUG("sum of path %f", sum_of_path);
-    // if (ESTIMATE_TD)
-    //     ROS_INFO("td %f", estimator.td);
+
+    ofstream fout(MLOAM_RESULT_PATH.c_str(), ios::out);
+    fout.setf(ios::fixed, ios::floatfield);
+    fout.precision(5);
+    for (size_t i = 0; i < v_laser_path[IDX_REF].poses.size(); i++)
+    {
+        geometry_msgs::PoseStamped &laser_pose = v_laser_path[IDX_REF].poses[i];
+        fout << laser_pose.pose.orientation.x << ", "
+            << laser_pose.pose.orientation.y << ", "
+            << laser_pose.pose.orientation.z << ", "
+            << laser_pose.pose.orientation.w << ", "
+            << laser_pose.pose.position.x << ", "
+            << laser_pose.pose.position.y << ", "
+            << laser_pose.pose.position.z << std::endl;
+    }
+    fout.close();
 }
 
 void pubOdometry(const Estimator &estimator, const double &time)
@@ -270,9 +262,9 @@ void pubOdometry(const Estimator &estimator, const double &time)
         geometry_msgs::PoseStamped laser_pose;
         laser_pose.header = laser_odometry.header;
         laser_pose.pose = laser_odometry.pose.pose;
-        v_laser_path[0].header = laser_odometry.header;
-        v_laser_path[0].poses.push_back(laser_pose);
-        v_pub_laser_path[0].publish(v_laser_path[0]);
+        v_laser_path[IDX_REF].header = laser_odometry.header;
+        v_laser_path[IDX_REF].poses.push_back(laser_pose);
+        v_pub_laser_path[IDX_REF].publish(v_laser_path[IDX_REF]);
     }
 
     // if (estimator.solver_flag_ == Estimator::SolverFlag::NON_LINEAR)
