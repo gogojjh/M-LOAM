@@ -245,7 +245,6 @@ void Estimator::process()
         for (int i = 0; i < NUM_OF_LASER; i++)
         {
             pose_rlt_[i] = Pose();
-            // pose_prev_cur_[i].push_back(Pose());
             pose_laser_cur_[i] = Pose();
         }
     } else
@@ -259,8 +258,6 @@ void Estimator::process()
                 printf("[LASER %d]:\n", i);
                 cloudFeature &cur_cloud_feature = cur_feature_.second[i];
                 cloudFeature &prev_cloud_feature = prev_feature_.second[i];
-                // Pose pose_rlt = lidar_tracker_.trackCloud(prev_cloud_feature, cur_cloud_feature, *(pose_prev_cur_[i].end()-1));
-                // pose_prev_cur_[i].push_back(pose_rlt);
                 pose_rlt_[i] = lidar_tracker_.trackCloud(prev_cloud_feature, cur_cloud_feature, pose_rlt_[i]);
                 pose_laser_cur_[i] = pose_laser_cur_[i] * pose_rlt_[i];
                 std::cout << "relative transform: " << pose_rlt_[i] << std::endl;
@@ -445,7 +442,6 @@ void Estimator::buildLocalMap()
             Pose pose_i(Qs_[i], Ts_[i]);
             Eigen::Affine3d transform_pivot_i;
             transform_pivot_i.matrix() = (pose_pivot.T_ * pose_ext.T_).inverse() * (pose_i.T_ * pose_ext.T_);
-            // std::cout << transform_pivot_i.matrix() << std::endl;
             pose_local[n][i] = Pose(transform_pivot_i.matrix());
             if ((i < pivot_idx) || (i == WINDOW_SIZE)) continue;
 
@@ -460,7 +456,7 @@ void Estimator::buildLocalMap()
         f_extract_.down_size_filter_corner_.filter(surf_points_local_map_filtered_[n]);
         // f_extract_.down_size_filter_corner_.setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_));
         // f_extract_.down_size_filter_corner_.filter(corner_points_local_map_filtered_);
-        printf("Laser_%d, filtered local map %d -> %d\n", n, surf_points_local_map_[n].size(), surf_points_local_map_filtered_[n].size());
+        // printf("Laser_%d, filtered local map %d -> %d\n", n, surf_points_local_map_[n].size(), surf_points_local_map_filtered_[n].size());
     }
     printf("build local map: %fms\n", t_build_local_map.toc());
     if (PCL_VIEWER)
@@ -535,11 +531,6 @@ void Estimator::buildLocalMap()
 
 void Estimator::optimizeLocalMap()
 {
-    if (cir_buf_cnt_ < WINDOW_SIZE)
-    {
-        ROS_WARN("enter optimization before enough count: %d < %d", cir_buf_cnt_, WINDOW_SIZE);
-        return;
-    }
     TicToc t_prep_solver;
     vector2Double();
     // printParameter();
@@ -595,19 +586,18 @@ void Estimator::optimizeLocalMap()
     // printf("[ceres] number of parameter vector: %d\n", problem.NumParameterBlocks()); // 8
 
     // ****************************************************
-    // -----------------
     // ceres: add marginalization error of previous parameter blocks
     std::vector<ceres::internal::ResidualBlock *> res_ids_marg;
     if ((MARGINALIZATION_FACTOR) && (last_marginalization_info_))
     {
         MarginalizationFactor *marginalization_factor = new MarginalizationFactor(last_marginalization_info_);
-        ceres::internal::ResidualBlock *res_id =
+        ceres::internal::ResidualBlock *res_id_marg =
             problem.AddResidualBlock(marginalization_factor, NULL, last_marginalization_parameter_blocks_);
-        res_ids_marg.push_back(res_id);
+        res_ids_marg.push_back(res_id_marg);
     }
 
     buildLocalMap();
-    // -----------------
+    // ****************************************************
     // ceres: add residual block within the sliding window
     std::vector<ceres::internal::ResidualBlock *> res_ids_proj;
     if (POINT_PLANE_FACTOR)
@@ -664,7 +654,7 @@ void Estimator::optimizeLocalMap()
             e_option.parameter_blocks = para_ids;
             e_option.residual_blocks = res_ids_proj;
             problem.Evaluate(e_option, &cost, NULL, NULL, NULL);
-            printf("residual bef_proj: %f ----------------------\n", cost);
+            printf("residual bef_proj: %f\n", cost);
         }
         if (MARGINALIZATION_FACTOR)
         {
@@ -678,10 +668,7 @@ void Estimator::optimizeLocalMap()
         }
     }
 
-    if (!OPTIMAL_ODOMETRY)
-    {
-        return;
-    }
+    if (!OPTIMAL_ODOMETRY) return;
 
     TicToc t_solver;
     ceres::Solver::Summary summary;
@@ -702,7 +689,7 @@ void Estimator::optimizeLocalMap()
             e_option.parameter_blocks = para_ids;
             e_option.residual_blocks = res_ids_proj;
             problem.Evaluate(e_option, &cost, NULL, NULL, NULL);
-            printf("residual aft_proj: %f ----------------------\n", cost);
+            printf("residual aft_proj: %f\n", cost);
         }
         if (MARGINALIZATION_FACTOR)
         {
@@ -746,7 +733,7 @@ void Estimator::optimizeLocalMap()
         // set marginalized residuals over the marginalized states
         if (POINT_PLANE_FACTOR)
         {
-            for (int n = 0; n < NUM_OF_LASER; n++)
+            for (int n = 0; n < NUM_OF_LASER - 1; n++)
             {
                 for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
                 {
@@ -851,7 +838,7 @@ void Estimator::double2Vector()
 
 void Estimator::printParameter()
 {
-    // printf("print optimized window (p -> j) ************************\n");
+    printf("print optimized window (p -> j) ************************\n");
     for (size_t i = 0; i < OPT_WINDOW_SIZE + 1; i++)
     {
         std::cout << "Pose: " << " " <<

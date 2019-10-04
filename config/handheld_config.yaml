@@ -20,7 +20,7 @@ show_track: 1           # publish tracking image as topic
 flow_back: 1            # perform forward and backward optical flow to improve feature tracking accuracy
 
 #optimization parameters
-max_solver_time: 0.1  # max solver itration time (s), to guarantee real time
+max_solver_time: 0.08  # max solver itration time (s), to guarantee real time
 max_num_iterations: 10   # max solver itrations, to guarantee real time
 keyframe_parallax: 0 # keyframe selection threshold (pixel)
 
@@ -98,5 +98,5 @@ evaluate_residual: 1
 pcl_viewer: 0
 pcl_viewer_normal_ratio: 5
 
-optimal_odometry: 0
+optimal_odometry: 1
 #
