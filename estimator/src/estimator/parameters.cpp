@@ -27,7 +27,8 @@ int ESTIMATE_EXTRINSIC;
 int ESTIMATE_TD;
 int ROLLING_SHUTTER;
 std::string OUTPUT_FOLDER;
-std::string MLOAM_RESULT_PATH;
+std::string MLOAM_ODOM_PATH;
+std::string MLOAM_MAP_PATH;
 std::string EX_CALIB_RESULT_PATH;
 std::string IMU_TOPIC;
 int ROW, COL;
@@ -129,10 +130,9 @@ void readParameters(std::string config_file)
     MIN_PARALLAX = MIN_PARALLAX / FOCAL_LENGTH;
 
     fsSettings["output_path"] >> OUTPUT_FOLDER;
-    MLOAM_RESULT_PATH = OUTPUT_FOLDER + "mloam.csv";
-    std::cout << "result path " << MLOAM_RESULT_PATH << std::endl;
-    std::ofstream fout(MLOAM_RESULT_PATH, std::ios::out);
-    fout.close();
+    MLOAM_ODOM_PATH = OUTPUT_FOLDER + "mloam_odom.csv";
+	MLOAM_MAP_PATH = OUTPUT_FOLDER + "mloam_map.csv";
+    std::cout << "result path " << MLOAM_ODOM_PATH << ", " << MLOAM_MAP_PATH << std::endl;
 
     NUM_OF_LASER = fsSettings["num_of_laser"];
     printf("Laser number %d\n", NUM_OF_LASER);

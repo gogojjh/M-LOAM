@@ -162,7 +162,7 @@ void printStatistics(const Estimator &estimator, double t)
         fout.close();
     }
 
-    ofstream fout(MLOAM_RESULT_PATH.c_str(), ios::out);
+    ofstream fout(MLOAM_ODOM_PATH.c_str(), ios::out);
     fout.setf(ios::fixed, ios::floatfield);
     fout.precision(5);
     for (size_t i = 0; i < v_laser_path[IDX_REF].poses.size(); i++)
@@ -225,7 +225,7 @@ void pubOdometry(const Estimator &estimator, const double &time)
         laser_odometry.pose.pose.position.x = pose_laser_cur.t_.x();
         laser_odometry.pose.pose.position.y = pose_laser_cur.t_.y();
         laser_odometry.pose.pose.position.z = pose_laser_cur.t_.z();
-        v_pub_laser_odometry[0].publish(laser_odometry);
+        v_pub_laser_odometry[IDX_REF].publish(laser_odometry);
         publishTF(laser_odometry);
 
         geometry_msgs::PoseStamped laser_pose;

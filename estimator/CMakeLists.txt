@@ -65,8 +65,8 @@ target_link_libraries(mloam_lib ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} $
 add_executable(mloam_node src/rosNodeTest.cpp)
 target_link_libraries(mloam_node mloam_lib)
 
-# add_executable(kitti_odom_test src/KITTIOdomTest.cpp)
-# target_link_libraries(kitti_odom_test mloam_lib)
+add_executable(lidar_mapper src/lidarMapper/lidar_mapper.cpp)
+target_link_libraries(lidar_mapper mloam_lib)
 
 # add_executable(kitti_gps_test src/KITTIGPSTest.cpp)
 # target_link_libraries(kitti_gps_test mloam_lib)

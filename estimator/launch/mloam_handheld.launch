@@ -2,7 +2,6 @@
 
     <arg name="bag_file_use" default="true" />
     <arg name="config_file" default="$(find mloam)/../config/handheld_config.yaml" />
-    <!-- <arg name="log_file" default="$(find mloam)/../log/mloam_log.txt" /> -->
     <arg name="base_link" default="base_link" />
 
     <!-- Ros Bag -->
@@ -14,6 +13,8 @@
     </group>
 
     <node pkg="mloam" type="mloam_node" name="mloam_node" args="$(arg config_file)" output="screen" />
+
+    <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" output="screen" />
 
     <!-- publish static tf -->
     <!-- <node name="static_tf_laser_left_into_lidar_left" pkg="tf" type="static_transform_publisher"
