@@ -137,7 +137,6 @@ struct LidarPlaneNormFactor
 	double negative_OA_dot_norm;
 };
 
-
 struct LidarDistanceFactor
 {
 	LidarDistanceFactor(Eigen::Vector3d curr_point_, Eigen::Vector3d closed_point_)

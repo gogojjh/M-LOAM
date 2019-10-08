@@ -250,6 +250,8 @@ void Estimator::process()
     } else
     {
         TicToc t_mloam_tracker;
+        // -----------------
+        // tracker and initialization
         if (ESTIMATE_EXTRINSIC == 2)
         {
             // feature tracker: estimate the relative transformations of each lidar
@@ -286,6 +288,11 @@ void Estimator::process()
                         QBL[i] = calib_result.q_;
                         TBL[i] = calib_result.t_;
                         // TDBL[i] = calib_result.td_;
+                        // TODO: using appearance to refine the extrinsics
+                        // if (checkOverlap())
+                        // {
+                        //     initial_extrinsics_.refineExRotation();
+                        // }
                     }
                 }
                 if (initial_extrinsics_.full_cov_rot_state_)
@@ -293,11 +300,11 @@ void Estimator::process()
                     ROS_WARN("all initial extrinsic rotation calib success");
                     ESTIMATE_EXTRINSIC = 1;
                     initial_extrinsics_.saveStatistics();
-                    // lidar_optimizer_.OptimizeLocalMap();
                 }
                 printf("whole initialize extrinsics %fms\n", t_calib_ext.toc());
             }
         }
+        // tracker
         else if (ESTIMATE_EXTRINSIC != 2)
         {
             cloudFeature &cur_cloud_feature = cur_feature_.second[IDX_REF];
@@ -311,7 +318,6 @@ void Estimator::process()
     }
 
     // get newest pose
-    // Qs[cir_buf_cnt_] = Qs.last()
     Qs_[cir_buf_cnt_] = pose_laser_cur_[IDX_REF].q_;
     Ts_[cir_buf_cnt_] = pose_laser_cur_[IDX_REF].t_;
 
@@ -532,6 +538,7 @@ void Estimator::buildLocalMap()
 void Estimator::optimizeLocalMap()
 {
     TicToc t_prep_solver;
+
     vector2Double();
     // printParameter();
 
@@ -553,7 +560,7 @@ void Estimator::optimizeLocalMap()
         problem.AddParameterBlock(para_pose_[i], SIZE_POSE, local_parameterization);
         para_ids.push_back(para_pose_[i]);
     }
-    // problem.SetParameterBlockConstant(para_pose_[0]);
+    problem.SetParameterBlockConstant(para_pose_[0]);
 
     for (int i = 0; i < NUM_OF_LASER; i++)
     {
@@ -591,8 +598,8 @@ void Estimator::optimizeLocalMap()
     if ((MARGINALIZATION_FACTOR) && (last_marginalization_info_))
     {
         MarginalizationFactor *marginalization_factor = new MarginalizationFactor(last_marginalization_info_);
-        ceres::internal::ResidualBlock *res_id_marg =
-            problem.AddResidualBlock(marginalization_factor, NULL, last_marginalization_parameter_blocks_);
+        ceres::internal::ResidualBlock *res_id_marg = problem.AddResidualBlock(marginalization_factor, NULL,
+            last_marginalization_parameter_blocks_);
         res_ids_marg.push_back(res_id_marg);
     }
 
@@ -602,11 +609,9 @@ void Estimator::optimizeLocalMap()
     std::vector<ceres::internal::ResidualBlock *> res_ids_proj;
     if (POINT_PLANE_FACTOR)
     {
-        for (int n = 0; n < NUM_OF_LASER - 1; n++)
-        // for (int n = 0; n < NUM_OF_LASER - 1; n++)
+        for (int n = 0; n < NUM_OF_LASER; n++)
         {
             for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
-            // for (size_t i = WINDOW_SIZE; i < WINDOW_SIZE + 1; i++)
             {
                 std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i];
                 // printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size());
@@ -615,28 +620,25 @@ void Estimator::optimizeLocalMap()
                     const double &s = feature.score_;
                     const Eigen::Vector3d &p_data = feature.point_;
                     const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-                    ceres::CostFunction *cost_function = LidarPivotPointPlaneFactor::Create(p_data, coeff_ref, s);
-                    ceres::internal::ResidualBlock *res_id =
-                        problem.AddResidualBlock(cost_function, loss_function, para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]);
+                    ceres::CostFunction *cost_function = LidarPivotPlaneNormFactor::Create(p_data, coeff_ref, s);
+                    ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(cost_function, loss_function,
+                        para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]);
                     res_ids_proj.push_back(res_id);
                 }
             }
         }
     }
-    // printf("[ceres] number of residuals: %d\n", problem.NumResiduals());
 
-    if (POINT_EDGE_FACTOR)
-    {
-    }
+    if (POINT_EDGE_FACTOR) {}
     printf("prepare ceres %fms\n", t_prep_solver.toc());
 
-    // -----------------
+    // ****************************************************
     // ceres: set options and solve the non-linear equation
     ceres::Solver::Options options;
     options.linear_solver_type = ceres::DENSE_SCHUR;
     //options.num_threads = 2;
-    options.trust_region_strategy_type = ceres::DOGLEG;
-    // options.trust_region_strategy_type = ceres::LEVENBEGR_MARQUARDT;
+    // options.trust_region_strategy_type = ceres::DOGLEG;
+    options.trust_region_strategy_type = ceres::LEVENBEGR_MARQUARDT;
     options.max_num_iterations = NUM_ITERATIONS;
     //options.use_explicit_schur_complement = true;
     //options.minimizer_progress_to_stdout = true;
@@ -644,30 +646,7 @@ void Estimator::optimizeLocalMap()
     options.max_solver_time_in_seconds = SOLVER_TIME;
 
     printf("*************** Before optimization\n");
-    if (EVALUATE_RESIDUAL)
-    {
-        ///< Bef
-        double cost = 0.0;
-        ceres::Problem::EvaluateOptions e_option;
-        if (POINT_PLANE_FACTOR)
-        {
-            e_option.parameter_blocks = para_ids;
-            e_option.residual_blocks = res_ids_proj;
-            problem.Evaluate(e_option, &cost, NULL, NULL, NULL);
-            printf("residual bef_proj: %f\n", cost);
-        }
-        if (MARGINALIZATION_FACTOR)
-        {
-            if (last_marginalization_info_ && !res_ids_marg.empty())
-            {
-              e_option.parameter_blocks = para_ids;
-              e_option.residual_blocks = res_ids_marg;
-              problem.Evaluate(e_option, &cost, NULL, NULL, NULL);
-              printf("residual bef_marg: %f\n", cost);
-            }
-        }
-    }
-
+    if (EVALUATE_RESIDUAL) evalResidual(problem, para_ids, res_ids_proj, last_marginalization_info_, res_ids_marg);
     if (!OPTIMAL_ODOMETRY) return;
 
     TicToc t_solver;
@@ -675,33 +654,11 @@ void Estimator::optimizeLocalMap()
     ceres::Solve(options, &problem, &summary);
     std::cout << summary.BriefReport() << std::endl;
     // std::cout << summary.FullReport() << std::endl;
-    ROS_DEBUG("Iterations : %d", static_cast<int>(summary.iterations.size()));
+    // printf("Iterations : %d", static_cast<int>(summary.iterations.size()));
     printf("solver costs: %fms\n", t_solver.toc());
 
     printf("*************** After optimization\n");
-    if (EVALUATE_RESIDUAL)
-    {
-        ///< Aft
-        double cost = 0.0;
-        ceres::Problem::EvaluateOptions e_option;
-        if (POINT_PLANE_FACTOR)
-        {
-            e_option.parameter_blocks = para_ids;
-            e_option.residual_blocks = res_ids_proj;
-            problem.Evaluate(e_option, &cost, NULL, NULL, NULL);
-            printf("residual aft_proj: %f\n", cost);
-        }
-        if (MARGINALIZATION_FACTOR)
-        {
-            if (last_marginalization_info_ && !res_ids_marg.empty())
-            {
-              e_option.parameter_blocks = para_ids;
-              e_option.residual_blocks = res_ids_marg;
-              problem.Evaluate(e_option, &cost, NULL, NULL, NULL);
-              printf("residual aft_marg: %f\n", cost);
-            }
-        }
-    }
+    if (EVALUATE_RESIDUAL) evalResidual(problem, para_ids, res_ids_proj, last_marginalization_info_, res_ids_marg);
 
     double2Vector();
     printParameter();
@@ -743,7 +700,7 @@ void Estimator::optimizeLocalMap()
                         const double &s = feature.score_;
                         const Eigen::Vector3d &p_data = feature.point_;
                         const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-                        ceres::CostFunction *cost_function = LidarPivotPointPlaneFactor::Create(p_data, coeff_ref, s);
+                        ceres::CostFunction *cost_function = LidarPivotPlaneNormFactor::Create(p_data, coeff_ref, s);
                         ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(cost_function, loss_function,
                             vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]}, std::vector<int>{0});
                         marginalization_info->addResidualBlockInfo(residual_block_info);
@@ -757,11 +714,11 @@ void Estimator::optimizeLocalMap()
         //! adjust the memory of H and b to implement the Schur complement
         TicToc t_pre_margin;
         marginalization_info->preMarginalize();
-        ROS_DEBUG_STREAM("pre marginalization: " << t_pre_margin.toc() << " ms");
+        printf("pre marginalization: %fms\n", t_pre_margin.toc());
 
         TicToc t_margin;
         marginalization_info->marginalize();
-        ROS_DEBUG_STREAM("marginalization: " << t_margin.toc() << " ms");
+        printf("marginalization: %fms\n", t_margin.toc());
 
         //! indicate shared memory of parameter blocks except for the dropped state
         std::unordered_map<long, double *> addr_shift;
@@ -784,7 +741,7 @@ void Estimator::optimizeLocalMap()
         }
         last_marginalization_info_ = marginalization_info;
         last_marginalization_parameter_blocks_ = parameter_blocks;
-        ROS_DEBUG_STREAM("whole marginalization costs: " << t_whole_marginalization.toc() << "ms");
+        printf("whole marginalization costs: %fms\n", t_whole_marginalization.toc());
     }
 }
 
@@ -836,36 +793,31 @@ void Estimator::double2Vector()
     }
 }
 
-void Estimator::printParameter()
+void Estimator::evalResidual(ceres::Problem &problem,
+    const std::vector<double *> &para_ids,
+    const std::vector<ceres::internal::ResidualBlock *> &res_ids_proj,
+	const MarginalizationInfo *last_marginalization_info_,
+    const std::vector<ceres::internal::ResidualBlock *> &res_ids_marg)
 {
-    printf("print optimized window (p -> j) ************************\n");
-    for (size_t i = 0; i < OPT_WINDOW_SIZE + 1; i++)
-    {
-        std::cout << "Pose: " << " " <<
-            para_pose_[i][3] << " " <<
-            para_pose_[i][4] << " " <<
-            para_pose_[i][5] << " " <<
-            para_pose_[i][6] << " " <<
-            para_pose_[i][0] << " " <<
-            para_pose_[i][1] << " " <<
-            para_pose_[i][2] << std::endl;
-    }
-    for (int i = 0; i < NUM_OF_LASER; i++)
-    {
-        std::cout << "Ext: " << " " <<
-            para_ex_pose_[i][3] << " " <<
-            para_ex_pose_[i][4] << " " <<
-            para_ex_pose_[i][5] << " " <<
-            para_ex_pose_[i][6] << " " <<
-            para_ex_pose_[i][0] << " " <<
-            para_ex_pose_[i][1] << " " <<
-            para_ex_pose_[i][2] << std::endl;
-    }
-    // for (int i = 0; i < NUM_OF_LASER; i++)
-    // {
-    //     std::cout << "dt: " <<
-    //         para_td_[i] << std::endl;
-    // }
+	double cost = 0.0;
+    ceres::Problem::EvaluateOptions e_option;
+	if (POINT_PLANE_FACTOR)
+	{
+		e_option.parameter_blocks = para_ids;
+		e_option.residual_blocks = res_ids_proj;
+		problem.Evaluate(e_option, &cost, NULL, NULL, NULL);
+		printf("residual proj: %f\n", cost);
+	}
+	if (MARGINALIZATION_FACTOR)
+	{
+		if (last_marginalization_info_ && !res_ids_marg.empty())
+		{
+			e_option.parameter_blocks = para_ids;
+			e_option.residual_blocks = res_ids_marg;
+			problem.Evaluate(e_option, &cost, NULL, NULL, NULL);
+			printf("residual marg: %f\n", cost);
+		}
+	}
 }
 
 // push new state and measurements in the sliding window
@@ -914,6 +866,38 @@ void Estimator::slideWindow()
         surf_points_stack_size_[n].push(surf_points_stack_size_[n][cir_buf_cnt_]);
     }
     printf("slide window: %fms\n", t_solid_window.toc());
+}
+
+void Estimator::printParameter()
+{
+    printf("print optimized window (p -> j) ************************\n");
+    for (size_t i = 0; i < OPT_WINDOW_SIZE + 1; i++)
+    {
+        std::cout << "Pose: " << " " <<
+            para_pose_[i][3] << " " <<
+            para_pose_[i][4] << " " <<
+            para_pose_[i][5] << " " <<
+            para_pose_[i][6] << " " <<
+            para_pose_[i][0] << " " <<
+            para_pose_[i][1] << " " <<
+            para_pose_[i][2] << std::endl;
+    }
+    for (int i = 0; i < NUM_OF_LASER; i++)
+    {
+        std::cout << "Ext: " << " " <<
+            para_ex_pose_[i][3] << " " <<
+            para_ex_pose_[i][4] << " " <<
+            para_ex_pose_[i][5] << " " <<
+            para_ex_pose_[i][6] << " " <<
+            para_ex_pose_[i][0] << " " <<
+            para_ex_pose_[i][1] << " " <<
+            para_ex_pose_[i][2] << std::endl;
+    }
+    // for (int i = 0; i < NUM_OF_LASER; i++)
+    // {
+    //     std::cout << "dt: " <<
+    //         para_td_[i] << std::endl;
+    // }
 }
 
 void Estimator::printSlideWindow()

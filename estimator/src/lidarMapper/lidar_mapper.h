@@ -66,9 +66,10 @@
 
 #include "common/common.hpp"
 #include "common/types/type.h"
-#include "../estimator/parameters.h"
 #include "../utility/tic_toc.h"
-#include "../../../../A-LOAM/src/lidarFactor.hpp"
+#include "../estimator/parameters.h"
+#include "../factor/lidar_edge_factor.hpp"
+#include "../factor/lidar_plane_norm_factor.hpp"
 
 
 

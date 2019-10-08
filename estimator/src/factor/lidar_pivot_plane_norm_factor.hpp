@@ -5,10 +5,10 @@
 #include <Eigen/Eigen>
 #include <Eigen/Dense>
 
-class LidarPivotPointPlaneFactor
+class LidarPivotPlaneNormFactor
 {
 public:
-	LidarPivotPointPlaneFactor(Eigen::Vector3d point, Eigen::Vector4d coeff, double s)
+	LidarPivotPlaneNormFactor(Eigen::Vector3d point, Eigen::Vector4d coeff, double s)
     	: point_(point), coeff_(coeff), s_(s){}
 
 	template <typename T>
@@ -67,8 +67,8 @@ public:
 
 	static ceres::CostFunction *Create(const Eigen::Vector3d &point, const Eigen::Vector4d &coeff, const double &s)
 	{
-		return (new ceres::AutoDiffCostFunction<LidarPivotPointPlaneFactor, 1, 7, 7, 7>(
-			new LidarPivotPointPlaneFactor(point, coeff, s)));
+		return (new ceres::AutoDiffCostFunction<LidarPivotPlaneNormFactor, 1, 7, 7, 7>(
+			new LidarPivotPlaneNormFactor(point, coeff, s)));
 	}
 
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW

@@ -45,7 +45,7 @@
 #include "../initial/initial_sfm.h"
 #include "../initial/initial_alignment.h"
 #include "../initial/initial_ex_rotation.h"
-#include "../factor/lidar_pivot_point_plane_factor.hpp"
+#include "../factor/lidar_pivot_plane_norm_factor.hpp"
 #include "../factor/imu_factor.h"
 #include "../factor/pose_local_parameterization.h"
 #include "../factor/marginalization_factor.h"
@@ -79,6 +79,7 @@ class Estimator
 
     // process localmap optimization
     void optimizeLocalMap();
+    void evalResidual(ceres::Problem &problem, const std::vector<double *> &para_ids, const std::vector<ceres::internal::ResidualBlock *> &res_ids_proj, const MarginalizationInfo *last_marginalization_info_, const std::vector<ceres::internal::ResidualBlock *> &res_ids_marg); 
     void vector2Double();
     void double2Vector();
     void printParameter();
