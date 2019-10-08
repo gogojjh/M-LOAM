@@ -21,7 +21,7 @@ flow_back: 1            # perform forward and backward optical flow to improve f
 
 #optimization parameters
 max_solver_time: 0.08  # max solver itration time (s), to guarantee real time
-max_num_iterations: 10   # max solver itrations, to guarantee real time
+max_num_iterations: 8   # max solver itrations, to guarantee real time
 keyframe_parallax: 0 # keyframe selection threshold (pixel)
 
 #imu parameters       The more accurate parameters you provide, the better performance
@@ -55,6 +55,8 @@ body_T_laser: !!opencv-matrix
    #        0, 0, 0, 1, 0, 0, 0] # qx qy qz qw px py pz
    data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
           0.37829, 0.00261, 0.04710, 0.92448, 0.02268, -0.60745, -0.22227]
+   # data: [0.37829, 0.00261, 0.04710, 0.92448, 0.02268, -0.60745, -0.22227,
+   #        0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000]
    # data: [0.37829, 0.00261, 0.04710, 0.92448, 0.02268, -0.60745, -0.22227,
    #        0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000]
 
@@ -98,5 +100,5 @@ evaluate_residual: 1
 pcl_viewer: 0
 pcl_viewer_normal_ratio: 5
 
-optimal_odometry: 1
+optimal_odometry: 0
 #

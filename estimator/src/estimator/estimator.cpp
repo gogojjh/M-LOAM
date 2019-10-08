@@ -609,7 +609,7 @@ void Estimator::optimizeLocalMap()
     std::vector<ceres::internal::ResidualBlock *> res_ids_proj;
     if (POINT_PLANE_FACTOR)
     {
-        for (int n = 0; n < NUM_OF_LASER; n++)
+        for (int n = 0; n < NUM_OF_LASER - 1; n++)
         {
             for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
             {
@@ -638,7 +638,7 @@ void Estimator::optimizeLocalMap()
     options.linear_solver_type = ceres::DENSE_SCHUR;
     //options.num_threads = 2;
     // options.trust_region_strategy_type = ceres::DOGLEG;
-    options.trust_region_strategy_type = ceres::LEVENBEGR_MARQUARDT;
+    // options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
     options.max_num_iterations = NUM_ITERATIONS;
     //options.use_explicit_schur_complement = true;
     //options.minimizer_progress_to_stdout = true;
