@@ -55,6 +55,7 @@ public:
     std::vector<common::PointICloud> laser_cloud_scans_;
     pcl::VoxelGrid<common::PointI> down_size_filter_corner_;
     pcl::VoxelGrid<common::PointI> down_size_filter_surf_;
+    pcl::VoxelGrid<common::PointI> down_size_filter_local_map_;
     pcl::VoxelGrid<common::PointI> down_size_filter_map_;
 
     int cloud_size_;

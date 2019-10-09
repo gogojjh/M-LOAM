@@ -662,7 +662,7 @@ void process()
 					//printf("result q %f %f %f %f result t %f %f %f\n", parameters[3], parameters[0], parameters[1], parameters[2],
 					//	   parameters[4], parameters[5], parameters[6]);
 				}
-				printf("mapping optimization time %f \n", t_opt.toc());
+				printf("mapping optimization time %fms\n", t_opt.toc());
 			}
 			else
 			{

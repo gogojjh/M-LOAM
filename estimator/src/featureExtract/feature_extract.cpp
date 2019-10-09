@@ -27,6 +27,7 @@ FeatureExtract::FeatureExtract()
     half_passed_ = false;
     down_size_filter_corner_.setLeafSize(0.2, 0.2, 0.2);
     down_size_filter_surf_.setLeafSize(0.4, 0.4, 0.4);
+    down_size_filter_local_map_.setLeafSize(0.4, 0.4, 0.4);
     down_size_filter_map_.setLeafSize(0.6, 0.6, 0.6);
 }
 
