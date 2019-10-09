@@ -14,7 +14,7 @@
 
     <node pkg="mloam" type="mloam_node" name="mloam_node" args="$(arg config_file)" output="screen" />
 
-    <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" output="screen" />
+    <node pkg="mloam" type="lidar_mapper" name="lidar_mapper"/>
 
     <!-- publish static tf -->
     <!-- <node name="static_tf_laser_left_into_lidar_left" pkg="tf" type="static_transform_publisher"

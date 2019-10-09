@@ -146,12 +146,12 @@ namespace common
     //----------------------------------- math utils
     static float toRad(float degree)
     {
-        return degree * (M_PI / 180.f);
+        return degree * M_PI / 180.f;
     }
 
     static float toDeg(float rad)
     {
-        return rad / (M_PI * 180.f);
+        return rad / M_PI * 180.f;
     }
 
     //----------------------------------- math utils

@@ -32,6 +32,7 @@
 #include "common/types/type.h"
 
 #include "parameters.h"
+#include "common/common.hpp"
 #include "../featureExtract/feature_extract.h"
 #include "../lidarTracker/lidar_tracker.h"
 #include "../initial/initial_extrinsics.h"
@@ -79,7 +80,7 @@ class Estimator
 
     // process localmap optimization
     void optimizeLocalMap();
-    void evalResidual(ceres::Problem &problem, const std::vector<double *> &para_ids, const std::vector<ceres::internal::ResidualBlock *> &res_ids_proj, const MarginalizationInfo *last_marginalization_info_, const std::vector<ceres::internal::ResidualBlock *> &res_ids_marg); 
+    void evalResidual(ceres::Problem &problem, const std::vector<double *> &para_ids, const std::vector<ceres::internal::ResidualBlock *> &res_ids_proj, const MarginalizationInfo *last_marginalization_info_, const std::vector<ceres::internal::ResidualBlock *> &res_ids_marg);
     void vector2Double();
     void double2Vector();
     void printParameter();

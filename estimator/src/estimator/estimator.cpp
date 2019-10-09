@@ -313,6 +313,10 @@ void Estimator::process()
             pose_laser_cur_[IDX_REF] = Pose(Qs_[cir_buf_cnt_-1], Ts_[cir_buf_cnt_-1]) * pose_rlt_[IDX_REF];
             std::cout << "relative transform: " << pose_rlt_[IDX_REF] << std::endl;
             std::cout << "current transform: " << pose_laser_cur_[IDX_REF] << std::endl;
+
+            // Eigen::Vector3d ea = pose_rlt_[IDX_REF].T_.topLeftCorner<3, 3>().eulerAngles(2, 1, 0);
+            // printf("relative euler (deg): %f, %f, %f\n", toDeg(ea(0)), toDeg(ea(1)), toDeg(ea(2)));
+
             printf("mloam_tracker %fms\n", t_mloam_tracker.toc());
         }
     }
@@ -324,18 +328,18 @@ void Estimator::process()
     // get newest point cloud
     Header_[cir_buf_cnt_].stamp = ros::Time(cur_feature_.first);
     PointICloud cloud_downsampled_;
-    for (int i = 0; i < NUM_OF_LASER; i++)
+    for (int n = 0; n < NUM_OF_LASER; n++)
     {
-        // PointICloud &corner_points = cur_feature_.second[i]["corner_points_less_sharp"];
+        // PointICloud &corner_points = cur_feature_.second[n]["corner_points_less_sharp"];
         // f_extract_.down_size_filter_corner_.setInputCloud(boost::make_shared<PointICloud>(corner_points));
         // f_extract_.down_size_filter_corner_.filter(corner_points_stack_downsampled_);
-        // corner_points_stack_[i].push(corner_points_stack_downsampled_);
-        // corner_points_stack_size_[i].push(corner_points_stack_downsampled_.size());
-        PointICloud &surf_points = cur_feature_.second[i]["surf_points_less_flat"];
+        // corner_points_stack_[n].push(corner_points_stack_downsampled_);
+        // corner_points_stack_size_[n].push(corner_points_stack_downsampled_.size());
+        PointICloud &surf_points = cur_feature_.second[n]["surf_points_less_flat"];
         f_extract_.down_size_filter_surf_.setInputCloud(boost::make_shared<PointICloud>(surf_points));
         f_extract_.down_size_filter_surf_.filter(cloud_downsampled_);
-        surf_points_stack_[i][cir_buf_cnt_] = cloud_downsampled_;
-        surf_points_stack_size_[i][cir_buf_cnt_] = cloud_downsampled_.size();
+        surf_points_stack_[n][cir_buf_cnt_] = cloud_downsampled_;
+        surf_points_stack_size_[n][cir_buf_cnt_] = cloud_downsampled_.size();
     }
     // printSlideWindow();
 
@@ -474,7 +478,7 @@ void Estimator::buildLocalMap()
     printf("build local map: %fms\n", t_build_local_map.toc());
     if (PCL_VIEWER)
     {
-        printf("[PlaneNormalVisualizer] update cloud\n");
+        // printf("[PlaneNormalVisualizer] update cloud\n");
         if (plane_normal_vis_.init_)
         {
             PointCloud::Ptr point_world_xyz(new PointCloud);
@@ -547,7 +551,7 @@ void Estimator::optimizeLocalMap()
     TicToc t_prep_solver;
 
     vector2Double();
-    // printParameter();
+    if (!OPTIMAL_ODOMETRY) printParameter();
 
     // -----------------
     size_t pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
@@ -616,7 +620,7 @@ void Estimator::optimizeLocalMap()
     std::vector<ceres::internal::ResidualBlock *> res_ids_proj;
     if (POINT_PLANE_FACTOR)
     {
-        for (int n = 0; n < NUM_OF_LASER; n++)
+        for (int n = 0; n < NUM_OF_LASER - 1; n++)
         {
             for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
             {
@@ -838,19 +842,28 @@ void Estimator::slideWindow()
         int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
         Pose pose_pivot(Qs_[pivot_idx], Ts_[pivot_idx]);
 
-        PointICloud surf_points_transformed, surf_points_filtered;
-        // PointICloud corner_points_transformed, corner_points_filtered;
         int i = pivot_idx + 1;
         Pose pose_i(Qs_[i], Ts_[i]);
         for (int n = 0; n < NUM_OF_LASER; n++)
         {
             surf_points_pivot_map_[n] = surf_points_stack_[n][pivot_idx];
+            PointICloud surf_points_transformed, surf_points_filtered;
+            // PointICloud corner_points_transformed, corner_points_filtered;
             if (n == IDX_REF)
             {
                 Pose pose_ext = Pose(qbl_[n], tbl_[n]);
+
+                // std::cout << pose_pivot << std::endl;
+                // std::cout << pose_i << std::endl;
+                // std::cout << pose_ext << std::endl;
+                // std::cout << Pose((pose_i.T_ * pose_ext.T_).inverse() * (pose_pivot.T_ * pose_ext.T_)) << std::endl;
+
                 Eigen::Affine3d transform_i_pivot;
                 transform_i_pivot.matrix() = (pose_i.T_ * pose_ext.T_).inverse() * (pose_pivot.T_ * pose_ext.T_);
                 pcl::transformPointCloud(surf_points_stack_[n][pivot_idx], surf_points_transformed, transform_i_pivot.cast<float>());
+
+                // Eigen::Vector3d ea = transform_i_pivot.matrix().topLeftCorner<3, 3>().eulerAngles(2, 1, 0);
+                // printf("Relative euler (deg): %f, %f, %f\n", toDeg(ea(0)), toDeg(ea(1)), toDeg(ea(2)));
 
                 pcl::PointIndices::Ptr inliers_surf(new pcl::PointIndices());
                 for (size_t j = 0; j < surf_points_stack_size_[n][0]; j++) inliers_surf->indices.push_back(j);
@@ -859,7 +872,8 @@ void Estimator::slideWindow()
                 extract.setIndices(inliers_surf);
                 extract.setNegative(true);
                 extract.filter(surf_points_filtered);
-                surf_points_stack_[n][i] = surf_points_filtered + surf_points_stack_[n][i];
+                surf_points_filtered += surf_points_stack_[n][i];
+                surf_points_stack_[n][i] = surf_points_filtered;
             }
         }
     }
@@ -879,10 +893,10 @@ void Estimator::slideWindow()
 
 void Estimator::printParameter()
 {
-    printf("print optimized window (p -> j) ************************\n");
+    printf("print optimized window (p -> j) [qx qy qz qw x y z] ************************\n");
     for (size_t i = 0; i < OPT_WINDOW_SIZE + 1; i++)
     {
-        std::cout << "Pose: " << " " <<
+        std::cout << "Pose " << WINDOW_SIZE - OPT_WINDOW_SIZE + i << ": " <<
             para_pose_[i][3] << " " <<
             para_pose_[i][4] << " " <<
             para_pose_[i][5] << " " <<
