@@ -66,7 +66,7 @@ public:
 
         // FIXME: info
         residual = sqrt_info * residual;
-        // DLOG(INFO) << "residual: " << residual.transpose();
+        std::cout << "prior factor residual: " << residual.transpose() << std::endl;
 
         if (jacobians)
         {

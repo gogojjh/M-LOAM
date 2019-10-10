@@ -474,7 +474,7 @@ void Estimator::optimizeLocalMap()
     std::vector<ceres::internal::ResidualBlock *> res_ids_proj;
     if (POINT_PLANE_FACTOR)
     {
-        for (int n = 0; n < NUM_OF_LASER; n++)
+        for (int n = 0; n < NUM_OF_LASER - 1; n++)
         {
             for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
             {
@@ -485,8 +485,13 @@ void Estimator::optimizeLocalMap()
                     const double &s = feature.score_;
                     const Eigen::Vector3d &p_data = feature.point_;
                     const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-                    ceres::CostFunction *cost_function = LidarPivotPlaneNormFactor::Create(p_data, coeff_ref, s);
-                    ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(cost_function, loss_function,
+
+                    // ceres::CostFunction *cost_function = LidarPivotPlaneNormFactor::Create(p_data, coeff_ref, s);
+                    // ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(cost_function, loss_function,
+                    //     para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]);
+
+                    LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s);
+                    ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
                         para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]);
                     res_ids_proj.push_back(res_id);
                 }
@@ -577,8 +582,12 @@ void Estimator::optimizeLocalMap()
                         const double &s = feature.score_;
                         const Eigen::Vector3d &p_data = feature.point_;
                         const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-                        ceres::CostFunction *cost_function = LidarPivotPlaneNormFactor::Create(p_data, coeff_ref, s);
-                        ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(cost_function, loss_function,
+                        // ceres::CostFunction *cost_function = LidarPivotPlaneNormFactor::Create(p_data, coeff_ref, s);
+                        // ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(cost_function, loss_function,
+                        //     vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]}, std::vector<int>{0});
+
+                        LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s);
+                        ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
                             vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]}, std::vector<int>{0});
                         marginalization_info->addResidualBlockInfo(residual_block_info);
                     }

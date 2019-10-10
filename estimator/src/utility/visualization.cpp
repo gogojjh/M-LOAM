@@ -129,7 +129,7 @@ void pubPointCloud(const Estimator &estimator, const double &time)
     // publish local map
     if (estimator.solver_flag_ == Estimator::SolverFlag::NON_LINEAR)
     {
-        for (size_t n = 0; n < NUM_OF_LASER; n++)
+        for (size_t n = 0; n < NUM_OF_LASER - 1; n++)
         {
             header.frame_id = "laser_" + std::to_string(n);
 

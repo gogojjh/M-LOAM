@@ -97,7 +97,7 @@ min_plane_dis: 0.2
 marginalization_factor: 0
 point_plane_factor: 1
 point_edge_factor: 0
-prior_factor: 1
+prior_factor: 0
 
 evaluate_residual: 1
 
