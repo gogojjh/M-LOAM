@@ -76,6 +76,7 @@ idx_ref: 0
 
 cloud0_topic: "/left/velodyne_points"
 cloud1_topic: "/right/velodyne_points"
+# cloud1_topic: "/left/velodyne_points"
 
 laser_sync_threshold: 0.07
 roi_range: 0.5
@@ -96,11 +97,13 @@ min_plane_dis: 0.2
 marginalization_factor: 0
 point_plane_factor: 1
 point_edge_factor: 0
+prior_factor: 1
 
 evaluate_residual: 1
 
 pcl_viewer: 0
-pcl_viewer_normal_ratio: 5
+pcl_viewer_normal_ratio: 2
 
-optimal_odometry: 0
+optimal_odometry: 1
+
 #

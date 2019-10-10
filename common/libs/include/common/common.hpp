@@ -144,17 +144,6 @@ namespace common
     }
 
     //----------------------------------- math utils
-    static float toRad(float degree)
-    {
-        return degree * M_PI / 180.f;
-    }
-
-    static float toDeg(float rad)
-    {
-        return rad / M_PI * 180.f;
-    }
-
-    //----------------------------------- math utils
     template <typename PointType>
     void removeROIPointCloud(const pcl::PointCloud<PointType> &cloud_in,
                              pcl::PointCloud<PointType> &cloud_out,

@@ -67,8 +67,7 @@ public:
 
 	static ceres::CostFunction *Create(const Eigen::Vector3d &point, const Eigen::Vector4d &coeff, const double &s)
 	{
-		return (new ceres::AutoDiffCostFunction<LidarPivotPlaneNormFactor, 1, 7, 7, 7>(
-			new LidarPivotPlaneNormFactor(point, coeff, s)));
+		return (new ceres::AutoDiffCostFunction<LidarPivotPlaneNormFactor, 1, 7, 7, 7>(new LidarPivotPlaneNormFactor(point, coeff, s)));
 	}
 
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW

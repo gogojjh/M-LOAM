@@ -24,6 +24,7 @@ ros::Publisher pub_surf_points_less_flat;
 // local map
 std::vector<ros::Publisher> v_pub_surf_points_pivot;
 std::vector<ros::Publisher> v_pub_surf_points_local_map;
+std::vector<ros::Publisher> v_pub_surf_points_cur;
 
 // odometry
 ros::Publisher pub_ext_base_to_sensor;
@@ -84,6 +85,10 @@ void registerPub(ros::NodeHandle &nh)
         std::string surf_points_local_map_topic;
         surf_points_local_map_topic = std::string("/surf_local_map_") + std::to_string(i);
         v_pub_surf_points_local_map.push_back(nh.advertise<sensor_msgs::PointCloud2>(surf_points_local_map_topic, 100));
+
+        std::string surf_points_cur_topic;
+        surf_points_cur_topic = std::string("/surf_points_cur_") + std::to_string(i);
+        v_pub_surf_points_cur.push_back(nh.advertise<sensor_msgs::PointCloud2>(surf_points_cur_topic, 100));
     }
     v_laser_path.resize(NUM_OF_LASER);
 }
@@ -96,7 +101,7 @@ void pubPointCloud(const Estimator &estimator, const double &time)
 
     // publish raw points
     PointICloud laser_cloud, corner_points_sharp, corner_points_less_sharp, surf_points_flat, surf_points_less_flat;
-    for (size_t n = 0; n < NUM_OF_LASER; n++)
+    for (size_t n = 1; n < NUM_OF_LASER; n++)
     {
         Pose pose_ext = Pose(estimator.qbl_[n], estimator.tbl_[n]);
         // int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
@@ -128,7 +133,7 @@ void pubPointCloud(const Estimator &estimator, const double &time)
         {
             header.frame_id = "laser_" + std::to_string(n);
 
-            // PointICloud surf_local_map_trans;
+            PointICloud surf_local_map_trans;
             // int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
             // Pose pose_ext = Pose(estimator.qbl_[n], estimator.tbl_[n]);
             // Pose pose_pivot(estimator.Qs_[pivot_idx], estimator.Ts_[pivot_idx]);
@@ -143,6 +148,14 @@ void pubPointCloud(const Estimator &estimator, const double &time)
             // Eigen::Matrix4d transform_pivot_ext = pose_pivot.T_ * pose_ext.T_;
             // pcl::transformPointCloud(estimator.surf_points_pivot_map_[n], surf_local_map_trans, transform_pivot_ext.cast<float>());
             publishCloud(v_pub_surf_points_pivot[n], header, estimator.surf_points_pivot_map_[n]);
+
+            int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
+            Pose pose_ext = Pose(estimator.qbl_[n], estimator.tbl_[n]);
+            Pose pose_pivot(estimator.Qs_[pivot_idx], estimator.Ts_[pivot_idx]);
+            Pose pose_j(estimator.Qs_[estimator.cir_buf_cnt_-1], estimator.Ts_[estimator.cir_buf_cnt_-1]);
+            Eigen::Matrix4d transform_pivot_j = (pose_pivot.T_ * pose_ext.T_).inverse() * (pose_j.T_ * pose_ext.T_);
+            pcl::transformPointCloud(estimator.surf_points_stack_[n][estimator.cir_buf_cnt_-1], surf_local_map_trans, transform_pivot_j.cast<float>());
+            publishCloud(v_pub_surf_points_cur[n], header, surf_local_map_trans);
         }
     }
 }

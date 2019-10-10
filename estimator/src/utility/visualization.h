@@ -42,6 +42,7 @@ extern ros::Publisher pub_surf_points_less_flat;
 // local map
 extern std::vector<ros::Publisher> v_pub_surf_points_pivot;
 extern std::vector<ros::Publisher> v_pub_surf_points_local_map;
+extern std::vector<ros::Publisher> v_pub_surf_points_cur;
 
 // odometry
 extern std::vector<ros::Publisher> v_pub_ext_base_to_laser;

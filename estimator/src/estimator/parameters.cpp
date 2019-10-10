@@ -77,6 +77,7 @@ float MIN_PLANE_DIS;
 int MARGINALIZATION_FACTOR;
 int POINT_PLANE_FACTOR;
 int POINT_EDGE_FACTOR;
+int PRIOR_FACTOR;
 
 int OPTIMAL_EXTRINSIC;
 
@@ -206,6 +207,7 @@ void readParameters(std::string config_file)
     MARGINALIZATION_FACTOR = fsSettings["marginalization_factor"];
     POINT_PLANE_FACTOR = fsSettings["point_plane_factor"];
     POINT_EDGE_FACTOR = fsSettings["point_edge_factor"];
+    PRIOR_FACTOR = fsSettings["prior_factor"];
 
     EVALUATE_RESIDUAL = fsSettings["evaluate_residual"];
 
