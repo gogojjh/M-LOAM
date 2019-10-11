@@ -474,7 +474,7 @@ void Estimator::optimizeLocalMap()
     std::vector<ceres::internal::ResidualBlock *> res_ids_proj;
     if (POINT_PLANE_FACTOR)
     {
-        for (int n = 0; n < NUM_OF_LASER - 1; n++)
+        for (int n = 1; n < NUM_OF_LASER; n++)
         {
             for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
             {
@@ -503,7 +503,7 @@ void Estimator::optimizeLocalMap()
     {
         for (int n = 0; n < NUM_OF_LASER; n++)
         {
-            PriorFactor *f = new PriorFactor(tbl_[n], qbl_[n], 100, 0.1);
+            PriorFactor *f = new PriorFactor(tbl_[n], qbl_[n], 10, 0.1);
             ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, NULL, para_ex_pose_[n]);
             res_ids_proj.push_back(res_id);
         }
@@ -732,15 +732,8 @@ void Estimator::buildLocalMap()
         {
             f_extract_.extractSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
                 surf_points_stack_[n][i], pose_local[n][i], surf_map_features_[n][i]);
-            // std::cout << "local pose: " << pose_local[n][i] << std::endl;
-            // printf("Laser_%d, %dth window, size of input cloud is %d\n", n, i, surf_points_stack_[n][i].size());
-
             // f_extract_.extractCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
             //  corner_points_stack_[n][i], pose_local[i], corner_map_features_[n][i]);
-            // printf("number of extracted features: %d\n", corner_map_features_[n][i].size());
-
-            // TODO:
-            // filter surf_points_stack_[n][i] and extractSurfFromMap
         }
     }
     printf("extract local map: %fms\n", t_local_map_extract.toc());
@@ -889,7 +882,7 @@ void Estimator::evalResidual(ceres::Problem &problem,
 		e_option.parameter_blocks = para_ids;
 		e_option.residual_blocks = res_ids_proj;
 		problem.Evaluate(e_option, &cost, NULL, NULL, NULL);
-		printf("residual proj: %f\n", cost);
+		printf("residual proj: %f+++++++++++++++++++++\n", cost);
 	}
 	if (MARGINALIZATION_FACTOR)
 	{
@@ -898,7 +891,7 @@ void Estimator::evalResidual(ceres::Problem &problem,
 			e_option.parameter_blocks = para_ids;
 			e_option.residual_blocks = res_ids_marg;
 			problem.Evaluate(e_option, &cost, NULL, NULL, NULL);
-			printf("residual marg: %f\n", cost);
+			printf("residual marg: %f+++++++++++++++++++++\n", cost);
 		}
 	}
 }
