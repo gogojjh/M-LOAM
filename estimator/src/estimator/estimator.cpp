@@ -485,11 +485,9 @@ void Estimator::optimizeLocalMap()
                     const double &s = feature.score_;
                     const Eigen::Vector3d &p_data = feature.point_;
                     const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-
                     // ceres::CostFunction *cost_function = LidarPivotPlaneNormFactor::Create(p_data, coeff_ref, s);
                     // ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(cost_function, loss_function,
                     //     para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]);
-
                     LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s);
                     ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
                         para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]);
@@ -638,7 +636,7 @@ void Estimator::buildLocalMap()
     Pose pose_pivot(Qs_[pivot_idx], Ts_[pivot_idx]);
     // -----------------
     // build static local map using fixed poses
-    PointICloud surf_points_transformed;
+    PointICloud surf_points_trans;
     if (!ini_fixed_local_map_)
     {
         for (int n = 0; n < NUM_OF_LASER; n++)
@@ -653,9 +651,9 @@ void Estimator::buildLocalMap()
                     Pose pose_i(Qs_[i], Ts_[i]);
                     Eigen::Affine3d transform_pivot_i;
                     transform_pivot_i.matrix() = (pose_pivot.T_ * pose_ext.T_).inverse() * (pose_i.T_ * pose_ext.T_);
-                    pcl::transformPointCloud(surf_points_stack_[n][i], surf_points_transformed, transform_pivot_i.cast<float>());
-                    for (auto &p: surf_points_transformed.points) p.intensity = i;
-                    surf_points_tmp += surf_points_transformed;
+                    pcl::transformPointCloud(surf_points_stack_[n][i], surf_points_trans, transform_pivot_i.cast<float>());
+                    for (auto &p: surf_points_trans.points) p.intensity = i;
+                    surf_points_tmp += surf_points_trans;
                     // pcl::transformPointCloud(corner_points_stack_[n][idx], corner_points_transformed, transform_pivot_i);
                     // corner_points_tmp[n] += corner_points_transformed;
                 }
@@ -690,9 +688,9 @@ void Estimator::buildLocalMap()
             pose_local[n][i] = Pose(transform_pivot_i.matrix());
             if ((i < pivot_idx) || (i == WINDOW_SIZE)) continue;
 
-            pcl::transformPointCloud(surf_points_stack_[n][i], surf_points_transformed, transform_pivot_i.cast<float>());
-            for (auto &p: surf_points_transformed.points) p.intensity = i;
-            surf_points_local_map_[n] += surf_points_transformed;
+            pcl::transformPointCloud(surf_points_stack_[n][i], surf_points_trans, transform_pivot_i.cast<float>());
+            for (auto &p: surf_points_trans.points) p.intensity = i;
+            surf_points_local_map_[n] += surf_points_trans;
             // pcl::transformPointCloud(corner_points_stack_[n][idx], corner_points_transformed, transform_pivot_i);
             // for (auto &p: corner_points_transformed.points) p.intensity = i;
             // corner_points_local_map_[n] += corner_points_transformed;
@@ -795,7 +793,7 @@ void Estimator::slideWindow()
         for (int n = 0; n < NUM_OF_LASER; n++)
         {
             surf_points_pivot_map_[n] = surf_points_stack_[n][pivot_idx];
-            PointICloud surf_points_transformed, surf_points_filtered;
+            PointICloud surf_points_trans, surf_points_filtered;
             // PointICloud corner_points_transformed, corner_points_filtered;
             if (n == IDX_REF)
             // if (n >= IDX_REF)
@@ -803,11 +801,11 @@ void Estimator::slideWindow()
                 Pose pose_ext = Pose(qbl_[n], tbl_[n]);
                 Eigen::Affine3d transform_i_pivot;
                 transform_i_pivot.matrix() = (pose_i.T_ * pose_ext.T_).inverse() * (pose_pivot.T_ * pose_ext.T_);
-                pcl::transformPointCloud(surf_points_stack_[n][pivot_idx], surf_points_transformed, transform_i_pivot.cast<float>());
+                pcl::transformPointCloud(surf_points_stack_[n][pivot_idx], surf_points_trans, transform_i_pivot.cast<float>());
                 pcl::PointIndices::Ptr inliers_surf(new pcl::PointIndices());
                 for (size_t j = 0; j < surf_points_stack_size_[n][0]; j++) inliers_surf->indices.push_back(j);
                 pcl::ExtractIndices<PointI> extract;
-                extract.setInputCloud(boost::make_shared<PointICloud>(surf_points_transformed));
+                extract.setInputCloud(boost::make_shared<PointICloud>(surf_points_trans));
                 extract.setIndices(inliers_surf);
                 extract.setNegative(true);
                 extract.filter(surf_points_filtered);
