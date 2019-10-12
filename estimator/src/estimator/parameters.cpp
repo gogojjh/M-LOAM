@@ -131,8 +131,8 @@ void readParameters(std::string config_file)
     MIN_PARALLAX = MIN_PARALLAX / FOCAL_LENGTH;
 
     fsSettings["output_path"] >> OUTPUT_FOLDER;
-    MLOAM_ODOM_PATH = OUTPUT_FOLDER + "mloam_odom.csv";
-	MLOAM_MAP_PATH = OUTPUT_FOLDER + "mloam_map.csv";
+    MLOAM_ODOM_PATH = OUTPUT_FOLDER + fsSettings["mloam_odom_path"];
+	MLOAM_MAP_PATH = OUTPUT_FOLDER + fsSettings["mloam_map_path"];
     std::cout << "result path " << MLOAM_ODOM_PATH << ", " << MLOAM_MAP_PATH << std::endl;
 
     NUM_OF_LASER = fsSettings["num_of_laser"];

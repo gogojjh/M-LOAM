@@ -7,6 +7,8 @@ num_of_cam: 2
 
 imu_topic: ""
 output_path: "/home/jjiao/catkin_ws/src/localization/M-LOAM/log/"
+mloam_odom_path: "mloam_odom_with_margin.csv"
+mloam_map_path: "mloam_map.csv"
 
 #Multiple thread support
 multiple_thread: 0
@@ -20,8 +22,8 @@ show_track: 1           # publish tracking image as topic
 flow_back: 1            # perform forward and backward optical flow to improve feature tracking accuracy
 
 #optimization parameters
-max_solver_time: 0.08  # max solver itration time (s), to guarantee real time
-max_num_iterations: 8   # max solver itrations, to guarantee real time
+max_solver_time: 0.07  # max solver itration time (s), to guarantee real time
+max_num_iterations: 7   # max solver itrations, to guarantee real time
 keyframe_parallax: 0 # keyframe selection threshold (pixel)
 
 #imu parameters       The more accurate parameters you provide, the better performance
@@ -53,8 +55,10 @@ body_T_laser: !!opencv-matrix
    dt: d
    # data: [0, 0, 0, 1, 0, 0, 0,
    #        0, 0, 0, 1, 0, 0, 0] # qx qy qz qw px py pz
+   # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
+   #        0.37829, 0.00261, 0.04710, 0.92448, 0.02268, -0.60745, -0.22227]
    data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-          0.37829, 0.00261, 0.04710, 0.92448, 0.02268, -0.60745, -0.22227]
+          0.37102, 0.00307, 0.00421, 0.92861, -0.0267, -0.4778, -0.1382]
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
    #        0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000]
    # data: [0.37829, 0.00261, 0.04710, 0.92448, 0.02268, -0.60745, -0.22227,
@@ -94,7 +98,7 @@ min_match_sq_dis: 1.0
 min_plane_dis: 0.2
 
 # mariginalization
-marginalization_factor: 0
+marginalization_factor: 1
 point_plane_factor: 1
 point_edge_factor: 0
 prior_factor: 0
