@@ -101,7 +101,7 @@ void pubPointCloud(const Estimator &estimator, const double &time)
 
     // publish raw points
     PointICloud laser_cloud, corner_points_sharp, corner_points_less_sharp, surf_points_flat, surf_points_less_flat;
-    for (size_t n = 0; n < NUM_OF_LASER - 1; n++)
+    for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
         Pose pose_ext = Pose(estimator.qbl_[n], estimator.tbl_[n]);
         Eigen::Matrix4d transform_ext = pose_ext.T_;

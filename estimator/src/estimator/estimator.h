@@ -48,6 +48,7 @@
 #include "../initial/initial_ex_rotation.h"
 #include "../factor/imu_factor.h"
 #include "../factor/lidar_pivot_plane_norm_factor.hpp"
+#include "../factor/lidar_pivot_target_plane_norm_factor.hpp"
 #include "../factor/pose_local_parameterization.h"
 #include "../factor/marginalization_factor.h"
 #include "../factor/prior_factor.hpp"
