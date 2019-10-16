@@ -28,7 +28,7 @@ FeatureExtract::FeatureExtract()
     down_size_filter_corner_.setLeafSize(0.1, 0.1, 0.1);
     down_size_filter_surf_.setLeafSize(0.4, 0.4, 0.4);
     down_size_filter_local_map_.setLeafSize(0.4, 0.4, 0.4);
-    down_size_filter_map_.setLeafSize(0.6, 0.6, 0.6);
+    down_size_filter_global_map_.setLeafSize(0.6, 0.6, 0.6);
 }
 
 void FeatureExtract::pointAssociateToMap(const PointI &pi, PointI &po, const Pose &pose)
