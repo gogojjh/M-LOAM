@@ -9,15 +9,12 @@
 
 using namespace common;
 
-static double sqrt_info_static = 1.0;
-
 class LidarPivotPlaneNormFactor : public ceres::SizedCostFunction<1, 7, 7, 7>
 {
 public:
 	LidarPivotPlaneNormFactor(Eigen::Vector3d point, Eigen::Vector4d coeff, double s)
-    	: point_(point), coeff_(coeff), s_(s){}
+    	: point_(point), coeff_(coeff), s_(s), sqrt_info_static_(1.0){}
 
-	// TODO:
 	// residual = sum(w^(T) * (R * p + t) + d)
     bool Evaluate(double const *const *param, double *residuals, double **jacobians) const
     {
@@ -38,7 +35,7 @@ public:
         Eigen::Vector3d w(coeff_(0), coeff_(1), coeff_(2));
         double d = coeff_(3);
 		double r = (w.dot(Q_ext_pi * point_ + t_ext_pi) + d) * s_;
-        double sqrt_info = sqrt_info_static;
+        double sqrt_info = sqrt_info_static_;
         residuals[0] = sqrt_info * r;
 
 		// TODO: jacobians derivation
@@ -52,10 +49,10 @@ public:
                 Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> > jacobian_pose_pivot(jacobians[0]);
                 Eigen::Matrix<double, 1, 6> jaco_pivot;
 
-                jaco_pivot.leftCols<3>() = -w.transpose() * Rext * Rp.transpose();
-                jaco_pivot.rightCols<3>() = w.transpose() * Rext * (
-						SkewSymmetric(Rp.transpose() * Ri * Rext.transpose() * (point_ - t_ext)) +
-						SkewSymmetric(Rp.transpose() * (t_i - t_pivot)));
+				jaco_pivot.leftCols<3>() = -w.transpose() * Rext.transpose() * Rp.transpose();
+				jaco_pivot.rightCols<3>() = w.transpose() * Rext.transpose() * (
+					SkewSymmetric(Rp.transpose() * (Ri * Rext * point_ + Ri * t_ext + t_i - Rp * t_ext - t_pivot)) +
+					SkewSymmetric(t_ext));
 
                 jacobian_pose_pivot.setZero();
                 jacobian_pose_pivot.leftCols<6>() = sqrt_info * jaco_pivot;
@@ -67,10 +64,9 @@ public:
                 Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> > jacobian_pose_i(jacobians[1]);
                 Eigen::Matrix<double, 1, 6> jaco_i;
 
-                jaco_i.leftCols<3>() = w.transpose() * Rext * Rp.transpose();
-                jaco_i.rightCols<3>() =
-					w.transpose() * Rext * Rp.transpose() * Ri * (-SkewSymmetric(Rext.transpose() * point_)
-					  	+ SkewSymmetric(Rext.transpose() * t_ext));
+				jaco_i.leftCols<3>() = w.transpose() * Rext.transpose() * Rp.transpose();
+				jaco_i.rightCols<3>() = -w.transpose() * Rext.transpose() * Rp.transpose() * Ri *
+					SkewSymmetric(Rext * point_ + t_ext);
 
                 jacobian_pose_i.setZero();
                 jacobian_pose_i.leftCols<6>() = sqrt_info * jaco_i;
@@ -82,22 +78,11 @@ public:
                 Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> > jacobian_pose_ex(jacobians[2]);
                 jacobian_pose_ex.setZero();
 
-                Eigen::Matrix3d I3x3;
-                I3x3.setIdentity();
-
-                Eigen::Matrix3d right_info_mat;
-                right_info_mat.setIdentity();
-                right_info_mat(2, 2) = 1e-6;
-                right_info_mat = Q_ext_pivot.conjugate().normalized() * right_info_mat * Q_ext_pivot.normalized();
-
-                Eigen::Matrix<double, 1, 6> jaco_ex;
-                //  NOTE: planar extrinsic
-                //       jaco_ex.leftCols<3>() = w.transpose() * (I3x3 - Rext * Rp.transpose() * Ri * Rext.transpose()) * right_info_mat;
-                jaco_ex.leftCols<3>() = w.transpose() * (I3x3 - Rext * Rp.transpose() * Ri * Rext.transpose());
-                jaco_ex.rightCols<3>() =
-					w.transpose() * Rext * (-SkewSymmetric(Rp.transpose() * Ri * Rext.transpose() * (point_ - t_ext))
-						  + Rp.transpose() * Ri * SkewSymmetric(Rext.transpose() * (point_ - t_ext))
-						  - SkewSymmetric(Rp.transpose() * (t_i - t_pivot)));
+				Eigen::Matrix<double, 1, 6> jaco_ex;
+				jaco_ex.leftCols<3>() = w.transpose() * Rext.transpose() * Rp.transpose() * (Ri - Rp);
+				jaco_ex.rightCols<3>() = w.transpose() * (
+					SkewSymmetric(Rext.transpose() * Rp.transpose() * (Ri * Rext * point_ + Ri * t_ext + t_i - Rp * t_ext - t_pivot)) -
+					SkewSymmetric(Rext.transpose() * Rp.transpose() * Ri * Rext * point_));
 
                 jacobian_pose_ex.setZero();
                 jacobian_pose_ex.leftCols<6>() = sqrt_info * jaco_ex;
@@ -107,6 +92,7 @@ public:
         return true;
     }
 
+	// TODO: check the jacobian derivation
     void Check(double **param)
     {
         double *res = new double[1];
@@ -140,8 +126,8 @@ public:
 
 		Eigen::Vector3d w(coeff_(0), coeff_(1), coeff_(2));
         double d = coeff_(3);
-		double r = w.dot(Q_ext_pi * point_ + t_ext_pi) + d;
-        double sqrt_info = sqrt_info_static;
+		double r = (w.dot(Q_ext_pi * point_ + t_ext_pi) + d) * s_;
+        double sqrt_info = sqrt_info_static_;
         r *= sqrt_info;
 
         std::cout << "num" << std::endl;
@@ -184,7 +170,7 @@ public:
 
 			Eigen::Vector3d w(coeff_(0), coeff_(1), coeff_(2));
 	        double d = coeff_(3);
-			double tmp_r = w.dot(Q_ext_pi * point_ + t_ext_pi) + d;
+			double tmp_r = (w.dot(Q_ext_pi * point_ + t_ext_pi) + d) * s_;
 	        tmp_r *= sqrt_info;
             num_jacobian(k) = (tmp_r - r) / eps;
         }
@@ -197,6 +183,7 @@ private:
 	const Eigen::Vector3d point_;
 	const Eigen::Vector4d coeff_;
 	const double s_;
+	const double sqrt_info_static_;
 };
 
 

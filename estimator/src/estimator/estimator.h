@@ -73,19 +73,23 @@ class Estimator
     void processMeasurements();
     void process();
 
-    // slide window and marginalization
-    void slideWindow();
-    void printSlideWindow();
-
-    // build local map
+    // build global map (for online calibration) and local map (for local optimization)
+    void buildCalibMap();
     void buildLocalMap();
 
     // process localmap optimization
-    void optimizeLocalMap();
-    void evalResidual(ceres::Problem &problem, const std::vector<double *> &para_ids, const std::vector<ceres::internal::ResidualBlock *> &res_ids_proj, const MarginalizationInfo *last_marginalization_info_, const std::vector<ceres::internal::ResidualBlock *> &res_ids_marg);
+    void optimizeMap();
+
     void vector2Double();
     void double2Vector();
+
+    void slideWindow();
+
+    void evalResidual(ceres::Problem &problem, const std::vector<double *> &para_ids, const std::vector<ceres::internal::ResidualBlock *> &res_ids_proj, const MarginalizationInfo *last_marginalization_info_, const std::vector<ceres::internal::ResidualBlock *> &res_ids_marg);
     void printParameter();
+    // slide window and marginalization
+    void printSlideWindow();
+    void visualizePCL();
 
     void changeSensorType(int use_imu, int use_stereo);
 
@@ -138,6 +142,8 @@ class Estimator
     std::vector<common::PointICloud> surf_points_pivot_map_;
     std::vector<common::PointICloud> corner_points_local_map_, corner_points_local_map_filtered_;
     std::vector<common::PointICloud> corner_points_pivot_map_;
+
+    std::vector<std::vector<Pose> > pose_local_;
 
     double prev_time_, cur_time_;
     double td_;
