@@ -82,7 +82,7 @@ public:
 				jaco_ex.leftCols<3>() = w.transpose() * Rext.transpose() * Rp.transpose() * (Ri - Rp);
 				jaco_ex.rightCols<3>() = w.transpose() * (
 					SkewSymmetric(Rext.transpose() * Rp.transpose() * (Ri * Rext * point_ + Ri * t_ext + t_i - Rp * t_ext - t_pivot)) -
-					SkewSymmetric(Rext.transpose() * Rp.transpose() * Ri * Rext * point_));
+					Rext.transpose() * Rp.transpose() * Ri * Rext * SkewSymmetric(point_));
 
                 jacobian_pose_ex.setZero();
                 jacobian_pose_ex.leftCols<6>() = sqrt_info * jaco_ex;
@@ -92,8 +92,8 @@ public:
         return true;
     }
 
-	// TODO: check the jacobian derivation
-    void Check(double **param)
+	// TODO: check if derived jacobian == perturbation on the raw function
+    void check(double **param)
     {
         double *res = new double[1];
         //  double **jaco = new double *[1];
@@ -102,13 +102,13 @@ public:
         jaco[1] = new double[1 * 7];
         jaco[2] = new double[1 * 7];
         Evaluate(param, res, jaco);
-        std::cout << "check begins" << std::endl;
-        std::cout << "analytical" << std::endl;
+		std::cout << "[LidarPivotPlaneNormFactor] check begins" << std::endl;
+        std::cout << "analytical:" << std::endl;
 
         std::cout << *res << std::endl;
-        std::cout << std::endl << Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> >(jaco[0]) << std::endl;
-        std::cout << std::endl << Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> >(jaco[1]) << std::endl;
-        std::cout << std::endl << Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> >(jaco[2]) << std::endl;
+        std::cout << Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> >(jaco[0]) << std::endl;
+        std::cout << Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> >(jaco[1]) << std::endl;
+        std::cout << Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> >(jaco[2]) << std::endl;
 
 		Eigen::Quaterniond Q_pivot(param[0][6], param[0][3], param[0][4], param[0][5]);
 		Eigen::Vector3d t_pivot(param[0][0], param[0][1], param[0][2]);
@@ -130,13 +130,13 @@ public:
         double sqrt_info = sqrt_info_static_;
         r *= sqrt_info;
 
-        std::cout << "num" << std::endl;
+        std::cout << "perturbation:" << std::endl;
         std::cout << r << std::endl;
 
         const double eps = 1e-6;
-        //  Eigen::Matrix<double, 1, 6> num_jacobian;
         Eigen::Matrix<double, 1, 18> num_jacobian;
-        //  for (int k = 0; k < 6; k++) {
+
+		// add random perturbation
         for (int k = 0; k < 18; k++)
         {
 			Eigen::Quaterniond Q_pivot(param[0][6], param[0][3], param[0][4], param[0][5]);
@@ -174,9 +174,9 @@ public:
 	        tmp_r *= sqrt_info;
             num_jacobian(k) = (tmp_r - r) / eps;
         }
-        std::cout << std::endl << num_jacobian.block<1, 6>(0, 0) << std::endl;
-        std::cout << std::endl << num_jacobian.block<1, 6>(0, 6) << std::endl;
-        std::cout << std::endl << num_jacobian.block<1, 6>(0, 12) << std::endl;
+        std::cout << num_jacobian.block<1, 6>(0, 0) << std::endl;
+        std::cout << num_jacobian.block<1, 6>(0, 6) << std::endl;
+        std::cout << num_jacobian.block<1, 6>(0, 12) << std::endl;
     }
 
 private:

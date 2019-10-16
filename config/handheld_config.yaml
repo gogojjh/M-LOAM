@@ -98,11 +98,12 @@ planar_movement: 0
 min_match_sq_dis: 1.0
 min_plane_dis: 0.2
 
-# mariginalization
+# factor
 marginalization_factor: 1
 point_plane_factor: 1
 point_edge_factor: 0
 prior_factor: 0
+check_jacobian: 1
 
 evaluate_residual: 1
 

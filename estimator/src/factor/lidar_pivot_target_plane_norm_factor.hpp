@@ -81,7 +81,7 @@ public:
 	}
 
 	// TODO: check the jacobian derivation
-	void Check(double **param)
+	void check(double **param)
     {
 		double *res = new double[1];
         //  double **jaco = new double *[1];
@@ -90,13 +90,13 @@ public:
         jaco[1] = new double[1 * 7];
         jaco[2] = new double[1 * 7];
         Evaluate(param, res, jaco);
-        std::cout << "check begins" << std::endl;
-        std::cout << "analytical" << std::endl;
+        std::cout << "[LidarPivotTargetPlaneNormFactor] check begins" << std::endl;
+        std::cout << "analytical:" << std::endl;
 
         std::cout << *res << std::endl;
-        std::cout << std::endl << Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> >(jaco[0]) << std::endl;
-        std::cout << std::endl << Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> >(jaco[1]) << std::endl;
-        std::cout << std::endl << Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> >(jaco[2]) << std::endl;
+        std::cout << Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> >(jaco[0]) << std::endl;
+        std::cout << Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> >(jaco[1]) << std::endl;
+        std::cout << Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> >(jaco[2]) << std::endl;
 
 		Eigen::Quaterniond Q_pivot(param[0][6], param[0][3], param[0][4], param[0][5]);
 		Eigen::Vector3d t_pivot(param[0][0], param[0][1], param[0][2]);
@@ -116,11 +116,13 @@ public:
 		double sqrt_info = sqrt_info_static_;
         r *= sqrt_info;
 
-        std::cout << "num" << std::endl;
+        std::cout << "perturbation:" << std::endl;
         std::cout << r << std::endl;
 
         const double eps = 1e-6;
         Eigen::Matrix<double, 1, 18> num_jacobian;
+
+		// add random perturbation
         for (int k = 0; k < 18; k++)
         {
 			Eigen::Quaterniond Q_pivot(param[0][6], param[0][3], param[0][4], param[0][5]);
@@ -156,9 +158,9 @@ public:
 	        tmp_r *= sqrt_info;
             num_jacobian(k) = (tmp_r - r) / eps;
         }
-        std::cout << std::endl << num_jacobian.block<1, 6>(0, 0) << std::endl;
-        std::cout << std::endl << num_jacobian.block<1, 6>(0, 6) << std::endl;
-        std::cout << std::endl << num_jacobian.block<1, 6>(0, 12) << std::endl;
+        std::cout << num_jacobian.block<1, 6>(0, 0) << std::endl;
+        std::cout << num_jacobian.block<1, 6>(0, 6) << std::endl;
+        std::cout << num_jacobian.block<1, 6>(0, 12) << std::endl;
 	}
 
 private:
