@@ -58,7 +58,7 @@ std::mutex m_buf;
 // laser path groundtruth
 nav_msgs::Path laser_path;
 ros::Publisher pub_laser_path;
-Pose pose_base_gt_ini;
+Pose pose_world_ref_ini;
 
 void cloud0_callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg)
 {
@@ -181,26 +181,25 @@ void restart_callback(const std_msgs::BoolConstPtr &restart_msg)
 
 void odom_gt_callback(const nav_msgs::Odometry &odom_msg)
 {
-    if (laser_path.poses.size() == 0) pose_base_gt_ini = Pose(odom_msg);
-    Pose pose_base_ref(Eigen::Quaterniond(-0.216, 0, 0, 0.976), Eigen::Vector3d(0, 0.266, 0.734));
-    Pose pose_base_gt(odom_msg);
-    Pose pose_ref_gt(pose_base_gt_ini.inverse() * pose_base_gt * pose_base_ref);
+    Pose pose_world_base(odom_msg);
+    Pose pose_base_ref(Eigen::Quaterniond(0.976, -0.216, 0, 0), Eigen::Vector3d(0, 0.266, 0.734));
+    Pose pose_world_ref(pose_world_base * pose_base_ref);
+    if (laser_path.poses.size() == 0) pose_world_ref_ini = pose_world_ref;
+    Pose pose_ref_ini_cur(pose_world_ref_ini.inverse() * pose_world_ref);
 
     geometry_msgs::PoseStamped laser_pose;
     laser_pose.header = odom_msg.header;
     laser_pose.header.frame_id = "world";
-    laser_pose.pose.orientation.x = pose_ref_gt.q_.x();
-    laser_pose.pose.orientation.y = pose_ref_gt.q_.y();
-    laser_pose.pose.orientation.z = pose_ref_gt.q_.z();
-    laser_pose.pose.orientation.w = pose_ref_gt.q_.w();
-    laser_pose.pose.position.x = pose_ref_gt.t_(0);
-    laser_pose.pose.position.y = pose_ref_gt.t_(1);
-    laser_pose.pose.position.z = pose_ref_gt.t_(2);
-
+    laser_pose.pose.orientation.x = pose_ref_ini_cur.q_.x();
+    laser_pose.pose.orientation.y = pose_ref_ini_cur.q_.y();
+    laser_pose.pose.orientation.z = pose_ref_ini_cur.q_.z();
+    laser_pose.pose.orientation.w = pose_ref_ini_cur.q_.w();
+    laser_pose.pose.position.x = pose_ref_ini_cur.t_(0);
+    laser_pose.pose.position.y = pose_ref_ini_cur.t_(1);
+    laser_pose.pose.position.z = pose_ref_ini_cur.t_(2);
     laser_path.header = laser_pose.header;
     laser_path.poses.push_back(laser_pose);
     pub_laser_path.publish(laser_path);
-
     estimator.laser_path_gt_ = laser_path;
 }
 

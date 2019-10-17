@@ -7,10 +7,10 @@
     <!-- Ros Bag -->
     <param name="/use_sim_time" value="true" />
     <group if="$(arg bag_file_use)">
-        <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/circle_filter_filter.bag" />
+        <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/circle_filter_filter.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/eight_filter.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/stright_filter.bag" /> -->
-        <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/random_walk.bag" /> -->
+        <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/random_walk.bag" />
         <node pkg="rosbag" type="play" name="rosbag" args="--clock --pause -r 2 $(arg bag_file)" />
     </group>
 
