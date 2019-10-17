@@ -19,6 +19,9 @@
 
 #include <std_msgs/Header.h>
 #include <std_msgs/Float32.h>
+#include <nav_msgs/Path.h>
+#include <nav_msgs/Odometry.h>
+
 #include <ceres/ceres.h>
 
 #include <opencv2/core/eigen.hpp>
@@ -125,6 +128,8 @@ class Estimator
     std::vector<Eigen::Quaterniond> qbl_;
     std::vector<Eigen::Vector3d> tbl_;
     std::vector<double> tdbl_;
+
+    nav_msgs::Path laser_path_gt_;
 
     // slide window
     // xx[cir_buf_cnt_] indicates the newest variables and measurements

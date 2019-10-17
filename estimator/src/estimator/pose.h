@@ -14,6 +14,8 @@
 #include <fstream>
 #include <map>
 
+#include <nav_msgs/Odometry.h>
+
 #include <eigen3/Eigen/Dense>
 
 #include "common/types/type.h"
@@ -36,6 +38,21 @@ public:
         q_ = Eigen::Quaterniond(T.topLeftCorner<3, 3>());
         q_.normalize();
         t_ = T.topRightCorner<3, 1>();
+    }
+    Pose(const nav_msgs::Odometry &odom)
+    {
+        q_ = Eigen::Quaterniond(
+            odom.pose.pose.orientation.w,
+            odom.pose.pose.orientation.x,
+            odom.pose.pose.orientation.y,
+            odom.pose.pose.orientation.z);
+        t_ = Eigen::Vector3d(
+            odom.pose.pose.position.x,
+            odom.pose.pose.position.y,
+            odom.pose.pose.position.z);
+        T_.setIdentity();
+        T_.topLeftCorner<3, 3>() = q_.toRotationMatrix();
+        T_.topRightCorner<3, 1>() = t_;
     }
 
     static Pose poseTransform(const Pose &pose1, const Pose &pose2);

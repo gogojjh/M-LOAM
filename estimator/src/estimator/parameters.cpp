@@ -29,6 +29,7 @@ int ROLLING_SHUTTER;
 std::string OUTPUT_FOLDER;
 std::string MLOAM_ODOM_PATH;
 std::string MLOAM_MAP_PATH;
+std::string MLOAM_GT_PATH;
 std::string EX_CALIB_RESULT_PATH;
 std::string IMU_TOPIC;
 int ROW, COL;
@@ -134,6 +135,7 @@ void readParameters(std::string config_file)
     fsSettings["output_path"] >> OUTPUT_FOLDER;
     MLOAM_ODOM_PATH = OUTPUT_FOLDER + fsSettings["mloam_odom_path"];
 	MLOAM_MAP_PATH = OUTPUT_FOLDER + fsSettings["mloam_map_path"];
+    MLOAM_GT_PATH = OUTPUT_FOLDER + fsSettings["mloam_gt_path"];
     std::cout << "result path " << MLOAM_ODOM_PATH << ", " << MLOAM_MAP_PATH << std::endl;
 
     NUM_OF_LASER = fsSettings["num_of_laser"];

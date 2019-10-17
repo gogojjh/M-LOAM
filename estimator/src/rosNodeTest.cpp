@@ -34,6 +34,8 @@
 #include <std_msgs/Header.h>
 #include <std_msgs/Float32.h>
 #include <std_msgs/Bool.h>
+#include <nav_msgs/Odometry.h>
+#include <nav_msgs/Path.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/Imu.h>
 
@@ -47,11 +49,16 @@ using namespace std;
 
 Estimator estimator;
 
+// message buffer
 queue<sensor_msgs::ImuConstPtr> imu_buf;
-// queue<sensor_msgs::PointCloud2ConstPtr> feature_buf;
 queue<sensor_msgs::PointCloud2ConstPtr> cloud0_buf;
 queue<sensor_msgs::PointCloud2ConstPtr> cloud1_buf;
 std::mutex m_buf;
+
+// laser path groundtruth
+nav_msgs::Path laser_path;
+ros::Publisher pub_laser_path;
+Pose pose_base_gt_ini;
 
 void cloud0_callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg)
 {
@@ -172,6 +179,31 @@ void restart_callback(const std_msgs::BoolConstPtr &restart_msg)
     return;
 }
 
+void odom_gt_callback(const nav_msgs::Odometry &odom_msg)
+{
+    if (laser_path.poses.size() == 0) pose_base_gt_ini = Pose(odom_msg);
+    Pose pose_base_ref(Eigen::Quaterniond(-0.216, 0, 0, 0.976), Eigen::Vector3d(0, 0.266, 0.734));
+    Pose pose_base_gt(odom_msg);
+    Pose pose_ref_gt(pose_base_gt_ini.inverse() * pose_base_gt * pose_base_ref);
+
+    geometry_msgs::PoseStamped laser_pose;
+    laser_pose.header = odom_msg.header;
+    laser_pose.header.frame_id = "world";
+    laser_pose.pose.orientation.x = pose_ref_gt.q_.x();
+    laser_pose.pose.orientation.y = pose_ref_gt.q_.y();
+    laser_pose.pose.orientation.z = pose_ref_gt.q_.z();
+    laser_pose.pose.orientation.w = pose_ref_gt.q_.w();
+    laser_pose.pose.position.x = pose_ref_gt.t_(0);
+    laser_pose.pose.position.y = pose_ref_gt.t_(1);
+    laser_pose.pose.position.z = pose_ref_gt.t_(2);
+
+    laser_path.header = laser_pose.header;
+    laser_path.poses.push_back(laser_pose);
+    pub_laser_path.publish(laser_path);
+
+    estimator.laser_path_gt_ = laser_path;
+}
+
 int main(int argc, char **argv)
 {
     if(argc < 2)
@@ -207,6 +239,9 @@ int main(int argc, char **argv)
     ros::Subscriber sub_cloud0 = n.subscribe(CLOUD0_TOPIC, 100, cloud0_callback);
     ros::Subscriber sub_cloud1 = n.subscribe(CLOUD1_TOPIC, 100, cloud1_callback);
     ros::Subscriber sub_restart = n.subscribe("/mlod_restart", 100, restart_callback);
+    ros::Subscriber sub_odom_gt = n.subscribe("/base_odom_gt", 100, odom_gt_callback);
+
+    pub_laser_path = n.advertise<nav_msgs::Path>("/laser_odom_gt_path_0", 100);
 
     std::thread sync_thread(sync_process);
     std::thread cloud_visualizer_thread;
