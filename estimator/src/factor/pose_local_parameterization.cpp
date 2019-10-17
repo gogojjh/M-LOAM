@@ -16,7 +16,7 @@ bool PoseLocalParameterization::Plus(const double *x, const double *delta, doubl
 
     Eigen::Map<const Eigen::Vector3d> dp(delta);
 
-    Eigen::Quaterniond dq = Utility::deltaQ(Eigen::Map<const Eigen::Vector3d>(delta + 3));
+    Eigen::Quaterniond dq = Utility::deltaQ(Eigen::Map<const Eigen::Vector3d>(delta + 3)); // using theta to approximate q
 
     Eigen::Map<Eigen::Vector3d> p(x_plus_delta);
     Eigen::Map<Eigen::Quaterniond> q(x_plus_delta + 3);
@@ -28,7 +28,7 @@ bool PoseLocalParameterization::Plus(const double *x, const double *delta, doubl
 }
 bool PoseLocalParameterization::ComputeJacobian(const double *x, double *jacobian) const
 {
-    Eigen::Map<Eigen::Matrix<double, 7, 6, Eigen::RowMajor>> j(jacobian);
+    Eigen::Map<Eigen::Matrix<double, 7, 6, Eigen::RowMajor> > j(jacobian);
     j.topRows<6>().setIdentity();
     j.bottomRows<1>().setZero();
 

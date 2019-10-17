@@ -519,15 +519,15 @@ void Estimator::optimizeMap()
                             ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
                                 para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]);
                             res_ids_proj.push_back(res_id);
-                            // if (CHECK_JACOBIAN)
-                            // {
-                            //     double **tmp_param = new double *[3];
-                            //     tmp_param[0] = para_pose_[0];
-                            //     tmp_param[1] = para_pose_[i - pivot_idx];
-                            //     tmp_param[2] = para_ex_pose_[n];
-                            //     f->check(tmp_param);
-                            //     CHECK_JACOBIAN = 0;
-                            // }
+                            if (CHECK_JACOBIAN)
+                            {
+                                double **tmp_param = new double *[3];
+                                tmp_param[0] = para_pose_[0];
+                                tmp_param[1] = para_pose_[i - pivot_idx];
+                                tmp_param[2] = para_ex_pose_[n];
+                                f->check(tmp_param);
+                                CHECK_JACOBIAN = 0;
+                            }
                         } else
                         {
                             // optimize extrinsics using local map
