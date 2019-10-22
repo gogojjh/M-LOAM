@@ -172,7 +172,7 @@ void Estimator::inputCloud(const double &t,
     TicToc feature_ext_time;
     for (size_t i = 0; i < v_laser_cloud_in.size(); i++)
     {
-        printf("[LASER %u]: \n", i);
+        // printf("[LASER %u]: \n", i);
         feature_frame.push_back(f_extract_.extractCloud(t, v_laser_cloud_in[i]));
     }
     printf("featureExt time: %fms \n", feature_ext_time.toc());
@@ -185,14 +185,14 @@ void Estimator::inputCloud(const double &t,
 }
 
 void Estimator::inputCloud(const double &t,
-    const PointCloud &laser_cloud_in0)
+    const PointCloud &laser_cloud_in)
 {
     input_cloud_cnt_++;
     m_buf_.lock();
     std::vector<cloudFeature> feature_frame;
     TicToc feature_ext_time;
-    printf("LASER 0: \n");
-    feature_frame.push_back(f_extract_.extractCloud(t, laser_cloud_in0));
+    // printf("LASER 0: \n");
+    feature_frame.push_back(f_extract_.extractCloud(t, laser_cloud_in));
     printf("featureExt time: %fms \n", feature_ext_time.toc());
     feature_buf_.push(make_pair(t, feature_frame));
     m_buf_.unlock();
@@ -292,11 +292,6 @@ void Estimator::process()
                         QBL[i] = calib_result.q_;
                         TBL[i] = calib_result.t_;
                         // TDBL[i] = calib_result.td_;
-                        // TODO: using appearance to refine the extrinsics
-                        // if (checkOverlap())
-                        // {
-                        //     initial_extrinsics_.refineExRotation();
-                        // }
                     }
                 }
                 if (initial_extrinsics_.full_cov_rot_state_)
@@ -453,7 +448,7 @@ void Estimator::optimizeMap()
         para_ids.push_back(para_ex_pose_[i]);
         if (ESTIMATE_EXTRINSIC != 0)
         {
-            ROS_INFO("extrinsic param are float");
+            // ROS_INFO("extrinsic param are float");
         }
     }
     problem.SetParameterBlockConstant(para_ex_pose_[IDX_REF]);
@@ -783,7 +778,6 @@ void Estimator::buildCalibMap()
         // f_extract_.down_size_filter_corner_.filter(corner_points_local_map_filtered_);
         // printf("Laser_%d, filtered local map %d -> %d\n", n, surf_points_local_map_[n].size(), surf_points_local_map_filtered_[n].size());
     }
-    printf("build map: %fms\n", t_build_map.toc());
 
     // -----------------
     // calculate features and correspondences from p+1 to j
@@ -803,7 +797,9 @@ void Estimator::buildCalibMap()
                 surf_points_stack_[n][i], pose_local_[n][i], surf_map_features_[n][i]);
         }
     }
-    printf("extract map: %fms\n", t_map_extract.toc());
+    // printf("extract map: %fms\n", t_map_extract.toc());
+
+    printf("build map: %fms\n", t_build_map.toc());
 
     if (PCL_VIEWER) visualizePCL();
 }
@@ -1007,7 +1003,7 @@ void Estimator::evalResidual(ceres::Problem &problem,
 		e_option.parameter_blocks = para_ids;
 		e_option.residual_blocks = res_ids_proj;
 		problem.Evaluate(e_option, &cost, NULL, NULL, NULL);
-		printf("residual proj: %f +++++++++++++++++++++\n", cost);
+		printf("residual proj: %f, ", cost);
 	}
 	if (MARGINALIZATION_FACTOR)
 	{
@@ -1016,7 +1012,7 @@ void Estimator::evalResidual(ceres::Problem &problem,
 			e_option.parameter_blocks = para_ids;
 			e_option.residual_blocks = res_ids_marg;
 			problem.Evaluate(e_option, &cost, NULL, NULL, NULL);
-			printf("residual marg: %f +++++++++++++++++++++\n", cost);
+			printf("residual marg: %f \nn", cost);
 		}
 	}
 }
@@ -1059,7 +1055,7 @@ void Estimator::visualizePCL()
 
 void Estimator::printParameter()
 {
-    printf("print optimized window (p -> j) [qx qy qz qw x y z] ************************\n");
+    printf("print optimized window (p -> j) [qx qy qz qw x y z]\n");
     for (size_t i = 0; i < OPT_WINDOW_SIZE + 1; i++)
     {
         std::cout << "Pose " << WINDOW_SIZE - OPT_WINDOW_SIZE + i << ": " <<

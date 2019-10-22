@@ -146,7 +146,7 @@ void pubPointCloud(const Estimator &estimator, const double &time)
 void printStatistics(const Estimator &estimator, double t)
 {
     // if (estimator.solver_flag_ != Estimator::SolverFlag::NON_LINEAR) return;
-    if (ESTIMATE_EXTRINSIC)
+    if (ESTIMATE_EXTRINSIC != 2)
     {
         ofstream fout(EX_CALIB_RESULT_PATH.c_str(), ios::out);
         fout.setf(ios::fixed, ios::floatfield);
@@ -171,7 +171,8 @@ void printStatistics(const Estimator &estimator, double t)
         for (size_t i = 0; i < v_laser_path[IDX_REF].poses.size(); i++)
         {
             geometry_msgs::PoseStamped &laser_pose = v_laser_path[IDX_REF].poses[i];
-            fout << laser_pose.pose.orientation.x << ", "
+            fout << laser_pose.header.stamp.toSec() << ", "
+                << laser_pose.pose.orientation.x << ", "
                 << laser_pose.pose.orientation.y << ", "
                 << laser_pose.pose.orientation.z << ", "
                 << laser_pose.pose.orientation.w << ", "
@@ -189,7 +190,8 @@ void printStatistics(const Estimator &estimator, double t)
         for (size_t i = 0; i < estimator.laser_path_gt_.poses.size(); i++)
         {
             geometry_msgs::PoseStamped laser_pose = estimator.laser_path_gt_.poses[i];
-            fout << laser_pose.pose.orientation.x << ", "
+            fout << laser_pose.header.stamp.toSec() << ", "
+                << laser_pose.pose.orientation.x << ", "
                 << laser_pose.pose.orientation.y << ", "
                 << laser_pose.pose.orientation.z << ", "
                 << laser_pose.pose.orientation.w << ", "

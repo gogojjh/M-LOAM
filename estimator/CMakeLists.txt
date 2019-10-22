@@ -70,3 +70,7 @@ target_link_libraries(lidar_mapper mloam_lib)
 
 # add_executable(kitti_gps_test src/KITTIGPSTest.cpp)
 # target_link_libraries(kitti_gps_test mloam_lib)
+
+######## --------------------- TEST --------------------- ########
+add_executable(test_merge_pointcloud ../test/test_merge_pointcloud.cpp)
+target_link_libraries(test_merge_pointcloud ${catkin_LIBRARIES} ${PCL_LIBS})

@@ -16,7 +16,7 @@
 using namespace Eigen;
 
 double EPSILON_R = 0.01;
-double EPSILON_T = 0.01;
+double EPSILON_T = 0.05;
 
 InitialExtrinsics::InitialExtrinsics() {}
 
@@ -103,6 +103,7 @@ bool InitialExtrinsics::calibExRotation(
     // initial rotation
     TicToc t_calib_rot;
     pose_cnt_ = indices_[idx_data].size();
+    // printf("********** pose_cnt %d\n", pose_cnt_);
     Eigen::MatrixXd A(pose_cnt_ * 4, 4); // a cumulative Q matrix
     A.setZero();
     for (int i = 0; i < pose_cnt_; i++)
@@ -179,6 +180,7 @@ bool InitialExtrinsics::calibExRotation(
     printf("calib ext rot: %f ms\n", t_calib_rot.toc());
     v_rot_cov_[idx_data].push_back(rot_cov(1));
 
+    // printf("********** rot cov %f\n", rot_cov(1));
     if (pose_cnt_ >= WINDOW_SIZE && rot_cov(1) > 0.25)
     {
         if (PLANAR_MOVEMENT)

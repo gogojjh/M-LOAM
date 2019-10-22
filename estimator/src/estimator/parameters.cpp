@@ -152,25 +152,26 @@ void readParameters(std::string config_file)
 
     ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];
     OPTIMAL_EXTRINSIC = fsSettings["optimal_extrinsic"];
+    EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.csv";
     if (ESTIMATE_EXTRINSIC == 2)
     {
-        ROS_WARN("have no prior about extrinsic param, calibrate extrinsic param");
+        ROS_WARN("Have no prior about extrinsic param, calibrate extrinsic param");
         for (int i = 0; i < NUM_OF_LASER; i++)
         {
             QBL.push_back(Eigen::Quaterniond::Identity());
             TBL.push_back(Eigen::Vector3d::Zero());
         }
-        EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "/extrinsic_parameter.csv";
     }
     else
     {
         if ( ESTIMATE_EXTRINSIC == 1)
         {
             ROS_WARN("Please optimize extrinsic param around initial guess!");
-            EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "/extrinsic_parameter.csv";
         }
         if (ESTIMATE_EXTRINSIC == 0)
-            ROS_WARN(" fix extrinsic param ");
+        {
+            ROS_WARN("Fix extrinsic param ");
+        }
 
         cv::Mat cv_T;
         fsSettings["body_T_laser"] >> cv_T;

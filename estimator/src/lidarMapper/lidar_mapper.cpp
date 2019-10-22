@@ -811,12 +811,13 @@ void process()
 			pubLaserAfterMappedPath.publish(laserAfterMappedPath);
 
 			////////////////////////////////////////
-			std::ofstream fout("/home/jjiao/catkin_ws/src/localization/M-LOAM/log/mloam_map.csv", std::ios::out);
+			std::ofstream fout("/home/jjiao/catkin_ws/src/localization/M-LOAM/log/simu/mloam_map.csv", std::ios::out);
 		    fout.precision(5);
 		    for (size_t i = 0; i < laserAfterMappedPath.poses.size(); i++)
 		    {
 		        geometry_msgs::PoseStamped &laser_pose = laserAfterMappedPath.poses[i];
-		        fout << laser_pose.pose.orientation.x << ", "
+		        fout << laser_pose.header.stamp.toSec() << ", " 
+					<< laser_pose.pose.orientation.x << ", "
 		            << laser_pose.pose.orientation.y << ", "
 		            << laser_pose.pose.orientation.z << ", "
 		            << laser_pose.pose.orientation.w << ", "
@@ -871,7 +872,7 @@ int main(int argc, char **argv)
 	pubOdomAftMapped = nh.advertise<nav_msgs::Odometry>("/laser_map", 100);
 	// TODO: the difference between laser_map and laser_map_high_frec
 	pubOdomAftMappedHighFrec = nh.advertise<nav_msgs::Odometry>("/laser_map_high_frec", 100);
-	pubLaserAfterMappedPath = nh.advertise<nav_msgs::Path>("/laser_map_path", 100);
+	pubLaserAfterMappedPath = nh.advertise<nav_msgs::Path>("/laser_map_path_0", 100);
 	for (int i = 0; i < laserCloudNum; i++)
 	{
 		laserCloudCornerArray[i].reset(new PointICloud());
