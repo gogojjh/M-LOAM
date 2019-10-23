@@ -335,10 +335,19 @@ void Estimator::process()
         // corner_points_stack_[n].push(corner_points_stack_downsampled_);
         // corner_points_stack_size_[n].push(corner_points_stack_downsampled_.size());
         PointICloud &surf_points = cur_feature_.second[n]["surf_points_less_flat"];
-        f_extract_.down_size_filter_surf_.setInputCloud(boost::make_shared<PointICloud>(surf_points));
-        f_extract_.down_size_filter_surf_.filter(cloud_downsampled_);
-        surf_points_stack_[n][cir_buf_cnt_] = cloud_downsampled_;
-        surf_points_stack_size_[n][cir_buf_cnt_] = cloud_downsampled_.size();
+        if (n == IDX_REF)
+        {
+            f_extract_.down_size_filter_surf_.setInputCloud(boost::make_shared<PointICloud>(surf_points));
+            f_extract_.down_size_filter_surf_.filter(cloud_downsampled_);
+            surf_points_stack_[n][cir_buf_cnt_] = cloud_downsampled_;
+            surf_points_stack_size_[n][cir_buf_cnt_] = cloud_downsampled_.size();
+        } else
+        {
+            f_extract_.down_size_filter_corner_.setInputCloud(boost::make_shared<PointICloud>(surf_points));
+            f_extract_.down_size_filter_corner_.filter(cloud_downsampled_);
+            surf_points_stack_[n][cir_buf_cnt_] = cloud_downsampled_;
+            surf_points_stack_size_[n][cir_buf_cnt_] = cloud_downsampled_.size();
+        }
     }
     // printSlideWindow();
 
@@ -524,7 +533,7 @@ void Estimator::optimizeMap()
                             }
                         } else
                         {
-                            // if (i != pivot_idx + 1) continue;
+                            if (i != pivot_idx + 1) continue;
                             // optimize extrinsics using local map
                             LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref, s, 1.0);
                             ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
@@ -544,6 +553,7 @@ void Estimator::optimizeMap()
                 }
             }
         }
+
     }
     // TODO: focus on online odometry estimation
     else if (ESTIMATE_EXTRINSIC == 0)
@@ -643,7 +653,7 @@ void Estimator::optimizeMap()
                                 marginalization_info->addResidualBlockInfo(residual_block_info);
                             } else
                             {
-                                // if (i != pivot_idx + 1) continue;
+                                if (i != pivot_idx + 1) continue;
                                 LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref, s, 1.0);
                                 ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
                                     vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]}, std::vector<int>{0});

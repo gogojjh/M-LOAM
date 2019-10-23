@@ -43,8 +43,8 @@ num_of_laser: 2
 n_scans: 16
 
 # window sizes
-window_size: 10
-opt_window_size: 7
+window_size: 7
+opt_window_size: 5
 
 # Extrinsic parameter between IMU and Camera.
 estimate_extrinsic: 1   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
@@ -60,13 +60,13 @@ body_T_laser: !!opencv-matrix
    #        0, 0, 0, 1, 0, 0, 0] # qx qy qz qw px py pz
    # simulation
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-          # 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000]
-          # 0.342, 0.0, 0.0, 0.940, 0, -0.477, 0.0]
+   #        # 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000]
+   #        0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220]
    data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
           0.3173, 0.0, 0.0, 0.94832, 0, -0.2, 0.0]
 
 # <!-- laser_0 to laser_1 -->
-# <!-- 0.342, 0.0, 0.0, 0.940, 0, -0.477, 0.0 -->
+# <!-- 0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220 -->
 # <!-- base_link to laser_0 -->
 # <!-- -0.216 0 0 0.976 0 0.266 0.734 -->
 # <!-- base_link to laser_1 -->
@@ -111,7 +111,7 @@ check_jacobian: 0
 
 evaluate_residual: 1
 
-pcl_viewer: 1
+pcl_viewer: 0
 pcl_viewer_normal_ratio: 1
 
 optimal_odometry: 1
