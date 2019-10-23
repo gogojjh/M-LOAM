@@ -103,7 +103,8 @@ void pubPointCloud(const Estimator &estimator, const double &time)
     PointICloud laser_cloud, corner_points_sharp, corner_points_less_sharp, surf_points_flat, surf_points_less_flat;
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
-        if ((ESTIMATE_EXTRINSIC !=0) && (n != IDX_REF)) continue;
+        // if ((ESTIMATE_EXTRINSIC !=0) && (n != IDX_REF)) continue;
+        if ((ESTIMATE_EXTRINSIC !=0) && (n == IDX_REF)) continue;
         Pose pose_ext = Pose(estimator.qbl_[n], estimator.tbl_[n]);
         Eigen::Matrix4d transform_ext = pose_ext.T_;
         cloudFeature cloud_feature_trans = transformCloudFeature(estimator.cur_feature_.second[n], transform_ext.cast<float>());
@@ -132,7 +133,8 @@ void pubPointCloud(const Estimator &estimator, const double &time)
             Pose pose_ext = Pose(estimator.qbl_[n], estimator.tbl_[n]);
             Pose pose_pivot(estimator.Qs_[pivot_idx], estimator.Ts_[pivot_idx]);
             Pose pose_j(estimator.Qs_[estimator.cir_buf_cnt_-1], estimator.Ts_[estimator.cir_buf_cnt_-1]);
-            Eigen::Matrix4d transform_j_pivot = (pose_j.T_ * pose_ext.T_).inverse() * (pose_pivot.T_ * pose_ext.T_);
+            Eigen::Matrix4d transform_j_pivot = (pose_j.T_ * pose_ext.T_).inverse() * (pose_pivot.T_ * pose_ext.T_)
+                * pose_ext.T_.inverse(); // TODO: for testing
 
             pcl::transformPointCloud(estimator.surf_points_local_map_filtered_[n], surf_local_map_trans, transform_j_pivot.cast<float>());
             publishCloud(v_pub_surf_points_local_map[n], header, surf_local_map_trans);

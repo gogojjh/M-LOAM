@@ -12,8 +12,8 @@ using namespace common;
 class LidarPivotPlaneNormFactor : public ceres::SizedCostFunction<1, 7, 7, 7>
 {
 public:
-	LidarPivotPlaneNormFactor(Eigen::Vector3d point, Eigen::Vector4d coeff, double s)
-    	: point_(point), coeff_(coeff), s_(s), sqrt_info_static_(1.0){}
+	LidarPivotPlaneNormFactor(Eigen::Vector3d point, Eigen::Vector4d coeff, double s, double sqrt_info_static = 1.0)
+    	: point_(point), coeff_(coeff), s_(s), sqrt_info_static_(sqrt_info_static){}
 
 	// residual = sum(w^(T) * (R * p + t) + d)
     bool Evaluate(double const *const *param, double *residuals, double **jacobians) const

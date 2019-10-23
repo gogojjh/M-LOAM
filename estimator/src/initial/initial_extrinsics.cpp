@@ -72,7 +72,7 @@ bool InitialExtrinsics::checkScrewMotion(const Pose &pose_ref, const Pose &pose_
     double t_dis = abs(pose_ref.t_.dot(ang_axis_ref.axis()) - pose_data.t_.dot(ang_axis_data.axis()));
     // std::cout << "ref pose : " << pose_ref << std::endl;
     // std::cout << "data pose : " << pose_data << std::endl;
-    // printf("r_dis: %f, t_dis: %f \n", r_dis, t_dis);
+    printf("r_dis: %f, t_dis: %f \n", r_dis, t_dis);
     v_rd_.push_back(r_dis);
     v_td_.push_back(t_dis);
     if ((r_dis < EPSILON_R) && (t_dis < EPSILON_T))
@@ -180,7 +180,7 @@ bool InitialExtrinsics::calibExRotation(
     printf("calib ext rot: %f ms\n", t_calib_rot.toc());
     v_rot_cov_[idx_data].push_back(rot_cov(1));
 
-    // printf("********** rot cov %f\n", rot_cov(1));
+    printf("********** pose_cnt:%d, rot cov %f\n", pose_cnt_, rot_cov(1));
     if (pose_cnt_ >= WINDOW_SIZE && rot_cov(1) > 0.25)
     {
         if (PLANAR_MOVEMENT)

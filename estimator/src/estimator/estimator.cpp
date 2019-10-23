@@ -524,8 +524,9 @@ void Estimator::optimizeMap()
                             }
                         } else
                         {
+                            // if (i != pivot_idx + 1) continue;
                             // optimize extrinsics using local map
-                            LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref, s);
+                            LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref, s, 1.0);
                             ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
                                 para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]);
                             res_ids_proj.push_back(res_id);
@@ -550,7 +551,7 @@ void Estimator::optimizeMap()
         for (int n = 0; n < NUM_OF_LASER; n++)
         {
             problem.SetParameterBlockConstant(para_ex_pose_[n]);
-            // problem.SetParameterBlockConstant(para_td_[n]);
+            // problem.SetParameterBlockConstant(&para_td_[n]);
         }
         buildLocalMap();
         if (POINT_PLANE_FACTOR)
@@ -642,7 +643,8 @@ void Estimator::optimizeMap()
                                 marginalization_info->addResidualBlockInfo(residual_block_info);
                             } else
                             {
-                                LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref, s);
+                                // if (i != pivot_idx + 1) continue;
+                                LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref, s, 1.0);
                                 ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
                                     vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]}, std::vector<int>{0});
                                 marginalization_info->addResidualBlockInfo(residual_block_info);
@@ -1050,7 +1052,7 @@ void Estimator::visualizePCL()
     {
         plane_normal_vis_.UpdateCloudAndNormals(tmp_cloud_sel, tmp_normals_sel, PCL_VIEWER_NORMAL_RATIO, "cloud1", "normal1");
     }
-    // std::cout << "pose pivot to j: " << pose_local[1][pivot_idx + 1] << std::endl;
+    std::cout << "pose pivot to j: " << pose_local_[1][pivot_idx + 1] << std::endl;
 }
 
 void Estimator::printParameter()
