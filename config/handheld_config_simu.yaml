@@ -26,7 +26,7 @@ flow_back: 1            # perform forward and backward optical flow to improve f
 
 #optimization parameters
 max_solver_time: 0.07  # max solver itration time (s), to guarantee real time
-max_num_iterations: 7   # max solver itrations, to guarantee real time
+max_num_iterations: 15   # max solver itrations, to guarantee real time
 keyframe_parallax: 0 # keyframe selection threshold (pixel)
 
 #imu parameters       The more accurate parameters you provide, the better performance
@@ -63,7 +63,7 @@ body_T_laser: !!opencv-matrix
    #        # 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000]
    #        0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220]
    data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-          0.3173, 0.0, 0.0, 0.94832, 0, -0.2, 0.0]
+          0.3, 0.0, 0.0, 0.948, 0, -0.2, 0.0]
 
 # <!-- laser_0 to laser_1 -->
 # <!-- 0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220 -->
@@ -107,6 +107,8 @@ marginalization_factor: 1
 point_plane_factor: 1
 point_edge_factor: 0
 prior_factor: 0
+prior_factor_pos: 5
+prior_factor_rot: 1
 check_jacobian: 0
 
 evaluate_residual: 1

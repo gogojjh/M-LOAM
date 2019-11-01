@@ -79,6 +79,8 @@ int MARGINALIZATION_FACTOR;
 int POINT_PLANE_FACTOR;
 int POINT_EDGE_FACTOR;
 int PRIOR_FACTOR;
+double PRIOR_FACTOR_POS;
+double PRIOR_FACTOR_ROT;
 int CHECK_JACOBIAN;
 
 int OPTIMAL_EXTRINSIC;
@@ -212,6 +214,8 @@ void readParameters(std::string config_file)
     POINT_PLANE_FACTOR = fsSettings["point_plane_factor"];
     POINT_EDGE_FACTOR = fsSettings["point_edge_factor"];
     PRIOR_FACTOR = fsSettings["prior_factor"];
+    PRIOR_FACTOR_POS = fsSettings["prior_factor_pos"];
+    PRIOR_FACTOR_ROT = fsSettings["prior_factor_rot"];
     CHECK_JACOBIAN = fsSettings["check_jacobian"];
 
     EVALUATE_RESIDUAL = fsSettings["evaluate_residual"];

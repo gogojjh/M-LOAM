@@ -55,10 +55,10 @@ public:
         Eigen::Quaterniond Q(param[0][6], param[0][3], param[0][4], param[0][5]);
         Eigen::Vector3d P(param[0][0], param[0][1], param[0][2]);
 
-        Matrix<double, 6, 6> sqrt_info;
+        Eigen::Matrix<double, 6, 6> sqrt_info; // information matrix
         sqrt_info.setZero();
-        sqrt_info.topLeftCorner<3, 3>() = Matrix3d::Identity() * pos_scale_; // TODO:
-        sqrt_info.bottomRightCorner<3, 3>() = Matrix3d::Identity() * rot_scale_;
+        sqrt_info.topLeftCorner<3, 3>() = Eigen::Matrix3d::Identity() * pos_scale_;
+        sqrt_info.bottomRightCorner<3, 3>() = Eigen::Matrix3d::Identity() * rot_scale_;
 
         Eigen::Map<Eigen::Matrix<double, 6, 1> > residual(residuals);
         residual.topRows<3>() = P - pos_;
@@ -66,7 +66,7 @@ public:
 
         // FIXME: info
         residual = sqrt_info * residual;
-        std::cout << "prior factor residual: " << residual.transpose() << std::endl;
+        // std::cout << "prior factor residual: " << residual.transpose() << std::endl;
 
         if (jacobians)
         {

@@ -37,39 +37,35 @@ include_directories(
 
 catkin_package()
 
-add_library(mloam_lib
+############## float libraries
+add_library(mloam_lib_1
     src/estimator/parameters.cpp
     src/estimator/estimator.cpp
-    src/estimator/pose.cpp
-    src/estimator/feature_manager.cpp
-    src/factor/pose_local_parameterization.cpp
-    src/factor/projectionTwoFrameOneCamFactor.cpp
-    src/factor/projectionTwoFrameTwoCamFactor.cpp
-    src/factor/projectionOneFrameTwoCamFactor.cpp
-    src/factor/marginalization_factor.cpp
-    src/utility/utility.cpp
     src/utility/visualization.cpp
-    src/utility/cloud_visualizer.cpp
-    src/utility/CameraPoseVisualization.cpp
-    src/initial/solve_5pts.cpp
-    src/initial/initial_aligment.cpp
-    src/initial/initial_sfm.cpp
-    src/initial/initial_ex_rotation.cpp
-    src/initial/initial_extrinsics.cpp
-    src/featureTracker/feature_tracker.cpp
+    )
+target_link_libraries(mloam_lib_1 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES})
+
+############## fix libraries
+add_library(mloam_lib_2
+    src/estimator/pose.cpp
     src/featureExtract/feature_extract.cpp
     src/lidarTracker/lidar_tracker.cpp
+    src/initial/initial_extrinsics.cpp
+    src/factor/pose_local_parameterization.cpp
+    src/factor/marginalization_factor.cpp
+    src/utility/utility.cpp
+    src/utility/cloud_visualizer.cpp
     )
-target_link_libraries(mloam_lib ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES})
+target_link_libraries(mloam_lib_2 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES})
 
 add_executable(mloam_node src/rosNodeTest.cpp)
-target_link_libraries(mloam_node mloam_lib)
+target_link_libraries(mloam_node mloam_lib_1 mloam_lib_2)
 
 add_executable(lidar_mapper src/lidarMapper/lidar_mapper.cpp)
-target_link_libraries(lidar_mapper mloam_lib)
+target_link_libraries(lidar_mapper mloam_lib_1 mloam_lib_2)
 
 # add_executable(kitti_gps_test src/KITTIGPSTest.cpp)
-# target_link_libraries(kitti_gps_test mloam_lib)
+# target_link_libraries(kitti_gps_test mloam_lib_1 mloam_lib_2)
 
 ######## --------------------- TEST --------------------- ########
 add_executable(test_merge_pointcloud ../test/test_merge_pointcloud.cpp)

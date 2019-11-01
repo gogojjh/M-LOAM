@@ -110,6 +110,8 @@ extern int MARGINALIZATION_FACTOR;
 extern int POINT_PLANE_FACTOR;
 extern int POINT_EDGE_FACTOR;
 extern int PRIOR_FACTOR;
+extern double PRIOR_FACTOR_POS;
+extern double PRIOR_FACTOR_ROT;
 extern int CHECK_JACOBIAN;
 
 extern int OPTIMAL_EXTRINSIC;

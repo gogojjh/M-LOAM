@@ -50,7 +50,6 @@ using namespace std;
 Estimator estimator;
 
 // message buffer
-queue<sensor_msgs::ImuConstPtr> imu_buf;
 queue<sensor_msgs::PointCloud2ConstPtr> cloud0_buf;
 queue<sensor_msgs::PointCloud2ConstPtr> cloud1_buf;
 std::mutex m_buf;
@@ -189,7 +188,7 @@ void odom_gt_callback(const nav_msgs::Odometry &odom_msg)
 
     geometry_msgs::PoseStamped laser_pose;
     laser_pose.header = odom_msg.header;
-    laser_pose.header.frame_id = "world";
+    laser_pose.header.frame_id = "/world";
     laser_pose.pose.orientation.x = pose_ref_ini_cur.q_.x();
     laser_pose.pose.orientation.y = pose_ref_ini_cur.q_.y();
     laser_pose.pose.orientation.z = pose_ref_ini_cur.q_.z();

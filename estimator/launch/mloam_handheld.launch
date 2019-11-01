@@ -8,7 +8,7 @@
     <param name="/use_sim_time" value="true" />
     <group if="$(arg bag_file_use)">
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/handheld/20190809/room2.bag" /> -->
-        <arg name="bag_file" default="/Monster/dataset/lidar_calibration/handheld/20190809/room1_filter_straight.bag" />
+        <arg name="bag_file" default="/Monster/dataset/lidar_calibration/handheld/20190809/room1_filter_filter_straight.bag" />
         <node pkg="rosbag" type="play" name="rosbag" args="--clock --pause -r 1 $(arg bag_file)" />
     </group>
 
@@ -17,9 +17,13 @@
     <node pkg="mloam" type="lidar_mapper" name="lidar_mapper"/>
 
     <!-- publish static tf -->
+    <!-- x y z yaw pitch roll -->
+    <!-- x y z qx qy qz qw -->
+    <node name="static_tf_world_base_into_world_sensor" pkg="tf" type="static_transform_publisher"
+        args="0 0 0 -0.17364 0 0 0.98481 world_base world 10"/>
     <!-- <node name="static_tf_laser_left_into_lidar_left" pkg="tf" type="static_transform_publisher"
         args="0 0 0 0 0 0 /laser_0 velo_left 100"/>
     <node name="static_tf_laser_right_into_lidar_right" pkg="tf" type="static_transform_publisher"
         args="0 0 0 0 0 0 /laser_1 velo_right 100"/> -->
 
-</launch>
+ </launch>

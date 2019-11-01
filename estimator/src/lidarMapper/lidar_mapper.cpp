@@ -816,7 +816,7 @@ void process()
 		    for (size_t i = 0; i < laserAfterMappedPath.poses.size(); i++)
 		    {
 		        geometry_msgs::PoseStamped &laser_pose = laserAfterMappedPath.poses[i];
-		        fout << laser_pose.header.stamp.toSec() << ", " 
+		        fout << laser_pose.header.stamp.toSec() << ", "
 					<< laser_pose.pose.orientation.x << ", "
 		            << laser_pose.pose.orientation.y << ", "
 		            << laser_pose.pose.orientation.z << ", "

@@ -8,11 +8,13 @@
     <param name="use_sim_time" value="true" />
     <group if="$(arg bag_file_use)">
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/circle_filter_filter.bag" /> -->
-        <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/eight_filter.bag" />
+        <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/eight_filter.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/stright_filter.bag" /> -->
-        <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/random_walk.bag" /> -->
+        <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/stright_2.bag" /> -->
+        <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/random_walk.bag" />
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/initialization.bag" /> -->
-        <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_file) --clock -r 2 --pause" />
+        <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/stright_calib.bag" /> -->
+        <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_file) --clock -r 1 --pause" />
     </group>
 
     <node pkg="mloam" type="mloam_node" name="mloam_node" args="$(arg config_file)" output="screen" />
@@ -20,9 +22,11 @@
     <node pkg="mloam" type="lidar_mapper" name="lidar_mapper"/>
 
     <!-- publish static tf -->
-    <!-- <node name="static_tf_laser_left_into_lidar_left" pkg="tf" type="static_transform_publisher"
-        args="0 0 0 0 0 0 /laser_0 velo_left 100"/>
-    <node name="static_tf_laser_right_into_lidar_right" pkg="tf" type="static_transform_publisher"
-        args="0 0 0 0 0 0 /laser_1 velo_right 100"/> -->
+    <!-- x y z yaw pitch roll -->
+    <!-- x y z qx qy qz qw -->
+    <node name="static_tf_world_base_into_world_sensor" pkg="tf" type="static_transform_publisher"
+        args="0 0.266 0.734 -0.216 0 0 0.976 world_base world 10"/>
+    <!-- <node name="static_tf_laser_right_into_lidar_right" pkg="tf" type="static_transform_publisher"
+        args="0 0 0 0 0 0 /laser_1 velo_right 10"/> -->
 
 </launch>

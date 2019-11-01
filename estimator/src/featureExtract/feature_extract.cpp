@@ -449,7 +449,8 @@ void FeatureExtract::extractSurfFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &kdt
     const PointICloud &cloud_map,
     const PointICloud &cloud_data,
     const Pose &pose_local,
-    std::vector<PointPlaneFeature> &features)
+    std::vector<PointPlaneFeature> &features,
+    const int N_NEIGH)
 {
     // if (!estimator_config_.keep_features)
     // {
@@ -458,10 +459,12 @@ void FeatureExtract::extractSurfFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &kdt
     features.clear();
 
     // setting variables
-    std::vector<int> point_search_idx(5, 0);
-    std::vector<float> point_search_sq_dis(5, 0);
-    Eigen::Matrix<double, 5, 3> mat_A = Eigen::Matrix<double, 5, 3>::Zero();
-    Eigen::Matrix<double, 5, 1> mat_B = Eigen::Matrix<double, 5, 1>::Constant(-1);
+    std::vector<int> point_search_idx(N_NEIGH, 0);
+    std::vector<float> point_search_sq_dis(N_NEIGH, 0);
+    Eigen::MatrixXd mat_A = Eigen::MatrixXd::Zero(N_NEIGH, 3);
+    Eigen::MatrixXd mat_B = Eigen::MatrixXd::Constant(N_NEIGH, 1, -1);
+    // Eigen::Matrix<double, 10, 3> mat_A = Eigen::Matrix<double, 10, 3>::Zero();
+    // Eigen::Matrix<double, 10, 1> mat_B = Eigen::Matrix<double, 10, 1>::Constant(-1);
 
     // TODO: extract plane coefficients and correspondences from surf map
     size_t cloud_size = cloud_data.points.size();
@@ -472,7 +475,7 @@ void FeatureExtract::extractSurfFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &kdt
         PointI point_ori = cloud_data.points[i];
         PointI point_sel;
         pointAssociateToMap(point_ori, point_sel, pose_local);
-        int num_neighbors = 5;
+        int num_neighbors = N_NEIGH;
         kdtree_surf_from_map->nearestKSearch(point_sel, num_neighbors, point_search_idx, point_search_sq_dis);
         if (point_search_sq_dis[num_neighbors - 1] < MIN_MATCH_SQ_DIS)
         {

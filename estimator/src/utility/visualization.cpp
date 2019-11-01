@@ -34,24 +34,6 @@ std::vector<ros::Publisher> v_pub_laser_odometry;
 std::vector<ros::Publisher> v_pub_laser_path;
 std::vector<nav_msgs::Path> v_laser_path;
 
-
-// should be deleted
-ros::Publisher pub_odometry, pub_latest_odometry;
-ros::Publisher pub_path;
-ros::Publisher pub_point_cloud, pub_margin_cloud;
-ros::Publisher pub_key_poses;
-ros::Publisher pub_camera_pose;
-ros::Publisher pub_camera_pose_visual;
-nav_msgs::Path path;
-
-ros::Publisher pub_image_track;
-
-CameraPoseVisualization cameraposevisual(1, 0, 0, 1);
-static double sum_of_path = 0;
-static Vector3d last_path(0.0, 0.0, 0.0);
-
-size_t pub_counter = 0;
-
 cloudFeature transformCloudFeature(const cloudFeature &cloud_feature, const Eigen::Matrix4f &trans)
 {
     cloudFeature trans_cloud_feature;
@@ -62,6 +44,11 @@ cloudFeature transformCloudFeature(const cloudFeature &cloud_feature, const Eige
         trans_cloud_feature.insert(pair<std::string, PointICloud>(iter->first, trans_cloud));
     }
     return trans_cloud_feature;
+}
+
+void clearPath()
+{
+    
 }
 
 void registerPub(ros::NodeHandle &nh)
@@ -153,7 +140,7 @@ void pubPointCloud(const Estimator &estimator, const double &time)
             publishCloud(pub_surf_points_target_localmap, header, estimator.surf_points_local_map_filtered_[1]);
             int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
             PointICloud cloud_trans;
-            for (auto &f : estimator.surf_map_features_[1][pivot_idx + 1])
+            for (auto &f : estimator.surf_map_features_[1][pivot_idx])
             {
                 PointI p_ori;
                 p_ori.x = f.point_.x();
@@ -161,7 +148,7 @@ void pubPointCloud(const Estimator &estimator, const double &time)
                 p_ori.z = f.point_.z();
                 PointI p_sel;
                 FeatureExtract f_extract;
-                f_extract.pointAssociateToMap(p_ori, p_sel, estimator.pose_local_[1][pivot_idx + 1]);
+                f_extract.pointAssociateToMap(p_ori, p_sel, estimator.pose_local_[1][pivot_idx]);
                 cloud_trans.push_back(p_sel);
             }
             publishCloud(pub_surf_points_target, header, cloud_trans);

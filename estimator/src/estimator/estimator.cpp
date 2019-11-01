@@ -423,12 +423,12 @@ void Estimator::optimizeMap()
     ceres::Solver::Summary summary;
     // ceres: set lossfunction and problem
     ceres::LossFunction *loss_function;
-    // loss_function = new ceres::HuberLoss(0.5);
-    loss_function = new ceres::CauchyLoss(1.0);
+    loss_function = new ceres::HuberLoss(0.5);
+    // loss_function = new ceres::CauchyLoss(1.0);
     // ceres: set options and solve the non-linear equation
     ceres::Solver::Options options;
-    options.linear_solver_type = ceres::DENSE_SCHUR;
-    //options.num_threads = 2;
+    // options.linear_solver_type = ceres::DENSE_SCHUR;
+    options.num_threads = 2;
     // options.trust_region_strategy_type = ceres::DOGLEG;
     options.max_num_iterations = NUM_ITERATIONS;
     //options.use_explicit_schur_complement = true;
@@ -492,7 +492,7 @@ void Estimator::optimizeMap()
     {
         for (int n = 0; n < NUM_OF_LASER; n++)
         {
-            PriorFactor *f = new PriorFactor(tbl_[n], qbl_[n], 10, 0.1);
+            PriorFactor *f = new PriorFactor(tbl_[n], qbl_[n], PRIOR_FACTOR_POS, PRIOR_FACTOR_ROT);
             ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, NULL, para_ex_pose_[n]);
             res_ids_proj.push_back(res_id);
         }
@@ -506,7 +506,7 @@ void Estimator::optimizeMap()
         {
             for (int n = 0; n < NUM_OF_LASER; n++)
             {
-                for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
+                for (size_t i = pivot_idx; i < WINDOW_SIZE + 1; i++)
                 {
                     std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i];
                     // printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size());
@@ -518,6 +518,7 @@ void Estimator::optimizeMap()
                         if (n == IDX_REF)
                         {
                             // pivot pose optimization
+                            if (i == pivot_idx) continue;
                             LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s);
                             ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
                                 para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]);
@@ -533,11 +534,11 @@ void Estimator::optimizeMap()
                             }
                         } else
                         {
-                            if (i != pivot_idx + 1) continue;
                             // optimize extrinsics using local map
+                            if (i != pivot_idx) continue;
                             LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref, s, 1.0);
                             ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
-                                para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]);
+                                para_ex_pose_[n]);
                             res_ids_proj.push_back(res_id);
                             if (CHECK_JACOBIAN)
                             {
@@ -553,7 +554,6 @@ void Estimator::optimizeMap()
                 }
             }
         }
-
     }
     // TODO: focus on online odometry estimation
     else if (ESTIMATE_EXTRINSIC == 0)
@@ -589,6 +589,7 @@ void Estimator::optimizeMap()
 
     // *******************************
     printf("*************** Before optimization\n");
+    printf("*************** Calib error\n");
     if (EVALUATE_RESIDUAL) evalResidual(problem, para_ids, res_ids_proj, last_marginalization_info_, res_ids_marg);
 
     printf("prepare ceres %fms\n", t_prep_solver.toc()); // cost time
@@ -597,10 +598,11 @@ void Estimator::optimizeMap()
     ceres::Solve(options, &problem, &summary);
     std::cout << summary.BriefReport() << std::endl;
     // std::cout << summary.FullReport() << std::endl;
-    // printf("Iterations : %d", static_cast<int>(summary.iterations.size()));
-    printf("solver costs: %fms\n", t_solver.toc());
+    // printf("Iterations : %d\n", static_cast<int>(summary.iterations.size()));
+    printf("Solver costs: %fms\n", t_solver.toc());
 
     printf("*************** After optimization\n");
+    printf("*************** Calib error\n");
     if (EVALUATE_RESIDUAL) evalResidual(problem, para_ids, res_ids_proj, last_marginalization_info_, res_ids_marg);
 
     double2Vector();
@@ -630,6 +632,17 @@ void Estimator::optimizeMap()
             marginalization_info->addResidualBlockInfo(residual_block_info);
         }
 
+        if (PRIOR_FACTOR)
+        {
+            for (int n = 0; n < NUM_OF_LASER; n++)
+            {
+                PriorFactor *f = new PriorFactor(tbl_[n], qbl_[n], PRIOR_FACTOR_POS, PRIOR_FACTOR_ROT);
+                ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, NULL,
+                    std::vector<double *>{para_ex_pose_[n]}, std::vector<int>{0});
+                marginalization_info->addResidualBlockInfo(residual_block_info);
+            }
+        }
+
         // TODO: add marginalization block
         if (ESTIMATE_EXTRINSIC == 1)
         {
@@ -637,7 +650,7 @@ void Estimator::optimizeMap()
             {
                 for (int n = 0; n < NUM_OF_LASER; n++)
                 {
-                    for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
+                    for (size_t i = pivot_idx; i < WINDOW_SIZE + 1; i++)
                     {
                         std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i];
                         for (auto &feature: features_frame)
@@ -647,16 +660,17 @@ void Estimator::optimizeMap()
                             const Eigen::Vector4d &coeff_ref = feature.coeffs_;
                             if (n == IDX_REF)
                             {
+                                if (i == pivot_idx) continue;
                                 LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s);
                                 ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
-                                    vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]}, std::vector<int>{0});
+                                    std::vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]}, std::vector<int>{0});
                                 marginalization_info->addResidualBlockInfo(residual_block_info);
                             } else
                             {
-                                if (i != pivot_idx + 1) continue;
+                                if (i != pivot_idx) continue;
                                 LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref, s, 1.0);
                                 ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
-                                    vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]}, std::vector<int>{0});
+                                    std::vector<double *>{para_ex_pose_[n]}, std::vector<int>{0});
                                 marginalization_info->addResidualBlockInfo(residual_block_info);
                             }
                         }
@@ -803,10 +817,11 @@ void Estimator::buildCalibMap()
         kdtree_surf_points_local_map->setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_filtered_[n]));
         // pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_points_local_map(new pcl::KdTreeFLANN<PointI>());
         // kdtree_corner_points_local_map->setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_filtered_[n]));
-        for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
+        int n_neigh = (n==IDX_REF ? 5:10);
+        for (size_t i = pivot_idx; i < WINDOW_SIZE + 1; i++)
         {
             f_extract_.extractSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
-                surf_points_stack_[n][i], pose_local_[n][i], surf_map_features_[n][i]);
+                surf_points_stack_[n][i], pose_local_[n][i], surf_map_features_[n][i], n_neigh);
         }
     }
     // printf("extract map: %fms\n", t_map_extract.toc());

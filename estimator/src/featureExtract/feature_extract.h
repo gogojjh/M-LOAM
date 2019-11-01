@@ -50,7 +50,7 @@ public:
 
     void extractSurfFromMap(const pcl::KdTreeFLANN<common::PointI>::Ptr &kdtree_surf_from_map,
         const common::PointICloud &cloud_map, const common::PointICloud &cloud_data,
-        const Pose &pose_local, std::vector<PointPlaneFeature> &features);
+        const Pose &pose_local, std::vector<PointPlaneFeature> &features, const int N_NEIGH = 5);
 
     std::vector<common::PointICloud> laser_cloud_scans_;
     pcl::VoxelGrid<common::PointI> down_size_filter_corner_;

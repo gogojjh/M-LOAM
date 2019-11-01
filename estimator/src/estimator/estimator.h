@@ -39,26 +39,15 @@
 #include "../featureExtract/feature_extract.h"
 #include "../lidarTracker/lidar_tracker.h"
 #include "../initial/initial_extrinsics.h"
-
-#include "feature_manager.h"
 #include "../utility/utility.h"
 #include "../utility/cloud_visualizer.h"
 #include "../utility/tic_toc.h"
 #include "../utility/CircularBuffer.h"
-#include "../initial/solve_5pts.h"
-#include "../initial/initial_sfm.h"
-#include "../initial/initial_alignment.h"
-#include "../initial/initial_ex_rotation.h"
-#include "../factor/imu_factor.h"
 #include "../factor/lidar_pivot_plane_norm_factor.hpp"
 #include "../factor/lidar_pivot_target_plane_norm_factor.hpp"
 #include "../factor/pose_local_parameterization.h"
 #include "../factor/marginalization_factor.h"
 #include "../factor/prior_factor.hpp"
-#include "../factor/projectionTwoFrameOneCamFactor.h"
-#include "../factor/projectionTwoFrameTwoCamFactor.h"
-#include "../factor/projectionOneFrameTwoCamFactor.h"
-#include "../featureTracker/feature_tracker.h"
 
 class Estimator
 {
@@ -114,11 +103,6 @@ class Estimator
     SolverFlag solver_flag_;
 
     bool b_system_inited_;
-
-    // extrinsic from base to laser
-    // std::vector<Pose> pose_ext_;
-    // std::vector<Pose> pose_prev_cur_;
-    // std::vector<Pose> pose_base_cur_;
 
     // pose from laser at k=0 to laser at k=K
     std::vector<Pose> pose_laser_cur_;
