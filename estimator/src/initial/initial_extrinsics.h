@@ -35,11 +35,14 @@ public:
 	void addPose(const Pose &pose, const size_t &idx);
 
 	bool calibExRotation(const size_t &idx_ref, const size_t &idx_data, Pose &calib_result);
-	void calibExTranslation(const size_t &idx_ref, const size_t &idx_data);
-	void calibExTranslationPlanar(const size_t &idx_ref, const size_t &idx_data);
+	bool calibExTranslation(const size_t &idx_ref, const size_t &idx_data, Pose &calib_result);
+	bool calibExTranslationPlanar(const size_t &idx_ref, const size_t &idx_data);
+	bool calibExTranslationNonPlanar(const size_t &idx_ref, const size_t &idx_data);
 	void calibTimeDelay(const size_t &idx_ref, const size_t &idx_data);
 
 	bool setCovRotation(const size_t &idx);
+	bool setCovTranslation(const size_t &idx);
+
 	bool checkScrewMotion(const Pose &pose_ref, const Pose &pose_data);
 	void saveStatistics();
 
@@ -50,10 +53,9 @@ public:
 	std::vector<double> v_rd_;
 	std::vector<double> v_td_;
 
-	std::vector<std::vector<double> > v_rot_cov_;
-
-	std::vector<bool> cov_rot_state_;
-	bool full_cov_rot_state_;
+	std::vector<std::vector<double> > v_rot_cov_, v_pos_cov_;
+	std::vector<bool> cov_rot_state_, cov_pos_state_;
+	bool full_cov_rot_state_, full_cov_pos_state_;
 
 	std::vector<std::vector<Pose> > v_pose_;
 	// v_pose_[idx_ref][indices_[idx_data][i]], v_pose_[idx_data][indices_[idx_data][i]] as the screw motion pair

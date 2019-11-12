@@ -276,25 +276,31 @@ void Estimator::process()
             if (cir_buf_cnt_ == WINDOW_SIZE)
             {
                 TicToc t_calib_ext;
-                printf("calibrating extrinsic param, rotation movement is needed \n");
+                printf("calibrating extrinsic param\n");
+                printf("sufficient movement is needed \n");
                 for (int i = 0; i < NUM_OF_LASER; i++)
                 {
                     Pose calib_result;
-                    if ((!initial_extrinsics_.cov_rot_state_[i]) &&
-                        (initial_extrinsics_.calibExRotation(IDX_REF, i, calib_result)))
+                    // if (IDX_REF == i) continue;
+                    if ((initial_extrinsics_.cov_rot_state_[i]) || (initial_extrinsics_.calibExRotation(IDX_REF, i, calib_result)))
                     {
+                        printf("sufficient translation movement is needed\n");
                         initial_extrinsics_.setCovRotation(i);
-                        ROS_WARN_STREAM("number of pose: " << initial_extrinsics_.frame_cnt_);
-                        ROS_WARN_STREAM("initial extrinsic of laser_" << i << ": " << calib_result);
-                        qbl_[i] = calib_result.q_;
-                        tbl_[i] = calib_result.t_;
-                        // tdbl_[i] = calib_result.td_;
-                        QBL[i] = calib_result.q_;
-                        TBL[i] = calib_result.t_;
-                        // TDBL[i] = calib_result.td_;
+                        if ((initial_extrinsics_.cov_pos_state_[i]) || (initial_extrinsics_.calibExTranslation(IDX_REF, i, calib_result)))
+                        {
+                            initial_extrinsics_.setCovTranslation(i);
+                            ROS_WARN_STREAM("number of pose: " << initial_extrinsics_.frame_cnt_);
+                            ROS_WARN_STREAM("initial extrinsic of laser_" << i << ": " << calib_result);
+                            qbl_[i] = calib_result.q_;
+                            tbl_[i] = calib_result.t_;
+                            // tdbl_[i] = calib_result.td_;
+                            QBL[i] = calib_result.q_;
+                            TBL[i] = calib_result.t_;
+                            // TDBL[i] = calib_result.td_;
+                        }
                     }
                 }
-                if (initial_extrinsics_.full_cov_rot_state_)
+                if ((initial_extrinsics_.full_cov_rot_state_) && (initial_extrinsics_.full_cov_pos_state_))
                 {
                     ROS_WARN("all initial extrinsic rotation calib success");
                     ESTIMATE_EXTRINSIC = 1;
@@ -535,6 +541,7 @@ void Estimator::optimizeMap()
                         } else
                         {
                             // optimize extrinsics using local map
+                            // continue;
                             if (i != pivot_idx) continue;
                             LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref, s, 1.0);
                             ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
@@ -553,6 +560,24 @@ void Estimator::optimizeMap()
                     }
                 }
             }
+
+            // TODO: cumulative feature frame
+            // if (cum_features_frame_ == 10)
+            // {
+            //     for (int n = 0; n < NUM_OF_LASER; n++)
+            //     {
+            //         if (n == IDX_REF) continue;
+            //         for (auto &features: features_frame)
+            //         {
+            //             const double &s = feature.score_;
+            //             const Eigen::Vector3d &p_data = feature.point_;
+            //             const Eigen::Vector4d &coeff_ref = feature.coeffs_;
+            //             LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref, s, 1.0);
+            //             ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_ex_pose_[n]);
+            //             res_ids_proj.push_back(res_id);
+            //         }
+            //     }
+            // }
         }
     }
     // TODO: focus on online odometry estimation

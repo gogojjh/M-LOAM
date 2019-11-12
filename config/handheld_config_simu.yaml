@@ -116,6 +116,6 @@ evaluate_residual: 1
 pcl_viewer: 0
 pcl_viewer_normal_ratio: 1
 
-optimal_odometry: 1
+optimal_odometry: 0
 
 #

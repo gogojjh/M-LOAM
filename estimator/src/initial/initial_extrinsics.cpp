@@ -23,8 +23,12 @@ InitialExtrinsics::InitialExtrinsics() {}
 void InitialExtrinsics::clearState()
 {
     calib_ext_.clear();
+
     cov_rot_state_.clear();
+    cov_pos_state_.clear();
+
     v_rot_cov_.clear();
+    v_pos_cov_.clear();
 
     v_pose_.clear();
     indices_.clear();
@@ -41,7 +45,13 @@ void InitialExtrinsics::setParameter()
     cov_rot_state_.resize(NUM_OF_LASER);
     for (size_t i = 0; i < cov_rot_state_.size(); i++) cov_rot_state_[i] = false;
     full_cov_rot_state_ = false;
+
+    cov_pos_state_.resize(NUM_OF_LASER);
+    for (size_t i = 0; i < cov_pos_state_.size(); i++) cov_pos_state_[i] = false;
+    full_cov_pos_state_ = false;
+
     v_rot_cov_.resize(NUM_OF_LASER);
+    v_pos_cov_.resize(NUM_OF_LASER);
 
     v_pose_.resize(NUM_OF_LASER);
     indices_.resize(NUM_OF_LASER);
@@ -54,6 +64,16 @@ bool InitialExtrinsics::setCovRotation(const size_t &idx)
     if (std::find(cov_rot_state_.begin(), cov_rot_state_.end(), false) == cov_rot_state_.end())
     {
         full_cov_rot_state_ = true;
+    }
+}
+
+bool InitialExtrinsics::setCovTranslation(const size_t &idx)
+{
+    assert(idx < NUM_OF_LASER);
+    cov_pos_state_[idx] = true;
+    if (std::find(cov_pos_state_.begin(), cov_pos_state_.end(), false) == cov_pos_state_.end())
+    {
+        full_cov_pos_state_ = true;
     }
 }
 
@@ -81,10 +101,7 @@ bool InitialExtrinsics::checkScrewMotion(const Pose &pose_ref, const Pose &pose_
         return false;
 }
 
-bool InitialExtrinsics::calibExRotation(
-    const size_t &idx_ref,
-    const size_t &idx_data,
-    Pose &calib_result)
+bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx_data, Pose &calib_result)
 {
     // -------------------------------
     // screw motion filter
@@ -176,22 +193,13 @@ bool InitialExtrinsics::calibExRotation(
         calib_ext_[idx_data].q_ = Eigen::Quaterniond(x);
     }
 
-    Vector3d rot_cov = svd.singularValues().tail<3>(); // singular value
-    printf("calib ext rot: %f ms\n", t_calib_rot.toc());
+    Eigen::Vector3d rot_cov = svd.singularValues().tail<3>(); // singular value
     v_rot_cov_[idx_data].push_back(rot_cov(1));
-
-    printf("********** pose_cnt:%d, rot cov %f\n", pose_cnt_, rot_cov(1));
+    printf("pose_cnt:%d, rot_cov:%f **********\n", pose_cnt_, rot_cov(1));
     if (pose_cnt_ >= WINDOW_SIZE && rot_cov(1) > 0.25)
     {
-        if (PLANAR_MOVEMENT)
-            calibExTranslationPlanar(idx_ref, idx_data);
-        else
-            calibExTranslation(idx_ref, idx_data);
-
-        if (ESTIMATE_TD)
-            calibTimeDelay(idx_ref, idx_data);
-
         calib_result = calib_ext_[idx_data];
+        // printf("calib ext rot: %fms\n", t_calib_rot.toc());
         return true;
     }
     else
@@ -200,7 +208,32 @@ bool InitialExtrinsics::calibExRotation(
     }
 }
 
-void InitialExtrinsics::calibExTranslation(const size_t &idx_ref, const size_t &idx_data)
+bool InitialExtrinsics::calibExTranslation(const size_t &idx_ref, const size_t &idx_data, Pose &calib_result)
+{
+    assert(idx_ref < NUM_OF_LASER);
+    assert(idx_data < NUM_OF_LASER);
+    assert(frame_cnt_ == v_pose_[idx_ref].size());
+    if (!checkScrewMotion(*(v_pose_[idx_ref].end()-1), *(v_pose_[idx_data].end()-1)))
+    {
+        return false;
+    } else
+    {
+        indices_[idx_data].push_back(frame_cnt_-1);
+    }
+    pose_cnt_ = indices_[idx_data].size();
+
+    if (((PLANAR_MOVEMENT) && (calibExTranslationPlanar(idx_ref, idx_data))) ||
+       ((!PLANAR_MOVEMENT) && (calibExTranslationNonPlanar(idx_ref, idx_data))))
+    {
+        calib_result = calib_ext_[idx_data];
+        return true;
+    } else
+    {
+        return false;
+    }
+}
+
+bool InitialExtrinsics::calibExTranslationNonPlanar(const size_t &idx_ref, const size_t &idx_data)
 {
     const Eigen::Quaterniond &q_zyx = calib_ext_[idx_data].q_;
     Eigen::MatrixXd A = Eigen::MatrixXd::Zero(pose_cnt_ * 3, 3);
@@ -215,9 +248,18 @@ void InitialExtrinsics::calibExTranslation(const size_t &idx_ref, const size_t &
     Eigen::Vector3d x;
     x = A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b);
     calib_ext_[idx_data] = Pose(q_zyx, x);
+
+    Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeFullU | Eigen::ComputeFullV);
+    Eigen::Vector3d pos_cov = svd.singularValues().head<3>();
+    v_pos_cov_[idx_data].push_back(pos_cov(1));
+    printf("pose_cnt:%d, pos_cov:%f **********\n", pose_cnt_, pos_cov(1));
+    if (pose_cnt_ >= WINDOW_SIZE && pos_cov(1) > 0.7)
+        return true;
+    else
+        return false;
 }
 
-void InitialExtrinsics::calibExTranslationPlanar(const size_t &idx_ref, const size_t &idx_data)
+bool InitialExtrinsics::calibExTranslationPlanar(const size_t &idx_ref, const size_t &idx_data)
 {
     const Eigen::Quaterniond &q_yx = calib_ext_[idx_data].q_;
     Eigen::MatrixXd G = Eigen::MatrixXd::Zero(pose_cnt_ * 2, 4);
@@ -240,6 +282,7 @@ void InitialExtrinsics::calibExTranslationPlanar(const size_t &idx_ref, const si
     double yaw = atan2(m(3), m(2));
     Eigen::Quaterniond q_z(Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ()));
     calib_ext_[idx_data] = Pose(q_z*q_yx, x);
+    return true;
 }
 
 void InitialExtrinsics::calibTimeDelay(const size_t &idx_ref, const size_t &idx_data)
@@ -275,6 +318,7 @@ void InitialExtrinsics::saveStatistics()
         // orientation
         for (size_t i = 0; i < NUM_OF_LASER; i ++)
         {
+            fout << 0 << ",";
             for (auto iter = v_pose_[i].begin(); iter != v_pose_[i].end(); iter++)
             {
                 fout << Eigen::AngleAxisd(iter->q_).angle() << ",";
@@ -284,10 +328,21 @@ void InitialExtrinsics::saveStatistics()
         // rot_cov
         for (size_t i = 0; i < NUM_OF_LASER; i ++)
         {
+            fout << 0 << ",";
             for (auto iter = v_rot_cov_[i].begin(); iter != v_rot_cov_[i].end(); iter++)
             {
                 fout << *iter << ",";
                 if (iter == v_rot_cov_[i].end() - 1) fout << std::endl;
+            }
+        }
+        // pos_cov
+        for (size_t i = 0; i < NUM_OF_LASER; i ++)
+        {
+            fout << 0 << ",";
+            for (auto iter = v_pos_cov_[i].begin(); iter != v_pos_cov_[i].end(); iter++)
+            {
+                fout << *iter << ",";
+                if (iter == v_pos_cov_[i].end() - 1) fout << std::endl;
             }
         }
         fout.close();
