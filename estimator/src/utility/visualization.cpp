@@ -48,7 +48,7 @@ cloudFeature transformCloudFeature(const cloudFeature &cloud_feature, const Eige
 
 void clearPath()
 {
-    
+
 }
 
 void registerPub(ros::NodeHandle &nh)

@@ -8,8 +8,8 @@
 class LidarPivotTargetPlaneNormFactor
 {
 public:
-	LidarPivotTargetPlaneNormFactor(Eigen::Vector3d point, Eigen::Vector4d coeff, double s)
-    	: point_(point), coeff_(coeff), s_(s){}
+	LidarPivotTargetPlaneNormFactor(Eigen::Vector3d point, Eigen::Vector4d coeff, double s, double sqrt_info_static)
+    	: point_(point), coeff_(coeff), s_(s), sqrt_info_static_(sqrt_info_static){}
 
 	// TODO: jacobian derivation
 	template <typename T>
@@ -35,9 +35,9 @@ public:
 		return true;
 	}
 
-	static ceres::CostFunction *Create(const Eigen::Vector3d &point, const Eigen::Vector4d &coeff, const double &s)
+	static ceres::CostFunction *Create(const Eigen::Vector3d &point, const Eigen::Vector4d &coeff, const double &s, const double &sqrt_info_static = 1.0)
 	{
-		return (new ceres::AutoDiffCostFunction<LidarPivotTargetPlaneNormFactor, 1, 7, 7, 7>(new LidarPivotTargetPlaneNormFactor(point, coeff, s)));
+		return (new ceres::AutoDiffCostFunction<LidarPivotTargetPlaneNormFactor, 1, 7, 7, 7>(new LidarPivotTargetPlaneNormFactor(point, coeff, s, sqrt_info_static)));
 	}
 
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -46,4 +46,5 @@ private:
 	const Eigen::Vector3d point_;
 	const Eigen::Vector4d coeff_;
 	const double s_;
+	const double sqrt_info_static_;
 };

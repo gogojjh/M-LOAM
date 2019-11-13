@@ -103,7 +103,7 @@ min_match_sq_dis: 1.0
 min_plane_dis: 0.2
 
 # factor
-marginalization_factor: 1
+marginalization_factor: 0
 point_plane_factor: 1
 point_edge_factor: 0
 prior_factor: 0
@@ -116,6 +116,6 @@ evaluate_residual: 1
 pcl_viewer: 0
 pcl_viewer_normal_ratio: 1
 
-optimal_odometry: 0
+optimal_odometry: 1
 
 #
