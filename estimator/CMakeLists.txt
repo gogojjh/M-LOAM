@@ -25,7 +25,7 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(OpenCV REQUIRED)
 find_package(PCL REQUIRED)
 find_package(Ceres REQUIRED)
-find_package(glog REQUIRED)
+# find_package(glog REQUIRED)
 find_package(Eigen3)
 
 include_directories(

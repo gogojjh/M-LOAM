@@ -117,14 +117,14 @@ void pubPointCloud(const Estimator &estimator, const double &time)
     {
         for (size_t n = 0; n < NUM_OF_LASER; n++)
         {
-            if ((ESTIMATE_EXTRINSIC !=0) && (n != IDX_REF)) continue;
+            // if ((ESTIMATE_EXTRINSIC !=0) && (n != IDX_REF)) continue;
             header.frame_id = "laser_" + std::to_string(n);
             PointICloud surf_local_map_trans;
             int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE - 1; // running after slideWindow()
             Pose pose_ext = Pose(estimator.qbl_[n], estimator.tbl_[n]);
             Pose pose_pivot(estimator.Qs_[pivot_idx], estimator.Ts_[pivot_idx]);
             Pose pose_j(estimator.Qs_[estimator.cir_buf_cnt_-1], estimator.Ts_[estimator.cir_buf_cnt_-1]);
-            Eigen::Matrix4d transform_j_pivot = (pose_j.T_ * pose_ext.T_).inverse() * (pose_pivot.T_ * pose_ext.T_);
+            Eigen::Matrix4d transform_j_pivot = (pose_j.T_ * pose_ext.T_).inverse() * pose_pivot.T_;
 
             pcl::transformPointCloud(estimator.surf_points_local_map_filtered_[n], surf_local_map_trans, transform_j_pivot.cast<float>());
             publishCloud(v_pub_surf_points_local_map[n], header, surf_local_map_trans);
@@ -140,7 +140,7 @@ void pubPointCloud(const Estimator &estimator, const double &time)
             publishCloud(pub_surf_points_target_localmap, header, estimator.surf_points_local_map_filtered_[1]);
             int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
             PointICloud cloud_trans;
-            for (auto &f : estimator.surf_map_features_[1][pivot_idx])
+            for (auto &f : estimator.surf_map_features_[1][WINDOW_SIZE])
             {
                 PointI p_ori;
                 p_ori.x = f.point_.x();
@@ -148,7 +148,7 @@ void pubPointCloud(const Estimator &estimator, const double &time)
                 p_ori.z = f.point_.z();
                 PointI p_sel;
                 FeatureExtract f_extract;
-                f_extract.pointAssociateToMap(p_ori, p_sel, estimator.pose_local_[1][pivot_idx]);
+                f_extract.pointAssociateToMap(p_ori, p_sel, estimator.pose_local_[1][WINDOW_SIZE]);
                 cloud_trans.push_back(p_sel);
             }
             publishCloud(pub_surf_points_target, header, cloud_trans);

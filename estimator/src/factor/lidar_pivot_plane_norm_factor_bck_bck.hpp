@@ -16,7 +16,7 @@ public:
     	: point_(point), coeff_(coeff), s_(s), sqrt_info_static_(sqrt_info_static){}
 
 	// residual = sum(w^(T) * (R * p + t) + d)
-	bool Evaluate(double const *const *param, double *residuals, double **jacobians) const
+		bool Evaluate(double const *const *param, double *residuals, double **jacobians) const
     {
 		Eigen::Quaterniond Q_pivot(param[0][6], param[0][3], param[0][4], param[0][5]);
 		Eigen::Vector3d t_pivot(param[0][0], param[0][1], param[0][2]);
@@ -25,10 +25,12 @@ public:
 		Eigen::Quaterniond Q_ext(param[2][6], param[2][3], param[2][4], param[2][5]);
 		Eigen::Vector3d t_ext(param[2][0], param[2][1], param[2][2]);
 
-		Eigen::Quaterniond Q_pi = Q_pivot.conjugate() * Q_i;
-		Eigen::Vector3d t_pi = Q_pivot.conjugate() * (t_i - t_pivot);
-		Eigen::Quaterniond Q_ext_pi = Q_pi * Q_ext;
-		Eigen::Vector3d t_ext_pi = Q_pi * t_ext + t_pi;
+		Eigen::Quaterniond Q_ext_pivot = Q_pivot * Q_ext;
+		Eigen::Vector3d t_ext_pivot = Q_pivot * t_ext + t_pivot;
+		Eigen::Quaterniond Q_ext_i = Q_i * Q_ext;
+		Eigen::Vector3d t_ext_i = Q_i * t_ext + t_i;
+		Eigen::Quaterniond Q_ext_pi = Q_ext_pivot.conjugate() * Q_ext_i;
+		Eigen::Vector3d t_ext_pi = Q_ext_pivot.conjugate() * (t_ext_i - t_ext_pivot);
 
 		Eigen::Vector3d w(coeff_(0), coeff_(1), coeff_(2));
 		double d = coeff_(3);
@@ -47,9 +49,10 @@ public:
                 Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> > jacobian_pose_pivot(jacobians[0]);
                 Eigen::Matrix<double, 1, 6> jaco_pivot;
 
-				jaco_pivot.leftCols<3>() = -w.transpose() * Rp.transpose();
-				jaco_pivot.rightCols<3>() = w.transpose() * (
-					SkewSymmetric(Rp.transpose() * (Ri * Rext * point_ + Ri * t_ext + t_i - t_pivot)));
+				jaco_pivot.leftCols<3>() = -w.transpose() * Rext.transpose() * Rp.transpose();
+				jaco_pivot.rightCols<3>() = w.transpose() * Rext.transpose() * (
+					SkewSymmetric(Rp.transpose() * (Ri * Rext * point_ + Ri * t_ext + t_i - Rp * t_ext - t_pivot)) +
+					SkewSymmetric(t_ext));
 
                 jacobian_pose_pivot.setZero();
                 jacobian_pose_pivot.leftCols<6>() = sqrt_info * jaco_pivot;
@@ -61,8 +64,9 @@ public:
                 Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> > jacobian_pose_i(jacobians[1]);
                 Eigen::Matrix<double, 1, 6> jaco_i;
 
-				jaco_i.leftCols<3>() = w.transpose() * Rp.transpose();
-				jaco_i.rightCols<3>() = -w.transpose() * Rp.transpose() * Ri * SkewSymmetric(Rext * point_ + t_ext);
+				jaco_i.leftCols<3>() = w.transpose() * Rext.transpose() * Rp.transpose();
+				jaco_i.rightCols<3>() = -w.transpose() * Rext.transpose() * Rp.transpose() * Ri *
+					SkewSymmetric(Rext * point_ + t_ext);
 
                 jacobian_pose_i.setZero();
                 jacobian_pose_i.leftCols<6>() = sqrt_info * jaco_i;
@@ -75,8 +79,10 @@ public:
                 jacobian_pose_ex.setZero();
 
 				Eigen::Matrix<double, 1, 6> jaco_ex;
-				jaco_ex.leftCols<3>() = w.transpose() * Rp.transpose() * Ri;
-				jaco_ex.rightCols<3>() = -w.transpose() * Rp.transpose() * Ri * Rext * SkewSymmetric(point_);
+				jaco_ex.leftCols<3>() = w.transpose() * Rext.transpose() * Rp.transpose() * (Ri - Rp);
+				jaco_ex.rightCols<3>() = w.transpose() * (
+					SkewSymmetric(Rext.transpose() * Rp.transpose() * (Ri * Rext * point_ + Ri * t_ext + t_i - Rp * t_ext - t_pivot)) -
+					Rext.transpose() * Rp.transpose() * Ri * Rext * SkewSymmetric(point_));
 
                 jacobian_pose_ex.setZero();
                 jacobian_pose_ex.leftCols<6>() = sqrt_info * jaco_ex;
@@ -111,10 +117,12 @@ public:
 		Eigen::Quaterniond Q_ext(param[2][6], param[2][3], param[2][4], param[2][5]);
 		Eigen::Vector3d t_ext(param[2][0], param[2][1], param[2][2]);
 
-		Eigen::Quaterniond Q_pi = Q_pivot.conjugate() * Q_i;
-		Eigen::Vector3d t_pi = Q_pivot.conjugate() * (t_i - t_pivot);
-		Eigen::Quaterniond Q_ext_pi = Q_pi * Q_ext;
-		Eigen::Vector3d t_ext_pi = Q_pi * t_ext + t_pi;
+		Eigen::Quaterniond Q_ext_pivot = Q_pivot * Q_ext;
+		Eigen::Vector3d t_ext_pivot = Q_pivot * t_ext + t_pivot;
+		Eigen::Quaterniond Q_ext_i = Q_i * Q_ext;
+		Eigen::Vector3d t_ext_i = Q_i * t_ext + t_i;
+		Eigen::Quaterniond Q_ext_pi = Q_ext_pivot.conjugate() * Q_ext_i;
+		Eigen::Vector3d t_ext_pi = Q_ext_pivot.conjugate() * (t_ext_i - t_ext_pivot);
 
 		Eigen::Vector3d w(coeff_(0), coeff_(1), coeff_(2));
         double d = coeff_(3);
@@ -129,34 +137,36 @@ public:
         Eigen::Matrix<double, 1, 18> num_jacobian;
 
 		// add random perturbation
-		for (int k = 0; k < 18; k++)
-		{
-			Eigen::Quaterniond Q_pivot(param[0][6], param[0][3], param[0][4], param[0][5]);
+      for (int k = 0; k < 18; k++)
+	  {
+		  Eigen::Quaterniond Q_pivot(param[0][6], param[0][3], param[0][4], param[0][5]);
 			Eigen::Vector3d t_pivot(param[0][0], param[0][1], param[0][2]);
 			Eigen::Quaterniond Q_i(param[1][6], param[1][3], param[1][4], param[1][5]);
 			Eigen::Vector3d t_i(param[1][0], param[1][1], param[1][2]);
 			Eigen::Quaterniond Q_ext(param[2][6], param[2][3], param[2][4], param[2][5]);
 			Eigen::Vector3d t_ext(param[2][0], param[2][1], param[2][2]);
-			int a = k / 3, b = k % 3;
-			Eigen::Vector3d delta = Eigen::Vector3d(b == 0, b == 1, b == 2) * eps;
+            int a = k / 3, b = k % 3;
+      Eigen::Vector3d delta = Eigen::Vector3d(b == 0, b == 1, b == 2) * eps;
 
-			if (a == 0)
-				t_pivot += delta;
-			else if (a == 1)
-				Q_pivot = Q_pivot * DeltaQ(delta);
-			else if (a == 2)
-				t_i += delta;
-			else if (a == 3)
-				Q_i = Q_i * DeltaQ(delta);
-			else if (a == 4)
-				t_ext += delta;
-			else if (a == 5)
-				Q_ext = Q_ext * DeltaQ(delta);
+      if (a == 0)
+          t_pivot += delta;
+      else if (a == 1)
+          Q_pivot = Q_pivot * DeltaQ(delta);
+      else if (a == 2)
+          t_i += delta;
+      else if (a == 3)
+          Q_i = Q_i * DeltaQ(delta);
+      else if (a == 4)
+          t_ext += delta;
+      else if (a == 5)
+          Q_ext = Q_ext * DeltaQ(delta);
 
-			Eigen::Quaterniond Q_pi = Q_pivot.conjugate() * Q_i;
-			Eigen::Vector3d t_pi = Q_pivot.conjugate() * (t_i - t_pivot);
-			Eigen::Quaterniond Q_ext_pi = Q_pi * Q_ext;
-			Eigen::Vector3d t_ext_pi = Q_pi * t_ext + t_pi;
+			Eigen::Quaterniond Q_ext_pivot = Q_pivot * Q_ext;
+			Eigen::Vector3d t_ext_pivot = Q_pivot * t_ext + t_pivot;
+			Eigen::Quaterniond Q_ext_i = Q_i * Q_ext;
+			Eigen::Vector3d t_ext_i = Q_i * t_ext + t_i;
+			Eigen::Quaterniond Q_ext_pi = Q_ext_pivot.conjugate() * Q_ext_i;
+			Eigen::Vector3d t_ext_pi = Q_ext_pivot.conjugate() * (t_ext_i - t_ext_pivot);
 
 			Eigen::Vector3d w(coeff_(0), coeff_(1), coeff_(2));
 	        double d = coeff_(3);
