@@ -20,7 +20,6 @@ public:
 		Eigen::Vector3d w(coeff_(0), coeff_(1), coeff_(2));
 		double d = coeff_(3);
 		double r = (w.dot(Q_ext * point_ + t_ext) + d) * s_;
-		// double r = (w.dot(Q_p_ext_i * point_ + t_p_ext_i) + d);
 		double sqrt_info = sqrt_info_static_;
 		residuals[0] = sqrt_info * r;
 

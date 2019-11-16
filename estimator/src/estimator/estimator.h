@@ -44,8 +44,7 @@
 #include "../utility/tic_toc.h"
 #include "../utility/CircularBuffer.h"
 #include "../factor/lidar_pivot_plane_norm_factor.hpp"
-// #include "../factor/lidar_pivot_target_plane_norm_factor.hpp"
-#include "../factor/lidar_pivot_target_plane_norm_factor_bck.hpp"
+#include "../factor/lidar_pivot_target_plane_norm_factor.hpp"
 #include "../factor/pose_local_parameterization.h"
 #include "../factor/marginalization_factor.h"
 #include "../factor/prior_factor.hpp"
@@ -147,6 +146,9 @@ class Estimator
     std::queue<std::pair<double, std::vector<cloudFeature> > > feature_buf_;
     pair<double, std::vector<cloudFeature> > prev_feature_, cur_feature_;
     std::vector<std::vector<std::vector<PointPlaneFeature> > > surf_map_features_;
+
+    std::vector<std::vector<std::vector<PointPlaneFeature> > > cumu_surf_map_features_;
+    int cumu_feature_cnt_;
 
     double **para_pose_;
     double **para_ex_pose_;

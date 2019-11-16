@@ -94,7 +94,7 @@ void pubPointCloud(const Estimator &estimator, const double &time)
     PointICloud laser_cloud, corner_points_sharp, corner_points_less_sharp, surf_points_flat, surf_points_less_flat;
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
-        if ((ESTIMATE_EXTRINSIC !=0) && (n != IDX_REF)) continue;
+        // if ((ESTIMATE_EXTRINSIC !=0) && (n != IDX_REF)) continue;
         Pose pose_ext = Pose(estimator.qbl_[n], estimator.tbl_[n]);
         Eigen::Matrix4d transform_ext = pose_ext.T_;
         cloudFeature cloud_feature_trans = transformCloudFeature(estimator.cur_feature_.second[n], transform_ext.cast<float>());
@@ -140,7 +140,7 @@ void pubPointCloud(const Estimator &estimator, const double &time)
             publishCloud(pub_surf_points_target_localmap, header, estimator.surf_points_local_map_filtered_[1]);
             int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
             PointICloud cloud_trans;
-            for (auto &f : estimator.surf_map_features_[1][WINDOW_SIZE])
+            for (auto &f : estimator.surf_map_features_[1][pivot_idx])
             {
                 PointI p_ori;
                 p_ori.x = f.point_.x();
@@ -148,7 +148,7 @@ void pubPointCloud(const Estimator &estimator, const double &time)
                 p_ori.z = f.point_.z();
                 PointI p_sel;
                 FeatureExtract f_extract;
-                f_extract.pointAssociateToMap(p_ori, p_sel, estimator.pose_local_[1][WINDOW_SIZE]);
+                f_extract.pointAssociateToMap(p_ori, p_sel, estimator.pose_local_[1][pivot_idx]);
                 cloud_trans.push_back(p_sel);
             }
             publishCloud(pub_surf_points_target, header, cloud_trans);

@@ -122,6 +122,7 @@ extern int PCL_VIEWER;
 extern int PCL_VIEWER_NORMAL_RATIO;
 
 extern int OPTIMAL_ODOMETRY;
+extern int N_CUMU_FEATURE;
 
 void readParameters(std::string config_file);
 

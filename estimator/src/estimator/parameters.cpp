@@ -91,6 +91,7 @@ int PCL_VIEWER;
 int PCL_VIEWER_NORMAL_RATIO;
 
 int OPTIMAL_ODOMETRY;
+int N_CUMU_FEATURE;
 
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
@@ -224,6 +225,7 @@ void readParameters(std::string config_file)
     PCL_VIEWER_NORMAL_RATIO = fsSettings["pcl_viewer_normal_ratio"];
 
     OPTIMAL_ODOMETRY = fsSettings["optimal_odometry"];
+    N_CUMU_FEATURE = fsSettings["n_cumu_feature"];
 
     fsSettings.release();
 }

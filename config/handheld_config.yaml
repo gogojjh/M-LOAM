@@ -6,7 +6,8 @@ imu: 0
 num_of_cam: 2
 
 imu_topic: ""
-output_path: "/home/jjiao/catkin_ws/src/localization/M-LOAM/log/"
+output_path: "/home/jjiao/catkin_ws/src/localization/M-LOAM/log/handheld/"
+
 # mloam_odom_path: "mloam_odom_with_margin.csv"
 mloam_odom_path: "mloam_odom.csv"
 mloam_map_path: "mloam_map.csv"
@@ -45,7 +46,7 @@ window_size: 7
 opt_window_size: 5
 
 # Extrinsic parameter between IMU and Camera.
-estimate_extrinsic: 2   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+estimate_extrinsic: 1   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
 optimal_extrinsic: 0
@@ -54,11 +55,11 @@ body_T_laser: !!opencv-matrix
    rows: 2
    cols: 7
    dt: d
-   data: [0, 0, 0, 1, 0, 0, 0,
-          0, 0, 0, 1, 0, 0, 0] # qx qy qz qw px py pz
+   # data: [0, 0, 0, 1, 0, 0, 0,
+   #        0, 0, 0, 1, 0, 0, 0] # qx qy qz qw px py pz
    # real data
-   # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-   #        0.37829, 0.00261, 0.04710, 0.92448, 0.02268, -0.60745, -0.22227]
+   data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
+          0.37829, 0.00261, 0.04710, 0.92448, 0.02268, -0.60745, -0.22227]
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
    #        0.37102, 0.00307, 0.00421, 0.92861, -0.0267, -0.4778, -0.1382]
 
@@ -98,13 +99,16 @@ marginalization_factor: 1
 point_plane_factor: 1
 point_edge_factor: 0
 prior_factor: 0
-check_jacobian: 1
+prior_factor_pos: 5
+prior_factor_rot: 1
+check_jacobian: 0
 
 evaluate_residual: 1
 
 pcl_viewer: 0
-pcl_viewer_normal_ratio: 3
+pcl_viewer_normal_ratio: 10
 
 optimal_odometry: 1
+n_cumu_feature: 30
 
 #
