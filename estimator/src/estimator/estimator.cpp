@@ -410,6 +410,7 @@ void Estimator::process()
     // prev_feature_.second = cur_feature_.second;
 }
 
+// TODO: optimize_direct_calib
 void Estimator::optimizeMap()
 {
     TicToc t_prep_solver, t_solver;
@@ -500,13 +501,12 @@ void Estimator::optimizeMap()
     if (ESTIMATE_EXTRINSIC == 1)
     {
         buildCalibMap();
-        // buildLocalMap();
         if (POINT_PLANE_FACTOR)
         {
             // CHECK_JACOBIAN = 1;
             for (int n = 0; n < NUM_OF_LASER; n++)
             {
-                for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
+                for (size_t i = pivot_idx; i < WINDOW_SIZE + 1; i++)
                 {
                     std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i];
                     // printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size());
@@ -517,8 +517,7 @@ void Estimator::optimizeMap()
                         const Eigen::Vector4d &coeff_ref = feature.coeffs_;
                         if (n == IDX_REF)
                         {
-                            // pivot pose optimization
-                            // if (i == pivot_idx) continue;
+                            if (i == pivot_idx) continue;
                             LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s);
                             ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
                                 para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[0]);
@@ -534,15 +533,9 @@ void Estimator::optimizeMap()
                             }
                         } else
                         {
-                            // optimize extrinsics using local map
-                            // continue;
-                            // if (i != pivot_idx) continue;
-                            // LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref, s, 1.0);
-                            // ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
-                            //     para_ex_pose_[n]);
-                            LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s);
-                            ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
-                                para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[1]);
+                            if (i != pivot_idx) continue;
+                            LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref, s);
+                            ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_ex_pose_[n]);
                             res_ids_proj.push_back(res_id);
                             if (CHECK_JACOBIAN)
                             {
