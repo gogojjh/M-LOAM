@@ -24,9 +24,10 @@ ros::Publisher pub_surf_points_target;
 ros::Publisher pub_surf_points_target_localmap;
 
 // local map
-std::vector<ros::Publisher> v_pub_surf_points_pivot;
 std::vector<ros::Publisher> v_pub_surf_points_local_map;
 std::vector<ros::Publisher> v_pub_surf_points_cur;
+
+std::vector<ros::Publisher> v_pub_corner_points_local_map;
 
 // odometry
 ros::Publisher pub_ext_base_to_sensor;
@@ -67,17 +68,10 @@ void registerPub(ros::NodeHandle &nh)
         laser_path_topic = std::string("/laser_odom_path_") + std::to_string(i);
         v_pub_laser_path.push_back(nh.advertise<nav_msgs::Path>(laser_path_topic, 100));
 
-        std::string surf_points_pivot;
-        surf_points_pivot = std::string("/surf_points_pivot_") + std::to_string(i);
-        v_pub_surf_points_pivot.push_back(nh.advertise<sensor_msgs::PointCloud2>(surf_points_pivot, 100));
+        v_pub_surf_points_local_map.push_back(nh.advertise<sensor_msgs::PointCloud2>(std::string("/surf_local_map_") + std::to_string(i), 100));
+        v_pub_surf_points_cur.push_back(nh.advertise<sensor_msgs::PointCloud2>(std::string("/surf_points_cur_") + std::to_string(i), 100));
 
-        std::string surf_points_local_map_topic;
-        surf_points_local_map_topic = std::string("/surf_local_map_") + std::to_string(i);
-        v_pub_surf_points_local_map.push_back(nh.advertise<sensor_msgs::PointCloud2>(surf_points_local_map_topic, 100));
-
-        std::string surf_points_cur_topic;
-        surf_points_cur_topic = std::string("/surf_points_cur_") + std::to_string(i);
-        v_pub_surf_points_cur.push_back(nh.advertise<sensor_msgs::PointCloud2>(surf_points_cur_topic, 100));
+        v_pub_corner_points_local_map.push_back(nh.advertise<sensor_msgs::PointCloud2>(std::string("/corner_local_map_") + std::to_string(i), 100));
     }
     pub_surf_points_target_localmap = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_target_localmap", 100);
     pub_surf_points_target = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_target", 100);
@@ -119,18 +113,19 @@ void pubPointCloud(const Estimator &estimator, const double &time)
         {
             // if ((ESTIMATE_EXTRINSIC !=0) && (n != IDX_REF)) continue;
             header.frame_id = "laser_" + std::to_string(n);
-            PointICloud surf_local_map_trans;
+            PointICloud surf_local_map_trans, corner_local_map_trans;
+
             int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE - 1; // running after slideWindow()
             Pose pose_ext = Pose(estimator.qbl_[n], estimator.tbl_[n]);
             Pose pose_pivot(estimator.Qs_[pivot_idx], estimator.Ts_[pivot_idx]);
             Pose pose_j(estimator.Qs_[estimator.cir_buf_cnt_-1], estimator.Ts_[estimator.cir_buf_cnt_-1]);
-            Eigen::Matrix4d transform_j_pivot = (pose_j.T_ * pose_ext.T_).inverse() * pose_pivot.T_;
+            Pose pose_j_pivot = Pose((pose_j.T_ * pose_ext.T_).inverse() * pose_pivot.T_);
 
-            pcl::transformPointCloud(estimator.surf_points_local_map_filtered_[n], surf_local_map_trans, transform_j_pivot.cast<float>());
+            pcl::transformPointCloud(estimator.surf_points_local_map_filtered_[n], surf_local_map_trans, pose_j_pivot.T_.cast<float>());
             publishCloud(v_pub_surf_points_local_map[n], header, surf_local_map_trans);
 
-            pcl::transformPointCloud(estimator.surf_points_pivot_map_[n], surf_local_map_trans, transform_j_pivot.cast<float>());
-            publishCloud(v_pub_surf_points_pivot[n], header, surf_local_map_trans);
+            pcl::transformPointCloud(estimator.corner_points_local_map_filtered_[n], corner_local_map_trans, pose_j_pivot.T_.cast<float>());
+            publishCloud(v_pub_corner_points_local_map[n], header, corner_local_map_trans);
         }
 
         // publish target cloud in localmap

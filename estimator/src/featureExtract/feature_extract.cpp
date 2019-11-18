@@ -328,19 +328,14 @@ void FeatureExtract::extractCornerFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &k
     const PointICloud &cloud_map,
     const PointICloud &cloud_data,
     const Pose &pose_local,
-    std::vector<PointPlaneFeature> &features)
+    std::vector<PointPlaneFeature> &features,
+    const int N_NEIGH)
 {
-    // if (!estimator_config_.keep_features)
-    // {
-    //     features.clear();
-    // }
     features.clear();
+    std::vector<int> point_search_idx(N_NEIGH, 0);
+    std::vector<float> point_search_sq_dis(N_NEIGH, 0);
 
-    // setting variables
-    std::vector<int> point_search_idx(5, 0);
-    std::vector<float> point_search_sq_dis(5, 0);
-
-    // TODO: extract edge coefficients and correspondences from edge map
+    // extract edge coefficients and correspondences from edge map
     size_t cloud_size = cloud_data.points.size();
     features.resize(cloud_size);
     for (size_t i = 0; i < cloud_size; i++)
@@ -348,7 +343,7 @@ void FeatureExtract::extractCornerFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &k
         PointI point_ori = cloud_data.points[i];
         PointI point_sel;
         pointAssociateToMap(point_ori, point_sel, pose_local);
-        int num_neighbors = 5;
+        int num_neighbors = N_NEIGH;
         kdtree_corner_from_map->nearestKSearch(point_sel, num_neighbors, point_search_idx, point_search_sq_dis);
         if (point_search_sq_dis[4] < MIN_MATCH_SQ_DIS)
         {
@@ -388,43 +383,39 @@ void FeatureExtract::extractCornerFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &k
                 Eigen::Vector3d w2 = (X1 - X2).cross(w1); // w2
                 double a012 = a012_vec.norm();
                 double l12 = (X1 - X2).norm();
-                // TODO: ???
                 double la = w1.x();
                 double lb = w1.y();
                 double lc = w1.z();
-                double ld2 = a012 / l12;
+                double ld2 = a012 / l12; // distance
+
                 PointI point_proj = point_sel;
                 point_proj.x -= la * ld2;
                 point_proj.y -= lb * ld2;
                 point_proj.z -= lc * ld2;
-                double ld_p1 = -(w1.x() * point_proj.x + w1.y() * point_proj.y
-                    + w1.z() * point_proj.z);
-                double ld_p2 = -(w2.x() * point_proj.x + w2.y() * point_proj.y
-                    + w2.z() * point_proj.z);
+                double ld_p1 = -(w1.x() * point_proj.x + w1.y() * point_proj.y + w1.z() * point_proj.z);
+                double ld_p2 = -(w2.x() * point_proj.x + w2.y() * point_proj.y + w2.z() * point_proj.z);
                 double s = 1 - 0.9f * fabs(ld2);
                 Eigen::Vector4d coeff1(s*la, s*lb, s*lc, s*ld_p1);
                 Eigen::Vector4d coeff2(s*w2.x(), s*w2.y(), s*w2.z(), s*ld_p2);
-
                 bool is_in_laser_fov = false;
-                // PointI transform_pos;
-                // transform_pos.x = transform_tobe_mapped_.pos.x();
-                // transform_pos.y = transform_tobe_mapped_.pos.y();
-                // transform_pos.z = transform_tobe_mapped_.pos.z();
-                // double squared_side1 = CalcSquaredDiff(transform_pos, point_sel);
-                // double squared_side2 = CalcSquaredDiff(point_on_z_axis_, point_sel);
-                //
-                // double check1 = 100.0f + squared_side1 - squared_side2
-                //     - 10.0f * sqrt(3.0f) * sqrt(squared_side1);
-                //
-                // double check2 = 100.0f + squared_side1 - squared_side2
-                //     + 10.0f * sqrt(3.0f) * sqrt(squared_side1);
-                //
-                // /// within +-60 degree
-                // if (check1 < 0 && check2 > 0)
-                // {
-                //   is_in_laser_fov = true;
-                // }
-                is_in_laser_fov = true;
+                {
+                    PointI point_on_z_axis, point_on_z_axis_trans;
+                    point_on_z_axis.x = 0.0;
+                    point_on_z_axis.y = 0.0;
+                    point_on_z_axis.z = 10.0;
+                    pointAssociateToMap(point_on_z_axis, point_on_z_axis_trans, pose_local);
+                    double squared_side1 = sqrSum(pose_local.t_(0) - point_sel.x,
+                                                 pose_local.t_(1) - point_sel.y,
+                                                 pose_local.t_(2) - point_sel.z);
+                    double squared_side2 = sqrSum(point_on_z_axis_trans.x - point_sel.x,
+                                                 point_on_z_axis_trans.y - point_sel.y,
+                                                 point_on_z_axis_trans.z - point_sel.z);
+
+                    double check1 = 100.0f + squared_side1 - squared_side2 - 10.0f * sqrt(3.0f) * sqrt(squared_side1);
+                    double check2 = 100.0f + squared_side1 - squared_side2 + 10.0f * sqrt(3.0f) * sqrt(squared_side1);
+                    // within +-60 degree
+                    if (check1 < 0 && check2 > 0) is_in_laser_fov = true;
+                }
                 if (s > 0.1 && is_in_laser_fov)
                 {
                     PointPlaneFeature feature1;
@@ -452,10 +443,6 @@ void FeatureExtract::extractSurfFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &kdt
     std::vector<PointPlaneFeature> &features,
     const int N_NEIGH)
 {
-    // if (!estimator_config_.keep_features)
-    // {
-    //     features.clear();
-    // }
     features.clear();
 
     // setting variables
@@ -463,10 +450,7 @@ void FeatureExtract::extractSurfFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &kdt
     std::vector<float> point_search_sq_dis(N_NEIGH, 0);
     Eigen::MatrixXd mat_A = Eigen::MatrixXd::Zero(N_NEIGH, 3);
     Eigen::MatrixXd mat_B = Eigen::MatrixXd::Constant(N_NEIGH, 1, -1);
-    // Eigen::Matrix<double, 10, 3> mat_A = Eigen::Matrix<double, 10, 3>::Zero();
-    // Eigen::Matrix<double, 10, 1> mat_B = Eigen::Matrix<double, 10, 1>::Constant(-1);
 
-    // TODO: extract plane coefficients and correspondences from surf map
     size_t cloud_size = cloud_data.points.size();
     features.resize(cloud_size);
     size_t cloud_cnt = 0;
@@ -509,30 +493,26 @@ void FeatureExtract::extractSurfFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &kdt
                 double pd2 = norm(0) * point_sel.x + norm(1) * point_sel.y + norm(2) * point_sel.z + negative_OA_dot_norm;
                 double s = 1 - 0.9f * fabs(pd2) / sqrt(sqrSum(point_sel.x, point_sel.y, point_sel.z));
                 Eigen::Vector4d coeff(norm(0), norm(1), norm(2), negative_OA_dot_norm);
-
                 bool is_in_laser_fov = false;
-                PointI transform_pos;
-                PointI point_on_z_axis, point_on_z_axis_trans;
-                point_on_z_axis.x = 0.0;
-                point_on_z_axis.y = 0.0;
-                point_on_z_axis.z = 10.0;
-                pointAssociateToMap(point_on_z_axis, point_on_z_axis_trans, pose_local);
-                double squared_side1 = sqrSum(pose_local.t_(0) - point_sel.x,
-                                             pose_local.t_(1) - point_sel.y,
-                                             pose_local.t_(2) - point_sel.z);
-                double squared_side2 = sqrSum(point_on_z_axis_trans.x - point_sel.x,
-                                             point_on_z_axis_trans.y - point_sel.y,
-                                             point_on_z_axis_trans.z - point_sel.z);
-                double check1 = 100.0f + squared_side1 - squared_side2
-                    - 10.0f * sqrt(3.0f) * sqrt(squared_side1);
-                double check2 = 100.0f + squared_side1 - squared_side2
-                    + 10.0f * sqrt(3.0f) * sqrt(squared_side1);
-                if (check1 < 0 && check2 > 0) /// within +-60 degree
                 {
-                    is_in_laser_fov = true;
+                    PointI transform_pos;
+                    PointI point_on_z_axis, point_on_z_axis_trans;
+                    point_on_z_axis.x = 0.0;
+                    point_on_z_axis.y = 0.0;
+                    point_on_z_axis.z = 10.0;
+                    pointAssociateToMap(point_on_z_axis, point_on_z_axis_trans, pose_local);
+                    double squared_side1 = sqrSum(pose_local.t_(0) - point_sel.x,
+                                                 pose_local.t_(1) - point_sel.y,
+                                                 pose_local.t_(2) - point_sel.z);
+                    double squared_side2 = sqrSum(point_on_z_axis_trans.x - point_sel.x,
+                                                 point_on_z_axis_trans.y - point_sel.y,
+                                                 point_on_z_axis_trans.z - point_sel.z);
+                    double check1 = 100.0f + squared_side1 - squared_side2 - 10.0f * sqrt(3.0f) * sqrt(squared_side1);
+                    double check2 = 100.0f + squared_side1 - squared_side2 + 10.0f * sqrt(3.0f) * sqrt(squared_side1);
+                    // within +-60 degree
+                    if (check1 < 0 && check2 > 0) is_in_laser_fov = true;
                 }
-                // TODO: please comment it
-                // is_in_laser_fov = true;
+
                 if (s > 0.1 && is_in_laser_fov)
                 {
                     PointPlaneFeature feature;

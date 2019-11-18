@@ -145,10 +145,8 @@ class Estimator
 
     std::queue<std::pair<double, std::vector<cloudFeature> > > feature_buf_;
     pair<double, std::vector<cloudFeature> > prev_feature_, cur_feature_;
-    std::vector<std::vector<std::vector<PointPlaneFeature> > > surf_map_features_;
-
-    std::vector<std::vector<std::vector<PointPlaneFeature> > > cumu_surf_map_features_;
-    int cumu_feature_cnt_;
+    std::vector<std::vector<std::vector<PointPlaneFeature> > > surf_map_features_, corner_map_features_;
+    std::vector<std::vector<std::vector<PointPlaneFeature> > > cumu_surf_map_features_, cumu_corner_map_features_;
 
     double **para_pose_;
     double **para_ex_pose_;

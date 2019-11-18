@@ -46,7 +46,7 @@ public:
 
     void extractCornerFromMap(const pcl::KdTreeFLANN<common::PointI>::Ptr &kdtree_corner_from_map,
         const common::PointICloud &cloud_map, const common::PointICloud &cloud_data,
-        const Pose &pose_local, std::vector<PointPlaneFeature> &features);
+        const Pose &pose_local, std::vector<PointPlaneFeature> &features, const int N_NEIGH = 5);
 
     void extractSurfFromMap(const pcl::KdTreeFLANN<common::PointI>::Ptr &kdtree_surf_from_map,
         const common::PointICloud &cloud_map, const common::PointICloud &cloud_data,

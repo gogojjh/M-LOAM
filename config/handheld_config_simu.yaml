@@ -63,7 +63,7 @@ body_T_laser: !!opencv-matrix
    #        # 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000]
    #        0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220]
    data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-          0.342, 0.0, 0.0, 0.948, 0, -0.2, 0.0]
+          0.32, 0.0, 0.0, 0.94, 0, -0.2, 0.0]
 
 # <!-- laser_0 to laser_1 -->
 # <!-- 0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220 -->
@@ -105,8 +105,8 @@ min_plane_dis: 0.2
 # factor
 marginalization_factor: 1
 point_plane_factor: 1
-point_edge_factor: 0
-prior_factor: 1
+point_edge_factor: 1
+prior_factor: 0
 prior_factor_pos: 0.5
 prior_factor_rot: 1
 check_jacobian: 0
@@ -117,6 +117,6 @@ pcl_viewer: 0
 pcl_viewer_normal_ratio: 10
 
 optimal_odometry: 1
-n_cumu_feature: 30
+n_cumu_feature: 10
 
 #
