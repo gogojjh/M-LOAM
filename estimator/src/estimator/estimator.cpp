@@ -719,7 +719,7 @@ void Estimator::optimizeMap()
                                 const Eigen::Vector4d &coeff_ref = feature.coeffs_;
                                 LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref, s, 1.0);
                                 ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
-                                    std::vector<double *>{para_ex_pose_[n]}, std::vector<int>{0});
+                                    std::vector<double *>{para_ex_pose_[n]}, std::vector<int>{});
                                 marginalization_info->addResidualBlockInfo(residual_block_info);
                             }
                         }
@@ -745,7 +745,7 @@ void Estimator::optimizeMap()
                                 const Eigen::Vector4d &coeff_ref = feature.coeffs_;
                                 LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref, s, 1.0);
                                 ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
-                                    std::vector<double *>{para_ex_pose_[n]}, std::vector<int>{0});
+                                    std::vector<double *>{para_ex_pose_[n]}, std::vector<int>{});
                                 marginalization_info->addResidualBlockInfo(residual_block_info);
                             }
                         }
@@ -790,7 +790,6 @@ void Estimator::optimizeMap()
         marginalization_info->marginalize();
         printf("marginalization: %fms\n", t_margin.toc());
 
-        // TODO:
         //! indicate shared memory of parameter blocks except for the dropped state
         std::unordered_map<long, double *> addr_shift;
         for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
@@ -811,7 +810,7 @@ void Estimator::optimizeMap()
             delete last_marginalization_info_;
         }
         last_marginalization_info_ = marginalization_info;
-        last_marginalization_parameter_blocks_ = parameter_blocks;
+        last_marginalization_parameter_blocks_ = parameter_blocks; // save parameter_blocks at the last optimization
         printf("whole marginalization costs: %fms\n", t_whole_marginalization.toc());
     }
 }
