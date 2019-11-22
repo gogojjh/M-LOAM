@@ -80,13 +80,13 @@ class Estimator
     void slideWindow();
 
     void evalResidual(ceres::Problem &problem,
-        const std::vector<ceres::LocalParameterization *> &local_param_ids,
+        std::vector<PoseLocalParameterization *> &local_param_ids,
         const std::vector<double *> &para_ids,
         const std::vector<ceres::internal::ResidualBlock *> &res_ids_proj,
         const MarginalizationInfo *last_marginalization_info_,
         const std::vector<ceres::internal::ResidualBlock *> &res_ids_marg,
         const bool b_eval_degenracy = false);
-    void evalDegenracy(const std::vector<ceres::LocalParameterization *> &local_param_ids, const ceres::CRSMatrix &jaco);
+    void evalDegenracy(std::vector<PoseLocalParameterization *> &local_param_ids, const ceres::CRSMatrix &jaco);
 
     void printParameter();
     // slide window and marginalization

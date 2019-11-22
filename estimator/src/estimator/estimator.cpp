@@ -466,10 +466,10 @@ void Estimator::optimizeMap()
     // if (!OPTIMAL_ODOMETRY) printParameter();
 
     std::vector<double *> para_ids;
-    std::vector<ceres::LocalParameterization *> local_param_ids;
+    std::vector<PoseLocalParameterization *> local_param_ids;
     for (size_t i = 0; i < OPT_WINDOW_SIZE + 1; i++)
     {
-        ceres::LocalParameterization *local_parameterization = new PoseLocalParameterization();
+        PoseLocalParameterization *local_parameterization = new PoseLocalParameterization();
         problem.AddParameterBlock(para_pose_[i], SIZE_POSE, local_parameterization);
         local_param_ids.push_back(local_parameterization);
         para_ids.push_back(para_pose_[i]);
@@ -478,7 +478,7 @@ void Estimator::optimizeMap()
 
     for (int i = 0; i < NUM_OF_LASER; i++)
     {
-        ceres::LocalParameterization *local_parameterization = new PoseLocalParameterization();
+        PoseLocalParameterization *local_parameterization = new PoseLocalParameterization();
         problem.AddParameterBlock(para_ex_pose_[i], SIZE_POSE, local_parameterization);
         local_param_ids.push_back(local_parameterization);
         para_ids.push_back(para_ex_pose_[i]);
@@ -530,38 +530,33 @@ void Estimator::optimizeMap()
         if (POINT_PLANE_FACTOR)
         {
             // CHECK_JACOBIAN = 0;
-            for (int n = 0; n < NUM_OF_LASER; n++)
+            for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
             {
-                for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
+                int n = IDX_REF;
+                std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i];
+                // printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size());
+                for (auto &feature: features_frame)
                 {
-                    std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i];
-                    // printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size());
-                    for (auto &feature: features_frame)
+                    const double &s = feature.score_;
+                    const Eigen::Vector3d &p_data = feature.point_;
+                    const Eigen::Vector4d &coeff_ref = feature.coeffs_;
+                    LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s);
+                    ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
+                        para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]);
+                    res_ids_proj.push_back(res_id);
+                    if (CHECK_JACOBIAN)
                     {
-                        const double &s = feature.score_;
-                        const Eigen::Vector3d &p_data = feature.point_;
-                        const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-                        if (n == IDX_REF)
-                        {
-                            LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s);
-                            ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
-                                para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]);
-                            res_ids_proj.push_back(res_id);
-                            if (CHECK_JACOBIAN)
-                            {
-                                double **tmp_param = new double *[3];
-                                tmp_param[0] = para_pose_[0];
-                                tmp_param[1] = para_pose_[i - pivot_idx];
-                                tmp_param[2] = para_ex_pose_[n];
-                                f->check(tmp_param);
-                                CHECK_JACOBIAN = 0;
-                            }
-                        }
+                        double **tmp_param = new double *[3];
+                        tmp_param[0] = para_pose_[0];
+                        tmp_param[1] = para_pose_[i - pivot_idx];
+                        tmp_param[2] = para_ex_pose_[n];
+                        f->check(tmp_param);
+                        CHECK_JACOBIAN = 0;
                     }
                 }
-                cumu_surf_map_features_[n].push_back(surf_map_features_[n][pivot_idx]);
             }
 
+            for (int n = 0; n < NUM_OF_LASER; n++) cumu_surf_map_features_[n].push_back(surf_map_features_[n][pivot_idx]);
             if (cumu_surf_map_features_[IDX_REF].size() == N_CUMU_FEATURE)
             {
                 ROS_WARN("*************** Calibration");
@@ -1150,7 +1145,7 @@ void Estimator::double2Vector()
 }
 
 void Estimator::evalResidual(ceres::Problem &problem,
-    const std::vector<ceres::LocalParameterization *> &local_param_ids,
+    std::vector<PoseLocalParameterization *> &local_param_ids,
     const std::vector<double *> &para_ids,
     const std::vector<ceres::internal::ResidualBlock *> &res_ids_proj,
 	const MarginalizationInfo *last_marginalization_info_,
@@ -1181,60 +1176,124 @@ void Estimator::evalResidual(ceres::Problem &problem,
 }
 
 // A^TA is not only symmetric and invertiable: https://math.stackexchange.com/questions/2352684/when-is-a-symmetric-matrix-invertible
-void Estimator::evalDegenracy(const std::vector<ceres::LocalParameterization *> &local_param_ids, const ceres::CRSMatrix &jaco)
+void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_param_ids, const ceres::CRSMatrix &jaco)
 {
     printf("##### jacob: %d constraints, %d parameters (%d pose_param, %d ext_param)\n", jaco.num_rows, jaco.num_cols, 6*(OPT_WINDOW_SIZE + 1), 6*NUM_OF_LASER); // 58, feature_size(2700) x 50
     TicToc t_eval_degenracy;
-    Eigen::MatrixXd mat_A_raw;
-    CRSMatrix2EigenMatrix(jaco, mat_A_raw);
-    // -----------------
-    {
-        Eigen::MatrixXd mat_A = mat_A_raw.block(0, 6*(OPT_WINDOW_SIZE + 1), mat_A_raw.rows(), 6*NUM_OF_LASER);
-        Eigen::MatrixXd mat_At = mat_A.transpose(); // A^T
-        Eigen::MatrixXd mat_AtA = mat_At * mat_A; // A^TA
-        Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> esolver(mat_AtA);
-        Eigen::MatrixXd mat_E = esolver.eigenvalues().real(); // 12*1
-        Eigen::MatrixXd mat_V = esolver.eigenvectors().real();
-        std::cout << "##### Calib degeneracy factor: " << mat_E(6, 0) << ", vector: " << mat_V.row(6) << std::endl;
-    }
+    Eigen::MatrixXd mat_J_raw;
+    CRSMatrix2EigenMatrix(jaco, mat_J_raw);
+    // // -----------------
+    // {
+    //     Eigen::MatrixXd mat_J = mat_J_raw.block(0, 6*(OPT_WINDOW_SIZE + 1), mat_J_raw.rows(), 6*NUM_OF_LASER);
+    //     Eigen::MatrixXd mat_Jt = mat_J.transpose(); // A^T
+    //     Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J; // A^TA
+    //     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> esolver(mat_JtJ);
+    //     Eigen::MatrixXd mat_E = esolver.eigenvalues().real(); // 12*1
+    //     Eigen::MatrixXd mat_V = esolver.eigenvectors().real(); // 12 * 12
+    //     std::cout << "##### Calib degeneracy factor: " << mat_E(6, 0) << ", vector: " << mat_V.row(6) << std::endl;
+    // }
+    //
+    // // -----------------
+    // {
+    //     Eigen::MatrixXd mat_J = mat_J_raw.block(0, 0, mat_J_raw.rows(), 6*(OPT_WINDOW_SIZE + 1));
+    //     Eigen::MatrixXd mat_Jt = mat_J.transpose(); // A^T
+    //     Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J; // A^TA
+    //     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> esolver(mat_JtJ);
+    //     Eigen::MatrixXd mat_E = esolver.eigenvalues().real(); // 36*1
+    //     Eigen::MatrixXd mat_V = esolver.eigenvectors().real();
+    //     std::cout << "##### Odom degeneracy factor: " << mat_E(6, 0) << std::endl;
+    // }
 
     // -----------------
     {
-        Eigen::MatrixXd mat_A = mat_A_raw.block(0, 0, mat_A_raw.rows(), 6*(OPT_WINDOW_SIZE + 1));
-        Eigen::MatrixXd mat_At = mat_A.transpose(); // A^T
-        Eigen::MatrixXd mat_AtA = mat_At * mat_A; // A^TA
-        Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> esolver(mat_AtA);
-        Eigen::MatrixXd mat_E = esolver.eigenvalues().real(); // 36*1
-        Eigen::MatrixXd mat_V = esolver.eigenvectors().real();
-        std::cout << "##### Odom degeneracy factor: " << mat_E(6, 0) << std::endl;
-    }
+        Eigen::MatrixXd &mat_J = mat_J_raw;
+        Eigen::MatrixXd mat_Jt = mat_J.transpose(); // A^T
+        Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J; // A^TA 48*48
 
-    // -----------------
-    {
-        Eigen::MatrixXd &mat_A = mat_A_raw;
-        Eigen::MatrixXd mat_At = mat_A.transpose(); // A^T
-        Eigen::MatrixXd mat_AtA = mat_At * mat_A; // A^TA
-        Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> esolver(mat_AtA);
-        Eigen::MatrixXd mat_E = esolver.eigenvalues().real(); // 48*1
-        Eigen::MatrixXd mat_V = esolver.eigenvectors().real();
-        Eigen::MatrixXd mat_V2 = mat_V;
-        is_degenerate_ = false;
-        // float eign_thre[6] = {10, 10, 10, 10, 10, 10};
-        double eigen_thre = 100;
-        for (int i = 0; i < mat_E.rows(); i++)
+        // TODO: to verfy the structure of A^T*A
+        // printf("##### verfy the structure of J^T*J\n");
+        // for (size_t i = 0; i < mat_JtJ.rows(); i++)
+        // {
+        //     for (size_t j = 0; j < mat_JtJ.cols(); j++)
+        //     {
+        //         if (mat_JtJ(i, j) == 0) std::cout << "0 ";
+        //                             else std::cout << "1 ";
+        //     }
+        //     std::cout << std::endl;
+        // }
+
+        for (size_t i = 0; i < local_param_ids.size(); i++)
         {
-            if (mat_E(i, 0) < eigen_thre)
+            Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(6*i, 6*i, 6, 6);
+            local_param_ids[i]->setParameter();
+            Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6> > esolver(mat_H);
+            Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real(); // 6*1
+            Eigen::Matrix<double, 6, 6> mat_V_f = esolver.eigenvectors().real(); // 6*6, column is the corresponding eigenvector
+
+            // std::cout << "mat_H: " << std::endl << mat_H << std::endl;
+            // std::cout << "mat_E: " << mat_E << std::endl;
+            // std::cout << "mat_V: " << std::endl << mat_V << std::endl;
+            // std::cout << "left: " << std::endl << (mat_H * mat_V.col(1)).transpose() << std::endl;
+            // std::cout << "right: " << std::endl << (mat_E(0, 1) * mat_V.col(1)).transpose() << std::endl;
+            std::cout << i << ": D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0) << std::endl;
+
+            Eigen::Matrix<double, 6, 6> mat_V_p = mat_V_f;
+            local_param_ids[i]->is_degenerate_ = false;
+            // float eigen_thre[6] = {10, 10, 10, 10, 10, 10};
+            double eigen_thre = 100;
+            for (int i = 0; i < mat_E.rows(); i++)
             {
-                mat_V2.row(i) = Eigen::MatrixXd::Zero(1, mat_V2.cols());
-                // cout << mat_E << endl;
-                is_degenerate_ = true;
-            } else
-            {
-                break;
+                if (mat_E(0, i) < eigen_thre)
+                {
+                    mat_V_p.col(i) = Eigen::Matrix<double, 6, 1>::Zero();
+                    local_param_ids[i]->is_degenerate_ = true;
+                } else
+                {
+                    break;
+                }
             }
+            Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
+            assert(mat_P.rows() == 6);
+            if (local_param_ids[i]->is_degenerate_) local_param_ids[i]->V_p_ = mat_P;
+            // std::cout << mat_P << std::endl;
         }
-        Eigen::MatrixXd mat_P = mat_V2 * mat_V.inverse();
-        printf("##### mat_P size: %d, %d\n", mat_P.rows(), mat_P.cols()); // 48*48
+    }
+
+    {
+        // Eigen::MatrixXd mat_A = Eigen::MatrixXd::Zero(mat_A_raw.rows(), 6*OPT_WINDOW_SIZE + 6*(NUM_OF_LASER - 1));
+        // mat_A.block(0, 0, mat_A_raw.rows(), 6*OPT_WINDOW_SIZE) = mat_A_raw.block(0, 6, mat_A_raw.rows(), 6*OPT_WINDOW_SIZE);
+        // mat_A.block(0, 6*OPT_WINDOW_SIZE, mat_A_raw.rows(), 6*(NUM_OF_LASER - 1)) = mat_A_raw.block(0, 6*(OPT_WINDOW_SIZE + 1) + 6, mat_A_raw.rows(), 6*(NUM_OF_LASER - 1)); // M*36
+        // Eigen::MatrixXd &mat_A = mat_A_raw;
+
+
+        // Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> esolver(mat_AtA);
+        // Eigen::MatrixXd mat_E = esolver.eigenvalues().real(); // 48*1
+        // Eigen::MatrixXd mat_V = esolver.eigenvectors().real();
+        // Eigen::MatrixXd mat_V_update = mat_V;
+        // is_degenerate_ = false;
+        // // float eign_thre[6] = {10, 10, 10, 10, 10, 10};
+        // double eigen_thre = 100;
+        // for (int i = 0; i < mat_E.rows(); i++)
+        // {
+        //     if (mat_E(i, 0) < eigen_thre)
+        //     {
+        //         mat_V_update.row(i) = Eigen::MatrixXd::Zero(1, mat_V_update.cols());
+        //         is_degenerate_ = true;
+        //     } else
+        //     {
+        //         break;
+        //     }
+        // }
+        // Eigen::MatrixXd mat_P = mat_V_update * mat_V.inverse();
+        // printf("##### mat_P size: %d, %d\n", mat_P.rows(), mat_P.cols()); // 48*48
+        // assert(local_param_ids.size() * 6 == mat_P.rows());
+        // if (is_degenerate_)
+        // {
+        //     for (size_t i = 0; i < local_param_ids.size(); i++)
+        //     {
+        //         local_param_ids[i]->V_update_ = mat_P.block(0, i*6, mat_P.rows());
+        //     }
+        // }
     }
     // if (is_degenerate_)
     // {

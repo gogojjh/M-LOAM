@@ -19,4 +19,9 @@ class PoseLocalParameterization : public ceres::LocalParameterization
     virtual bool ComputeJacobian(const double *x, double *jacobian) const;
     virtual int GlobalSize() const { return 7; };
     virtual int LocalSize() const { return 6; };
+public:
+    void setParameter();
+
+    bool is_degenerate_;
+    Eigen::Matrix<double, 6, 6> V_p_;
 };
