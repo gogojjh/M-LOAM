@@ -36,7 +36,7 @@ public:
 		double sqrt_info = sqrt_info_static_;
 		residuals[0] = sqrt_info * r;
 
-		// TODO: jacobians derivation
+		// jacobians: 3x7
         if (jacobians)
         {
             Eigen::Matrix3d Rp = Q_pivot.toRotationMatrix();

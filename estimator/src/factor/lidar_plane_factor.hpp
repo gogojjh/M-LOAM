@@ -6,6 +6,7 @@
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+// calculate distance from point to plane (using three points)
 struct LidarPlaneFactor
 {
 	LidarPlaneFactor(Eigen::Vector3d curr_point_, Eigen::Vector3d last_point_j_,

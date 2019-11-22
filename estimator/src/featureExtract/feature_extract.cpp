@@ -9,6 +9,8 @@
  * Author: Qin Tong (qintonguav@gmail.com)
  *******************************************************/
 
+// tutorial about LOAM: https://zhuanlan.zhihu.com/p/57351961
+
 #include "feature_extract.h"
 
 using namespace common;
@@ -47,8 +49,7 @@ void FeatureExtract::cloudRearrange(const PointCloud &laser_cloud_in)
     cloud_size_ = laser_cloud_in.points.size();
     float start_ori = -atan2(laser_cloud_in.points[0].y, laser_cloud_in.points[0].x);
     float end_ori = -atan2(laser_cloud_in.points[cloud_size_ - 1].y,
-                            laser_cloud_in.points[cloud_size_ - 1].x) +
-                            2 * M_PI;
+                            laser_cloud_in.points[cloud_size_ - 1].x) + 2 * M_PI;
     if (end_ori - start_ori > 3 * M_PI)
     {
         end_ori -= 2 * M_PI;

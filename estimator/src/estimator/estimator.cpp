@@ -12,6 +12,23 @@
 
 using namespace common;
 
+void CRSMatrix2EigenMatrix(const ceres::CRSMatrix &crs_matrix, Eigen::MatrixXd &eigen_matrix)
+{
+    eigen_matrix = Eigen::MatrixXd::Zero(crs_matrix.num_rows, crs_matrix.num_cols);
+    for (int row = 0; row < crs_matrix.num_rows; row++)
+    {
+        int start = crs_matrix.rows[row];
+        int end = crs_matrix.rows[row + 1] - 1;
+        for (int i = start; i <= end; i++)
+        {
+            int col = crs_matrix.cols[i];
+            double value = crs_matrix.values[i];
+            eigen_matrix(row, col) = value;
+        }
+    }
+}
+
+
 Estimator::Estimator()
 {
     ROS_INFO("init begins");
@@ -77,6 +94,8 @@ void Estimator::clearState()
 
     cumu_surf_map_features_.clear();
     cumu_corner_map_features_.clear();
+
+    is_degenerate_ = false;
 
     pose_local_.clear();
 
@@ -447,10 +466,12 @@ void Estimator::optimizeMap()
     // if (!OPTIMAL_ODOMETRY) printParameter();
 
     std::vector<double *> para_ids;
+    std::vector<ceres::LocalParameterization *> local_param_ids;
     for (size_t i = 0; i < OPT_WINDOW_SIZE + 1; i++)
     {
         ceres::LocalParameterization *local_parameterization = new PoseLocalParameterization();
         problem.AddParameterBlock(para_pose_[i], SIZE_POSE, local_parameterization);
+        local_param_ids.push_back(local_parameterization);
         para_ids.push_back(para_pose_[i]);
     }
     problem.SetParameterBlockConstant(para_pose_[0]);
@@ -459,24 +480,25 @@ void Estimator::optimizeMap()
     {
         ceres::LocalParameterization *local_parameterization = new PoseLocalParameterization();
         problem.AddParameterBlock(para_ex_pose_[i], SIZE_POSE, local_parameterization);
+        local_param_ids.push_back(local_parameterization);
         para_ids.push_back(para_ex_pose_[i]);
-        if (ESTIMATE_EXTRINSIC != 0)
+        if (!ESTIMATE_EXTRINSIC)
         {
-            // ROS_INFO("extrinsic param are float");
+            problem.SetParameterBlockConstant(para_ex_pose_[i]);
         }
     }
     problem.SetParameterBlockConstant(para_ex_pose_[IDX_REF]);
 
-    for (int i = 0; i < NUM_OF_LASER; i++)
-    {
-        problem.AddParameterBlock(&para_td_[i], 1);
-        para_ids.push_back(&para_td_[i]);
-        if (ESTIMATE_TD != 0)
-        {
-            problem.SetParameterBlockConstant(&para_td_[i]);
-        }
-    }
-    problem.SetParameterBlockConstant(&para_td_[IDX_REF]);
+    // for (int i = 0; i < NUM_OF_LASER; i++)
+    // {
+    //     problem.AddParameterBlock(&para_td_[i], 1);
+    //     para_ids.push_back(&para_td_[i]);
+    //     if (!ESTIMATE_TD)
+    //     {
+    //         problem.SetParameterBlockConstant(&para_td_[i]);
+    //     }
+    // }
+    // problem.SetParameterBlockConstant(&para_td_[IDX_REF]);
 
     // ****************************************************
     // ceres: add marginalization error of previous parameter blocks
@@ -491,7 +513,6 @@ void Estimator::optimizeMap()
     // ****************************************************
     // ceres: add residual block within the sliding window
     std::vector<ceres::internal::ResidualBlock *> res_ids_proj;
-
     if (PRIOR_FACTOR)
     {
         for (int n = 0; n < NUM_OF_LASER; n++)
@@ -524,7 +545,7 @@ void Estimator::optimizeMap()
                         {
                             LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s);
                             ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
-                                para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[0]);
+                                para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]);
                             res_ids_proj.push_back(res_id);
                             if (CHECK_JACOBIAN)
                             {
@@ -630,7 +651,7 @@ void Estimator::optimizeMap()
 
     // *******************************
     printf("*************** Before optimization\n");
-    if (EVALUATE_RESIDUAL) evalResidual(problem, para_ids, res_ids_proj, last_marginalization_info_, res_ids_marg);
+    if (EVALUATE_RESIDUAL) evalResidual(problem, local_param_ids, para_ids, res_ids_proj, last_marginalization_info_, res_ids_marg, true);
 
     printf("prepare ceres %fms\n", t_prep_solver.toc()); // cost time
     if (!OPTIMAL_ODOMETRY) return;
@@ -641,7 +662,7 @@ void Estimator::optimizeMap()
     printf("Solver costs: %fms\n", t_solver.toc());
 
     printf("*************** After optimization\n");
-    if (EVALUATE_RESIDUAL) evalResidual(problem, para_ids, res_ids_proj, last_marginalization_info_, res_ids_marg);
+    if (EVALUATE_RESIDUAL) evalResidual(problem, local_param_ids, para_ids, res_ids_proj, last_marginalization_info_, res_ids_marg);
 
     double2Vector();
     printParameter();
@@ -800,10 +821,10 @@ void Estimator::optimizeMap()
         {
             addr_shift[reinterpret_cast<long>(para_ex_pose_[n])] = para_ex_pose_[n];
         }
-        for (int n = 0; n < NUM_OF_LASER; n++)
-        {
-            addr_shift[reinterpret_cast<long>(&para_td_[n])] = &para_td_[n];
-        }
+        // for (int n = 0; n < NUM_OF_LASER; n++)
+        // {
+        //     addr_shift[reinterpret_cast<long>(&para_td_[n])] = &para_td_[n];
+        // }
         vector<double *> parameter_blocks = marginalization_info->getParameterBlocks(addr_shift);
         if (last_marginalization_info_)
         {
@@ -1103,10 +1124,10 @@ void Estimator::vector2Double()
         para_ex_pose_[i][5] = qbl_[i].z();
         para_ex_pose_[i][6] = qbl_[i].w();
     }
-    for (int i = 0; i < NUM_OF_LASER; i++)
-    {
-        para_td_[i] = tdbl_[i];
-    }
+    // for (int i = 0; i < NUM_OF_LASER; i++)
+    // {
+    //     para_td_[i] = tdbl_[i];
+    // }
 }
 
 void Estimator::double2Vector()
@@ -1122,26 +1143,30 @@ void Estimator::double2Vector()
         tbl_[i] = Eigen::Vector3d(para_ex_pose_[i][0], para_ex_pose_[i][1], para_ex_pose_[i][2]);
         qbl_[i] = Eigen::Quaterniond(para_ex_pose_[i][6], para_ex_pose_[i][3], para_ex_pose_[i][4], para_ex_pose_[i][5]);
     }
-    for (int i = 0; i < NUM_OF_LASER; i++)
-    {
-        tdbl_[i] = para_td_[i];
-    }
+    // for (int i = 0; i < NUM_OF_LASER; i++)
+    // {
+    //     tdbl_[i] = para_td_[i];
+    // }
 }
 
 void Estimator::evalResidual(ceres::Problem &problem,
+    const std::vector<ceres::LocalParameterization *> &local_param_ids,
     const std::vector<double *> &para_ids,
     const std::vector<ceres::internal::ResidualBlock *> &res_ids_proj,
 	const MarginalizationInfo *last_marginalization_info_,
-    const std::vector<ceres::internal::ResidualBlock *> &res_ids_marg)
+    const std::vector<ceres::internal::ResidualBlock *> &res_ids_marg,
+    const bool b_eval_degenracy)
 {
-	double cost = 0.0;
+	double cost;
+    ceres::CRSMatrix jaco;
     ceres::Problem::EvaluateOptions e_option;
-	if (POINT_PLANE_FACTOR)
+	if ((PRIOR_FACTOR) || (POINT_PLANE_FACTOR) || (POINT_EDGE_FACTOR))
 	{
 		e_option.parameter_blocks = para_ids;
 		e_option.residual_blocks = res_ids_proj;
-		problem.Evaluate(e_option, &cost, NULL, NULL, NULL);
-		printf("residual proj: %f, ", cost);
+		problem.Evaluate(e_option, &cost, NULL, NULL, &jaco);
+        printf("cost proj: %f\n", cost);
+        if (b_eval_degenracy) evalDegenracy(local_param_ids, jaco);
 	}
 	if (MARGINALIZATION_FACTOR)
 	{
@@ -1149,10 +1174,75 @@ void Estimator::evalResidual(ceres::Problem &problem,
 		{
 			e_option.parameter_blocks = para_ids;
 			e_option.residual_blocks = res_ids_marg;
-			problem.Evaluate(e_option, &cost, NULL, NULL, NULL);
-			printf("residual marg: %f \nn", cost);
+			problem.Evaluate(e_option, &cost, NULL, NULL, &jaco);
+            printf("cost marg: %f\n", cost);
 		}
 	}
+}
+
+// A^TA is not only symmetric and invertiable: https://math.stackexchange.com/questions/2352684/when-is-a-symmetric-matrix-invertible
+void Estimator::evalDegenracy(const std::vector<ceres::LocalParameterization *> &local_param_ids, const ceres::CRSMatrix &jaco)
+{
+    printf("##### jacob: %d constraints, %d parameters (%d pose_param, %d ext_param)\n", jaco.num_rows, jaco.num_cols, 6*(OPT_WINDOW_SIZE + 1), 6*NUM_OF_LASER); // 58, feature_size(2700) x 50
+    TicToc t_eval_degenracy;
+    Eigen::MatrixXd mat_A_raw;
+    CRSMatrix2EigenMatrix(jaco, mat_A_raw);
+    // -----------------
+    {
+        Eigen::MatrixXd mat_A = mat_A_raw.block(0, 6*(OPT_WINDOW_SIZE + 1), mat_A_raw.rows(), 6*NUM_OF_LASER);
+        Eigen::MatrixXd mat_At = mat_A.transpose(); // A^T
+        Eigen::MatrixXd mat_AtA = mat_At * mat_A; // A^TA
+        Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> esolver(mat_AtA);
+        Eigen::MatrixXd mat_E = esolver.eigenvalues().real(); // 12*1
+        Eigen::MatrixXd mat_V = esolver.eigenvectors().real();
+        std::cout << "##### Calib degeneracy factor: " << mat_E(6, 0) << ", vector: " << mat_V.row(6) << std::endl;
+    }
+
+    // -----------------
+    {
+        Eigen::MatrixXd mat_A = mat_A_raw.block(0, 0, mat_A_raw.rows(), 6*(OPT_WINDOW_SIZE + 1));
+        Eigen::MatrixXd mat_At = mat_A.transpose(); // A^T
+        Eigen::MatrixXd mat_AtA = mat_At * mat_A; // A^TA
+        Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> esolver(mat_AtA);
+        Eigen::MatrixXd mat_E = esolver.eigenvalues().real(); // 36*1
+        Eigen::MatrixXd mat_V = esolver.eigenvectors().real();
+        std::cout << "##### Odom degeneracy factor: " << mat_E(6, 0) << std::endl;
+    }
+
+    // -----------------
+    {
+        Eigen::MatrixXd &mat_A = mat_A_raw;
+        Eigen::MatrixXd mat_At = mat_A.transpose(); // A^T
+        Eigen::MatrixXd mat_AtA = mat_At * mat_A; // A^TA
+        Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> esolver(mat_AtA);
+        Eigen::MatrixXd mat_E = esolver.eigenvalues().real(); // 48*1
+        Eigen::MatrixXd mat_V = esolver.eigenvectors().real();
+        Eigen::MatrixXd mat_V2 = mat_V;
+        is_degenerate_ = false;
+        // float eign_thre[6] = {10, 10, 10, 10, 10, 10};
+        double eigen_thre = 100;
+        for (int i = 0; i < mat_E.rows(); i++)
+        {
+            if (mat_E(i, 0) < eigen_thre)
+            {
+                mat_V2.row(i) = Eigen::MatrixXd::Zero(1, mat_V2.cols());
+                // cout << mat_E << endl;
+                is_degenerate_ = true;
+            } else
+            {
+                break;
+            }
+        }
+        Eigen::MatrixXd mat_P = mat_V2 * mat_V.inverse();
+        printf("##### mat_P size: %d, %d\n", mat_P.rows(), mat_P.cols()); // 48*48
+    }
+    // if (is_degenerate_)
+    // {
+    //   Eigen::Matrix<float, 6, 1> mat_X2;
+    //   mat_X2 = mat_X;
+    //   mat_X = mat_P * mat_X2;
+    // }
+    printf("evaluate degeneracy %fms\n", t_eval_degenracy.toc());
 }
 
 void Estimator::visualizePCL()

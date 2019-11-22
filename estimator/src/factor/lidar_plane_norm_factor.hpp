@@ -8,6 +8,7 @@
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+// calculate distrance from point to plane (using normal)
 struct LidarPlaneNormFactor
 {
 	LidarPlaneNormFactor(Eigen::Vector3d curr_point_, Eigen::Vector3d plane_unit_norm_,

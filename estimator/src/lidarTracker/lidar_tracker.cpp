@@ -316,6 +316,36 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         ceres::Solver::Summary summary;
         ceres::Solve(options, &problem, &summary);
         // printf("solver time %f ms \n", t_solver.toc());
+
+        // ceres::Problem::EvaluateOptions e_option;
+        // double cost;
+        // ceres::CRSMatrix jaco;
+        // problem.Evaluate(e_option, &cost, NULL, NULL, &jaco);
+        // ceres::CRSMatrix &crs_matrix = jaco;
+        // Eigen::MatrixXd eigen_matrix = Eigen::MatrixXd::Zero(jaco.num_rows, crs_matrix.num_cols);
+        // for (int row = 0; row < crs_matrix.num_rows; row++)
+        // {
+        //     int start = crs_matrix.rows[row];
+        //     int end = crs_matrix.rows[row + 1] - 1;
+        //     for (int i = start; i <= end; i++)
+        //     {
+        //         int col = crs_matrix.cols[i];
+        //         double value = crs_matrix.values[i];
+        //         eigen_matrix(row, col) = value;
+        //     }
+        // }
+        // Eigen::MatrixXd &mat_A = eigen_matrix;
+        // Eigen::MatrixXd mat_At = mat_A.transpose(); // A^T
+        // Eigen::MatrixXd mat_AtA = mat_At * mat_A; // A^TA
+        //
+        // Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> esolver(mat_AtA);
+        // Eigen::MatrixXd mat_E = esolver.eigenvalues().real();
+        // Eigen::MatrixXd mat_V = esolver.eigenvectors().real();
+        //
+        // printf("######### mat_E size: %d, %d\n", mat_E.rows(), mat_E.cols()); // 50x50
+        // // printf("######### degeneracy factor %f\n", mat_E(0, 0));
+        // for (size_t i = 0; i < mat_E.rows(); i++) printf("%f, ", mat_E(i, 0));
+        // printf("\n");
     }
     // printf("optimization twice time %f \n", t_opt.toc());
 

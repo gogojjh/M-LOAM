@@ -10,7 +10,7 @@
 #include "pose_local_parameterization.h"
 
 // state update
-// description: LIC-Fusion: LiDAR-Inertial-Camera Odometry, IROS 2019
+// about the update rule: LIC-Fusion: LiDAR-Inertial-Camera Odometry, IROS 2019
 bool PoseLocalParameterization::Plus(const double *x, const double *delta, double *x_plus_delta) const
 {
     Eigen::Map<const Eigen::Vector3d> _p(x);
