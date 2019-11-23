@@ -36,7 +36,6 @@ acc_w: 0.001         # accelerometer bias random work noise standard deviation. 
 gyr_w: 1.0e-4       # gyroscope bias random work noise standard deviation.     #4.0e-5
 g_norm: 9.81007     # gravity magnitude
 
-
 ###############################################
 # laser parameters
 num_of_laser: 2
