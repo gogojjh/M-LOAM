@@ -405,10 +405,11 @@ void Estimator::process()
             optimizeMap();
             slideWindow();
 
+            evalCalib();
             // TODO
             // if checkNonLinearCalib()
             //     ESTIMATE_EXTRINSIC = 2;
-            // ini_fixed_local_map_ = false;
+            // ini_fixed_local_map_ = false; // reconstruct new optimized map
             // last_marginalization_info_ = nullptr; // meaning that the prior errors in online calibration are discarded
 
             ROS_DEBUG("solver costs: %fms", t_solve.toc());
@@ -1238,6 +1239,11 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
         }
     }
     printf("evaluate degeneracy %fms\n", t_eval_degenracy.toc());
+}
+
+void Estimator::evalCalib()
+{
+    // compute \sum ||AX-XB||_F
 }
 
 void Estimator::visualizePCL()

@@ -196,7 +196,7 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
     Eigen::Vector3d rot_cov = svd.singularValues().tail<3>(); // singular value
     v_rot_cov_[idx_data].push_back(rot_cov(1));
     printf("pose_cnt:%d, rot_cov:%f **********\n", pose_cnt_, rot_cov(1));
-    if (pose_cnt_ >= WINDOW_SIZE && rot_cov(1) > 0.25)
+    if (pose_cnt_ >= WINDOW_SIZE && rot_cov(1) > 0.25) // converage
     {
         calib_result = calib_ext_[idx_data];
         // printf("calib ext rot: %fms\n", t_calib_rot.toc());
@@ -253,7 +253,7 @@ bool InitialExtrinsics::calibExTranslationNonPlanar(const size_t &idx_ref, const
     Eigen::Vector3d pos_cov = svd.singularValues().head<3>();
     v_pos_cov_[idx_data].push_back(pos_cov(1));
     printf("pose_cnt:%d, pos_cov:%f **********\n", pose_cnt_, pos_cov(1));
-    if (pose_cnt_ >= WINDOW_SIZE && pos_cov(1) > 0.7)
+    if (pose_cnt_ >= WINDOW_SIZE && pos_cov(1) > 0.7) // converage
         return true;
     else
         return false;
