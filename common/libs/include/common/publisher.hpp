@@ -180,7 +180,7 @@ namespace common {
         }
         else
         {
-            ROS_INFO("Publishing %u objects markers.", objects_array.size());
+            ROS_INFO("Publishing %lu objects markers.", objects_array.size());
         }
 
         visualization_msgs::MarkerArray object_markers;
@@ -342,7 +342,7 @@ namespace common {
             return;
         }
         else {
-            ROS_INFO("Publishing %d clusters markers.", clusters_array.size());
+            ROS_INFO("Publishing %lu clusters markers.", clusters_array.size());
         }
 
         visualization_msgs::MarkerArray cluster_markers;

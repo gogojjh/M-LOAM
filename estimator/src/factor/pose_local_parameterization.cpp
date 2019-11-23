@@ -12,7 +12,7 @@
 void PoseLocalParameterization::setParameter()
 {
     is_degenerate_ = false;
-    V_p_ = Eigen::Matrix<double, 6, 6>::Identity();
+    V_update_ = Eigen::Matrix<double, 6, 6>::Identity();
 }
 
 // state update
@@ -23,15 +23,16 @@ bool PoseLocalParameterization::Plus(const double *x, const double *delta, doubl
     Eigen::Map<const Eigen::Vector3d> _p(x);
     Eigen::Map<const Eigen::Quaterniond> _q(x + 3);
 
-    Eigen::Map<const Eigen::Vector3d> dp(delta);
-    Eigen::Quaterniond dq = Utility::deltaQ(Eigen::Map<const Eigen::Vector3d>(delta + 3)); // using theta to approximate q
+    // TODO: apply solution remapping
+    Eigen::Map<const Eigen::Matrix<double, 6, 1> > dx(delta);
+    Eigen::Matrix<double, 6, 1> dx_update = V_update_ * dx;
+    Eigen::Vector3d dp(dx_update.head(3));
+    Eigen::Quaterniond dq = Utility::deltaQ(dx_update.tail(3));
+    // Eigen::Map<const Eigen::Vector3d> dp(delta);
+    // Eigen::Quaterniond dq = Utility::deltaQ(Eigen::Map<const Eigen::Vector3d>(delta + 3)); // using theta to approximate q
 
     Eigen::Map<Eigen::Vector3d> p(x_plus_delta);
     Eigen::Map<Eigen::Quaterniond> q(x_plus_delta + 3);
-
-    // if (is_degenerate_)
-    //     V_p_ * dp   V_p_ * dq
-
     p = _p + dp;
     q = (_q * dq).normalized(); // q = _q * [0.5*delta, 1]
 
