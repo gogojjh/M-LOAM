@@ -555,7 +555,6 @@ void Estimator::optimizeMap()
                     }
                 }
             }
-
             for (int n = 0; n < NUM_OF_LASER; n++) cumu_surf_map_features_[n].push_back(surf_map_features_[n][pivot_idx]);
             if (cumu_surf_map_features_[IDX_REF].size() == N_CUMU_FEATURE)
             {
@@ -1264,7 +1263,7 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
             if (local_param_ids[i]->is_degenerate_)
             {
                 local_param_ids[i]->V_update_ = mat_P;
-                std::cout << "degenerate" << std::endl;
+                std::cout << "param " << i << "is degenerate !" << std::endl;
             }
             // std::cout << mat_P << std::endl;
         }
