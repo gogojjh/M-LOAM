@@ -989,7 +989,7 @@ void Estimator::buildLocalMap()
             // corner_points_local_map_[n] += corner_points_trans;
         }
         pcl::VoxelGrid<PointI> down_size_filter;
-        down_size_filter.setLeafSize(0.5, 0.5, 0.5);
+        down_size_filter.setLeafSize(0.4, 0.4, 0.4);
         down_size_filter.setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_[n]));
         down_size_filter.filter(surf_points_local_map_filtered_[n]);
         // down_size_filter.setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_[n]));
@@ -1011,10 +1011,10 @@ void Estimator::buildLocalMap()
         int n_neigh = 5;
         for (int i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
         {
-            // f_extract_.extractSurfFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
-            //     corner_points_stack_[n][i], pose_local_[n][i], corner_map_features_[n][i], n_neigh);
-            f_extract_.extractCornerFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
+            f_extract_.extractSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
                 surf_points_stack_[n][i], pose_local_[n][i], surf_map_features_[n][i], n_neigh);
+            // f_extract_.extractCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
+            //     corner_points_stack_[n][i], pose_local_[n][i], corner_map_features_[n][i], n_neigh);
         }
     }
     printf("build map: %fms\n", t_build_map.toc());

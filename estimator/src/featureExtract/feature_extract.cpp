@@ -522,6 +522,7 @@ void FeatureExtract::extractSurfFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &kdt
                     feature.coeffs_ = coeff;
                     features[cloud_cnt] = feature;
                     cloud_cnt++;
+                    // TODO: remove some additional correspondences
                 }
             }
         }
