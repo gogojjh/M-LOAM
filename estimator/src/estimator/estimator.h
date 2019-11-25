@@ -87,6 +87,7 @@ class Estimator
         const std::vector<ceres::internal::ResidualBlock *> &res_ids_marg,
         const bool b_eval_degenracy = false);
     void evalDegenracy(std::vector<PoseLocalParameterization *> &local_param_ids, const ceres::CRSMatrix &jaco);
+    void evalCalib();
 
     void printParameter();
     // slide window and marginalization
@@ -162,7 +163,7 @@ class Estimator
     double **para_ex_pose_;
     double *para_td_;
 
-    bool is_degenerate_;
+    std::vector<double> eig_thre_calib_;
 
     // for marginalization
     MarginalizationInfo *last_marginalization_info_;

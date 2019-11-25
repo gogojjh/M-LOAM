@@ -29,6 +29,11 @@ bool test_print()
 
 int main()
 {
+    std::vector<int> v_calib;
+    v_calib = std::vector<int>(10, 23333);
+    for (size_t i = 0; i < v_calib.size(); i++) std::cout << v_calib[i] << ", ";
+    std::cout << std::endl;
+
     double a[10];
     a[0] = 1;
     a[1] = 2;

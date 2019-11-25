@@ -95,8 +95,6 @@ void Estimator::clearState()
     cumu_surf_map_features_.clear();
     cumu_corner_map_features_.clear();
 
-    is_degenerate_ = false;
-
     pose_local_.clear();
 
     last_marginalization_info_ = nullptr;
@@ -171,6 +169,8 @@ void Estimator::setParameter()
         para_ex_pose_[i] = new double[SIZE_POSE];
     }
     para_td_ = new double[NUM_OF_LASER];
+
+    eig_thre_calib_ = std::vector<double>(OPT_WINDOW_SIZE + NUM_OF_LASER + 1, EIG_INITIAL);
 
     m_process_.unlock();
 }
@@ -616,6 +616,7 @@ void Estimator::optimizeMap()
     // TODO: focus on online odometry estimation
     else if (ESTIMATE_EXTRINSIC == 0)
     {
+        return;
         for (int n = 0; n < NUM_OF_LASER; n++)
         {
             problem.SetParameterBlockConstant(para_ex_pose_[n]);
@@ -1201,7 +1202,7 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
             }
         }
 
-        double eig_thre;
+        double eig_thre; // the larger, the better (with more constraints)
         for (int i = 0; i < local_param_ids.size(); i++)
         {
             Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(6*i, 6*i, 6, 6);
@@ -1212,31 +1213,39 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
             Eigen::Matrix<double, 6, 6> mat_V_p = mat_V_f;
 
             local_param_ids[i]->is_degenerate_ = false;
-            if (i < OPT_WINDOW_SIZE + 1) eig_thre = 10;
-                                    else eig_thre = 50 * N_CUMU_FEATURE;
-
+            eig_thre = eig_thre_calib_[i];
             for (int j = 0; j < mat_E.cols(); j++)
             {
                 if (mat_E(0, j) < eig_thre)
                 {
                     mat_V_p.col(j) = Eigen::Matrix<double, 6, 1>::Zero();
-                    local_param_ids[j]->is_degenerate_ = true;
+                    local_param_ids[i]->is_degenerate_ = true;
                 } else
                 {
                     break;
                 }
             }
+            std::cout << i << ": D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose() << std::endl;
             Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
             assert(mat_P.rows() == 6);
-            // std::cout << mat_P << std::endl;
 
-            std::cout << i << ": D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose() << std::endl;
+            if (i > OPT_WINDOW_SIZE)
+            {
+                if (mat_E(0, 0) > eig_thre)
+                    eig_thre_calib_[i] = mat_E(0, 0);
+                else
+                    mat_P.setZero();
+            }
             if (local_param_ids[i]->is_degenerate_)
             {
                 local_param_ids[i]->V_update_ = mat_P;
-                std::cout << "param " << i << "is degenerate !" << std::endl;
+                std::cout << "param " << i << " is degenerate !" << std::endl;
+                // std::cout << mat_P << std::endl;
             }
         }
+        std::cout << "eigen threshold: " << eig_thre_calib_.size() << " ";
+        for (int i = 0; i < eig_thre_calib_.size(); i++) std::cout << eig_thre_calib_[i] << " ";
+        std::cout << std::endl;
     }
     printf("evaluate degeneracy %fms\n", t_eval_degenracy.toc());
 }
@@ -1244,6 +1253,11 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
 void Estimator::evalCalib()
 {
     // compute \sum ||AX-XB||_F
+    // if (solver_flag_ == NON_LINEAR)
+    // {
+    //     // check converage
+    //     // if (eig_thre_calib_[i] > threshold) &&
+    // }
 }
 
 void Estimator::visualizePCL()

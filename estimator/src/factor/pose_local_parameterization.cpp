@@ -16,15 +16,14 @@ void PoseLocalParameterization::setParameter()
 }
 
 // state update
-// about the update rule: LIC-Fusion: LiDAR-Inertial-Camera Odometry, IROS 2019
-// delta = [dp, dq]
+// description of update rule: LIC-Fusion: LiDAR-Inertial-Camera Odometry, IROS 2019
+// description of solution remapping: On Degeneracy of Optimization-based State Estimation Problems, ICRA 2016
 bool PoseLocalParameterization::Plus(const double *x, const double *delta, double *x_plus_delta) const
 {
     Eigen::Map<const Eigen::Vector3d> _p(x);
     Eigen::Map<const Eigen::Quaterniond> _q(x + 3);
+    Eigen::Map<const Eigen::Matrix<double, 6, 1> > dx(delta); // dx = [dp, dq]
 
-    // TODO: apply solution remapping
-    Eigen::Map<const Eigen::Matrix<double, 6, 1> > dx(delta);
     Eigen::Matrix<double, 6, 1> dx_update = V_update_ * dx;
     Eigen::Vector3d dp(dx_update.head(3));
     Eigen::Quaterniond dq = Utility::deltaQ(dx_update.tail(3));

@@ -118,4 +118,6 @@ pcl_viewer_normal_ratio: 10
 optimal_odometry: 1
 n_cumu_feature: 10
 
+eig_initial: 100
+
 #

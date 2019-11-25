@@ -124,6 +124,8 @@ extern int PCL_VIEWER_NORMAL_RATIO;
 extern int OPTIMAL_ODOMETRY;
 extern int N_CUMU_FEATURE;
 
+extern int EIG_INITIAL;
+
 void readParameters(std::string config_file);
 
 enum SIZE_PARAMETERIZATION
