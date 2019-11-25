@@ -137,7 +137,6 @@ void sync_process()
             m_buf.unlock();
             if ((laser_cloud0.points.size() != 0) && (laser_cloud1.points.size() != 0))
             {
-                // cout << "estimator" << endl;
                 estimator.inputCloud(time, v_laser_cloud);
             }
         }
@@ -158,12 +157,10 @@ void sync_process()
             m_buf.unlock();
             if (laser_cloud0.points.size() != 0)
             {
-                // cout << "estimator" << endl;
                 estimator.inputCloud(time, laser_cloud0);
             }
         }
-        std::chrono::milliseconds dura(2);
-        std::this_thread::sleep_for(dura);
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
 }
 
@@ -226,14 +223,12 @@ int main(int argc, char **argv)
     readParameters(config_file);
     estimator.setParameter();
 
-#ifdef EIGEN_DONT_PARALLELIZE
-    ROS_DEBUG("EIGEN_DONT_PARALLELIZE");
-#endif
-
+// #ifdef EIGEN_DONT_PARALLELIZE
+//     ROS_DEBUG("EIGEN_DONT_PARALLELIZE");
+// #endif
     ROS_WARN("waiting for cloud...");
 
     registerPub(n);
-
     ros::Subscriber sub_cloud0 = n.subscribe(CLOUD0_TOPIC, 100, cloud0_callback);
     ros::Subscriber sub_cloud1 = n.subscribe(CLOUD1_TOPIC, 100, cloud1_callback);
     ros::Subscriber sub_restart = n.subscribe("/mlod_restart", 100, restart_callback);

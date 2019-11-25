@@ -151,7 +151,7 @@ void Estimator::setParameter()
     cumu_surf_map_features_.resize(NUM_OF_LASER);
     cumu_corner_map_features_.resize(NUM_OF_LASER);
 
-    std::cout << "MULTIPLE_THREAD is " << MULTIPLE_THREAD << '\n';
+    printf("MULTIPLE_THREAD is %d\n", MULTIPLE_THREAD);
     if (MULTIPLE_THREAD && !init_thread_flag_)
     {
         init_thread_flag_ = true;
@@ -190,9 +190,6 @@ void Estimator::changeSensorType(int use_imu, int use_stereo)
 void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_laser_cloud_in)
 {
     input_cloud_cnt_++;
-
-    // TODO: to parallize it?
-    m_buf_.lock();
     std::vector<cloudFeature> feature_frame;
     TicToc feature_ext_time;
     for (int i = 0; i < v_laser_cloud_in.size(); i++)
@@ -201,39 +198,35 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
         feature_frame.push_back(f_extract_.extractCloud(t, v_laser_cloud_in[i]));
     }
     printf("featureExt time: %fms \n", feature_ext_time.toc());
+
+    m_buf_.lock();
     feature_buf_.push(make_pair(t, feature_frame));
     m_buf_.unlock();
-
-    TicToc process_time;
-    processMeasurements();
-    ROS_WARN_STREAM("input cloud: " << input_cloud_cnt_ << ", processMea time: " << process_time.toc() << "ms");
+    if (!MULTIPLE_THREAD) processMeasurements();
 }
 
 void Estimator::inputCloud(const double &t, const PointCloud &laser_cloud_in)
 {
     input_cloud_cnt_++;
-    m_buf_.lock();
     std::vector<cloudFeature> feature_frame;
     TicToc feature_ext_time;
     // printf("LASER 0: \n");
     feature_frame.push_back(f_extract_.extractCloud(t, laser_cloud_in));
     printf("featureExt time: %fms \n", feature_ext_time.toc());
+
+    m_buf_.lock();
     feature_buf_.push(make_pair(t, feature_frame));
     m_buf_.unlock();
-
-    TicToc process_time;
-    // TODO: if MULTIPLE_THREAD
-    processMeasurements();
-    ROS_WARN_STREAM("frame: " << input_cloud_cnt_ << ", processMea time: " << process_time.toc() << "ms");
+    if (!MULTIPLE_THREAD) processMeasurements();
 }
 
 void Estimator::processMeasurements()
 {
     while (1)
     {
-        printf("process measurments -----------------------------------\n");
         if (!feature_buf_.empty())
         {
+            TicToc t_process;
             cur_feature_ = feature_buf_.front();
             cur_time_ = cur_feature_.first + td_;
             assert(cur_feature_.second.size() == NUM_OF_LASER);
@@ -245,27 +238,20 @@ void Estimator::processMeasurements()
             m_process_.lock();
             process();
 
-            // -----------------
-            // print and publish current result
             printStatistics(*this, 0);
             pubPointCloud(*this, cur_time_);
             pubOdometry(*this, cur_time_);
-            // pubKeyPoses(*this, header);
-            // pubCameraPose(*this, header);
-            // pubKeyframe(*this);
             m_process_.unlock();
+
+            ROS_WARN("frame: %d, processMea time: %fms\n", input_cloud_cnt_, t_process.toc());
         }
-
-        if (!MULTIPLE_THREAD)
-            break;
-
+        if (!MULTIPLE_THREAD) break;
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
 }
 
 void Estimator::process()
 {
-    // -----------------
     if (!b_system_inited_)
     {
         b_system_inited_ = true;
@@ -398,13 +384,9 @@ void Estimator::process()
         {
             // local optimization: optimize the relative LiDAR measurments
             printf("[NON_LINEAR]\n");
-            TicToc t_solve;
-
             optimizeMap();
             slideWindow();
             if (ESTIMATE_EXTRINSIC) evalCalib();
-
-            printf("solver costs: %fms\n", t_solve.toc());
             break;
         }
     }
@@ -443,7 +425,7 @@ void Estimator::optimizeMap()
     // ceres: set options and solve the non-linear equation
     ceres::Solver::Options options;
     // options.linear_solver_type = ceres::DENSE_SCHUR;
-    options.num_threads = 2;
+    options.num_threads = 3;
     // options.trust_region_strategy_type = ceres::DOGLEG;
     options.max_num_iterations = NUM_ITERATIONS;
     //options.use_explicit_schur_complement = true;
@@ -518,6 +500,7 @@ void Estimator::optimizeMap()
     // TODO: focus on online calibration
     if (ESTIMATE_EXTRINSIC == 1)
     {
+        ROS_WARN("Online Calibration");
         buildCalibMap();
         if (POINT_PLANE_FACTOR)
         {
@@ -607,6 +590,7 @@ void Estimator::optimizeMap()
     // TODO: focus on online odometry estimation
     else if (ESTIMATE_EXTRINSIC == 0)
     {
+        ROS_WARN("Multi-LiDAR Odometry");
         for (int n = 0; n < NUM_OF_LASER; n++)
         {
             problem.SetParameterBlockConstant(para_ex_pose_[n]);
@@ -620,7 +604,7 @@ void Estimator::optimizeMap()
                 for (int i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
                 {
                     std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i];
-                    printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size());
+                    // printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size());
                     for (auto &feature: features_frame)
                     {
                         const double &s = feature.score_;
@@ -1027,7 +1011,7 @@ void Estimator::buildLocalMap()
 void Estimator::slideWindow()
 {
     TicToc t_solid_window;
-    printf("Slide Window, cir_buf_cnt_: %d\n", cir_buf_cnt_);
+    printf("sliding window with cir_buf_cnt_: %d\n", cir_buf_cnt_);
     if (ini_fixed_local_map_)
     {
         int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
@@ -1077,7 +1061,7 @@ void Estimator::slideWindow()
         corner_points_stack_[n].push(corner_points_stack_[n][cir_buf_cnt_]);
         corner_points_stack_size_[n].push(corner_points_stack_size_[n][cir_buf_cnt_]);
     }
-    printf("slide window: %fms\n", t_solid_window.toc());
+    // printf("slide window: %fms\n", t_solid_window.toc());
 }
 
 void Estimator::vector2Double()
@@ -1248,9 +1232,11 @@ void Estimator::evalCalib()
         if (is_converage)
         {
             ROS_WARN("Finish nonlinear calibration !");
-            // ESTIMATE_EXTRINSIC = 0;
-            // ini_fixed_local_map_ = false; // reconstruct new optimized map
-            // last_marginalization_info_ = nullptr; // meaning that the prior errors in online calibration are discarded
+            ESTIMATE_EXTRINSIC = 0;
+            ini_fixed_local_map_ = false; // reconstruct new optimized map
+            if (last_marginalization_info_ != nullptr) delete last_marginalization_info_;
+            last_marginalization_info_ = nullptr; // meaning that the prior errors in online calibration are discarded
+            last_marginalization_parameter_blocks_.clear();
         }
     }
 }

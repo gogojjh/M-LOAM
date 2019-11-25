@@ -77,6 +77,7 @@ class Estimator
     void vector2Double();
     void double2Vector();
 
+    // slide window and marginalization
     void slideWindow();
 
     void evalResidual(ceres::Problem &problem,
@@ -90,7 +91,6 @@ class Estimator
     void evalCalib();
 
     void printParameter();
-    // slide window and marginalization
     void printSlideWindow();
     void visualizePCL();
 
