@@ -42,12 +42,10 @@ void InitialExtrinsics::setParameter()
     calib_ext_.resize(NUM_OF_LASER);
     for (size_t i = 0; i < NUM_OF_LASER; i++) calib_ext_[i] = Pose(QBL[i], TBL[i], TDBL[i]);
 
-    cov_rot_state_.resize(NUM_OF_LASER);
-    for (size_t i = 0; i < cov_rot_state_.size(); i++) cov_rot_state_[i] = false;
+    cov_rot_state_ = std::vector<bool>(NUM_OF_LASER, false);
     full_cov_rot_state_ = false;
 
-    cov_pos_state_.resize(NUM_OF_LASER);
-    for (size_t i = 0; i < cov_pos_state_.size(); i++) cov_pos_state_[i] = false;
+    cov_pos_state_ = std::vector<bool>(NUM_OF_LASER, false);
     full_cov_pos_state_ = false;
 
     v_rot_cov_.resize(NUM_OF_LASER);
@@ -61,20 +59,14 @@ bool InitialExtrinsics::setCovRotation(const size_t &idx)
 {
     assert(idx < NUM_OF_LASER);
     cov_rot_state_[idx] = true;
-    if (std::find(cov_rot_state_.begin(), cov_rot_state_.end(), false) == cov_rot_state_.end())
-    {
-        full_cov_rot_state_ = true;
-    }
+    if (std::find(cov_rot_state_.begin(), cov_rot_state_.end(), false) == cov_rot_state_.end()) full_cov_rot_state_ = true;
 }
 
 bool InitialExtrinsics::setCovTranslation(const size_t &idx)
 {
     assert(idx < NUM_OF_LASER);
     cov_pos_state_[idx] = true;
-    if (std::find(cov_pos_state_.begin(), cov_pos_state_.end(), false) == cov_pos_state_.end())
-    {
-        full_cov_pos_state_ = true;
-    }
+    if (std::find(cov_pos_state_.begin(), cov_pos_state_.end(), false) == cov_pos_state_.end()) full_cov_pos_state_ = true;
 }
 
 void InitialExtrinsics::addPose(const Pose &pose, const size_t &idx)

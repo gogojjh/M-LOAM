@@ -404,19 +404,12 @@ void Estimator::process()
 
             optimizeMap();
             slideWindow();
+            if (ESTIMATE_EXTRINSIC) evalCalib();
 
-            evalCalib();
-            // TODO
-            // if checkNonLinearCalib()
-            //     ESTIMATE_EXTRINSIC = 2;
-            // ini_fixed_local_map_ = false; // reconstruct new optimized map
-            // last_marginalization_info_ = nullptr; // meaning that the prior errors in online calibration are discarded
-
-            ROS_DEBUG("solver costs: %fms", t_solve.toc());
+            printf("solver costs: %fms\n", t_solve.toc());
             break;
         }
     }
-    // printf("size: %d, capacity: %d\n", Qs_.size(), Qs_.capacity());
 
     // swap features
     prev_time_ = cur_time_;
@@ -463,7 +456,7 @@ void Estimator::optimizeMap()
     // ****************************************************
     // ceres: add parameter block
     vector2Double();
-    printParameter();
+    // printParameter();
     // if (!OPTIMAL_ODOMETRY) printParameter();
 
     std::vector<double *> para_ids;
@@ -662,7 +655,7 @@ void Estimator::optimizeMap()
     if (EVALUATE_RESIDUAL) evalResidual(problem, local_param_ids, para_ids, res_ids_proj, last_marginalization_info_, res_ids_marg);
 
     double2Vector();
-    printParameter();
+    // printParameter();
 
     // ****************************************************
     // ceres: marginalization of current parameter block
@@ -1252,12 +1245,24 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
 
 void Estimator::evalCalib()
 {
-    // compute \sum ||AX-XB||_F
-    // if (solver_flag_ == NON_LINEAR)
-    // {
-    //     // check converage
-    //     // if (eig_thre_calib_[i] > threshold) &&
-    // }
+    if (solver_flag_ == NON_LINEAR)
+    {
+        bool is_converage = true;
+        // TODO: very rough calibration stability analysis
+        for (int i = 0; i < NUM_OF_LASER; i++)
+            if ((i != IDX_REF) && (eig_thre_calib_[i + OPT_WINDOW_SIZE + 1] < 1300))
+            {
+                is_converage = false;
+                break;
+            }
+        if (is_converage)
+        {
+            ROS_WARN("Finish nonlinear calibration !");
+            // ESTIMATE_EXTRINSIC = 0;
+            // ini_fixed_local_map_ = false; // reconstruct new optimized map
+            // last_marginalization_info_ = nullptr; // meaning that the prior errors in online calibration are discarded
+        }
+    }
 }
 
 void Estimator::visualizePCL()
