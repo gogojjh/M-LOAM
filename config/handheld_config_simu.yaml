@@ -46,7 +46,7 @@ window_size: 7
 opt_window_size: 5
 
 # Extrinsic parameter between IMU and Camera.
-estimate_extrinsic: 1   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
 optimal_extrinsic: 0
@@ -58,11 +58,10 @@ body_T_laser: !!opencv-matrix
    # data: [0, 0, 0, 1, 0, 0, 0,
    #        0, 0, 0, 1, 0, 0, 0] # qx qy qz qw px py pz
    # simulation
-   # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-   #        # 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000]
-   #        0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220]
    data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-          0.31, 0.0, 0.0, 0.94, 0, -0.2, 0.0]
+          0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220]
+   # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
+   #        0.31, 0.0, 0.0, 0.94, 0, -0.2, 0.0]
 
 # <!-- laser_0 to laser_1 -->
 # <!-- 0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220 -->
@@ -119,5 +118,6 @@ optimal_odometry: 1
 n_cumu_feature: 10
 
 eig_initial: 100
+eig_calib_thre: 1300
 
 #

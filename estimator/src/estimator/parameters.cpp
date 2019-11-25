@@ -93,7 +93,8 @@ int PCL_VIEWER_NORMAL_RATIO;
 int OPTIMAL_ODOMETRY;
 int N_CUMU_FEATURE;
 
-int EIG_INITIAL;
+double EIG_INITIAL;
+double EIG_THRE_CALIB;
 
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
@@ -230,6 +231,7 @@ void readParameters(std::string config_file)
     N_CUMU_FEATURE = fsSettings["n_cumu_feature"];
 
     EIG_INITIAL = fsSettings["eig_initial"];
+    EIG_THRE_CALIB = fsSettings["eig_thre_calib"];
 
     fsSettings.release();
 }

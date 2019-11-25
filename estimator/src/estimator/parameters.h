@@ -124,7 +124,8 @@ extern int PCL_VIEWER_NORMAL_RATIO;
 extern int OPTIMAL_ODOMETRY;
 extern int N_CUMU_FEATURE;
 
-extern int EIG_INITIAL;
+extern double EIG_INITIAL;
+extern double EIG_THRE_CALIB;
 
 void readParameters(std::string config_file);
 

@@ -342,10 +342,8 @@ void Estimator::process()
             pose_laser_cur_[IDX_REF] = Pose(Qs_[cir_buf_cnt_-1], Ts_[cir_buf_cnt_-1]) * pose_rlt_[IDX_REF];
             std::cout << "relative transform: " << pose_rlt_[IDX_REF] << std::endl;
             std::cout << "current transform: " << pose_laser_cur_[IDX_REF] << std::endl;
-
             // Eigen::Vector3d ea = pose_rlt_[IDX_REF].T_.topLeftCorner<3, 3>().eulerAngles(2, 1, 0);
             // printf("relative euler (deg): %f, %f, %f\n", toDeg(ea(0)), toDeg(ea(1)), toDeg(ea(2)));
-
             printf("mloam_tracker %fms\n", t_mloam_tracker.toc());
         }
     }
@@ -609,7 +607,6 @@ void Estimator::optimizeMap()
     // TODO: focus on online odometry estimation
     else if (ESTIMATE_EXTRINSIC == 0)
     {
-        return;
         for (int n = 0; n < NUM_OF_LASER; n++)
         {
             problem.SetParameterBlockConstant(para_ex_pose_[n]);
@@ -623,6 +620,7 @@ void Estimator::optimizeMap()
                 for (int i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
                 {
                     std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i];
+                    printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size());
                     for (auto &feature: features_frame)
                     {
                         const double &s = feature.score_;
@@ -685,7 +683,7 @@ void Estimator::optimizeMap()
             {
                 PriorFactor *f = new PriorFactor(tbl_[n], qbl_[n], PRIOR_FACTOR_POS, PRIOR_FACTOR_ROT);
                 ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, NULL,
-                    std::vector<double *>{para_ex_pose_[n]}, std::vector<int>{0});
+                    std::vector<double *>{para_ex_pose_[n]}, std::vector<int>{});
                 marginalization_info->addResidualBlockInfo(residual_block_info);
             }
         }
@@ -695,24 +693,19 @@ void Estimator::optimizeMap()
         {
             if (POINT_PLANE_FACTOR)
             {
-                for (int n = 0; n < NUM_OF_LASER; n++)
+                for (int i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
                 {
-                    for (int i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
+                    int n = IDX_REF;
+                    std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i];
+                    for (auto &feature: features_frame)
                     {
-                        std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i];
-                        for (auto &feature: features_frame)
-                        {
-                            const double &s = feature.score_;
-                            const Eigen::Vector3d &p_data = feature.point_;
-                            const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-                            if (n == IDX_REF)
-                            {
-                                LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s);
-                                ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
-                                    std::vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]}, std::vector<int>{0});
-                                marginalization_info->addResidualBlockInfo(residual_block_info);
-                            }
-                        }
+                        const double &s = feature.score_;
+                        const Eigen::Vector3d &p_data = feature.point_;
+                        const Eigen::Vector4d &coeff_ref = feature.coeffs_;
+                        LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s);
+                        ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
+                            std::vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]}, std::vector<int>{0});
+                        marginalization_info->addResidualBlockInfo(residual_block_info);
                     }
                 }
 
@@ -960,13 +953,12 @@ void Estimator::buildLocalMap()
                 pcl::transformPointCloud(surf_points_stack_[n][i], surf_points_trans, pose_ext_pi.T_.cast<float>());
                 for (auto &p: surf_points_trans.points) p.intensity = i;
                 surf_points_tmp += surf_points_trans;
-
-                pcl::transformPointCloud(corner_points_stack_[n][i], corner_points_trans, pose_ext_pi.T_.cast<float>());
-                for (auto &p: corner_points_trans.points) p.intensity = i;
-                corner_points_tmp += corner_points_trans;
+                // pcl::transformPointCloud(corner_points_stack_[n][i], corner_points_trans, pose_ext_pi.T_.cast<float>());
+                // for (auto &p: corner_points_trans.points) p.intensity = i;
+                // corner_points_tmp += corner_points_trans;
             }
             surf_points_stack_[n][pivot_idx] = surf_points_tmp;
-            corner_points_stack_[n][pivot_idx] = corner_points_tmp;
+            // corner_points_stack_[n][pivot_idx] = corner_points_tmp;
         }
         ini_fixed_local_map_ = true;
     }
@@ -977,8 +969,8 @@ void Estimator::buildLocalMap()
     {
         surf_points_local_map_[n].clear();
         surf_points_local_map_filtered_[n].clear();
-        corner_points_local_map_[n].clear();
-        corner_points_local_map_filtered_[n].clear();
+        // corner_points_local_map_[n].clear();
+        // corner_points_local_map_filtered_[n].clear();
     }
 
     for (int n = 0; n < NUM_OF_LASER; n++)
@@ -987,21 +979,21 @@ void Estimator::buildLocalMap()
         for (int i = 0; i < WINDOW_SIZE + 1; i++)
         {
             Pose pose_i(Qs_[i], Ts_[i]);
-            pose_local_[n][i] = Pose(pose_pivot.T_ * pose_i.T_ * pose_ext.T_);
+            pose_local_[n][i] = Pose(pose_pivot.T_.inverse() * pose_i.T_ * pose_ext.T_);
             if ((i < pivot_idx) || (i == WINDOW_SIZE)) continue;
-
             pcl::transformPointCloud(surf_points_stack_[n][i], surf_points_trans, pose_local_[n][i].T_.cast<float>());
             for (auto &p: surf_points_trans.points) p.intensity = i;
             surf_points_local_map_[n] += surf_points_trans;
-
-            pcl::transformPointCloud(corner_points_stack_[n][i], corner_points_trans, pose_local_[n][i].T_.cast<float>());
-            for (auto &p: corner_points_trans.points) p.intensity = i;
-            corner_points_local_map_[n] += corner_points_trans;
+            // pcl::transformPointCloud(corner_points_stack_[n][i], corner_points_trans, pose_local_[n][i].T_.cast<float>());
+            // for (auto &p: corner_points_trans.points) p.intensity = i;
+            // corner_points_local_map_[n] += corner_points_trans;
         }
-        f_extract_.down_size_filter_local_map_.setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_[n]));
-        f_extract_.down_size_filter_local_map_.filter(surf_points_local_map_filtered_[n]);
-        f_extract_.down_size_filter_corner_.setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_[n]));
-        f_extract_.down_size_filter_corner_.filter(corner_points_local_map_filtered_[n]);
+        pcl::VoxelGrid<PointI> down_size_filter;
+        down_size_filter.setLeafSize(0.5, 0.5, 0.5);
+        down_size_filter.setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_[n]));
+        down_size_filter.filter(surf_points_local_map_filtered_[n]);
+        // down_size_filter.setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_[n]));
+        // down_size_filter.filter(corner_points_local_map_filtered_[n]);
     }
 
     // -----------------
@@ -1013,15 +1005,14 @@ void Estimator::buildLocalMap()
         surf_map_features_[n].resize(WINDOW_SIZE + 1);
         pcl::KdTreeFLANN<PointI>::Ptr kdtree_surf_points_local_map(new pcl::KdTreeFLANN<PointI>());
         kdtree_surf_points_local_map->setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_filtered_[n]));
-
-        corner_map_features_[n].resize(WINDOW_SIZE + 1);
-        pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_points_local_map(new pcl::KdTreeFLANN<PointI>());
-        kdtree_corner_points_local_map->setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_filtered_[n]));
-        int n_neigh = (n == IDX_REF ? 5:10);
+        // corner_map_features_[n].resize(WINDOW_SIZE + 1);
+        // pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_points_local_map(new pcl::KdTreeFLANN<PointI>());
+        // kdtree_corner_points_local_map->setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_filtered_[n]));
+        int n_neigh = 5;
         for (int i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
         {
-            f_extract_.extractSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
-                surf_points_stack_[n][i], pose_local_[n][i], surf_map_features_[n][i], n_neigh);
+            // f_extract_.extractSurfFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
+            //     corner_points_stack_[n][i], pose_local_[n][i], corner_map_features_[n][i], n_neigh);
             f_extract_.extractCornerFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
                 surf_points_stack_[n][i], pose_local_[n][i], surf_map_features_[n][i], n_neigh);
         }
@@ -1046,8 +1037,7 @@ void Estimator::slideWindow()
         Pose pose_i(Qs_[i], Ts_[i]);
         for (int n = 0; n < NUM_OF_LASER; n++)
         {
-            if ((ESTIMATE_EXTRINSIC == 1) && (n != IDX_REF)) continue; // only filter the reference local map
-            // surf_points_pivot_map_[n] = surf_points_stack_[n][pivot_idx];
+            if ((ESTIMATE_EXTRINSIC == 1) && (n != IDX_REF)) continue;
 
             PointICloud surf_points_trans, surf_points_filtered, corner_points_trans, corner_points_filtered;
             Pose pose_ext = Pose(qbl_[n], tbl_[n]);
@@ -1064,6 +1054,7 @@ void Estimator::slideWindow()
             surf_points_filtered += surf_points_stack_[n][i];
             surf_points_stack_[n][i] = surf_points_filtered;
 
+            if (ESTIMATE_EXTRINSIC == 0) continue;
             pcl::transformPointCloud(corner_points_stack_[n][pivot_idx], corner_points_trans, pose_i_pivot.T_.cast<float>());
             pcl::PointIndices::Ptr inliers_corner(new pcl::PointIndices());
             for (int j = 0; j < corner_points_stack_size_[n][0]; j++) inliers_corner->indices.push_back(j);
@@ -1073,7 +1064,6 @@ void Estimator::slideWindow()
             extract.filter(corner_points_filtered);
             corner_points_filtered += corner_points_stack_[n][i];
             corner_points_stack_[n][i] = corner_points_filtered;
-
         }
     }
 
@@ -1172,7 +1162,7 @@ void Estimator::evalResidual(ceres::Problem &problem,
 // A^TA is not only symmetric and invertiable: https://math.stackexchange.com/questions/2352684/when-is-a-symmetric-matrix-invertible
 void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_param_ids, const ceres::CRSMatrix &jaco)
 {
-    printf("##### jacob: %d constraints, %d parameters (%d pose_param, %d ext_param)\n", jaco.num_rows, jaco.num_cols, 6*(OPT_WINDOW_SIZE + 1), 6*NUM_OF_LASER); // 58, feature_size(2700) x 50
+    printf("jacob: %d constraints, %d parameters (%d pose_param, %d ext_param)\n", jaco.num_rows, jaco.num_cols, 6*(OPT_WINDOW_SIZE + 1), 6*NUM_OF_LASER); // 58, feature_size(2700) x 50
     TicToc t_eval_degenracy;
     Eigen::MatrixXd mat_J_raw;
     CRSMatrix2EigenMatrix(jaco, mat_J_raw);
@@ -1183,7 +1173,7 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
         bool b_vis = false; // to verify the structure of A^T*A
         if (b_vis)
         {
-            printf("##### visualize the structure of H(J^T*J)\n");
+            printf("visualize the structure of H(J^T*J)\n");
             for (int i = 0; i < mat_JtJ.rows(); i++)
             {
                 for (int j = 0; j < mat_JtJ.cols(); j++)
@@ -1232,11 +1222,11 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
             if (local_param_ids[i]->is_degenerate_)
             {
                 local_param_ids[i]->V_update_ = mat_P;
-                std::cout << "param " << i << " is degenerate !" << std::endl;
+                // std::cout << "param " << i << " is degenerate !" << std::endl;
                 // std::cout << mat_P << std::endl;
             }
         }
-        std::cout << "eigen threshold: " << eig_thre_calib_.size() << " ";
+        std::cout << "eigen threshold " << eig_thre_calib_.size() << ": ";
         for (int i = 0; i < eig_thre_calib_.size(); i++) std::cout << eig_thre_calib_[i] << " ";
         std::cout << std::endl;
     }
@@ -1250,7 +1240,7 @@ void Estimator::evalCalib()
         bool is_converage = true;
         // TODO: very rough calibration stability analysis
         for (int i = 0; i < NUM_OF_LASER; i++)
-            if ((i != IDX_REF) && (eig_thre_calib_[i + OPT_WINDOW_SIZE + 1] < 1300))
+            if ((i != IDX_REF) && (eig_thre_calib_[i + OPT_WINDOW_SIZE + 1] < EIG_THRE_CALIB))
             {
                 is_converage = false;
                 break;

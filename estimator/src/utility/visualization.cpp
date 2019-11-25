@@ -95,15 +95,15 @@ void pubPointCloud(const Estimator &estimator, const double &time)
         for (auto &p: cloud_feature_trans["laser_cloud"].points) p.intensity = n;
 
         laser_cloud += cloud_feature_trans["laser_cloud"];
-        corner_points_sharp += cloud_feature_trans["corner_points_sharp"];
+        // corner_points_sharp += cloud_feature_trans["corner_points_sharp"];
+        // surf_points_flat += cloud_feature_trans["surf_points_flat"];
         corner_points_less_sharp += cloud_feature_trans["corner_points_less_sharp"];
-        surf_points_flat += cloud_feature_trans["surf_points_flat"];
         surf_points_less_flat += cloud_feature_trans["surf_points_less_flat"];
     }
     publishCloud(pub_laser_cloud, header, laser_cloud);
-    publishCloud(pub_corner_points_sharp, header, corner_points_sharp);
+    // publishCloud(pub_corner_points_sharp, header, corner_points_sharp);
+    // publishCloud(pub_surf_points_flat, header, surf_points_flat);
     publishCloud(pub_corner_points_less_sharp, header, corner_points_less_sharp);
-    publishCloud(pub_surf_points_flat, header, surf_points_flat);
     publishCloud(pub_surf_points_less_flat, header, surf_points_less_flat);
 
     // publish local map
