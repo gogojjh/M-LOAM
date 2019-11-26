@@ -14,7 +14,7 @@
 
 using namespace common;
 
-#define DISTORTION 0
+#define DISTORTION 1
 
 LidarTracker::LidarTracker()
 {
@@ -105,6 +105,8 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
     int skip_frame_num = 5;
 
     TicToc t_opt;
+
+    // TODO: opti_counter
     for (size_t opti_counter = 0; opti_counter < 2; ++opti_counter)
     {
         num_corner_correspondence = 0;
@@ -311,12 +313,13 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         TicToc t_solver;
         ceres::Solver::Options options;
         options.linear_solver_type = ceres::DENSE_QR;
-        options.max_num_iterations = 4;
+        options.max_num_iterations = 6;
         options.minimizer_progress_to_stdout = false;
         ceres::Solver::Summary summary;
         ceres::Solve(options, &problem, &summary);
         // printf("solver time %f ms \n", t_solver.toc());
 
+        // TODO: apply solution remapping
         // ceres::Problem::EvaluateOptions e_option;
         // double cost;
         // ceres::CRSMatrix jaco;

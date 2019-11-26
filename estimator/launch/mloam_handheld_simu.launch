@@ -9,12 +9,12 @@
     <group if="$(arg bag_file_use)">
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/circle_filter_filter.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/eight_filter.bag" /> -->
-        <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/stright_filter.bag" />
+        <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/stright_filter_filter.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/stright_2.bag" /> -->
-        <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/random_walk.bag" /> -->
+        <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/random_walk.bag" />
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/initialization.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_husky_simu_rect_box/stright_calib.bag" /> -->
-        <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_file) --clock -r 1 --pause" />
+        <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_file) --clock -r 2 --pause" />
     </group>
 
     <node pkg="mloam" type="mloam_node" name="mloam_node" args="$(arg config_file)" output="screen" />

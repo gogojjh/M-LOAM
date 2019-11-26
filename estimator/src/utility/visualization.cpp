@@ -124,30 +124,30 @@ void pubPointCloud(const Estimator &estimator, const double &time)
             pcl::transformPointCloud(estimator.surf_points_local_map_filtered_[n], surf_local_map_trans, pose_j_pivot.T_.cast<float>());
             publishCloud(v_pub_surf_points_local_map[n], header, surf_local_map_trans);
 
-            pcl::transformPointCloud(estimator.corner_points_local_map_filtered_[n], corner_local_map_trans, pose_j_pivot.T_.cast<float>());
-            publishCloud(v_pub_corner_points_local_map[n], header, corner_local_map_trans);
+            // pcl::transformPointCloud(estimator.corner_points_local_map_filtered_[n], corner_local_map_trans, pose_j_pivot.T_.cast<float>());
+            // publishCloud(v_pub_corner_points_local_map[n], header, corner_local_map_trans);
         }
 
         // publish target cloud in localmap
-        if ((ESTIMATE_EXTRINSIC == 1) && (estimator.surf_map_features_.size() != 0))
-        {
-            header.frame_id = "laser_0";
-            publishCloud(pub_surf_points_target_localmap, header, estimator.surf_points_local_map_filtered_[1]);
-            int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
-            PointICloud cloud_trans;
-            for (auto &f : estimator.surf_map_features_[1][pivot_idx])
-            {
-                PointI p_ori;
-                p_ori.x = f.point_.x();
-                p_ori.y = f.point_.y();
-                p_ori.z = f.point_.z();
-                PointI p_sel;
-                FeatureExtract f_extract;
-                f_extract.pointAssociateToMap(p_ori, p_sel, estimator.pose_local_[1][pivot_idx]);
-                cloud_trans.push_back(p_sel);
-            }
-            publishCloud(pub_surf_points_target, header, cloud_trans);
-        }
+        // if ((ESTIMATE_EXTRINSIC == 1) && (estimator.surf_map_features_.size() != 0))
+        // {
+        //     header.frame_id = "laser_0";
+        //     publishCloud(pub_surf_points_target_localmap, header, estimator.surf_points_local_map_filtered_[1]);
+        //     int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
+        //     PointICloud cloud_trans;
+        //     for (auto &f : estimator.surf_map_features_[1][pivot_idx])
+        //     {
+        //         PointI p_ori;
+        //         p_ori.x = f.point_.x();
+        //         p_ori.y = f.point_.y();
+        //         p_ori.z = f.point_.z();
+        //         PointI p_sel;
+        //         FeatureExtract f_extract;
+        //         f_extract.pointAssociateToMap(p_ori, p_sel, estimator.pose_local_[1][pivot_idx]);
+        //         cloud_trans.push_back(p_sel);
+        //     }
+        //     publishCloud(pub_surf_points_target, header, cloud_trans);
+        // }
     }
 
 }

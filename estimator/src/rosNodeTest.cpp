@@ -112,12 +112,12 @@ void sync_process()
                 if(time0 < time1 - LASER_SYNC_THRESHOLD)
                 {
                     cloud0_buf.pop();
-                    printf("throw cloud0 \n");
+                    printf("throw cloud0\n");
                 }
                 else if(time0 > time1 + LASER_SYNC_THRESHOLD)
                 {
                     cloud1_buf.pop();
-                    printf("throw cloud1 \n");
+                    printf("throw cloud1\n");
                 }
                 else
                 {

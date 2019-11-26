@@ -39,8 +39,8 @@ class FeatureExtract
 public:
     FeatureExtract();
 
-    void cloudRearrange(const common::PointCloud &laser_cloud_in);
-    cloudFeature extractCloud(const double &cur_time, const common::PointCloud &laser_cloud_in);
+    void cloudRearrange(const common::PointCloud &laser_cloud_in, std::vector<common::PointICloud> &laser_cloud_scans, int &cloud_size);
+    void extractCloud(const double &cur_time, const common::PointCloud &laser_cloud_in, cloudFeature &cloud_feature);
 
     void pointAssociateToMap(const common::PointI &pi, common::PointI &po, const Pose &pose);
 
@@ -52,15 +52,11 @@ public:
         const common::PointICloud &cloud_map, const common::PointICloud &cloud_data,
         const Pose &pose_local, std::vector<PointPlaneFeature> &features, const int N_NEIGH = 5);
 
-    std::vector<common::PointICloud> laser_cloud_scans_;
+    bool half_passed_;
     pcl::VoxelGrid<common::PointI> down_size_filter_corner_;
     pcl::VoxelGrid<common::PointI> down_size_filter_surf_;
     pcl::VoxelGrid<common::PointI> down_size_filter_local_map_;
     pcl::VoxelGrid<common::PointI> down_size_filter_global_map_;
-
-    int cloud_size_;
-    bool half_passed_;
-    TicToc t_whole_, t_prepare_, t_pts_;
 };
 
 

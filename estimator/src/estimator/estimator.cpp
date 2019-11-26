@@ -15,11 +15,11 @@ using namespace common;
 void CRSMatrix2EigenMatrix(const ceres::CRSMatrix &crs_matrix, Eigen::MatrixXd &eigen_matrix)
 {
     eigen_matrix = Eigen::MatrixXd::Zero(crs_matrix.num_rows, crs_matrix.num_cols);
-    for (int row = 0; row < crs_matrix.num_rows; row++)
+    for (auto row = 0; row < crs_matrix.num_rows; row++)
     {
         int start = crs_matrix.rows[row];
         int end = crs_matrix.rows[row + 1] - 1;
-        for (int i = start; i <= end; i++)
+        for (auto i = start; i <= end; i++)
         {
             int col = crs_matrix.cols[i];
             double value = crs_matrix.values[i];
@@ -79,8 +79,8 @@ void Estimator::clearState()
     Header_.clear();
     surf_points_stack_.clear();
     surf_points_stack_size_.clear();
-    // corner_points_stack_.clear();
-    // corner_points_stack_size_.clear();
+    corner_points_stack_.clear();
+    corner_points_stack_size_.clear();
 
     surf_points_local_map_.clear();
     surf_points_local_map_filtered_.clear();
@@ -113,7 +113,7 @@ void Estimator::setParameter()
     qbl_.resize(NUM_OF_LASER);
     tbl_.resize(NUM_OF_LASER);
     tdbl_.resize(NUM_OF_LASER);
-    for (int i = 0; i < NUM_OF_LASER; i++)
+    for (auto i = 0; i < NUM_OF_LASER; i++)
     {
         qbl_[i] = QBL[i];
         tbl_[i] = TBL[i];
@@ -132,7 +132,7 @@ void Estimator::setParameter()
     corner_points_stack_size_.resize(NUM_OF_LASER);
 
     pose_local_.resize(NUM_OF_LASER);
-    for (int i = 0; i < NUM_OF_LASER; i++)
+    for (auto i = 0; i < NUM_OF_LASER; i++)
     {
         surf_points_stack_[i].resize(WINDOW_SIZE + 1);
         surf_points_stack_size_[i].resize(WINDOW_SIZE + 1);
@@ -159,12 +159,12 @@ void Estimator::setParameter()
     }
 
     para_pose_ = new double *[OPT_WINDOW_SIZE + 1];
-    for (int i = 0; i < OPT_WINDOW_SIZE + 1; i++)
+    for (auto i = 0; i < OPT_WINDOW_SIZE + 1; i++)
     {
         para_pose_[i] = new double[SIZE_POSE];
     }
     para_ex_pose_ = new double *[NUM_OF_LASER];
-    for (int i = 0; i < NUM_OF_LASER; i++)
+    for (auto i = 0; i < NUM_OF_LASER; i++)
     {
         para_ex_pose_[i] = new double[SIZE_POSE];
     }
@@ -189,15 +189,33 @@ void Estimator::changeSensorType(int use_imu, int use_stereo)
 
 void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_laser_cloud_in)
 {
+    assert(v_laser_cloud_in.size() == NUM_OF_LASER);
     input_cloud_cnt_++;
-    std::vector<cloudFeature> feature_frame;
+
     TicToc feature_ext_time;
-    for (int i = 0; i < v_laser_cloud_in.size(); i++)
+    std::vector<cloudFeature> feature_frame;
+    feature_frame.resize(NUM_OF_LASER);
+
+    // TODO: apply openmp
+    // static omp_lock_t omp_lock_;
+    // omp_init_lock(&omp_lock_);
+    // #pragma omp parallel for
+    // for (auto i = 0; i < v_laser_cloud_in.size(); i++)
+    // {
+    //     cloudFeature cloud_feature;
+    //     f_extract_.extractCloud(t, v_laser_cloud_in[i], cloud_feature);
+    //     omp_set_lock(&omp_lock_);
+    //     feature_frame[i] = cloud_feature;
+    //     omp_unset_lock(&omp_lock_);
+    // }
+    // omp_destroy_lock(&omp_lock_);
+    for (auto i = 0; i < v_laser_cloud_in.size(); i++)
     {
-        // printf("[LASER %u]: \n", i);
-        feature_frame.push_back(f_extract_.extractCloud(t, v_laser_cloud_in[i]));
+        cloudFeature cloud_feature;
+        f_extract_.extractCloud(t, v_laser_cloud_in[i], cloud_feature);
+        feature_frame[i] = cloud_feature;
     }
-    printf("featureExt time: %fms \n", feature_ext_time.toc());
+    printf("featureExt time: %fms\n", feature_ext_time.toc());
 
     m_buf_.lock();
     feature_buf_.push(make_pair(t, feature_frame));
@@ -208,11 +226,13 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
 void Estimator::inputCloud(const double &t, const PointCloud &laser_cloud_in)
 {
     input_cloud_cnt_++;
-    std::vector<cloudFeature> feature_frame;
+
     TicToc feature_ext_time;
-    // printf("LASER 0: \n");
-    feature_frame.push_back(f_extract_.extractCloud(t, laser_cloud_in));
-    printf("featureExt time: %fms \n", feature_ext_time.toc());
+    std::vector<cloudFeature> feature_frame;
+    cloudFeature cloud_feature;
+    f_extract_.extractCloud(t, laser_cloud_in, cloud_feature);
+    feature_frame.push_back(cloud_feature);
+    printf("featureExt time: %fms\n", feature_ext_time.toc());
 
     m_buf_.lock();
     feature_buf_.push(make_pair(t, feature_frame));
@@ -243,7 +263,7 @@ void Estimator::processMeasurements()
             pubOdometry(*this, cur_time_);
             m_process_.unlock();
 
-            ROS_WARN("frame: %d, processMea time: %fms\n", input_cloud_cnt_, t_process.toc());
+            ROS_WARN("frame: %d, processMea time: %fms", input_cloud_cnt_, t_process.toc());
         }
         if (!MULTIPLE_THREAD) break;
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
@@ -256,7 +276,7 @@ void Estimator::process()
     {
         b_system_inited_ = true;
         printf("System initialization finished \n");
-        for (int i = 0; i < NUM_OF_LASER; i++)
+        for (auto i = 0; i < NUM_OF_LASER; i++)
         {
             pose_rlt_[i] = Pose();
             pose_laser_cur_[i] = Pose();
@@ -269,7 +289,7 @@ void Estimator::process()
         if (ESTIMATE_EXTRINSIC == 2)
         {
             // feature tracker: estimate the relative transformations of each lidar
-            for (int i = 0; i < NUM_OF_LASER; i++)
+            for (auto i = 0; i < NUM_OF_LASER; i++)
             {
                 printf("[LASER %d]:\n", i);
                 cloudFeature &cur_cloud_feature = cur_feature_.second[i];
@@ -282,13 +302,12 @@ void Estimator::process()
             printf("mloam_tracker %fms\n", t_mloam_tracker.toc());
 
             // initialize extrinsics
-            for (int i = 0; i < NUM_OF_LASER; i++) initial_extrinsics_.addPose(pose_rlt_[i], i);
+            for (auto i = 0; i < NUM_OF_LASER; i++) initial_extrinsics_.addPose(pose_rlt_[i], i);
             if (cir_buf_cnt_ == WINDOW_SIZE)
             {
                 TicToc t_calib_ext;
-                printf("calibrating extrinsic param\n");
-                printf("sufficient movement is needed \n");
-                for (int i = 0; i < NUM_OF_LASER; i++)
+                printf("calibrating extrinsic param, sufficient movement is needed\n");
+                for (auto i = 0; i < NUM_OF_LASER; i++)
                 {
                     Pose calib_result;
                     // if (IDX_REF == i) continue;
@@ -316,7 +335,7 @@ void Estimator::process()
                     ESTIMATE_EXTRINSIC = 1;
                     initial_extrinsics_.saveStatistics();
                 }
-                printf("whole initialize extrinsics %fms\n", t_calib_ext.toc());
+                printf("initialize extrinsics %fms\n", t_calib_ext.toc());
             }
         }
         // tracker
@@ -334,14 +353,12 @@ void Estimator::process()
         }
     }
 
-    // get newest pose
+    //----------------- update pose and point cloud
     Qs_[cir_buf_cnt_] = pose_laser_cur_[IDX_REF].q_;
     Ts_[cir_buf_cnt_] = pose_laser_cur_[IDX_REF].t_;
-
-    // get newest point cloud
     Header_[cir_buf_cnt_].stamp = ros::Time(cur_feature_.first);
     PointICloud cloud_downsampled_;
-    for (int n = 0; n < NUM_OF_LASER; n++)
+    for (auto n = 0; n < NUM_OF_LASER; n++)
     {
         PointICloud &corner_points = cur_feature_.second[n]["corner_points_less_sharp"];
         f_extract_.down_size_filter_corner_.setInputCloud(boost::make_shared<PointICloud>(corner_points));
@@ -357,7 +374,6 @@ void Estimator::process()
     }
     // printSlideWindow();
 
-    // -----------------
     switch (solver_flag_)
     {
         // INITIAL: multi-LiDAR individual tracking
@@ -395,7 +411,7 @@ void Estimator::process()
     prev_time_ = cur_time_;
     prev_feature_.first = prev_time_;
     prev_feature_.second.clear();
-    for (int i = 0; i < cur_feature_.second.size(); i++)
+    for (auto i = 0; i < cur_feature_.second.size(); i++)
     {
         cloudFeature tmp_cloud_feature;
         for (auto iter = cur_feature_.second[i].begin(); iter != cur_feature_.second[i].end(); iter++)
@@ -424,8 +440,9 @@ void Estimator::optimizeMap()
     // loss_function = new ceres::CauchyLoss(1.0);
     // ceres: set options and solve the non-linear equation
     ceres::Solver::Options options;
-    // options.linear_solver_type = ceres::DENSE_SCHUR;
-    options.num_threads = 3;
+    // options.linear_solver_type = ceres::DENSE_QR;
+    options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
+    options.num_threads = 6;
     // options.trust_region_strategy_type = ceres::DOGLEG;
     options.max_num_iterations = NUM_ITERATIONS;
     //options.use_explicit_schur_complement = true;
@@ -441,7 +458,7 @@ void Estimator::optimizeMap()
 
     std::vector<double *> para_ids;
     std::vector<PoseLocalParameterization *> local_param_ids;
-    for (int i = 0; i < OPT_WINDOW_SIZE + 1; i++)
+    for (auto i = 0; i < OPT_WINDOW_SIZE + 1; i++)
     {
         PoseLocalParameterization *local_parameterization = new PoseLocalParameterization();
         problem.AddParameterBlock(para_pose_[i], SIZE_POSE, local_parameterization);
@@ -450,7 +467,7 @@ void Estimator::optimizeMap()
     }
     problem.SetParameterBlockConstant(para_pose_[0]);
 
-    for (int i = 0; i < NUM_OF_LASER; i++)
+    for (auto i = 0; i < NUM_OF_LASER; i++)
     {
         PoseLocalParameterization *local_parameterization = new PoseLocalParameterization();
         problem.AddParameterBlock(para_ex_pose_[i], SIZE_POSE, local_parameterization);
@@ -463,7 +480,7 @@ void Estimator::optimizeMap()
     }
     problem.SetParameterBlockConstant(para_ex_pose_[IDX_REF]);
 
-    // for (int i = 0; i < NUM_OF_LASER; i++)
+    // for (auto i = 0; i < NUM_OF_LASER; i++)
     // {
     //     problem.AddParameterBlock(&para_td_[i], 1);
     //     para_ids.push_back(&para_td_[i]);
@@ -489,7 +506,7 @@ void Estimator::optimizeMap()
     std::vector<ceres::internal::ResidualBlock *> res_ids_proj;
     if (PRIOR_FACTOR)
     {
-        for (int n = 0; n < NUM_OF_LASER; n++)
+        for (auto n = 0; n < NUM_OF_LASER; n++)
         {
             PriorFactor *f = new PriorFactor(tbl_[n], qbl_[n], PRIOR_FACTOR_POS, PRIOR_FACTOR_ROT);
             ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, NULL, para_ex_pose_[n]);
@@ -505,9 +522,9 @@ void Estimator::optimizeMap()
         if (POINT_PLANE_FACTOR)
         {
             // CHECK_JACOBIAN = 0;
-            for (int i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
+            for (auto i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
             {
-                int n = IDX_REF;
+                auto n = IDX_REF;
                 std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i];
                 // printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size());
                 for (auto &feature: features_frame)
@@ -530,11 +547,11 @@ void Estimator::optimizeMap()
                     }
                 }
             }
-            for (int n = 0; n < NUM_OF_LASER; n++) cumu_surf_map_features_[n].push_back(surf_map_features_[n][pivot_idx]);
+            for (auto n = 0; n < NUM_OF_LASER; n++) cumu_surf_map_features_[n].push_back(surf_map_features_[n][pivot_idx]);
             if (cumu_surf_map_features_[IDX_REF].size() == N_CUMU_FEATURE)
             {
                 ROS_WARN("*************** Calibration");
-                for (int n = 0; n < NUM_OF_LASER; n++)
+                for (auto n = 0; n < NUM_OF_LASER; n++)
                 {
                     if (n == IDX_REF) continue;
                     for (auto &features_frame: cumu_surf_map_features_[n])
@@ -560,10 +577,10 @@ void Estimator::optimizeMap()
 
         if (POINT_EDGE_FACTOR)
         {
-            for (int n = 0; n < NUM_OF_LASER; n++) cumu_corner_map_features_[n].push_back(corner_map_features_[n][pivot_idx]);
+            for (auto n = 0; n < NUM_OF_LASER; n++) cumu_corner_map_features_[n].push_back(corner_map_features_[n][pivot_idx]);
             if (cumu_corner_map_features_[IDX_REF].size() == N_CUMU_FEATURE)
             {
-                for (int n = 0; n < NUM_OF_LASER; n++)
+                for (auto n = 0; n < NUM_OF_LASER; n++)
                 {
                     if (n == IDX_REF) continue;
                     for (auto &features_frame: cumu_corner_map_features_[n])
@@ -591,7 +608,7 @@ void Estimator::optimizeMap()
     else if (ESTIMATE_EXTRINSIC == 0)
     {
         ROS_WARN("Multi-LiDAR Odometry");
-        for (int n = 0; n < NUM_OF_LASER; n++)
+        for (auto n = 0; n < NUM_OF_LASER; n++)
         {
             problem.SetParameterBlockConstant(para_ex_pose_[n]);
             // problem.SetParameterBlockConstant(&para_td_[n]);
@@ -599,12 +616,12 @@ void Estimator::optimizeMap()
         buildLocalMap();
         if (POINT_PLANE_FACTOR)
         {
-            for (int n = 0; n < NUM_OF_LASER; n++)
+            for (auto n = 0; n < NUM_OF_LASER; n++)
             {
-                for (int i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
+                for (auto i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
                 {
                     std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i];
-                    // printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size());
+                    printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size());
                     for (auto &feature: features_frame)
                     {
                         const double &s = feature.score_;
@@ -650,7 +667,7 @@ void Estimator::optimizeMap()
         if (last_marginalization_info_)
         {
             std::vector<int> drop_set;
-            for (int i = 0; i < static_cast<int>(last_marginalization_parameter_blocks_.size()); i++)
+            for (auto i = 0; i < static_cast<int>(last_marginalization_parameter_blocks_.size()); i++)
             {
                 // indicate the dropped pose to calculate the relatd residuals
                 if (last_marginalization_parameter_blocks_[i] == para_pose_[0]) drop_set.push_back(i);
@@ -663,7 +680,7 @@ void Estimator::optimizeMap()
 
         if (PRIOR_FACTOR)
         {
-            for (int n = 0; n < NUM_OF_LASER; n++)
+            for (auto n = 0; n < NUM_OF_LASER; n++)
             {
                 PriorFactor *f = new PriorFactor(tbl_[n], qbl_[n], PRIOR_FACTOR_POS, PRIOR_FACTOR_ROT);
                 ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, NULL,
@@ -677,9 +694,9 @@ void Estimator::optimizeMap()
         {
             if (POINT_PLANE_FACTOR)
             {
-                for (int i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
+                for (auto i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
                 {
-                    int n = IDX_REF;
+                    auto n = IDX_REF;
                     std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i];
                     for (auto &feature: features_frame)
                     {
@@ -695,7 +712,7 @@ void Estimator::optimizeMap()
 
                 if (cumu_surf_map_features_[IDX_REF].size() == N_CUMU_FEATURE)
                 {
-                    for (int n = 0; n < NUM_OF_LASER; n++)
+                    for (auto n = 0; n < NUM_OF_LASER; n++)
                     {
                         if (n == IDX_REF) continue;
                         for (auto &features_frame: cumu_surf_map_features_[n])
@@ -721,7 +738,7 @@ void Estimator::optimizeMap()
             {
                 if (cumu_corner_map_features_[IDX_REF].size() == N_CUMU_FEATURE)
                 {
-                    for (int n = 0; n < NUM_OF_LASER; n++)
+                    for (auto n = 0; n < NUM_OF_LASER; n++)
                     {
                         if (n == IDX_REF) continue;
                         for (auto &features_frame: cumu_corner_map_features_[n])
@@ -747,9 +764,9 @@ void Estimator::optimizeMap()
         {
             if (POINT_PLANE_FACTOR)
             {
-                for (int n = 0; n < NUM_OF_LASER; n++)
+                for (auto n = 0; n < NUM_OF_LASER; n++)
                 {
-                    for (int i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
+                    for (auto i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
                     {
                         std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i];
                         for (auto &feature: features_frame)
@@ -768,7 +785,7 @@ void Estimator::optimizeMap()
         }
 
         //! calculate the residuals and jacobian of all ResidualBlockInfo over the marginalized parameter blocks,
-        //! for next iteration, the linearization point is assured and fixed
+        //! for next iteration, the linearization poauto is assured and fixed
         //! adjust the memory of H and b to implement the Schur complement
         TicToc t_pre_margin;
         marginalization_info->preMarginalize();
@@ -780,15 +797,15 @@ void Estimator::optimizeMap()
 
         //! indicate shared memory of parameter blocks except for the dropped state
         std::unordered_map<long, double *> addr_shift;
-        for (int i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
+        for (auto i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
         {
             addr_shift[reinterpret_cast<long>(para_pose_[i - pivot_idx])] = para_pose_[i - pivot_idx - 1];
         }
-        for (int n = 0; n < NUM_OF_LASER; n++)
+        for (auto n = 0; n < NUM_OF_LASER; n++)
         {
             addr_shift[reinterpret_cast<long>(para_ex_pose_[n])] = para_ex_pose_[n];
         }
-        // for (int n = 0; n < NUM_OF_LASER; n++)
+        // for (auto n = 0; n < NUM_OF_LASER; n++)
         // {
         //     addr_shift[reinterpret_cast<long>(&para_td_[n])] = &para_td_[n];
         // }
@@ -812,20 +829,19 @@ void Estimator::buildCalibMap()
     Pose pose_pivot(Qs_[pivot_idx], Ts_[pivot_idx]);
     // -----------------
     // build static local map using fixed poses
-    PointICloud surf_points_trans, corner_points_trans;
     if (!ini_fixed_local_map_)
     {
         PointICloud surf_points_tmp, corner_points_tmp;
         Pose pose_ext = Pose(qbl_[IDX_REF], tbl_[IDX_REF]);
-        for (int i = 0; i <= pivot_idx; i++)
+        for (auto i = 0; i <= pivot_idx; i++)
         {
             Pose pose_i(Qs_[i], Ts_[i]);
             Pose pose_pi = Pose(pose_pivot.T_ .inverse() * pose_i.T_ * pose_ext.T_);
+            PointICloud surf_points_trans, corner_points_trans;
 
             pcl::transformPointCloud(surf_points_stack_[IDX_REF][i], surf_points_trans, pose_pi.T_.cast<float>());
             for (auto &p: surf_points_trans.points) p.intensity = i;
             surf_points_tmp += surf_points_trans;
-
             pcl::transformPointCloud(corner_points_stack_[IDX_REF][i], corner_points_trans, pose_pi.T_.cast<float>());
             for (auto &p: corner_points_trans.points) p.intensity = i;
             corner_points_tmp += corner_points_trans;
@@ -837,7 +853,7 @@ void Estimator::buildCalibMap()
 
     // -----------------
     // build the whole local map using all poses except the newest pose
-    for (int n = 0; n < NUM_OF_LASER; n++)
+    for (auto n = 0; n < NUM_OF_LASER; n++)
     {
         surf_points_local_map_[n].clear();
         surf_points_local_map_filtered_[n].clear();
@@ -845,14 +861,16 @@ void Estimator::buildCalibMap()
         corner_points_local_map_filtered_[n].clear();
     }
 
-    for (int n = 0; n < NUM_OF_LASER; n++)
+    for (auto n = 0; n < NUM_OF_LASER; n++)
     {
         Pose pose_ext = Pose(qbl_[n], tbl_[n]);
-        for (int i = 0; i < WINDOW_SIZE + 1; i++)
+        for (auto i = 0; i < WINDOW_SIZE + 1; i++)
         {
             Pose pose_i(Qs_[i], Ts_[i]);
             pose_local_[n][i] = Pose(pose_pivot.T_.inverse() * pose_i.T_ * pose_ext.T_);
             if ((i < pivot_idx) || (i == WINDOW_SIZE)) continue;
+
+            PointICloud surf_points_trans, corner_points_trans;
             if (n == IDX_REF) // localmap of reference
             {
                 pcl::transformPointCloud(surf_points_stack_[n][i], surf_points_trans, pose_local_[n][i].T_.cast<float>());
@@ -885,31 +903,34 @@ void Estimator::buildCalibMap()
 
     // -----------------
     // calculate features and correspondences from p+1 to j
-    TicToc t_map_extract;
-    surf_map_features_.clear();
-    surf_map_features_.resize(NUM_OF_LASER);
-    corner_map_features_.clear();
-    corner_map_features_.resize(NUM_OF_LASER);
-    for (int n = 0; n < NUM_OF_LASER; n++)
+    surf_map_features_.clear(); surf_map_features_.resize(NUM_OF_LASER);
+    corner_map_features_.clear(); corner_map_features_.resize(NUM_OF_LASER);
+    for (auto n = 0; n < NUM_OF_LASER; n++)
     {
         surf_map_features_[n].resize(WINDOW_SIZE + 1);
         pcl::KdTreeFLANN<PointI>::Ptr kdtree_surf_points_local_map(new pcl::KdTreeFLANN<PointI>());
         kdtree_surf_points_local_map->setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_filtered_[n]));
-
         corner_map_features_[n].resize(WINDOW_SIZE + 1);
         pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_points_local_map(new pcl::KdTreeFLANN<PointI>());
         kdtree_corner_points_local_map->setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_filtered_[n]));
 
-        int n_neigh = (n == IDX_REF ? 5:10);
-        // int n_neigh = 5;
-        for (int i = pivot_idx; i < WINDOW_SIZE + 1; i++)
+        auto n_neigh = (n == IDX_REF ? 5:10);
+        omp_init_lock(&omp_lock_);
+        #pragma omp parallel for
+        for (auto i = pivot_idx; i < WINDOW_SIZE + 1; i++)
         {
             if (((n == IDX_REF) && (i == pivot_idx)) || ((n != IDX_REF) && (i != pivot_idx))) continue;
+            std::vector<PointPlaneFeature> tmp_surf_map_features, tmp_corner_map_features;
             f_extract_.extractSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
-                surf_points_stack_[n][i], pose_local_[n][i], surf_map_features_[n][i], n_neigh);
+                surf_points_stack_[n][i], pose_local_[n][i], tmp_surf_map_features, n_neigh);
             f_extract_.extractCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
-                corner_points_stack_[n][i], pose_local_[n][i], corner_map_features_[n][i], n_neigh);
+                corner_points_stack_[n][i], pose_local_[n][i], tmp_corner_map_features, n_neigh);
+            omp_set_lock(&omp_lock_);
+            surf_map_features_[n][i] = tmp_surf_map_features;
+            corner_map_features_[n][i] = tmp_corner_map_features;
+            omp_unset_lock(&omp_lock_);
         }
+        omp_destroy_lock(&omp_lock_);
     }
     printf("build map: %fms\n", t_build_map.toc());
     if (PCL_VIEWER) visualizePCL();
@@ -923,17 +944,17 @@ void Estimator::buildLocalMap()
 
     // -----------------
     // build static local map using fixed poses
-    PointICloud surf_points_trans, corner_points_trans;
     if (!ini_fixed_local_map_)
     {
-        PointICloud surf_points_tmp, corner_points_tmp;
-        for (int n = 0; n < NUM_OF_LASER; n++)
+        for (auto n = 0; n < NUM_OF_LASER; n++)
         {
+            PointICloud surf_points_tmp, corner_points_tmp;
             Pose pose_ext = Pose(qbl_[n], tbl_[n]);
-            for (int i = 0; i <= pivot_idx; i++)
+            for (auto i = 0; i <= pivot_idx; i++)
             {
                 Pose pose_i(Qs_[i], Ts_[i]);
                 Pose pose_ext_pi = Pose(pose_pivot.T_.inverse() * pose_i.T_ * pose_ext.T_);
+                PointICloud surf_points_trans, corner_points_trans;
                 pcl::transformPointCloud(surf_points_stack_[n][i], surf_points_trans, pose_ext_pi.T_.cast<float>());
                 for (auto &p: surf_points_trans.points) p.intensity = i;
                 surf_points_tmp += surf_points_trans;
@@ -949,7 +970,7 @@ void Estimator::buildLocalMap()
 
     // -----------------
     // build the whole local map using all poses except the newest pose
-    for (int n = 0; n < NUM_OF_LASER; n++)
+    for (auto n = 0; n < NUM_OF_LASER; n++)
     {
         surf_points_local_map_[n].clear();
         surf_points_local_map_filtered_[n].clear();
@@ -957,14 +978,15 @@ void Estimator::buildLocalMap()
         // corner_points_local_map_filtered_[n].clear();
     }
 
-    for (int n = 0; n < NUM_OF_LASER; n++)
+    for (auto n = 0; n < NUM_OF_LASER; n++)
     {
         Pose pose_ext = Pose(qbl_[n], tbl_[n]);
-        for (int i = 0; i < WINDOW_SIZE + 1; i++)
+        for (auto i = 0; i < WINDOW_SIZE + 1; i++)
         {
             Pose pose_i(Qs_[i], Ts_[i]);
             pose_local_[n][i] = Pose(pose_pivot.T_.inverse() * pose_i.T_ * pose_ext.T_);
             if ((i < pivot_idx) || (i == WINDOW_SIZE)) continue;
+            PointICloud surf_points_trans, corner_points_trans;
             pcl::transformPointCloud(surf_points_stack_[n][i], surf_points_trans, pose_local_[n][i].T_.cast<float>());
             for (auto &p: surf_points_trans.points) p.intensity = i;
             surf_points_local_map_[n] += surf_points_trans;
@@ -982,9 +1004,8 @@ void Estimator::buildLocalMap()
 
     // -----------------
     // calculate features and correspondences from p+1 to j
-    surf_map_features_.clear();
-    surf_map_features_.resize(NUM_OF_LASER);
-    for (int n = 0; n < NUM_OF_LASER; n++)
+    surf_map_features_.clear(); surf_map_features_.resize(NUM_OF_LASER);
+    for (auto n = 0; n < NUM_OF_LASER; n++)
     {
         surf_map_features_[n].resize(WINDOW_SIZE + 1);
         pcl::KdTreeFLANN<PointI>::Ptr kdtree_surf_points_local_map(new pcl::KdTreeFLANN<PointI>());
@@ -992,17 +1013,23 @@ void Estimator::buildLocalMap()
         // corner_map_features_[n].resize(WINDOW_SIZE + 1);
         // pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_points_local_map(new pcl::KdTreeFLANN<PointI>());
         // kdtree_corner_points_local_map->setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_filtered_[n]));
-        int n_neigh = 5;
-        for (int i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
+        auto n_neigh = 5;
+        omp_init_lock(&omp_lock_);
+        #pragma omp parallel for
+        for (auto i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
         {
+            std::vector<PointPlaneFeature> tmp_map_features;
             f_extract_.extractSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
-                surf_points_stack_[n][i], pose_local_[n][i], surf_map_features_[n][i], n_neigh);
+                surf_points_stack_[n][i], pose_local_[n][i], tmp_map_features, n_neigh);
             // f_extract_.extractCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
-            //     corner_points_stack_[n][i], pose_local_[n][i], corner_map_features_[n][i], n_neigh);
+                //     corner_points_stack_[n][i], pose_local_[n][i], corner_map_features_[n][i], n_neigh);
+            omp_set_lock(&omp_lock_);
+            surf_map_features_[n][i] = tmp_map_features;
+            omp_unset_lock(&omp_lock_);
         }
+        omp_destroy_lock(&omp_lock_);
     }
     printf("build map: %fms\n", t_build_map.toc());
-
     if (PCL_VIEWER) visualizePCL();
 }
 
@@ -1017,9 +1044,9 @@ void Estimator::slideWindow()
         int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
         Pose pose_pivot(Qs_[pivot_idx], Ts_[pivot_idx]);
 
-        int i = pivot_idx + 1;
+        auto i = pivot_idx + 1;
         Pose pose_i(Qs_[i], Ts_[i]);
-        for (int n = 0; n < NUM_OF_LASER; n++)
+        for (auto n = 0; n < NUM_OF_LASER; n++)
         {
             if ((ESTIMATE_EXTRINSIC == 1) && (n != IDX_REF)) continue;
 
@@ -1030,7 +1057,7 @@ void Estimator::slideWindow()
 
             pcl::transformPointCloud(surf_points_stack_[n][pivot_idx], surf_points_trans, pose_i_pivot.T_.cast<float>());
             pcl::PointIndices::Ptr inliers_surf(new pcl::PointIndices());
-            for (int j = 0; j < surf_points_stack_size_[n][0]; j++) inliers_surf->indices.push_back(j);
+            for (auto j = 0; j < surf_points_stack_size_[n][0]; j++) inliers_surf->indices.push_back(j);
             extract.setInputCloud(boost::make_shared<PointICloud>(surf_points_trans));
             extract.setIndices(inliers_surf);
             extract.setNegative(true);
@@ -1041,7 +1068,7 @@ void Estimator::slideWindow()
             if (ESTIMATE_EXTRINSIC == 0) continue;
             pcl::transformPointCloud(corner_points_stack_[n][pivot_idx], corner_points_trans, pose_i_pivot.T_.cast<float>());
             pcl::PointIndices::Ptr inliers_corner(new pcl::PointIndices());
-            for (int j = 0; j < corner_points_stack_size_[n][0]; j++) inliers_corner->indices.push_back(j);
+            for (auto j = 0; j < corner_points_stack_size_[n][0]; j++) inliers_corner->indices.push_back(j);
             extract.setInputCloud(boost::make_shared<PointICloud>(corner_points_trans));
             extract.setIndices(inliers_corner);
             extract.setNegative(true);
@@ -1054,7 +1081,7 @@ void Estimator::slideWindow()
     Qs_.push(Qs_[cir_buf_cnt_]);
     Ts_.push(Ts_[cir_buf_cnt_]);
     Header_.push(Header_[cir_buf_cnt_]);
-    for (int n = 0; n < NUM_OF_LASER; n++)
+    for (auto n = 0; n < NUM_OF_LASER; n++)
     {
         surf_points_stack_[n].push(surf_points_stack_[n][cir_buf_cnt_]);
         surf_points_stack_size_[n].push(surf_points_stack_size_[n][cir_buf_cnt_]);
@@ -1067,7 +1094,7 @@ void Estimator::slideWindow()
 void Estimator::vector2Double()
 {
     int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
-    for (int i = pivot_idx; i < WINDOW_SIZE + 1; i++)
+    for (auto i = pivot_idx; i < WINDOW_SIZE + 1; i++)
     {
         para_pose_[i - pivot_idx][0] = Ts_[i](0);
         para_pose_[i - pivot_idx][1] = Ts_[i](1);
@@ -1077,7 +1104,7 @@ void Estimator::vector2Double()
         para_pose_[i - pivot_idx][5] = Qs_[i].z();
         para_pose_[i - pivot_idx][6] = Qs_[i].w();
     }
-    for (int i = 0; i < NUM_OF_LASER; i++)
+    for (auto i = 0; i < NUM_OF_LASER; i++)
     {
         para_ex_pose_[i][0] = tbl_[i](0);
         para_ex_pose_[i][1] = tbl_[i](1);
@@ -1087,7 +1114,7 @@ void Estimator::vector2Double()
         para_ex_pose_[i][5] = qbl_[i].z();
         para_ex_pose_[i][6] = qbl_[i].w();
     }
-    // for (int i = 0; i < NUM_OF_LASER; i++)
+    // for (auto i = 0; i < NUM_OF_LASER; i++)
     // {
     //     para_td_[i] = tdbl_[i];
     // }
@@ -1096,17 +1123,17 @@ void Estimator::vector2Double()
 void Estimator::double2Vector()
 {
     int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
-    for (int i = 0; i < OPT_WINDOW_SIZE + 1; i++)
+    for (auto i = 0; i < OPT_WINDOW_SIZE + 1; i++)
     {
         Ts_[i + pivot_idx] = Eigen::Vector3d(para_pose_[i][0], para_pose_[i][1], para_pose_[i][2]);
         Qs_[i + pivot_idx] = Eigen::Quaterniond(para_pose_[i][6], para_pose_[i][3], para_pose_[i][4], para_pose_[i][5]);
     }
-    for (int i = 0; i < NUM_OF_LASER; i++)
+    for (auto i = 0; i < NUM_OF_LASER; i++)
     {
         tbl_[i] = Eigen::Vector3d(para_ex_pose_[i][0], para_ex_pose_[i][1], para_ex_pose_[i][2]);
         qbl_[i] = Eigen::Quaterniond(para_ex_pose_[i][6], para_ex_pose_[i][3], para_ex_pose_[i][4], para_ex_pose_[i][5]);
     }
-    // for (int i = 0; i < NUM_OF_LASER; i++)
+    // for (auto i = 0; i < NUM_OF_LASER; i++)
     // {
     //     tdbl_[i] = para_td_[i];
     // }
@@ -1158,9 +1185,9 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
         if (b_vis)
         {
             printf("visualize the structure of H(J^T*J)\n");
-            for (int i = 0; i < mat_JtJ.rows(); i++)
+            for (auto i = 0; i < mat_JtJ.rows(); i++)
             {
-                for (int j = 0; j < mat_JtJ.cols(); j++)
+                for (auto j = 0; j < mat_JtJ.cols(); j++)
                 {
                     if (mat_JtJ(i, j) == 0) std::cout << "0 ";
                                         else std::cout << "1 ";
@@ -1170,7 +1197,7 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
         }
 
         double eig_thre; // the larger, the better (with more constraints)
-        for (int i = 0; i < local_param_ids.size(); i++)
+        for (auto i = 0; i < local_param_ids.size(); i++)
         {
             Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(6*i, 6*i, 6, 6);
             local_param_ids[i]->setParameter();
@@ -1181,7 +1208,7 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
 
             local_param_ids[i]->is_degenerate_ = false;
             eig_thre = eig_thre_calib_[i];
-            for (int j = 0; j < mat_E.cols(); j++)
+            for (auto j = 0; j < mat_E.cols(); j++)
             {
                 if (mat_E(0, j) < eig_thre)
                 {
@@ -1211,7 +1238,7 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
             }
         }
         std::cout << "eigen threshold " << eig_thre_calib_.size() << ": ";
-        for (int i = 0; i < eig_thre_calib_.size(); i++) std::cout << eig_thre_calib_[i] << " ";
+        for (auto i = 0; i < eig_thre_calib_.size(); i++) std::cout << eig_thre_calib_[i] << " ";
         std::cout << std::endl;
     }
     printf("evaluate degeneracy %fms\n", t_eval_degenracy.toc());
@@ -1223,7 +1250,7 @@ void Estimator::evalCalib()
     {
         bool is_converage = true;
         // TODO: very rough calibration stability analysis
-        for (int i = 0; i < NUM_OF_LASER; i++)
+        for (auto i = 0; i < NUM_OF_LASER; i++)
             if ((i != IDX_REF) && (eig_thre_calib_[i + OPT_WINDOW_SIZE + 1] < EIG_THRE_CALIB))
             {
                 is_converage = false;
@@ -1280,7 +1307,7 @@ void Estimator::visualizePCL()
 void Estimator::printParameter()
 {
     printf("print optimized window (p -> j) [qx qy qz qw x y z]\n");
-    for (int i = 0; i < OPT_WINDOW_SIZE + 1; i++)
+    for (auto i = 0; i < OPT_WINDOW_SIZE + 1; i++)
     {
         std::cout << "Pose " << WINDOW_SIZE - OPT_WINDOW_SIZE + i << ": " <<
             para_pose_[i][3] << " " <<
@@ -1291,7 +1318,7 @@ void Estimator::printParameter()
             para_pose_[i][1] << " " <<
             para_pose_[i][2] << std::endl;
     }
-    for (int i = 0; i < NUM_OF_LASER; i++)
+    for (auto i = 0; i < NUM_OF_LASER; i++)
     {
         std::cout << "Ext: " << " " <<
             para_ex_pose_[i][3] << " " <<
@@ -1302,7 +1329,7 @@ void Estimator::printParameter()
             para_ex_pose_[i][1] << " " <<
             para_ex_pose_[i][2] << std::endl;
     }
-    // for (int i = 0; i < NUM_OF_LASER; i++)
+    // for (auto i = 0; i < NUM_OF_LASER; i++)
     // {
     //     std::cout << "dt: " <<
     //         para_td_[i] << std::endl;
@@ -1312,7 +1339,7 @@ void Estimator::printParameter()
 void Estimator::printSlideWindow()
 {
     printf("print slide window (0 -> j) ************************\n");
-    for (int i = 0; i < cir_buf_cnt_ + 1; i++)
+    for (auto i = 0; i < cir_buf_cnt_ + 1; i++)
     {
         Pose pose(Qs_[i], Ts_[i]);
         std::cout << i << ": " << pose << std::endl;

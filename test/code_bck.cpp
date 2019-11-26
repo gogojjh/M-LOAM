@@ -72,3 +72,6 @@
 // std::cout << "left: " << std::endl << (mat_H * mat_V.col(1)).transpose() << std::endl;
 // std::cout << "right: " << std::endl << (mat_E(0, 1) * mat_V.col(1)).transpose() << std::endl;
 // std::cout << i << ": D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose() << std::endl;
+
+// openmp example
+// #pragma omp parallel for num_threads(4)

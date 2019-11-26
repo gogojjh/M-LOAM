@@ -14,6 +14,8 @@
 #include <unordered_map>
 #include <queue>
 
+#include <omp.h>
+
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
@@ -108,6 +110,8 @@ class Estimator
 
     std::thread track_thread_;
     std::thread process_thread_;
+
+    omp_lock_t omp_lock_;
 
     bool init_thread_flag_;
 

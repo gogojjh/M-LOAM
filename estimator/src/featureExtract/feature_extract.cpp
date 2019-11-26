@@ -44,12 +44,12 @@ void FeatureExtract::pointAssociateToMap(const PointI &pi, PointI &po, const Pos
 	//po->intensity = 1.0;
 }
 
-void FeatureExtract::cloudRearrange(const PointCloud &laser_cloud_in)
+void FeatureExtract::cloudRearrange(const common::PointCloud &laser_cloud_in, std::vector<common::PointICloud> &laser_cloud_scans, int &cloud_size)
 {
-    cloud_size_ = laser_cloud_in.points.size();
+    cloud_size = laser_cloud_in.points.size();
     float start_ori = -atan2(laser_cloud_in.points[0].y, laser_cloud_in.points[0].x);
-    float end_ori = -atan2(laser_cloud_in.points[cloud_size_ - 1].y,
-                            laser_cloud_in.points[cloud_size_ - 1].x) + 2 * M_PI;
+    float end_ori = -atan2(laser_cloud_in.points[cloud_size - 1].y,
+                            laser_cloud_in.points[cloud_size - 1].x) + 2 * M_PI;
     if (end_ori - start_ori > 3 * M_PI)
     {
         end_ori -= 2 * M_PI;
@@ -60,11 +60,11 @@ void FeatureExtract::cloudRearrange(const PointCloud &laser_cloud_in)
     }
     // std::cout << "end Ori " << end_ori << std::endl;
 
-    int count = cloud_size_;
+    int count = cloud_size;
     PointI point;
-    laser_cloud_scans_.clear();
-    laser_cloud_scans_.resize(N_SCANS);
-    for (int i = 0; i < cloud_size_; i++)
+    laser_cloud_scans.clear();
+    laser_cloud_scans.resize(N_SCANS);
+    for (int i = 0; i < cloud_size; i++)
     {
         point.x = laser_cloud_in.points[i].x;
         point.y = laser_cloud_in.points[i].y;
@@ -144,18 +144,18 @@ void FeatureExtract::cloudRearrange(const PointCloud &laser_cloud_in)
 
         float relTime = (ori - start_ori) / (end_ori - start_ori);
         point.intensity = scan_id + scan_period * relTime;
-        laser_cloud_scans_[scan_id].push_back(point);
+        laser_cloud_scans[scan_id].push_back(point);
     }
-    cloud_size_ = count;
-    // printf("points size: %d ********* \n",  cloud_size_);
+    cloud_size = count;
+    // printf("points size: %d ********* \n",  cloud_size);
 }
 
-cloudFeature FeatureExtract::extractCloud(const double &cur_time, const PointCloud &laser_cloud_in)
+void FeatureExtract::extractCloud(const double &cur_time, const PointCloud &laser_cloud_in, cloudFeature &cloud_feature)
 {
-    t_whole_.tic();
-    t_prepare_.tic();
-
-    cloudRearrange(laser_cloud_in);
+    TicToc t_whole, t_prepare;
+    int cloud_size;
+    std::vector<common::PointICloud> laser_cloud_scans;
+    cloudRearrange(laser_cloud_in, laser_cloud_scans, cloud_size);
 
     std::vector<int> scan_start_ind(N_SCANS);
     std::vector<int> scan_end_ind(N_SCANS);
@@ -164,12 +164,12 @@ cloudFeature FeatureExtract::extractCloud(const double &cur_time, const PointClo
     for (int i = 0; i < N_SCANS; i++)
     {
         scan_start_ind[i] = laser_cloud->size() + 5;
-        *laser_cloud += laser_cloud_scans_[i];
+        *laser_cloud += laser_cloud_scans[i];
         scan_end_ind[i] = laser_cloud->size() - 6;
     }
-    // printf("prepare time %f ms \n", t_prepare_.toc());
+    // printf("prepare time %fms\n", t_prepare.toc());
 
-    for (int i = 5; i < cloud_size_ - 5; i++)
+    for (int i = 5; i < cloud_size - 5; i++)
     {
         float diff_x = laser_cloud->points[i - 5].x + laser_cloud->points[i - 4].x + laser_cloud->points[i - 3].x + laser_cloud->points[i - 2].x + laser_cloud->points[i - 1].x - 10 * laser_cloud->points[i].x + laser_cloud->points[i + 1].x + laser_cloud->points[i + 2].x + laser_cloud->points[i + 3].x + laser_cloud->points[i + 4].x + laser_cloud->points[i + 5].x;
         float diff_y = laser_cloud->points[i - 5].y + laser_cloud->points[i - 4].y + laser_cloud->points[i - 3].y + laser_cloud->points[i - 2].y + laser_cloud->points[i - 1].y - 10 * laser_cloud->points[i].y + laser_cloud->points[i + 1].y + laser_cloud->points[i + 2].y + laser_cloud->points[i + 3].y + laser_cloud->points[i + 4].y + laser_cloud->points[i + 5].y;
@@ -180,8 +180,7 @@ cloudFeature FeatureExtract::extractCloud(const double &cur_time, const PointClo
         cloud_label[i] = 0;
     }
 
-    t_pts_.tic();
-
+    TicToc t_pts;
     PointICloud corner_points_sharp;
     PointICloud corner_points_less_sharp;
     PointICloud surf_points_flat;
@@ -189,9 +188,7 @@ cloudFeature FeatureExtract::extractCloud(const double &cur_time, const PointClo
     float t_q_sort = 0;
     for (int i = 0; i < N_SCANS; i++)
     {
-        if (scan_end_ind[i] - scan_start_ind[i] < 6)
-            continue;
-
+        if (scan_end_ind[i] - scan_start_ind[i] < 6) continue;
         PointICloud::Ptr surf_points_less_flat_scan(new PointICloud);
         for (int j = 0; j < 6; j++)
         {
@@ -304,17 +301,19 @@ cloudFeature FeatureExtract::extractCloud(const double &cur_time, const PointClo
             }
         }
         PointICloud surf_points_less_flat_scanDS;
-        down_size_filter_corner_.setInputCloud(surf_points_less_flat_scan);
-        down_size_filter_corner_.filter(surf_points_less_flat_scanDS);
+        pcl::VoxelGrid<PointI> down_size_filter;
+        down_size_filter.setInputCloud(surf_points_less_flat_scan);
+        down_size_filter.setLeafSize(0.2, 0.2, 0.2);
+        down_size_filter.filter(surf_points_less_flat_scanDS);
         surf_points_less_flat += surf_points_less_flat_scanDS;
     }
-    // printf("sort q time %f ms \n", t_q_sort);
-    // printf("seperate points time %f ms \n", t_pts_.toc());
+    // printf("sort q time %fms\n", t_q_sort);
+    // printf("seperate points time %fms\n", t_pts.toc());
 
-    printf("whole scan registration time %fms \n", t_whole_.toc());
-    if(t_whole_.toc() > 100) ROS_WARN("whole scan registration process over 100ms");
+    printf("whole scan registration time %fms \n", t_whole.toc());
+    if(t_whole.toc() > 100) ROS_WARN("whole scan registration process over 100ms");
 
-    cloudFeature cloud_feature;
+    cloud_feature.clear();
     // cloud_feature.find("key")->first/ second
     // cloud_feature.erase("key")/ cloud_feature.erase(cloud_feature.find("key"))
     cloud_feature.insert(pair<std::string, PointICloud>("laser_cloud", *laser_cloud));
@@ -322,7 +321,6 @@ cloudFeature FeatureExtract::extractCloud(const double &cur_time, const PointClo
     cloud_feature.insert(pair<std::string, PointICloud>("corner_points_less_sharp", corner_points_less_sharp));
     cloud_feature.insert(pair<std::string, PointICloud>("surf_points_flat", surf_points_flat));
     cloud_feature.insert(pair<std::string, PointICloud>("surf_points_less_flat", surf_points_less_flat));
-    return cloud_feature;
 }
 
 void FeatureExtract::extractCornerFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_corner_from_map,

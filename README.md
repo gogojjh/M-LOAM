@@ -21,6 +21,9 @@ Follow [Ceres Installation](http://ceres-solver.org/installation.html).
 #### 1.3. **PCL**
 Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 
+#### 1.4. **OpenMP**
+```sudo apt install libomp-dev```
+
 ### 2. Build M-LOAM
 
 
