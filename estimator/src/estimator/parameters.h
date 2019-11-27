@@ -126,6 +126,7 @@ extern int N_CUMU_FEATURE;
 
 extern double EIG_INITIAL;
 extern double EIG_THRE_CALIB;
+extern int N_CALIB;
 
 void readParameters(std::string config_file);
 

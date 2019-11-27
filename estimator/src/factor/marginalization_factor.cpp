@@ -187,8 +187,7 @@ void MarginalizationInfo::marginalize()
         it.second = pos;
         pos += localSize(parameter_block_size[it.first]);
     }
-
-    m = pos;
+    m = pos; // size of marginalized states
 
     for (const auto &it : parameter_block_size)
     {
@@ -198,9 +197,9 @@ void MarginalizationInfo::marginalize()
             pos += localSize(it.second);
         }
     }
-
-    n = pos - m;
+    n = pos - m; // size of optimized states
     //ROS_INFO("marginalization, pos: %d, m: %d, n: %d, size: %d", pos, m, n, (int)parameter_block_idx.size());
+
     if(m == 0)
     {
         valid = false;

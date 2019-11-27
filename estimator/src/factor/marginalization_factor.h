@@ -30,12 +30,12 @@ struct ResidualBlockInfo
 
     ceres::CostFunction *cost_function;
     ceres::LossFunction *loss_function;
-    std::vector<double *> parameter_blocks;
-    std::vector<int> drop_set;
+    std::vector<double *> parameter_blocks; // parameters to be optimized
+    std::vector<int> drop_set; // id of states to be marginalized
 
-    double **raw_jacobians;
+    double **raw_jacobians; // Jacobian
     std::vector<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> jacobians;
-    Eigen::VectorXd residuals;
+    Eigen::VectorXd residuals; // 1x1
 
     int localSize(int size)
     {
@@ -60,16 +60,16 @@ class MarginalizationInfo
     int localSize(int size) const;
     int globalSize(int size) const;
     void addResidualBlockInfo(ResidualBlockInfo *residual_block_info);
-    void preMarginalize();
-    void marginalize();
+    void preMarginalize(); // calculate Jacobian of each residual, and update the parameter_block_data
+    void marginalize(); // pose, m, n: dimension of states; marginalized states; optimized states
     std::vector<double *> getParameterBlocks(std::unordered_map<long, double *> &addr_shift);
 
     std::vector<ResidualBlockInfo *> factors;
-    int m, n;
-    std::unordered_map<long, int> parameter_block_size; //global size
+    int m, n; // m: number of marginalized states; n: number of optimized states; n = localSize(parameter_block_size) - m
+    std::unordered_map<long, int> parameter_block_size; //global size, optimized <memory, id>
     int sum_block_size;
-    std::unordered_map<long, int> parameter_block_idx; //local size
-    std::unordered_map<long, double *> parameter_block_data;
+    std::unordered_map<long, int> parameter_block_idx; //local size, marginalized <memory, id>
+    std::unordered_map<long, double *> parameter_block_data; // optimized data <memory, data>
 
     std::vector<int> keep_block_size; //global size
     std::vector<int> keep_block_idx;  //local size

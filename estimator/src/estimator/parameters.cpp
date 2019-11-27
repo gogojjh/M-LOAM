@@ -95,6 +95,7 @@ int N_CUMU_FEATURE;
 
 double EIG_INITIAL;
 double EIG_THRE_CALIB;
+int N_CALIB;
 
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
@@ -232,6 +233,7 @@ void readParameters(std::string config_file)
 
     EIG_INITIAL = fsSettings["eig_initial"];
     EIG_THRE_CALIB = fsSettings["eig_thre_calib"];
+    N_CALIB = fsSettings["n_calib"];
 
     fsSettings.release();
 }

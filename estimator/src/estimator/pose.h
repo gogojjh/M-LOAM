@@ -69,3 +69,5 @@ public:
 
     double td_;
 };
+
+void computeMeanPose(const std::vector<std::pair<double, Pose> > &pose_array, Pose &pose_mean);

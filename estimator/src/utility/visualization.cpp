@@ -16,6 +16,7 @@ using namespace common;
 
 // pointcloud
 ros::Publisher pub_laser_cloud;
+ros::Publisher pub_laser_cloud_proj;
 ros::Publisher pub_corner_points_sharp;
 ros::Publisher pub_corner_points_less_sharp;
 ros::Publisher pub_surf_points_flat;
@@ -55,6 +56,7 @@ void clearPath()
 void registerPub(ros::NodeHandle &nh)
 {
     pub_laser_cloud = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud", 100);
+    pub_laser_cloud_proj = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_proj", 100);
     pub_corner_points_sharp = nh.advertise<sensor_msgs::PointCloud2>("/corner_points_sharp", 100);
     pub_corner_points_less_sharp = nh.advertise<sensor_msgs::PointCloud2>("/corner_points_less_sharp", 100);
     pub_surf_points_flat = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_flat", 100);
@@ -85,22 +87,25 @@ void pubPointCloud(const Estimator &estimator, const double &time)
     header.stamp = ros::Time(time);
 
     // publish raw points
-    PointICloud laser_cloud, corner_points_sharp, corner_points_less_sharp, surf_points_flat, surf_points_less_flat;
+    PointICloud laser_cloud, laser_cloud_proj, corner_points_sharp, corner_points_less_sharp, surf_points_flat, surf_points_less_flat;
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
-        // if ((ESTIMATE_EXTRINSIC !=0) && (n != IDX_REF)) continue;
         Pose pose_ext = Pose(estimator.qbl_[n], estimator.tbl_[n]);
         Eigen::Matrix4d transform_ext = pose_ext.T_;
         cloudFeature cloud_feature_trans = transformCloudFeature(estimator.cur_feature_.second[n], transform_ext.cast<float>());
         for (auto &p: cloud_feature_trans["laser_cloud"].points) p.intensity = n;
-
-        laser_cloud += cloud_feature_trans["laser_cloud"];
-        // corner_points_sharp += cloud_feature_trans["corner_points_sharp"];
-        // surf_points_flat += cloud_feature_trans["surf_points_flat"];
-        corner_points_less_sharp += cloud_feature_trans["corner_points_less_sharp"];
-        surf_points_less_flat += cloud_feature_trans["surf_points_less_flat"];
+        laser_cloud_proj += cloud_feature_trans["laser_cloud"];
+        if ((ESTIMATE_EXTRINSIC == 0) || (n == IDX_REF))
+        {
+            laser_cloud += cloud_feature_trans["laser_cloud"];
+            // corner_points_sharp += cloud_feature_trans["corner_points_sharp"];
+            // surf_points_flat += cloud_feature_trans["surf_points_flat"];
+            corner_points_less_sharp += cloud_feature_trans["corner_points_less_sharp"];
+            surf_points_less_flat += cloud_feature_trans["surf_points_less_flat"];
+        }
     }
     publishCloud(pub_laser_cloud, header, laser_cloud);
+    publishCloud(pub_laser_cloud_proj, header, laser_cloud_proj);
     // publishCloud(pub_corner_points_sharp, header, corner_points_sharp);
     // publishCloud(pub_surf_points_flat, header, surf_points_flat);
     publishCloud(pub_corner_points_less_sharp, header, corner_points_less_sharp);

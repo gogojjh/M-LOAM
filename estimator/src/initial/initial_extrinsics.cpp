@@ -115,7 +115,7 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
     // printf("********** pose_cnt %d\n", pose_cnt_);
     Eigen::MatrixXd A(pose_cnt_ * 4, 4); // a cumulative Q matrix
     A.setZero();
-    for (int i = 0; i < pose_cnt_; i++)
+    for (auto i = 0; i < pose_cnt_; i++)
     {
         Pose &pose_ref = v_pose_[idx_ref][indices_[idx_data][i]];
         Pose &pose_data = v_pose_[idx_data][indices_[idx_data][i]];
@@ -165,7 +165,7 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
         std::vector<Eigen::Quaterniond> q_yx;
         q_yx.resize(2);
         double yaw[2];
-        for (int i = 0; i < 2; ++i)
+        for (auto i = 0; i < 2; ++i)
         {
             double t = s[i] * s[i] * t1.dot(t1) + 2 * s[i] * t1.dot(t2) + t2.dot(t2);
             // solve constraint ||q_yx|| = 1
@@ -256,7 +256,7 @@ bool InitialExtrinsics::calibExTranslationPlanar(const size_t &idx_ref, const si
     const Eigen::Quaterniond &q_yx = calib_ext_[idx_data].q_;
     Eigen::MatrixXd G = Eigen::MatrixXd::Zero(pose_cnt_ * 2, 4);
     Eigen::MatrixXd w = Eigen::MatrixXd::Zero(pose_cnt_ * 2, 1);
-    for (int i = 0; i < pose_cnt_; ++i)
+    for (auto i = 0; i < pose_cnt_; ++i)
     {
         Pose &pose_ref = v_pose_[idx_ref][indices_[idx_data][i]];
         Pose &pose_data = v_pose_[idx_data][indices_[idx_data][i]];

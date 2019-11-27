@@ -99,6 +99,10 @@ void Estimator::clearState()
 
     last_marginalization_info_ = nullptr;
 
+    eig_thre_calib_.clear();
+    d_factor_calib_.clear();
+    pose_calib_.clear();
+
     m_process_.unlock();
 }
 
@@ -171,6 +175,8 @@ void Estimator::setParameter()
     para_td_ = new double[NUM_OF_LASER];
 
     eig_thre_calib_ = std::vector<double>(OPT_WINDOW_SIZE + NUM_OF_LASER + 1, EIG_INITIAL);
+    d_factor_calib_ = std::vector<double>(NUM_OF_LASER, 0);
+    pose_calib_.resize(NUM_OF_LASER);
 
     m_process_.unlock();
 }
@@ -195,20 +201,6 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
     TicToc feature_ext_time;
     std::vector<cloudFeature> feature_frame;
     feature_frame.resize(NUM_OF_LASER);
-
-    // TODO: apply openmp
-    // static omp_lock_t omp_lock_;
-    // omp_init_lock(&omp_lock_);
-    // #pragma omp parallel for
-    // for (auto i = 0; i < v_laser_cloud_in.size(); i++)
-    // {
-    //     cloudFeature cloud_feature;
-    //     f_extract_.extractCloud(t, v_laser_cloud_in[i], cloud_feature);
-    //     omp_set_lock(&omp_lock_);
-    //     feature_frame[i] = cloud_feature;
-    //     omp_unset_lock(&omp_lock_);
-    // }
-    // omp_destroy_lock(&omp_lock_);
     for (auto i = 0; i < v_laser_cloud_in.size(); i++)
     {
         cloudFeature cloud_feature;
@@ -440,8 +432,8 @@ void Estimator::optimizeMap()
     // loss_function = new ceres::CauchyLoss(1.0);
     // ceres: set options and solve the non-linear equation
     ceres::Solver::Options options;
-    // options.linear_solver_type = ceres::DENSE_QR;
-    options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
+    options.linear_solver_type = ceres::DENSE_QR;
+    // options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
     options.num_threads = 6;
     // options.trust_region_strategy_type = ceres::DOGLEG;
     options.max_num_iterations = NUM_ITERATIONS;
@@ -492,7 +484,7 @@ void Estimator::optimizeMap()
     // problem.SetParameterBlockConstant(&para_td_[IDX_REF]);
 
     // ****************************************************
-    // ceres: add marginalization error of previous parameter blocks
+    // ceres: add the prior residual into future optimization
     std::vector<ceres::internal::ResidualBlock *> res_ids_marg;
     if ((MARGINALIZATION_FACTOR) && (last_marginalization_info_))
     {
@@ -621,7 +613,7 @@ void Estimator::optimizeMap()
                 for (auto i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
                 {
                     std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i];
-                    printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size());
+                    // printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size()); // 500-1000
                     for (auto &feature: features_frame)
                     {
                         const double &s = feature.score_;
@@ -663,13 +655,13 @@ void Estimator::optimizeMap()
         TicToc t_whole_marginalization;
         MarginalizationInfo *marginalization_info = new MarginalizationInfo();
         vector2Double();
-        // indicate the marginalized parameter blocks
+        // indicate the prior error
         if (last_marginalization_info_)
         {
             std::vector<int> drop_set;
             for (auto i = 0; i < static_cast<int>(last_marginalization_parameter_blocks_.size()); i++)
             {
-                // indicate the dropped pose to calculate the relatd residuals
+                // indicate the dropped pose to calculate the related residuals
                 if (last_marginalization_parameter_blocks_[i] == para_pose_[0]) drop_set.push_back(i);
             }
             MarginalizationFactor *marginalization_factor = new MarginalizationFactor(last_marginalization_info_);
@@ -788,11 +780,11 @@ void Estimator::optimizeMap()
         //! for next iteration, the linearization poauto is assured and fixed
         //! adjust the memory of H and b to implement the Schur complement
         TicToc t_pre_margin;
-        marginalization_info->preMarginalize();
+        marginalization_info->preMarginalize(); // compute the Jacobian
         printf("pre marginalization: %fms\n", t_pre_margin.toc());
 
         TicToc t_margin;
-        marginalization_info->marginalize();
+        marginalization_info->marginalize(); // marginalize some states and keep the remaining states with prior residuals
         printf("marginalization: %fms\n", t_margin.toc());
 
         //! indicate shared memory of parameter blocks except for the dropped state
@@ -855,10 +847,8 @@ void Estimator::buildCalibMap()
     // build the whole local map using all poses except the newest pose
     for (auto n = 0; n < NUM_OF_LASER; n++)
     {
-        surf_points_local_map_[n].clear();
-        surf_points_local_map_filtered_[n].clear();
-        corner_points_local_map_[n].clear();
-        corner_points_local_map_filtered_[n].clear();
+        surf_points_local_map_[n].clear(); surf_points_local_map_filtered_[n].clear();
+        corner_points_local_map_[n].clear(); corner_points_local_map_filtered_[n].clear();
     }
 
     for (auto n = 0; n < NUM_OF_LASER; n++)
@@ -869,14 +859,12 @@ void Estimator::buildCalibMap()
             Pose pose_i(Qs_[i], Ts_[i]);
             pose_local_[n][i] = Pose(pose_pivot.T_.inverse() * pose_i.T_ * pose_ext.T_);
             if ((i < pivot_idx) || (i == WINDOW_SIZE)) continue;
-
-            PointICloud surf_points_trans, corner_points_trans;
             if (n == IDX_REF) // localmap of reference
             {
+                PointICloud surf_points_trans, corner_points_trans;
                 pcl::transformPointCloud(surf_points_stack_[n][i], surf_points_trans, pose_local_[n][i].T_.cast<float>());
                 for (auto &p: surf_points_trans.points) p.intensity = i;
                 surf_points_local_map_[n] += surf_points_trans;
-
                 pcl::transformPointCloud(corner_points_stack_[n][i], corner_points_trans, pose_local_[n][i].T_.cast<float>());
                 for (auto &p: corner_points_trans.points) p.intensity = i;
                 corner_points_local_map_[n] += corner_points_trans;
@@ -898,11 +886,14 @@ void Estimator::buildCalibMap()
             down_size_filter.filter(surf_points_local_map_filtered_[n]); // filter surf_local_map
             down_size_filter.setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_[IDX_REF]));
             down_size_filter.filter(corner_points_local_map_filtered_[n]); // filter corner_local_map
+            // surf_points_local_map_filtered_[n] = surf_points_local_map_filtered_[IDX_REF];
+            // corner_points_local_map_filtered_[n] = corner_points_local_map_filtered_[IDX_REF];
         }
     }
 
     // -----------------
     // calculate features and correspondences from p+1 to j
+    TicToc t_extract_map;
     surf_map_features_.clear(); surf_map_features_.resize(NUM_OF_LASER);
     corner_map_features_.clear(); corner_map_features_.resize(NUM_OF_LASER);
     for (auto n = 0; n < NUM_OF_LASER; n++)
@@ -914,12 +905,12 @@ void Estimator::buildCalibMap()
         pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_points_local_map(new pcl::KdTreeFLANN<PointI>());
         kdtree_corner_points_local_map->setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_filtered_[n]));
 
-        auto n_neigh = (n == IDX_REF ? 5:10);
         omp_init_lock(&omp_lock_);
         #pragma omp parallel for
         for (auto i = pivot_idx; i < WINDOW_SIZE + 1; i++)
         {
             if (((n == IDX_REF) && (i == pivot_idx)) || ((n != IDX_REF) && (i != pivot_idx))) continue;
+            int n_neigh = (n == IDX_REF ? 5:10);
             std::vector<PointPlaneFeature> tmp_surf_map_features, tmp_corner_map_features;
             f_extract_.extractSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
                 surf_points_stack_[n][i], pose_local_[n][i], tmp_surf_map_features, n_neigh);
@@ -931,8 +922,9 @@ void Estimator::buildCalibMap()
             omp_unset_lock(&omp_lock_);
         }
         omp_destroy_lock(&omp_lock_);
+
     }
-    printf("build map: %fms\n", t_build_map.toc());
+    printf("build map (extract map): %f (%f)ms\n", t_build_map.toc(), t_extract_map.toc());
     if (PCL_VIEWER) visualizePCL();
 }
 
@@ -1014,6 +1006,7 @@ void Estimator::buildLocalMap()
         // pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_points_local_map(new pcl::KdTreeFLANN<PointI>());
         // kdtree_corner_points_local_map->setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_filtered_[n]));
         auto n_neigh = 5;
+
         omp_init_lock(&omp_lock_);
         #pragma omp parallel for
         for (auto i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
@@ -1028,6 +1021,7 @@ void Estimator::buildLocalMap()
             omp_unset_lock(&omp_lock_);
         }
         omp_destroy_lock(&omp_lock_);
+
     }
     printf("build map: %fms\n", t_build_map.toc());
     if (PCL_VIEWER) visualizePCL();
@@ -1197,6 +1191,7 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
         }
 
         double eig_thre; // the larger, the better (with more constraints)
+        d_factor_calib_ = std::vector<double>(NUM_OF_LASER, 0);
         for (auto i = 0; i < local_param_ids.size(); i++)
         {
             Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(6*i, 6*i, 6, 6);
@@ -1225,7 +1220,12 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
 
             if (i > OPT_WINDOW_SIZE)
             {
-                if (mat_E(0, 0) > eig_thre)
+                if (mat_E(0, 0) >= EIG_THRE_CALIB)
+                {
+                    eig_thre_calib_[i] = EIG_THRE_CALIB;
+                    d_factor_calib_[i - OPT_WINDOW_SIZE - 1] = mat_E(0, 0);
+                }
+                else if (mat_E(0, 0) > eig_thre)
                     eig_thre_calib_[i] = mat_E(0, 0);
                 else
                     mat_P.setZero();
@@ -1248,18 +1248,36 @@ void Estimator::evalCalib()
 {
     if (solver_flag_ == NON_LINEAR)
     {
-        bool is_converage = true;
-        // TODO: very rough calibration stability analysis
-        for (auto i = 0; i < NUM_OF_LASER; i++)
-            if ((i != IDX_REF) && (eig_thre_calib_[i + OPT_WINDOW_SIZE + 1] < EIG_THRE_CALIB))
+        for (auto n = 0; n < NUM_OF_LASER; n++)
+            if (d_factor_calib_[n] != 0) // with high constraints
             {
+                double weight = d_factor_calib_[n] / EIG_THRE_CALIB;
+                Pose pose_ext = Pose(qbl_[n], tbl_[n]);
+                pose_calib_[n].push_back(make_pair(weight, pose_ext));
+            }
+
+        bool is_converage = true;
+        for (auto n = 0; n < NUM_OF_LASER; n++)
+            if ((n != IDX_REF) && (pose_calib_[n].size() < N_CALIB))
+            {
+                ROS_WARN("pose_calib size: %d", pose_calib_[n].size());
                 is_converage = false;
                 break;
             }
+
         if (is_converage)
         {
             ROS_WARN("Finish nonlinear calibration !");
             ESTIMATE_EXTRINSIC = 0;
+            for (auto n = 0; n < NUM_OF_LASER; n++)
+                if (n != IDX_REF)
+                {
+                    Pose pose_mean_calib;
+                    computeMeanPose(pose_calib_[n], pose_mean_calib); // compute the mean calibration parameters
+                    qbl_[n] = pose_mean_calib.q_;
+                    tbl_[n] = pose_mean_calib.t_;
+                    // std::cout << "laser_" << n << ": " << pose_mean_calib << std::endl;
+                }
             ini_fixed_local_map_ = false; // reconstruct new optimized map
             if (last_marginalization_info_ != nullptr) delete last_marginalization_info_;
             last_marginalization_info_ = nullptr; // meaning that the prior errors in online calibration are discarded
