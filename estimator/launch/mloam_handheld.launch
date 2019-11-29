@@ -10,12 +10,12 @@
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/handheld/20190809/room2.bag" /> -->
         <arg name="bag_file" default="/Monster/dataset/lidar_calibration/handheld/20190809/room1_filter_filter_straight.bag" />
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/handheld/20190809/room1.bag" /> -->
-        <node pkg="rosbag" type="play" name="rosbag" args="--clock --pause -r 0.5 $(arg bag_file)" />
+        <node pkg="rosbag" type="play" name="rosbag" args="--clock --pause -r 0.7 $(arg bag_file)" />
     </group>
 
     <node pkg="mloam" type="mloam_node" name="mloam_node" args="$(arg config_file)" output="screen" />
 
-    <node pkg="mloam" type="lidar_mapper" name="lidar_mapper"/>
+    <!-- <node pkg="mloam" type="lidar_mapper" name="lidar_mapper"/> -->
 
     <!-- publish static tf -->
     <!-- x y z yaw pitch roll -->

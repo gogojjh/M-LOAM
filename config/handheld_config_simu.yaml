@@ -6,12 +6,10 @@ imu: 0
 num_of_cam: 2
 
 imu_topic: ""
-output_path: "/home/jjiao/catkin_ws/src/localization/M-LOAM/log/simu/"
-
-# mloam_odom_path: "mloam_odom_with_margin.csv"
-mloam_odom_path: "mloam_odom.csv"
-mloam_map_path: "mloam_map.csv"
-mloam_gt_path: "mloam_gt.csv"
+output_path: "/home/jjiao/catkin_ws/src/localization/rpg_trajectory_evaluation/results/simulation_mloam/test/mloam/test_mloam_randomwalk/"
+mloam_odom_path: "stamped_odom_estimate.txt"
+mloam_map_path: "stamped_map_estimate.txt"
+mloam_gt_path: "stamped_groundtruth.txt"
 
 #Multiple thread support
 multiple_thread: 1
@@ -46,7 +44,7 @@ window_size: 5
 opt_window_size: 3
 
 # Extrinsic parameter between IMU and Camera.
-estimate_extrinsic: 1   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
 optimal_extrinsic: 0
@@ -57,10 +55,10 @@ body_T_laser: !!opencv-matrix
    dt: d
    # data: [0, 0, 0, 1, 0, 0, 0,
    #        0, 0, 0, 1, 0, 0, 0] # qx qy qz qw px py pz
-   # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-   #        0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220]
    data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-          0.31, 0.0, 0.0, 0.94, 0, -0.2, 0.0]
+          0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220]
+   # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
+   #        0.31, 0.0, 0.0, 0.94, 0, -0.2, 0.0]
 
 # <!-- laser_0 to laser_1 -->
 # <!-- 0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220 -->
@@ -117,7 +115,7 @@ optimal_odometry: 1
 n_cumu_feature: 5
 
 eig_initial: 100
-eig_thre_calib: 600
-n_calib: 5
+eig_thre_calib: 500
+n_calib: 10
 
 #

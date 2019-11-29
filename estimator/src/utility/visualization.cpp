@@ -160,20 +160,22 @@ void pubPointCloud(const Estimator &estimator, const double &time)
 void printStatistics(const Estimator &estimator, double t)
 {
     // if (estimator.solver_flag_ != Estimator::SolverFlag::NON_LINEAR) return;
+    // timestamp tx ty tz qx qy qz qw
     if (ESTIMATE_EXTRINSIC != 2)
     {
         ofstream fout(EX_CALIB_RESULT_PATH.c_str(), ios::out);
         fout.setf(ios::fixed, ios::floatfield);
         fout.precision(5);
-        for (int i = 0; i < NUM_OF_LASER; i++)
+        for (auto i = 0; i < NUM_OF_LASER; i++)
         {
-            fout << estimator.qbl_[i].x() << ", "
-                << estimator.qbl_[i].y() << ", "
-                << estimator.qbl_[i].z() << ", "
-                << estimator.qbl_[i].w() << ", "
-                << estimator.tbl_[i](0) << ", "
-                << estimator.tbl_[i](1) << ", "
-                << estimator.tbl_[i](2) << std::endl;
+            fout << i << " "
+                << estimator.tbl_[i](0) << " "
+                << estimator.tbl_[i](1) << " "
+                << estimator.tbl_[i](2) << " "
+                << estimator.qbl_[i].x() << " "
+                << estimator.qbl_[i].y() << " "
+                << estimator.qbl_[i].z() << " "
+                << estimator.qbl_[i].w() << std::endl;
         }
         fout.close();
     }
@@ -182,17 +184,17 @@ void printStatistics(const Estimator &estimator, double t)
         ofstream fout(MLOAM_ODOM_PATH.c_str(), ios::out);
         fout.setf(ios::fixed, ios::floatfield);
         fout.precision(5);
-        for (size_t i = 0; i < v_laser_path[IDX_REF].poses.size(); i++)
+        for (auto i = 0; i < v_laser_path[IDX_REF].poses.size(); i++)
         {
             geometry_msgs::PoseStamped &laser_pose = v_laser_path[IDX_REF].poses[i];
-            fout << laser_pose.header.stamp.toSec() << ", "
-                << laser_pose.pose.orientation.x << ", "
-                << laser_pose.pose.orientation.y << ", "
-                << laser_pose.pose.orientation.z << ", "
-                << laser_pose.pose.orientation.w << ", "
-                << laser_pose.pose.position.x << ", "
-                << laser_pose.pose.position.y << ", "
-                << laser_pose.pose.position.z << std::endl;
+            fout << laser_pose.header.stamp.toSec() << " "
+                << laser_pose.pose.position.x << " "
+                << laser_pose.pose.position.y << " "
+                << laser_pose.pose.position.z << " "
+                << laser_pose.pose.orientation.x << " "
+                << laser_pose.pose.orientation.y << " "
+                << laser_pose.pose.orientation.z << " "
+                << laser_pose.pose.orientation.w << std::endl;
         }
         fout.close();
     }
@@ -201,17 +203,17 @@ void printStatistics(const Estimator &estimator, double t)
         ofstream fout(MLOAM_GT_PATH.c_str(), ios::out);
         fout.setf(ios::fixed, ios::floatfield);
         fout.precision(5);
-        for (size_t i = 0; i < estimator.laser_path_gt_.poses.size(); i++)
+        for (auto i = 0; i < estimator.laser_path_gt_.poses.size(); i++)
         {
             geometry_msgs::PoseStamped laser_pose = estimator.laser_path_gt_.poses[i];
-            fout << laser_pose.header.stamp.toSec() << ", "
-                << laser_pose.pose.orientation.x << ", "
-                << laser_pose.pose.orientation.y << ", "
-                << laser_pose.pose.orientation.z << ", "
-                << laser_pose.pose.orientation.w << ", "
-                << laser_pose.pose.position.x << ", "
-                << laser_pose.pose.position.y << ", "
-                << laser_pose.pose.position.z << std::endl;
+            fout << laser_pose.header.stamp.toSec() << " "
+                << laser_pose.pose.position.x << " "
+                << laser_pose.pose.position.y << " "
+                << laser_pose.pose.position.z << " "
+                << laser_pose.pose.orientation.x << " "
+                << laser_pose.pose.orientation.y << " "
+                << laser_pose.pose.orientation.z << " "
+                << laser_pose.pose.orientation.w << std::endl;
         }
         fout.close();
     }

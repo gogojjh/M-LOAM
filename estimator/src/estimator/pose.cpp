@@ -9,10 +9,13 @@
 
 #include "pose.h"
 
+// quaternion averaging: https://wiki.unity3d.com/index.php/Averaging_Quaternions_and_Vectors
+// ceres: pose graph optimization: https://ceres-solver.googlesource.com/ceres-solver/+/master/examples/slam/pose_graph_3d
+// review of rotation averaging: Rotation Averaging IJCV
+// TODO: Solution 2: using pose graph optimization T_mean = argmin_{T} \sum||(T-T_mean)||^{2}
 void computeMeanPose(const std::vector<std::pair<double, Pose> > &pose_array, Pose &pose_mean)
 {
     // Solution 1: approximation if the separate quaternions are relatively close to each other.
-    // TODO: Solution 2: using pose graph optimization T_mean = argmin_{T} \sum||(T-T_mean)||^{2}
     double weight_total = 0;
     for (auto iter = pose_array.begin(); iter != pose_array.end(); iter++)  weight_total += iter->first;
 

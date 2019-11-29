@@ -811,19 +811,21 @@ void process()
 			pubLaserAfterMappedPath.publish(laserAfterMappedPath);
 
 			////////////////////////////////////////
-			std::ofstream fout("/home/jjiao/catkin_ws/src/localization/M-LOAM/log/simu/mloam_map.csv", std::ios::out);
+			// std::string mloam_map_path = "/home/jjiao/catkin_ws/src/localization/rpg_trajectory_evaluation/results/simulation_mloam/test/mloam/test_mloam_straight/stamped_map_estimate.txt";
+			std::cout << MLOAM_MAP_PATH << std::endl;
+			std::ofstream fout(MLOAM_MAP_PATH.c_str(), std::ios::out);
 		    fout.precision(5);
 		    for (size_t i = 0; i < laserAfterMappedPath.poses.size(); i++)
 		    {
 		        geometry_msgs::PoseStamped &laser_pose = laserAfterMappedPath.poses[i];
-		        fout << laser_pose.header.stamp.toSec() << ", "
-					<< laser_pose.pose.orientation.x << ", "
-		            << laser_pose.pose.orientation.y << ", "
-		            << laser_pose.pose.orientation.z << ", "
-		            << laser_pose.pose.orientation.w << ", "
-		            << laser_pose.pose.position.x << ", "
-		            << laser_pose.pose.position.y << ", "
-		            << laser_pose.pose.position.z << std::endl;
+		        fout << laser_pose.header.stamp.toSec() << " "
+					<< laser_pose.pose.position.x << " "
+					<< laser_pose.pose.position.y << " "
+					<< laser_pose.pose.position.z << " "
+					<< laser_pose.pose.orientation.x << " "
+		            << laser_pose.pose.orientation.y << " "
+		            << laser_pose.pose.orientation.z << " "
+		            << laser_pose.pose.orientation.w << std::endl;
 		    }
 		    fout.close();
 			////////////////////////////////////////
@@ -852,6 +854,9 @@ int main(int argc, char **argv)
 {
 	ros::init(argc, argv, "lidar_mapper");
 	ros::NodeHandle nh;
+
+	string config_file = argv[1];
+	readParameters(config_file);
 
 	float lineRes = 0.4;
 	float planeRes = 0.8;

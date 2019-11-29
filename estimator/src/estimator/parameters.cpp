@@ -159,7 +159,7 @@ void readParameters(std::string config_file)
 
     ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];
     OPTIMAL_EXTRINSIC = fsSettings["optimal_extrinsic"];
-    EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.csv";
+    EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
     if (ESTIMATE_EXTRINSIC == 2)
     {
         ROS_WARN("Have no prior about extrinsic param, calibrate extrinsic param");

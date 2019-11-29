@@ -219,7 +219,6 @@ int main(int argc, char **argv)
 
     string config_file = argv[1];
     cout << "config_file: " << argv[1] << endl;
-
     readParameters(config_file);
     estimator.setParameter();
 

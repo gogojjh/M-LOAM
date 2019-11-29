@@ -19,7 +19,7 @@
 
     <node pkg="mloam" type="mloam_node" name="mloam_node" args="$(arg config_file)" output="screen" />
 
-    <!-- <node pkg="mloam" type="lidar_mapper" name="lidar_mapper"/> -->
+    <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" args="$(arg config_file)" />
 
     <!-- publish static tf -->
     <!-- x y z yaw pitch roll -->

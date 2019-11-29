@@ -62,7 +62,7 @@ public:
 
         Eigen::Map<Eigen::Matrix<double, 6, 1> > residual(residuals);
         residual.topRows<3>() = P - pos_;
-        residual.bottomRows<3>() = 2 * (rot_.inverse() * Q).coeffs().head<3>();
+        residual.bottomRows<3>() = 2 * (rot_.inverse() * Q).coeffs().head<3>(); // 6*1 [dx dy dz dqx dqy dqz]
 
         // FIXME: info
         residual = sqrt_info * residual;
