@@ -511,6 +511,7 @@ void Estimator::optimizeMap()
     {
         ROS_WARN("Online Calibration");
         buildCalibMap();
+        // TODO: using matric representation or ||d||^2 to represent this error, but not easy
         if (POINT_PLANE_FACTOR)
         {
             // CHECK_JACOBIAN = 0;
@@ -917,8 +918,10 @@ void Estimator::buildCalibMap()
             f_extract_.extractCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
                 corner_points_stack_[n][i], pose_local_[n][i], tmp_corner_map_features, n_neigh);
             omp_set_lock(&omp_lock_);
-            surf_map_features_[n][i] = tmp_surf_map_features;
-            corner_map_features_[n][i] = tmp_corner_map_features;
+            // surf_map_features_[n][i] = tmp_surf_map_features;
+            // corner_map_features_[n][i] = tmp_corner_map_features;
+            std::copy(tmp_surf_map_features.begin(), tmp_surf_map_features.end(), std::back_inserter(surf_map_features_[n][i]));
+            std::copy(tmp_corner_map_features.begin(), tmp_corner_map_features.end(), std::back_inserter(corner_map_features_[n][i]));
             omp_unset_lock(&omp_lock_);
         }
         omp_destroy_lock(&omp_lock_);
@@ -1017,7 +1020,8 @@ void Estimator::buildLocalMap()
             // f_extract_.extractCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
                 //     corner_points_stack_[n][i], pose_local_[n][i], corner_map_features_[n][i], n_neigh);
             omp_set_lock(&omp_lock_);
-            surf_map_features_[n][i] = tmp_map_features;
+            // surf_map_features_[n][i] = tmp_map_features;
+            std::copy(tmp_map_features.begin(), tmp_map_features.end(), std::back_inserter(surf_map_features_[n][i]));
             omp_unset_lock(&omp_lock_);
         }
         omp_destroy_lock(&omp_lock_);
