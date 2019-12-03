@@ -77,6 +77,7 @@ void process(const sensor_msgs::PointCloud2ConstPtr& pc2_left,
         pcl::transformPointCloud(cloud_left, cloud_left, trans.cast<float>());
         for (auto &p : cloud_left.points) p.intensity = 0;
         cloud_fused += cloud_left;
+        // std::cout << cloud_fused.size() << std::endl;
     }
     {
         std::vector<double> calib{0.342, 0.0, 0.0, 0.940, 0, -0.477, 0.0};
@@ -85,6 +86,7 @@ void process(const sensor_msgs::PointCloud2ConstPtr& pc2_left,
         pcl::transformPointCloud(cloud_right, cloud_right, trans.cast<float>());
         for (auto &p : cloud_right.points) p.intensity = 1;
         cloud_fused += cloud_right;
+        // std::cout << cloud_fused.size() << std::endl;
     }
     publishCloud(cloud_fused_pub, header, cloud_fused);
 }
