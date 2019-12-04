@@ -1,7 +1,7 @@
 <launch>
 
     <arg name="bag_file_use" default="true" />
-    <arg name="config_file" default="$(find mloam)/../config/handheld_config.yaml" />
+    <arg name="config_file" default="$(find mloam)/../config/config_handheld.yaml" />
     <arg name="base_link" default="base_link" />
 
     <!-- Ros Bag -->

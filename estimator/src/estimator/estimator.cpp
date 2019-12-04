@@ -45,67 +45,6 @@ Estimator::~Estimator()
     }
 }
 
-void Estimator::clearState()
-{
-    printf("[estimator] clear state\n");
-    m_process_.lock();
-
-    b_system_inited_ = false;
-
-    prev_time_ = -1;
-    cur_time_ = 0;
-    input_cloud_cnt_ = 0;
-
-    td_ = 0;
-
-    solver_flag_ = INITIAL;
-
-    pose_laser_cur_.clear();
-    // pose_prev_cur_.clear();
-    pose_rlt_.clear();
-
-    qbl_.clear();
-    tbl_.clear();
-    tdbl_.clear();
-
-    initial_extrinsics_.clearState();
-
-    ini_fixed_local_map_ = false;
-
-    cir_buf_cnt_ = 0;
-
-    Qs_.clear();
-    Ts_.clear();
-    Header_.clear();
-    surf_points_stack_.clear();
-    surf_points_stack_size_.clear();
-    corner_points_stack_.clear();
-    corner_points_stack_size_.clear();
-
-    surf_points_local_map_.clear();
-    surf_points_local_map_filtered_.clear();
-    surf_points_pivot_map_.clear();
-    corner_points_local_map_.clear();
-    corner_points_local_map_filtered_.clear();
-    corner_points_pivot_map_.clear();
-
-    surf_map_features_.clear();
-    corner_map_features_.clear();
-
-    cumu_surf_map_features_.clear();
-    cumu_corner_map_features_.clear();
-
-    pose_local_.clear();
-
-    last_marginalization_info_ = nullptr;
-
-    eig_thre_calib_.clear();
-    d_factor_calib_.clear();
-    pose_calib_.clear();
-
-    m_process_.unlock();
-}
-
 void Estimator::setParameter()
 {
     m_process_.lock();
@@ -177,6 +116,67 @@ void Estimator::setParameter()
     eig_thre_calib_ = std::vector<double>(OPT_WINDOW_SIZE + NUM_OF_LASER + 1, EIG_INITIAL);
     d_factor_calib_ = std::vector<double>(NUM_OF_LASER, 0);
     pose_calib_.resize(NUM_OF_LASER);
+
+    m_process_.unlock();
+}
+
+void Estimator::clearState()
+{
+    printf("[estimator] clear state\n");
+    m_process_.lock();
+
+    b_system_inited_ = false;
+
+    prev_time_ = -1;
+    cur_time_ = 0;
+    input_cloud_cnt_ = 0;
+
+    td_ = 0;
+
+    solver_flag_ = INITIAL;
+
+    pose_laser_cur_.clear();
+    // pose_prev_cur_.clear();
+    pose_rlt_.clear();
+
+    qbl_.clear();
+    tbl_.clear();
+    tdbl_.clear();
+
+    initial_extrinsics_.clearState();
+
+    ini_fixed_local_map_ = false;
+
+    cir_buf_cnt_ = 0;
+
+    Qs_.clear();
+    Ts_.clear();
+    Header_.clear();
+    surf_points_stack_.clear();
+    surf_points_stack_size_.clear();
+    corner_points_stack_.clear();
+    corner_points_stack_size_.clear();
+
+    surf_points_local_map_.clear();
+    surf_points_local_map_filtered_.clear();
+    surf_points_pivot_map_.clear();
+    corner_points_local_map_.clear();
+    corner_points_local_map_filtered_.clear();
+    corner_points_pivot_map_.clear();
+
+    surf_map_features_.clear();
+    corner_map_features_.clear();
+
+    cumu_surf_map_features_.clear();
+    cumu_corner_map_features_.clear();
+
+    pose_local_.clear();
+
+    last_marginalization_info_ = nullptr;
+
+    eig_thre_calib_.clear();
+    d_factor_calib_.clear();
+    pose_calib_.clear();
 
     m_process_.unlock();
 }
@@ -1171,7 +1171,8 @@ void Estimator::evalResidual(ceres::Problem &problem,
 // A^TA is not only symmetric and invertiable: https://math.stackexchange.com/questions/2352684/when-is-a-symmetric-matrix-invertible
 void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_param_ids, const ceres::CRSMatrix &jaco)
 {
-    printf("jacob: %d constraints, %d parameters (%d pose_param, %d ext_param)\n", jaco.num_rows, jaco.num_cols, 6*(OPT_WINDOW_SIZE + 1), 6*NUM_OF_LASER); // 58, feature_size(2700) x 50
+    printf("jacob: %d constraints, %d parameters (%d pose_param, %d ext_param)\n",
+        jaco.num_rows, jaco.num_cols, 6*(OPT_WINDOW_SIZE + 1), 6*NUM_OF_LASER); // 58, feature_size(2700) x 50
     TicToc t_eval_degenracy;
     Eigen::MatrixXd mat_J_raw;
     CRSMatrix2EigenMatrix(jaco, mat_J_raw);

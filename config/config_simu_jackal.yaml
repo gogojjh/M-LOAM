@@ -6,7 +6,7 @@ imu: 0
 num_of_cam: 2
 
 imu_topic: ""
-output_path: "/home/jjiao/catkin_ws/src/localization/rpg_trajectory_evaluation/results/simulation_mloam/test/mloam/test_mloam_randomwalk/"
+output_path: "/home/jjiao/catkin_ws/src/localization/rpg_trajectory_evaluation/results/simu_jackal_mloam/test/mloam/test_mloam_eight/"
 mloam_odom_path: "stamped_odom_estimate.txt"
 mloam_map_path: "stamped_map_estimate.txt"
 mloam_gt_path: "stamped_groundtruth.txt"
@@ -17,12 +17,12 @@ multiple_thread: 1
 #feature traker paprameters
 max_cnt: 200            # max feature number in feature tracking
 min_dist: 30            # min distance between two features
-freq: 10                # frequence (Hz) of publish tracking result. At least 10Hz for good estimation. If set 0, the frequence will be same as raw image
-F_threshold: 1.0        # ransac threshold (pixel)
+freq: 10                # frequence (hz) of publish tracking result. at least 10hz for good estimation. if set 0, the frequence will be same as raw image
+f_threshold: 1.0        # ransac threshold (pixel)
 show_track: 1           # publish tracking image as topic
 flow_back: 1            # perform forward and backward optical flow to improve feature tracking accuracy
 
-#optimization parameters
+#optimization PARAMETERS
 max_solver_time: 0.07  # max solver itration time (s), to guarantee real time
 max_num_iterations: 10   # max solver itrations, to guarantee real time
 keyframe_parallax: 0 # keyframe selection threshold (pixel)

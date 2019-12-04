@@ -206,7 +206,7 @@ int main(int argc, char **argv)
         cout << "please intput: rosrun mlod mlod_node [config file] " << endl
              << "for example: "
              << "rosrun mloam mloam_node "
-             << "~/catkin_ws/src/M-LOAM/config/handheld_config.yaml" << endl;
+             << "~/catkin_ws/src/M-LOAM/config/config_handheld.yaml" << endl;
         return 1;
     }
 
@@ -233,7 +233,7 @@ int main(int argc, char **argv)
     ros::Subscriber sub_restart = n.subscribe("/mlod_restart", 100, restart_callback);
     ros::Subscriber sub_odom_gt = n.subscribe("/base_odom_gt", 100, odom_gt_callback);
 
-    pub_laser_path = n.advertise<nav_msgs::Path>("/laser_odom_gt_path_0", 100);
+    pub_laser_path = n.advertise<nav_msgs::Path>("/world_gt", 100);
 
     std::thread sync_thread(sync_process);
     std::thread cloud_visualizer_thread;
