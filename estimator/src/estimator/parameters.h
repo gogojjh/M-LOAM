@@ -82,6 +82,8 @@ extern int FLOW_BACK;
 // LiDAR
 extern int NUM_OF_LASER;
 extern int N_SCANS;
+extern int HORIZON_SCAN;
+extern int MIN_CLUSTER_SIZE;
 
 extern int IDX_REF;
 
@@ -91,6 +93,8 @@ extern int OPT_WINDOW_SIZE;
 extern float SCAN_PERIOD;
 extern float DISTANCE_SQ_THRESHOLD;
 extern float NEARBY_SCAN;
+
+extern int SEGMENT_CLOUD;
 
 extern std::string CLOUD0_TOPIC, CLOUD1_TOPIC;
 extern float LASER_SYNC_THRESHOLD;

@@ -22,7 +22,7 @@ int cloud_sort_ind[400000];
 int cloud_neighbor_picked[400000];
 int cloud_label[400000];
 
-bool comp (int i,int j) { return (cloud_curvature[i] < cloud_curvature[j]); }
+bool comp(int i,int j) { return (cloud_curvature[i] < cloud_curvature[j]); }
 
 FeatureExtract::FeatureExtract()
 {
@@ -148,6 +148,7 @@ void FeatureExtract::cloudRearrange(const common::PointCloud &laser_cloud_in, st
     }
     cloud_size = count;
     // printf("points size: %d ********* \n",  cloud_size);
+    // for (auto i = 0; i < laser_cloud_scans.size(); i++) printf("line %d: %d\n", i, laser_cloud_scans[i].size());
 }
 
 void FeatureExtract::extractCloud(const double &cur_time, const PointCloud &laser_cloud_in, cloudFeature &cloud_feature)

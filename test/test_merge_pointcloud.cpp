@@ -80,7 +80,7 @@ void process(const sensor_msgs::PointCloud2ConstPtr& pc2_left,
         // std::cout << cloud_fused.size() << std::endl;
     }
     {
-        std::vector<double> calib{0.342, 0.0, 0.0, 0.940, 0, -0.477, 0.0};
+        std::vector<double> calib{0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220};
         pcl::fromROSMsg(*pc2_right, cloud_right);
         Eigen::Matrix4d trans = getTransformMatrix(calib);
         pcl::transformPointCloud(cloud_right, cloud_right, trans.cast<float>());

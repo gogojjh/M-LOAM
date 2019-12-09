@@ -51,6 +51,8 @@ int FLOW_BACK;
 // LiDAR
 int NUM_OF_LASER;
 int N_SCANS;
+int HORIZON_SCAN;
+int MIN_CLUSTER_SIZE;
 
 int IDX_REF;
 
@@ -60,6 +62,8 @@ int OPT_WINDOW_SIZE;
 float SCAN_PERIOD;
 float DISTANCE_SQ_THRESHOLD;
 float NEARBY_SCAN;
+
+int SEGMENT_CLOUD;
 
 std::string CLOUD0_TOPIC, CLOUD1_TOPIC;
 float LASER_SYNC_THRESHOLD;
@@ -128,6 +132,8 @@ void readParameters(std::string config_file)
     {
         std::cerr << "ERROR: Wrong path to settings" << std::endl;
     }
+
+    SEGMENT_CLOUD = fsSettings["segment_cloud"];
 
     fsSettings["cloud0_topic"] >> CLOUD0_TOPIC;
     fsSettings["cloud1_topic"] >> CLOUD1_TOPIC;
@@ -203,6 +209,8 @@ void readParameters(std::string config_file)
     LASER_SYNC_THRESHOLD = fsSettings["laser_sync_threshold"];
     N_SCANS = fsSettings["n_scans"];
     ROI_RANGE = fsSettings["roi_range"];
+    HORIZON_SCAN = fsSettings["horizon_scan"];
+    MIN_CLUSTER_SIZE = fsSettings["min_cluster_size"];
 
     IDX_REF = fsSettings["idx_ref"];
 

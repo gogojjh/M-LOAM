@@ -107,7 +107,7 @@ void sync_process()
             {
                 double time0 = cloud0_buf.front()->header.stamp.toSec();
                 double time1 = cloud1_buf.front()->header.stamp.toSec();
-                printf("\ntimestamps: %.3f, %.3f \n", time0, time1);
+                printf("\ntimestamps: (%.3f, %.3f)\n", time0, time1);
                 // 0.07s sync tolerance
                 if(time0 < time1 - LASER_SYNC_THRESHOLD)
                 {
@@ -131,7 +131,7 @@ void sync_process()
                     laser_cloud1 = getCloudFromMsg(cloud1_buf.front());
                     v_laser_cloud.push_back(laser_cloud1);
                     cloud1_buf.pop();
-                    printf("find laser_cloud0: %d, laser_cloud1: %d \n", laser_cloud0.points.size(), laser_cloud1.points.size());
+                    printf("size of finding laser_cloud0: %d, laser_cloud1: %d\n", laser_cloud0.points.size(), laser_cloud1.points.size());
                 }
             }
             m_buf.unlock();
@@ -166,13 +166,12 @@ void sync_process()
 
 void restart_callback(const std_msgs::BoolConstPtr &restart_msg)
 {
-    if (restart_msg->data == true)
+    if (restart_msg->data != 0)
     {
         ROS_WARN("restart the estimator!");
         estimator.clearState();
         estimator.setParameter();
     }
-    return;
 }
 
 void odom_gt_callback(const nav_msgs::Odometry &odom_msg)
@@ -233,7 +232,7 @@ int main(int argc, char **argv)
     ros::Subscriber sub_restart = n.subscribe("/mlod_restart", 100, restart_callback);
     ros::Subscriber sub_odom_gt = n.subscribe("/base_odom_gt", 100, odom_gt_callback);
 
-    pub_laser_path = n.advertise<nav_msgs::Path>("/world_gt", 100);
+    pub_laser_path = n.advertise<nav_msgs::Path>("/laser_odom_path_gt", 100);
 
     std::thread sync_thread(sync_process);
     std::thread cloud_visualizer_thread;

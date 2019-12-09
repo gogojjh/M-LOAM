@@ -1,0 +1,4 @@
+estimator/cmake-build-debug
+*.pcd
+.idea
+.kdev4

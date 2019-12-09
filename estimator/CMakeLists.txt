@@ -59,6 +59,7 @@ target_link_libraries(mloam_lib_1 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS}
 
 ######################################################## fix libraries
 add_library(mloam_lib_2
+    src/imageSegmenter/image_segmenter.cpp
     src/featureExtract/feature_extract.cpp
     src/factor/pose_local_parameterization.cpp
     src/utility/utility.cpp

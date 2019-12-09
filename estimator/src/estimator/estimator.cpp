@@ -117,6 +117,8 @@ void Estimator::setParameter()
     d_factor_calib_ = std::vector<double>(NUM_OF_LASER, 0);
     pose_calib_.resize(NUM_OF_LASER);
 
+    img_segment_.setScanParam(HORIZON_SCAN, MIN_CLUSTER_SIZE);
+
     m_process_.unlock();
 }
 
@@ -203,9 +205,15 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
     feature_frame.resize(NUM_OF_LASER);
     for (auto i = 0; i < v_laser_cloud_in.size(); i++)
     {
-        cloudFeature cloud_feature;
-        f_extract_.extractCloud(t, v_laser_cloud_in[i], cloud_feature);
-        feature_frame[i] = cloud_feature;
+        if (SEGMENT_CLOUD)
+        {
+            PointCloud laser_cloud_segment;
+            img_segment_.segmentCloud(v_laser_cloud_in[i], laser_cloud_segment);
+            f_extract_.extractCloud(t, laser_cloud_segment, feature_frame[i]);
+        } else
+        {
+            f_extract_.extractCloud(t, v_laser_cloud_in[i], feature_frame[i]);
+        }
     }
     printf("featureExt time: %fms\n", feature_ext_time.toc());
 
@@ -221,9 +229,16 @@ void Estimator::inputCloud(const double &t, const PointCloud &laser_cloud_in)
 
     TicToc feature_ext_time;
     std::vector<cloudFeature> feature_frame;
-    cloudFeature cloud_feature;
-    f_extract_.extractCloud(t, laser_cloud_in, cloud_feature);
-    feature_frame.push_back(cloud_feature);
+    feature_frame.resize(1);
+    if (SEGMENT_CLOUD)
+    {
+        PointCloud laser_cloud_segment;
+        img_segment_.segmentCloud(laser_cloud_in, laser_cloud_segment);
+        f_extract_.extractCloud(t, laser_cloud_segment, feature_frame[0]);
+    } else
+    {
+        f_extract_.extractCloud(t, laser_cloud_in, feature_frame[0]);
+    }
     printf("featureExt time: %fms\n", feature_ext_time.toc());
 
     m_buf_.lock();
@@ -302,7 +317,6 @@ void Estimator::process()
                 for (auto i = 0; i < NUM_OF_LASER; i++)
                 {
                     Pose calib_result;
-                    // if (IDX_REF == i) continue;
                     if ((initial_extrinsics_.cov_rot_state_[i]) || (initial_extrinsics_.calibExRotation(IDX_REF, i, calib_result)))
                     {
                         printf("sufficient translation movement is needed\n");
@@ -629,7 +643,6 @@ void Estimator::optimizeMap()
             }
         }
     }
-
     // *******************************
     ROS_WARN("Before optimization");
     if (EVALUATE_RESIDUAL) evalResidual(problem, local_param_ids, para_ids, res_ids_proj, last_marginalization_info_, res_ids_marg, true);
@@ -757,6 +770,7 @@ void Estimator::optimizeMap()
         {
             if (POINT_PLANE_FACTOR)
             {
+                // std::vector<LidarPivotPlaneNormFactor *> factor_buf;
                 for (auto n = 0; n < NUM_OF_LASER; n++)
                 {
                     for (auto i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
@@ -906,8 +920,8 @@ void Estimator::buildCalibMap()
         pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_points_local_map(new pcl::KdTreeFLANN<PointI>());
         kdtree_corner_points_local_map->setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_filtered_[n]));
 
-        omp_init_lock(&omp_lock_);
-        #pragma omp parallel for
+        // omp_init_lock(&omp_lock_);
+        // #pragma omp parallel
         for (auto i = pivot_idx; i < WINDOW_SIZE + 1; i++)
         {
             if (((n == IDX_REF) && (i == pivot_idx)) || ((n != IDX_REF) && (i != pivot_idx))) continue;
@@ -917,14 +931,14 @@ void Estimator::buildCalibMap()
                 surf_points_stack_[n][i], pose_local_[n][i], tmp_surf_map_features, n_neigh);
             f_extract_.extractCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
                 corner_points_stack_[n][i], pose_local_[n][i], tmp_corner_map_features, n_neigh);
-            omp_set_lock(&omp_lock_);
+            // omp_set_lock(&omp_lock_);
             // surf_map_features_[n][i] = tmp_surf_map_features;
             // corner_map_features_[n][i] = tmp_corner_map_features;
             std::copy(tmp_surf_map_features.begin(), tmp_surf_map_features.end(), std::back_inserter(surf_map_features_[n][i]));
             std::copy(tmp_corner_map_features.begin(), tmp_corner_map_features.end(), std::back_inserter(corner_map_features_[n][i]));
-            omp_unset_lock(&omp_lock_);
+            // omp_unset_lock(&omp_lock_);
         }
-        omp_destroy_lock(&omp_lock_);
+        // omp_destroy_lock(&omp_lock_);
 
     }
     printf("build map (extract map): %f (%f)ms\n", t_build_map.toc(), t_extract_map.toc());
@@ -1011,7 +1025,7 @@ void Estimator::buildLocalMap()
         auto n_neigh = 5;
 
         omp_init_lock(&omp_lock_);
-        #pragma omp parallel for
+        // #pragma omp parallel
         for (auto i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
         {
             std::vector<PointPlaneFeature> tmp_map_features;
@@ -1019,12 +1033,12 @@ void Estimator::buildLocalMap()
                 surf_points_stack_[n][i], pose_local_[n][i], tmp_map_features, n_neigh);
             // f_extract_.extractCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
                 //     corner_points_stack_[n][i], pose_local_[n][i], corner_map_features_[n][i], n_neigh);
-            omp_set_lock(&omp_lock_);
+            // omp_set_lock(&omp_lock_);
             // surf_map_features_[n][i] = tmp_map_features;
             std::copy(tmp_map_features.begin(), tmp_map_features.end(), std::back_inserter(surf_map_features_[n][i]));
-            omp_unset_lock(&omp_lock_);
+            // omp_unset_lock(&omp_lock_);
         }
-        omp_destroy_lock(&omp_lock_);
+        // omp_destroy_lock(&omp_lock_);
 
     }
     printf("build map: %fms\n", t_build_map.toc());

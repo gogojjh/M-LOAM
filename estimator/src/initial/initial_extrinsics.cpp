@@ -1,5 +1,5 @@
 /*******************************************************
- * Copyright (C) 2019, Aerial Robotics Group, Hong Kong University of Science and Technology
+ * Copyright (A) 2019, Aerial Robotics Group, Hong Kong University of Science and Technology
  *
  * This file is part of VINS.
  *
@@ -12,11 +12,13 @@
  *******************************************************/
 
 #include "initial_extrinsics.h"
+#include<cstdlib>
+#include<ctime>
 
 using namespace Eigen;
 
 double EPSILON_R = 0.01;
-double EPSILON_T = 0.05;
+double EPSILON_T = 0.1;
 
 InitialExtrinsics::InitialExtrinsics() {}
 
@@ -84,13 +86,10 @@ bool InitialExtrinsics::checkScrewMotion(const Pose &pose_ref, const Pose &pose_
     double t_dis = abs(pose_ref.t_.dot(ang_axis_ref.axis()) - pose_data.t_.dot(ang_axis_data.axis()));
     // std::cout << "ref pose : " << pose_ref << std::endl;
     // std::cout << "data pose : " << pose_data << std::endl;
-    printf("r_dis: %f, t_dis: %f \n", r_dis, t_dis);
+//    printf("r_dis: %f, t_dis: %f \n", r_dis, t_dis);
     v_rd_.push_back(r_dis);
     v_td_.push_back(t_dis);
-    if ((r_dis < EPSILON_R) && (t_dis < EPSILON_T))
-        return true;
-    else
-        return false;
+    return (r_dis < EPSILON_R) && (t_dis < EPSILON_T);
 }
 
 bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx_data, Pose &calib_result)
@@ -188,7 +187,7 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
     Eigen::Vector3d rot_cov = svd.singularValues().tail<3>(); // singular value
     v_rot_cov_[idx_data].push_back(rot_cov(1));
     printf("pose_cnt:%d, rot_cov:%f **********\n", pose_cnt_, rot_cov(1));
-    if (pose_cnt_ >= WINDOW_SIZE && rot_cov(1) > 0.25) // converage
+    if (pose_cnt_ >= WINDOW_SIZE && rot_cov(1) > 0.25) // converage, the second smallest sigular value
     {
         calib_result = calib_ext_[idx_data];
         // printf("calib ext rot: %fms\n", t_calib_rot.toc());
@@ -234,21 +233,17 @@ bool InitialExtrinsics::calibExTranslationNonPlanar(const size_t &idx_ref, const
     {
         Pose &pose_ref = v_pose_[idx_ref][indices_[idx_data][i]];
         Pose &pose_data = v_pose_[idx_data][indices_[idx_data][i]];
-        A.block<3, 3>(i * 3, 0) = pose_ref.q_.toRotationMatrix() - Eigen::Matrix3d::Identity();
+        AngleAxisd ang_axis_ref(pose_ref.q_);
+        AngleAxisd ang_axis_data(pose_data.q_);
+        double t_dis = abs(pose_ref.t_.dot(ang_axis_ref.axis()) - pose_data.t_.dot(ang_axis_data.axis()));
+        double huber = t_dis > 0.04 ? 0.04 / t_dis : 1.0;
+        A.block<3, 3>(i * 3, 0) = huber * (pose_ref.q_.toRotationMatrix() - Eigen::Matrix3d::Identity());
         b.block<3, 1>(i * 3, 0) = q_zyx * pose_data.t_ - pose_ref.t_;
     }
     Eigen::Vector3d x;
     x = A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b);
     calib_ext_[idx_data] = Pose(q_zyx, x);
-
-    Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeFullU | Eigen::ComputeFullV);
-    Eigen::Vector3d pos_cov = svd.singularValues().head<3>();
-    v_pos_cov_[idx_data].push_back(pos_cov(1));
-    printf("pose_cnt:%d, pos_cov:%f **********\n", pose_cnt_, pos_cov(1));
-    if (pose_cnt_ >= WINDOW_SIZE && pos_cov(1) > 0.7) // converage
-        return true;
-    else
-        return false;
+    return true;
 }
 
 bool InitialExtrinsics::calibExTranslationPlanar(const size_t &idx_ref, const size_t &idx_data)
@@ -260,13 +255,17 @@ bool InitialExtrinsics::calibExTranslationPlanar(const size_t &idx_ref, const si
     {
         Pose &pose_ref = v_pose_[idx_ref][indices_[idx_data][i]];
         Pose &pose_data = v_pose_[idx_data][indices_[idx_data][i]];
+        AngleAxisd ang_axis_ref(pose_ref.q_);
+        AngleAxisd ang_axis_data(pose_data.q_);
+        double t_dis = abs(pose_ref.t_.dot(ang_axis_ref.axis()) - pose_data.t_.dot(ang_axis_data.axis()));
+        double huber = t_dis > 0.04 ? 0.04 / t_dis : 1.0;
         Eigen::Matrix2d J = pose_ref.q_.toRotationMatrix().block<2,2>(0, 0) - Eigen::Matrix2d::Identity();
         Eigen::Vector3d n = q_yx.toRotationMatrix().row(2);
         Eigen::Vector3d p = q_yx * (pose_data.t_ - pose_data.t_.dot(n) * n);
         Eigen::Matrix2d K;
         K << p(0), -p(1), p(1), p(0);
-        G.block<2,2>(i * 2, 0) = J;
-        G.block<2,2>(i * 2, 2) = K;
+        G.block<2,2>(i * 2, 0) = huber * J;
+        G.block<2,2>(i * 2, 2) = huber * K;
         w.block<2,1>(i * 2, 0) = pose_ref.t_.block<2,1>(0,0);
     }
     Eigen::Vector4d m = G.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(w);

@@ -38,6 +38,7 @@
 
 #include "parameters.h"
 #include "common/common.hpp"
+#include "../imageSegmenter/image_segmenter.h"
 #include "../featureExtract/feature_extract.h"
 #include "../lidarTracker/lidar_tracker.h"
 #include "../initial/initial_extrinsics.h"
@@ -65,7 +66,7 @@ class Estimator
     void inputCloud(const double &t, const std::vector<common::PointCloud> &v_laser_cloud_in);
     void inputCloud(const double &t, const common::PointCloud &laser_cloud_in0);
 
-    // interface
+    // process measurements
     void processMeasurements();
     void process();
 
@@ -111,13 +112,13 @@ class Estimator
     std::thread track_thread_;
     std::thread process_thread_;
 
-    omp_lock_t omp_lock_;
+    omp_lock_t omp_lock_{};
 
     bool init_thread_flag_;
 
     SolverFlag solver_flag_;
 
-    bool b_system_inited_;
+    bool b_system_inited_{};
 
     // pose from laser at k=0 to laser at k=K
     std::vector<Pose> pose_laser_cur_;
@@ -132,9 +133,9 @@ class Estimator
 
     // slide window
     // xx[cir_buf_cnt_] indicates the newest variables and measurements
-    bool ini_fixed_local_map_;
+    bool ini_fixed_local_map_{};
 
-    size_t cir_buf_cnt_;
+    size_t cir_buf_cnt_{};
 
     CircularBuffer<Eigen::Quaterniond> Qs_;
     CircularBuffer<Eigen::Vector3d> Ts_;
@@ -149,11 +150,12 @@ class Estimator
 
     std::vector<std::vector<Pose> > pose_local_;
 
-    double prev_time_, cur_time_;
-    double td_;
+    double prev_time_{}, cur_time_{};
+    double td_{};
 
-    int input_cloud_cnt_;
+    int input_cloud_cnt_{};
 
+    ImageSegmenter img_segment_;
     FeatureExtract f_extract_;
     LidarTracker lidar_tracker_;
     InitialExtrinsics initial_extrinsics_;
@@ -163,16 +165,16 @@ class Estimator
     std::vector<std::vector<std::vector<PointPlaneFeature> > > surf_map_features_, corner_map_features_;
     std::vector<std::vector<std::vector<PointPlaneFeature> > > cumu_surf_map_features_, cumu_corner_map_features_;
 
-    double **para_pose_;
-    double **para_ex_pose_;
-    double *para_td_;
+    double **para_pose_{};
+    double **para_ex_pose_{};
+    double *para_td_{};
 
     std::vector<double> eig_thre_calib_;
     std::vector<double> d_factor_calib_;
     std::vector<std::vector<std::pair<double, Pose> > > pose_calib_;
 
     // for marginalization
-    MarginalizationInfo *last_marginalization_info_;
+    MarginalizationInfo *last_marginalization_info_{};
     vector<double *> last_marginalization_parameter_blocks_;
 
     PlaneNormalVisualizer plane_normal_vis_;

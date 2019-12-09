@@ -7,12 +7,12 @@ num_of_cam: 2
 
 imu_topic: ""
 output_path: "/home/jjiao/catkin_ws/src/localization/rpg_trajectory_evaluation/results/simu_jackal_mloam/test/mloam/test_mloam_eight/"
-mloam_odom_path: "stamped_odom_estimate.txt"
-mloam_map_path: "stamped_map_estimate.txt"
+mloam_odom_path: "stamped_mloam_odom_estimate.txt"
+mloam_map_path: "stamped_mloam_map_estimate.txt"
 mloam_gt_path: "stamped_groundtruth.txt"
 
 #Multiple thread support
-multiple_thread: 1
+multiple_thread: 0
 
 #feature traker paprameters
 max_cnt: 200            # max feature number in feature tracking
@@ -38,10 +38,12 @@ g_norm: 9.81007     # gravity magnitude
 # laser parameters
 num_of_laser: 2
 n_scans: 16
+horizon_scan: 360
+min_cluster_size: 3
 
 # window sizes
-window_size: 5
-opt_window_size: 3
+window_size: 10
+opt_window_size: 5
 
 # Extrinsic parameter between IMU and Camera.
 estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
@@ -78,6 +80,8 @@ td: !!opencv-matrix                 # initial value of time offset. unit: s. rea
    data: [0, 0]
 
 idx_ref: 0
+
+segment_cloud: 1
 
 cloud0_topic: "/left/velodyne_points"
 cloud1_topic: "/right/velodyne_points"

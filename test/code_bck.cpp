@@ -75,3 +75,86 @@
 
 // openmp example
 // #pragma omp parallel for num_threads(4)
+
+// TODO: initialization
+    // RANSAC-based approach
+//    const Eigen::Quaterniond &q_zyx = calib_ext_[idx_data].q_;
+//    int ransac_split = 3;
+//    int ransac_loop = 10;
+//    int ransac_size = pose_cnt_ / ransac_split;
+//    double e_th = 1e6;
+//    Eigen::Vector3d x_opt;
+//    srand(time(0));
+//    for (auto k = 0; k < ransac_loop; k++)
+//    {
+//        Eigen::MatrixXd A = Eigen::MatrixXd::Zero(ransac_size * 3, 3);
+//        Eigen::MatrixXd b = Eigen::MatrixXd::Zero(ransac_size * 3, 1);
+//        for (auto i = 0; i < ransac_size; i++)
+//        {
+//            auto j = rand() % pose_cnt_;
+//            Pose &pose_ref = v_pose_[idx_ref][indices_[idx_data][j]];
+//            Pose &pose_data = v_pose_[idx_data][indices_[idx_data][j]];
+//            AngleAxisd ang_axis_ref(pose_ref.q_);
+//            AngleAxisd ang_axis_data(pose_data.q_);
+//            double t_dis = abs(pose_ref.t_.dot(ang_axis_ref.axis()) - pose_data.t_.dot(ang_axis_data.axis()));
+//            double huber = t_dis > 0.05 ? 0.05 / t_dis : 1.0;
+//            A.block<3, 3>(i * 3, 0) = huber * (pose_ref.q_.toRotationMatrix() - Eigen::Matrix3d::Identity());
+//            b.block<3, 1>(i * 3, 0) = q_zyx * pose_data.t_ - pose_ref.t_;
+//        }
+//        Eigen::Vector3d x = A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b);
+//        double e = Eigen::MatrixXd(A*x - b).norm();
+//        if (e < e_th)
+//        {
+//            e_th = e;
+//            x_opt = x;
+//            std::cout << "error: " << e << "| " << x_opt.transpose() << std::endl;
+//        }
+//    }
+//    calib_ext_[idx_data] = Pose(q_zyx, x_opt);
+//    return true;
+
+//    Eigen::MatrixXd A = Eigen::MatrixXd::Zero(pose_cnt_ * 3, 3);
+//    Eigen::MatrixXd b = Eigen::MatrixXd::Zero(pose_cnt_ * 3, 1);
+//    for (size_t i = 0; i < pose_cnt_; i++)
+//    {
+//        Pose &pose_ref = v_pose_[idx_ref][indices_[idx_data][i]];
+//        Pose &pose_data = v_pose_[idx_data][indices_[idx_data][i]];
+//        AngleAxisd ang_axis_ref(pose_ref.q_);
+//        AngleAxisd ang_axis_data(pose_data.q_);
+//        double t_dis = abs(pose_ref.t_.dot(ang_axis_ref.axis()) - pose_data.t_.dot(ang_axis_data.axis()));
+//        double huber = t_dis > 0.05 ? 0.05 / t_dis : 1.0;
+//        A.block<3, 3>(i * 3, 0) = huber * (pose_ref.q_.toRotationMatrix() - Eigen::Matrix3d::Identity());
+//        b.block<3, 1>(i * 3, 0) = q_zyx * pose_data.t_ - pose_ref.t_;
+//    }
+//
+//    Eigen::Vector3d x, x_prev, x_delta;
+//    x = A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b);
+//    calib_ext_[idx_data] = Pose(q_zyx, x);
+//    return true;
+
+    // TODO: using singular value to check constraints
+//    Eigen::Vector3d x, x_prev, x_delta;
+//    x = A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b);
+////    x_prev = calib_ext_[idx_data].t_;
+////    x_delta = x - x_prev;
+//    calib_ext_[idx_data] = Pose(q_zyx, x);
+//    Eigen::MatrixXd A_aug = Eigen::MatrixXd::Zero(A.rows(), A.cols() + 1);
+//    A_aug.leftCols(A.cols()) = A;
+//    A_aug.rightCols(b.cols()) = b;
+//    Eigen::JacobiSVD<Eigen::MatrixXd> svd(A_aug, Eigen::ComputeFullU | Eigen::ComputeFullV);
+//    Eigen::Vector3d pos_cov = svd.singularValues().head<3>();
+//    v_pos_cov_[idx_data].push_back(pos_cov(1));
+//    printf("pose_cnt:%d, pos_cov:%f **********\n", pose_cnt_, pos_cov(1));
+//    if (pose_cnt_ >= WINDOW_SIZE && pos_cov(1) > 0.7) // converage
+//        return true;
+//    else
+//        return false;
+
+//    if (x_prev.norm() != 0)
+//    {
+//        double d = 1.0 * x_delta.norm() / x_prev.norm();
+//        printf("||dx %||: %f\n", d);
+//        if (pose_cnt_ >= WINDOW_SIZE && d < 1e-2)
+//            return true;
+//    }
+//    return false;
