@@ -831,32 +831,8 @@ void Estimator::optimizeMap()
 void Estimator::buildCalibMap()
 {
     TicToc t_build_map;
-
     int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
     Pose pose_pivot(Qs_[pivot_idx], Ts_[pivot_idx]);
-    // -----------------
-    // build static local map using fixed poses
-    if (!ini_fixed_local_map_)
-    {
-        PointICloud surf_points_tmp, corner_points_tmp;
-        Pose pose_ext = Pose(qbl_[IDX_REF], tbl_[IDX_REF]);
-        for (auto i = 0; i <= pivot_idx; i++)
-        {
-            Pose pose_i(Qs_[i], Ts_[i]);
-            Pose pose_pi = Pose(pose_pivot.T_ .inverse() * pose_i.T_ * pose_ext.T_);
-            PointICloud surf_points_trans, corner_points_trans;
-
-            pcl::transformPointCloud(surf_points_stack_[IDX_REF][i], surf_points_trans, pose_pi.T_.cast<float>());
-            for (auto &p: surf_points_trans.points) p.intensity = i;
-            surf_points_tmp += surf_points_trans;
-            pcl::transformPointCloud(corner_points_stack_[IDX_REF][i], corner_points_trans, pose_pi.T_.cast<float>());
-            for (auto &p: corner_points_trans.points) p.intensity = i;
-            corner_points_tmp += corner_points_trans;
-        }
-        surf_points_stack_[IDX_REF][pivot_idx] = surf_points_tmp;
-        corner_points_stack_[IDX_REF][pivot_idx] = corner_points_tmp;
-        ini_fixed_local_map_ = true;
-    }
 
     // -----------------
     // build the whole local map using all poses except the newest pose
@@ -865,7 +841,6 @@ void Estimator::buildCalibMap()
         surf_points_local_map_[n].clear(); surf_points_local_map_filtered_[n].clear();
         corner_points_local_map_[n].clear(); corner_points_local_map_filtered_[n].clear();
     }
-
     for (auto n = 0; n < NUM_OF_LASER; n++)
     {
         Pose pose_ext = Pose(qbl_[n], tbl_[n]);
@@ -873,7 +848,7 @@ void Estimator::buildCalibMap()
         {
             Pose pose_i(Qs_[i], Ts_[i]);
             pose_local_[n][i] = Pose(pose_pivot.T_.inverse() * pose_i.T_ * pose_ext.T_);
-            if ((i < pivot_idx) || (i == WINDOW_SIZE)) continue;
+            if (i == WINDOW_SIZE) continue;
             if (n == IDX_REF) // localmap of reference
             {
                 PointICloud surf_points_trans, corner_points_trans;
@@ -920,8 +895,6 @@ void Estimator::buildCalibMap()
         pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_points_local_map(new pcl::KdTreeFLANN<PointI>());
         kdtree_corner_points_local_map->setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_filtered_[n]));
 
-        // omp_init_lock(&omp_lock_);
-        // #pragma omp parallel
         for (auto i = pivot_idx; i < WINDOW_SIZE + 1; i++)
         {
             if (((n == IDX_REF) && (i == pivot_idx)) || ((n != IDX_REF) && (i != pivot_idx))) continue;
@@ -931,14 +904,9 @@ void Estimator::buildCalibMap()
                 surf_points_stack_[n][i], pose_local_[n][i], tmp_surf_map_features, n_neigh);
             f_extract_.extractCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
                 corner_points_stack_[n][i], pose_local_[n][i], tmp_corner_map_features, n_neigh);
-            // omp_set_lock(&omp_lock_);
-            // surf_map_features_[n][i] = tmp_surf_map_features;
-            // corner_map_features_[n][i] = tmp_corner_map_features;
             std::copy(tmp_surf_map_features.begin(), tmp_surf_map_features.end(), std::back_inserter(surf_map_features_[n][i]));
             std::copy(tmp_corner_map_features.begin(), tmp_corner_map_features.end(), std::back_inserter(corner_map_features_[n][i]));
-            // omp_unset_lock(&omp_lock_);
         }
-        // omp_destroy_lock(&omp_lock_);
 
     }
     printf("build map (extract map): %f (%f)ms\n", t_build_map.toc(), t_extract_map.toc());
@@ -952,32 +920,6 @@ void Estimator::buildLocalMap()
     Pose pose_pivot(Qs_[pivot_idx], Ts_[pivot_idx]);
 
     // -----------------
-    // build static local map using fixed poses
-    if (!ini_fixed_local_map_)
-    {
-        for (auto n = 0; n < NUM_OF_LASER; n++)
-        {
-            PointICloud surf_points_tmp, corner_points_tmp;
-            Pose pose_ext = Pose(qbl_[n], tbl_[n]);
-            for (auto i = 0; i <= pivot_idx; i++)
-            {
-                Pose pose_i(Qs_[i], Ts_[i]);
-                Pose pose_ext_pi = Pose(pose_pivot.T_.inverse() * pose_i.T_ * pose_ext.T_);
-                PointICloud surf_points_trans, corner_points_trans;
-                pcl::transformPointCloud(surf_points_stack_[n][i], surf_points_trans, pose_ext_pi.T_.cast<float>());
-                for (auto &p: surf_points_trans.points) p.intensity = i;
-                surf_points_tmp += surf_points_trans;
-                // pcl::transformPointCloud(corner_points_stack_[n][i], corner_points_trans, pose_ext_pi.T_.cast<float>());
-                // for (auto &p: corner_points_trans.points) p.intensity = i;
-                // corner_points_tmp += corner_points_trans;
-            }
-            surf_points_stack_[n][pivot_idx] = surf_points_tmp;
-            // corner_points_stack_[n][pivot_idx] = corner_points_tmp;
-        }
-        ini_fixed_local_map_ = true;
-    }
-
-    // -----------------
     // build the whole local map using all poses except the newest pose
     for (auto n = 0; n < NUM_OF_LASER; n++)
     {
@@ -986,7 +928,6 @@ void Estimator::buildLocalMap()
         // corner_points_local_map_[n].clear();
         // corner_points_local_map_filtered_[n].clear();
     }
-
     for (auto n = 0; n < NUM_OF_LASER; n++)
     {
         Pose pose_ext = Pose(qbl_[n], tbl_[n]);
@@ -994,7 +935,7 @@ void Estimator::buildLocalMap()
         {
             Pose pose_i(Qs_[i], Ts_[i]);
             pose_local_[n][i] = Pose(pose_pivot.T_.inverse() * pose_i.T_ * pose_ext.T_);
-            if ((i < pivot_idx) || (i == WINDOW_SIZE)) continue;
+            if (i == WINDOW_SIZE) continue;
             PointICloud surf_points_trans, corner_points_trans;
             pcl::transformPointCloud(surf_points_stack_[n][i], surf_points_trans, pose_local_[n][i].T_.cast<float>());
             for (auto &p: surf_points_trans.points) p.intensity = i;
@@ -1023,9 +964,6 @@ void Estimator::buildLocalMap()
         // pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_points_local_map(new pcl::KdTreeFLANN<PointI>());
         // kdtree_corner_points_local_map->setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_filtered_[n]));
         auto n_neigh = 5;
-
-        omp_init_lock(&omp_lock_);
-        // #pragma omp parallel
         for (auto i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
         {
             std::vector<PointPlaneFeature> tmp_map_features;
@@ -1033,13 +971,8 @@ void Estimator::buildLocalMap()
                 surf_points_stack_[n][i], pose_local_[n][i], tmp_map_features, n_neigh);
             // f_extract_.extractCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
                 //     corner_points_stack_[n][i], pose_local_[n][i], corner_map_features_[n][i], n_neigh);
-            // omp_set_lock(&omp_lock_);
-            // surf_map_features_[n][i] = tmp_map_features;
             std::copy(tmp_map_features.begin(), tmp_map_features.end(), std::back_inserter(surf_map_features_[n][i]));
-            // omp_unset_lock(&omp_lock_);
         }
-        // omp_destroy_lock(&omp_lock_);
-
     }
     printf("build map: %fms\n", t_build_map.toc());
     if (PCL_VIEWER) visualizePCL();
@@ -1051,45 +984,6 @@ void Estimator::slideWindow()
 {
     TicToc t_solid_window;
     printf("sliding window with cir_buf_cnt_: %d\n", cir_buf_cnt_);
-    if (ini_fixed_local_map_)
-    {
-        int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
-        Pose pose_pivot(Qs_[pivot_idx], Ts_[pivot_idx]);
-
-        auto i = pivot_idx + 1;
-        Pose pose_i(Qs_[i], Ts_[i]);
-        for (auto n = 0; n < NUM_OF_LASER; n++)
-        {
-            if ((ESTIMATE_EXTRINSIC == 1) && (n != IDX_REF)) continue;
-
-            PointICloud surf_points_trans, surf_points_filtered, corner_points_trans, corner_points_filtered;
-            Pose pose_ext = Pose(qbl_[n], tbl_[n]);
-            Pose pose_i_pivot = Pose((pose_i.T_ * pose_ext.T_).inverse() * pose_pivot.T_ * pose_ext.T_);
-            pcl::ExtractIndices<PointI> extract;
-
-            pcl::transformPointCloud(surf_points_stack_[n][pivot_idx], surf_points_trans, pose_i_pivot.T_.cast<float>());
-            pcl::PointIndices::Ptr inliers_surf(new pcl::PointIndices());
-            for (auto j = 0; j < surf_points_stack_size_[n][0]; j++) inliers_surf->indices.push_back(j);
-            extract.setInputCloud(boost::make_shared<PointICloud>(surf_points_trans));
-            extract.setIndices(inliers_surf);
-            extract.setNegative(true);
-            extract.filter(surf_points_filtered);
-            surf_points_filtered += surf_points_stack_[n][i];
-            surf_points_stack_[n][i] = surf_points_filtered;
-
-            if (ESTIMATE_EXTRINSIC == 0) continue;
-            pcl::transformPointCloud(corner_points_stack_[n][pivot_idx], corner_points_trans, pose_i_pivot.T_.cast<float>());
-            pcl::PointIndices::Ptr inliers_corner(new pcl::PointIndices());
-            for (auto j = 0; j < corner_points_stack_size_[n][0]; j++) inliers_corner->indices.push_back(j);
-            extract.setInputCloud(boost::make_shared<PointICloud>(corner_points_trans));
-            extract.setIndices(inliers_corner);
-            extract.setNegative(true);
-            extract.filter(corner_points_filtered);
-            corner_points_filtered += corner_points_stack_[n][i];
-            corner_points_stack_[n][i] = corner_points_filtered;
-        }
-    }
-
     Qs_.push(Qs_[cir_buf_cnt_]);
     Ts_.push(Ts_[cir_buf_cnt_]);
     Header_.push(Header_[cir_buf_cnt_]);
@@ -1298,7 +1192,7 @@ void Estimator::evalCalib()
                     tbl_[n] = pose_mean_calib.t_;
                     // std::cout << "laser_" << n << ": " << pose_mean_calib << std::endl;
                 }
-            ini_fixed_local_map_ = false; // reconstruct new optimized map
+            // ini_fixed_local_map_ = false; // reconstruct new optimized map
             if (last_marginalization_info_ != nullptr) delete last_marginalization_info_;
             last_marginalization_info_ = nullptr; // meaning that the prior errors in online calibration are discarded
             last_marginalization_parameter_blocks_.clear();

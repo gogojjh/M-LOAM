@@ -44,7 +44,7 @@ horizon_scan: 400
 min_cluster_size: 2
 
 # window sizes
-window_size: 7
+window_size: 10
 opt_window_size: 5
 
 # Extrinsic parameter between IMU and Camera.

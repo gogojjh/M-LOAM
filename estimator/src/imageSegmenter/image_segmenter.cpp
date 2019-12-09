@@ -2,7 +2,7 @@
 
 using namespace common;
 
-const float segment_theta = 1.0472;
+const float segment_theta = 60.0 / 180.0 * M_PI;
 const int segment_valid_point_num = 5;
 const int segment_valid_line_num = 3;
 
@@ -145,15 +145,15 @@ void ImageSegmenter::labelComponents(int row, int col)
             {
                 queue_indx[queue_end_ind] = this_indx;
                 queue_indy[queue_end_ind] = this_indy;
-                ++queue_size;
-                ++queue_end_ind;
+                queue_size++;
+                queue_end_ind++;
 
                 label_mat_.at<int>(this_indx, this_indy) = label_count_;
                 line_count_flag[this_indx] = true;
 
                 all_pushed_indx[all_pushed_ind_size] = this_indx;
                 all_pushed_indy[all_pushed_ind_size] = this_indy;
-                ++all_pushed_ind_size;
+                all_pushed_ind_size++;
             }
         }
     }
@@ -169,7 +169,8 @@ void ImageSegmenter::labelComponents(int row, int col)
             if (line_count_flag[i]) line_count++;
         if (line_count >= segment_valid_line_num) feasible_segment = true;
     }
-    if (feasible_segment == true)
+
+    if (feasible_segment)
     {
         label_count_++;
     } else
