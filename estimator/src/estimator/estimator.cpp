@@ -1288,6 +1288,7 @@ void Estimator::evalCalib()
         {
             ROS_WARN("Finish nonlinear calibration !");
             ESTIMATE_EXTRINSIC = 0;
+            SEGMENT_CLOUD = 1;
             for (auto n = 0; n < NUM_OF_LASER; n++)
                 if (n != IDX_REF)
                 {

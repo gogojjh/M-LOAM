@@ -38,11 +38,13 @@ g_norm: 9.81007     # gravity magnitude
 # laser parameters
 num_of_laser: 2
 n_scans: 16
-horizon_scan: 360
-min_cluster_size: 3
+
+segment_cloud: 0
+horizon_scan: 400
+min_cluster_size: 2
 
 # window sizes
-window_size: 10
+window_size: 7
 opt_window_size: 5
 
 # Extrinsic parameter between IMU and Camera.
@@ -81,8 +83,6 @@ td: !!opencv-matrix                 # initial value of time offset. unit: s. rea
 
 idx_ref: 0
 
-segment_cloud: 1
-
 cloud0_topic: "/left/velodyne_points"
 cloud1_topic: "/right/velodyne_points"
 
@@ -118,7 +118,7 @@ pcl_viewer_normal_ratio: 10
 optimal_odometry: 1
 n_cumu_feature: 5
 
-eig_initial: 100
+eig_initial: 200
 eig_thre_calib: 500
 n_calib: 10
 

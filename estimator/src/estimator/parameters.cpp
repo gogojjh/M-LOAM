@@ -183,6 +183,7 @@ void readParameters(std::string config_file)
         }
         if (ESTIMATE_EXTRINSIC == 0)
         {
+            SEGMENT_CLOUD = 1;
             ROS_WARN("Fix extrinsic param ");
         }
 

@@ -128,9 +128,8 @@ void pubPointCloud(const Estimator &estimator, const double &time)
 
             pcl::transformPointCloud(estimator.surf_points_local_map_filtered_[n], surf_local_map_trans, pose_j_pivot.T_.cast<float>());
             publishCloud(v_pub_surf_points_local_map[n], header, surf_local_map_trans);
-
-            // pcl::transformPointCloud(estimator.corner_points_local_map_filtered_[n], corner_local_map_trans, pose_j_pivot.T_.cast<float>());
-            // publishCloud(v_pub_corner_points_local_map[n], header, corner_local_map_trans);
+            pcl::transformPointCloud(estimator.corner_points_local_map_filtered_[n], corner_local_map_trans, pose_j_pivot.T_.cast<float>());
+            publishCloud(v_pub_corner_points_local_map[n], header, corner_local_map_trans);
         }
 
         // publish target cloud in localmap
