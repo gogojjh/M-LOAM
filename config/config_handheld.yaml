@@ -41,12 +41,16 @@ g_norm: 9.81007     # gravity magnitude
 num_of_laser: 2
 n_scans: 16
 
-segment_cloud: 0
+# segmentation
+segment_cloud: 1
 horizon_scan: 1800
-min_cluster_size: 3
+min_cluster_size: 10
+min_line_size: 10
+segment_valid_point_num: 5
+segment_valid_line_num: 3
 
 # window sizes
-window_size: 10
+window_size: 7
 opt_window_size: 5
 
 # Extrinsic parameter between IMU and Camera.

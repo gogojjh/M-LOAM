@@ -117,7 +117,7 @@ void Estimator::setParameter()
     d_factor_calib_ = std::vector<double>(NUM_OF_LASER, 0);
     pose_calib_.resize(NUM_OF_LASER);
 
-    img_segment_.setScanParam(HORIZON_SCAN, MIN_CLUSTER_SIZE);
+    img_segment_.setScanParam(HORIZON_SCAN, MIN_CLUSTER_SIZE, MIN_LINE_SIZE, SEGMENT_VALID_POINT_NUM, SEGMENT_VALID_LINE_NUM);
 
     m_process_.unlock();
 }
@@ -621,6 +621,7 @@ void Estimator::optimizeMap()
             // problem.SetParameterBlockConstant(&para_td_[n]);
         }
         buildLocalMap();
+        // TODO: add covariance matrix to different LiDARs
         if (POINT_PLANE_FACTOR)
         {
             for (auto n = 0; n < NUM_OF_LASER; n++)

@@ -9,50 +9,23 @@
 
 #include "parameters.h"
 
-double INIT_DEPTH;
-double MIN_PARALLAX;
-double ACC_N, ACC_W;
-double GYR_N, GYR_W;
-
-std::vector<Eigen::Matrix3d> RIC;
-std::vector<Eigen::Vector3d> TIC;
-
-Eigen::Vector3d G{0.0, 0.0, 9.8};
-
-double BIAS_ACC_THRESHOLD;
-double BIAS_GYR_THRESHOLD;
-double SOLVER_TIME;
-int NUM_ITERATIONS;
-int ESTIMATE_EXTRINSIC;
-int ESTIMATE_TD;
-int ROLLING_SHUTTER;
+int MLOAM_RESULT_SAVE;
 std::string OUTPUT_FOLDER;
 std::string MLOAM_ODOM_PATH;
 std::string MLOAM_MAP_PATH;
 std::string MLOAM_GT_PATH;
 std::string EX_CALIB_RESULT_PATH;
-std::string IMU_TOPIC;
-int ROW, COL;
-double TD;
-int NUM_OF_CAM;
-int STEREO;
-int USE_IMU;
+
 int MULTIPLE_THREAD;
-map<int, Eigen::Vector3d> pts_gt;
-std::string IMAGE0_TOPIC, IMAGE1_TOPIC;
-std::string FISHEYE_MASK;
-std::vector<std::string> CAM_NAMES;
-int MAX_CNT;
-int MIN_DIST;
-double F_THRESHOLD;
-int SHOW_TRACK;
-int FLOW_BACK;
+
+double SOLVER_TIME;
+int NUM_ITERATIONS;
+int ESTIMATE_EXTRINSIC;
+int ESTIMATE_TD;
 
 // LiDAR
 int NUM_OF_LASER;
 int N_SCANS;
-int HORIZON_SCAN;
-int MIN_CLUSTER_SIZE;
 
 int IDX_REF;
 
@@ -63,7 +36,13 @@ float SCAN_PERIOD;
 float DISTANCE_SQ_THRESHOLD;
 float NEARBY_SCAN;
 
+// segmentation
 int SEGMENT_CLOUD;
+int HORIZON_SCAN;
+int MIN_CLUSTER_SIZE;
+int MIN_LINE_SIZE;
+int SEGMENT_VALID_POINT_NUM;
+int SEGMENT_VALID_LINE_NUM;
 
 std::string CLOUD0_TOPIC, CLOUD1_TOPIC;
 float LASER_SYNC_THRESHOLD;
@@ -120,7 +99,8 @@ T readParam(ros::NodeHandle &n, std::string name)
 void readParameters(std::string config_file)
 {
     FILE *fh = fopen(config_file.c_str(),"r");
-    if(fh == NULL){
+    if(fh == NULL)
+    {
         ROS_WARN("config_file dosen't exist; wrong config_file path");
         ROS_BREAK();
         return;
@@ -133,7 +113,6 @@ void readParameters(std::string config_file)
         std::cerr << "ERROR: Wrong path to settings" << std::endl;
     }
 
-    SEGMENT_CLOUD = fsSettings["segment_cloud"];
 
     fsSettings["cloud0_topic"] >> CLOUD0_TOPIC;
     fsSettings["cloud1_topic"] >> CLOUD1_TOPIC;
@@ -142,10 +121,9 @@ void readParameters(std::string config_file)
 
     SOLVER_TIME = fsSettings["max_solver_time"];
     NUM_ITERATIONS = fsSettings["max_num_iterations"];
-    MIN_PARALLAX = fsSettings["keyframe_parallax"];
-    MIN_PARALLAX = MIN_PARALLAX / FOCAL_LENGTH;
 
     fsSettings["output_path"] >> OUTPUT_FOLDER;
+    MLOAM_RESULT_SAVE = fsSettings["mloam_result_save"];
     MLOAM_ODOM_PATH = OUTPUT_FOLDER + fsSettings["mloam_odom_path"];
 	MLOAM_MAP_PATH = OUTPUT_FOLDER + fsSettings["mloam_map_path"];
     MLOAM_GT_PATH = OUTPUT_FOLDER + fsSettings["mloam_gt_path"];
@@ -210,8 +188,13 @@ void readParameters(std::string config_file)
     LASER_SYNC_THRESHOLD = fsSettings["laser_sync_threshold"];
     N_SCANS = fsSettings["n_scans"];
     ROI_RANGE = fsSettings["roi_range"];
+
+    SEGMENT_CLOUD = fsSettings["segment_cloud"];
     HORIZON_SCAN = fsSettings["horizon_scan"];
     MIN_CLUSTER_SIZE = fsSettings["min_cluster_size"];
+    MIN_LINE_SIZE = fsSettings["min_line_size"];
+    SEGMENT_VALID_POINT_NUM = fsSettings["segment_valid_point_num"];
+    SEGMENT_VALID_LINE_NUM = fsSettings["segment_valid_line_num"];
 
     IDX_REF = fsSettings["idx_ref"];
 

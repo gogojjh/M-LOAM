@@ -810,26 +810,6 @@ void process()
 			laserAfterMappedPath.poses.push_back(laserAfterMappedPose);
 			pubLaserAfterMappedPath.publish(laserAfterMappedPath);
 
-			////////////////////////////////////////
-			// std::string mloam_map_path = "/home/jjiao/catkin_ws/src/localization/rpg_trajectory_evaluation/results/simulation_mloam/test/mloam/test_mloam_straight/stamped_map_estimate.txt";
-			std::cout << MLOAM_MAP_PATH << std::endl;
-			std::ofstream fout(MLOAM_MAP_PATH.c_str(), std::ios::out);
-		    fout.precision(5);
-		    for (size_t i = 0; i < laserAfterMappedPath.poses.size(); i++)
-		    {
-		        geometry_msgs::PoseStamped &laser_pose = laserAfterMappedPath.poses[i];
-		        fout << laser_pose.header.stamp.toSec() << " "
-					<< laser_pose.pose.position.x << " "
-					<< laser_pose.pose.position.y << " "
-					<< laser_pose.pose.position.z << " "
-					<< laser_pose.pose.orientation.x << " "
-		            << laser_pose.pose.orientation.y << " "
-		            << laser_pose.pose.orientation.z << " "
-		            << laser_pose.pose.orientation.w << std::endl;
-		    }
-		    fout.close();
-			////////////////////////////////////////
-
 			static tf::TransformBroadcaster br;
 			tf::Transform transform;
 			tf::Quaternion q;
@@ -844,6 +824,26 @@ void process()
 			br.sendTransform(tf::StampedTransform(transform, odomAftMapped.header.stamp, "/world", "/aft_mapped"));
 
 			frameCount++;
+
+			if (MLOAM_RESULT_SAVE)
+			{
+				std::cout << MLOAM_MAP_PATH << std::endl;
+				std::ofstream fout(MLOAM_MAP_PATH.c_str(), std::ios::out);
+				fout.precision(5);
+				for (size_t i = 0; i < laserAfterMappedPath.poses.size(); i++)
+				{
+					geometry_msgs::PoseStamped &laser_pose = laserAfterMappedPath.poses[i];
+					fout << laser_pose.header.stamp.toSec() << " "
+						<< laser_pose.pose.position.x << " "
+						<< laser_pose.pose.position.y << " "
+						<< laser_pose.pose.position.z << " "
+						<< laser_pose.pose.orientation.x << " "
+						<< laser_pose.pose.orientation.y << " "
+						<< laser_pose.pose.orientation.z << " "
+						<< laser_pose.pose.orientation.w << std::endl;
+				}
+				fout.close();
+			}
 		}
 		std::chrono::milliseconds dura(2);
         std::this_thread::sleep_for(dura);

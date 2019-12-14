@@ -170,6 +170,7 @@ void FeatureExtract::extractCloud(const double &cur_time, const PointCloud &lase
     }
     // printf("prepare time %fms\n", t_prepare.toc());
 
+    // compute curvature of each point
     for (int i = 5; i < cloud_size - 5; i++)
     {
         float diff_x = laser_cloud->points[i - 5].x + laser_cloud->points[i - 4].x + laser_cloud->points[i - 3].x + laser_cloud->points[i - 2].x + laser_cloud->points[i - 1].x - 10 * laser_cloud->points[i].x + laser_cloud->points[i + 1].x + laser_cloud->points[i + 2].x + laser_cloud->points[i + 3].x + laser_cloud->points[i + 4].x + laser_cloud->points[i + 5].x;
@@ -181,6 +182,7 @@ void FeatureExtract::extractCloud(const double &cur_time, const PointCloud &lase
         cloud_label[i] = 0;
     }
 
+    // extract features using curvature
     TicToc t_pts;
     PointICloud corner_points_sharp;
     PointICloud corner_points_less_sharp;
@@ -205,7 +207,6 @@ void FeatureExtract::extractCloud(const double &cur_time, const PointCloud &lase
             for (int k = ep; k >= sp; k--)
             {
                 int ind = cloud_sort_ind[k];
-
                 if (cloud_neighbor_picked[ind] == 0 && cloud_curvature[ind] > 0.1)
                 {
                     largest_picked_num++;
@@ -225,7 +226,7 @@ void FeatureExtract::extractCloud(const double &cur_time, const PointCloud &lase
                         break;
                     }
                     cloud_neighbor_picked[ind] = 1;
-
+                    // TODO: check extreme cases that object is occlused
                     for (int l = 1; l <= 5; l++)
                     {
                         float diff_x = laser_cloud->points[ind + l].x - laser_cloud->points[ind + l - 1].x;
@@ -252,7 +253,7 @@ void FeatureExtract::extractCloud(const double &cur_time, const PointCloud &lase
             }
 
             // step 4: extract plane feature
-            int smallestPickedNum = 0;
+            int smallest_picked_num = 0;
             for (int k = sp; k <= ep; k++)
             {
                 int ind = cloud_sort_ind[k];
@@ -260,13 +261,11 @@ void FeatureExtract::extractCloud(const double &cur_time, const PointCloud &lase
                 {
                     cloud_label[ind] = -1;
                     surf_points_flat.push_back(laser_cloud->points[ind]);
-
-                    smallestPickedNum++;
-                    if (smallestPickedNum >= 4)
+                    smallest_picked_num++;
+                    if (smallest_picked_num >= 4)
                     {
                         break;
                     }
-
                     cloud_neighbor_picked[ind] = 1;
                     for (int l = 1; l <= 5; l++)
                     {
@@ -292,7 +291,6 @@ void FeatureExtract::extractCloud(const double &cur_time, const PointCloud &lase
                     }
                 }
             }
-
             for (int k = sp; k <= ep; k++)
             {
                 if (cloud_label[k] <= 0)
