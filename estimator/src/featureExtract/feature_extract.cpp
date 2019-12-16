@@ -33,17 +33,6 @@ FeatureExtract::FeatureExtract()
     down_size_filter_global_map_.setLeafSize(0.6, 0.6, 0.6);
 }
 
-void FeatureExtract::pointAssociateToMap(const PointI &pi, PointI &po, const Pose &pose)
-{
-	Eigen::Vector3d point_curr(pi.x, pi.y, pi.z);
-	Eigen::Vector3d point_trans = pose.q_ * point_curr + pose.t_;
-	po.x = point_trans.x();
-	po.y = point_trans.y();
-	po.z = point_trans.z();
-	po.intensity = pi.intensity;
-	//po->intensity = 1.0;
-}
-
 void FeatureExtract::cloudRearrange(const common::PointCloud &laser_cloud_in, std::vector<common::PointICloud> &laser_cloud_scans, int &cloud_size)
 {
     cloud_size = laser_cloud_in.points.size();

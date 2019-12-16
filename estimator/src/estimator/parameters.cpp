@@ -127,7 +127,8 @@ void readParameters(std::string config_file)
     MLOAM_ODOM_PATH = OUTPUT_FOLDER + fsSettings["mloam_odom_path"];
 	MLOAM_MAP_PATH = OUTPUT_FOLDER + fsSettings["mloam_map_path"];
     MLOAM_GT_PATH = OUTPUT_FOLDER + fsSettings["mloam_gt_path"];
-    std::cout << "result path " << MLOAM_ODOM_PATH << ", " << MLOAM_MAP_PATH << std::endl;
+    std::cout << "gt path: " << MLOAM_GT_PATH << std::endl;
+    std::cout << "result path: " << MLOAM_ODOM_PATH << ", " << MLOAM_MAP_PATH << std::endl;
 
     NUM_OF_LASER = fsSettings["num_of_laser"];
     printf("Laser number %d\n", NUM_OF_LASER);

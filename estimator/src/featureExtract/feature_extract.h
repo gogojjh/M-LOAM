@@ -33,6 +33,7 @@
 
 #include "../estimator/parameters.h"
 #include "../utility/tic_toc.h"
+#include "../utility/utility.h"
 
 class FeatureExtract
 {
@@ -41,8 +42,6 @@ public:
 
     void cloudRearrange(const common::PointCloud &laser_cloud_in, std::vector<common::PointICloud> &laser_cloud_scans, int &cloud_size);
     void extractCloud(const double &cur_time, const common::PointCloud &laser_cloud_in, cloudFeature &cloud_feature);
-
-    void pointAssociateToMap(const common::PointI &pi, common::PointI &po, const Pose &pose);
 
     void extractCornerFromMap(const pcl::KdTreeFLANN<common::PointI>::Ptr &kdtree_corner_from_map,
         const common::PointICloud &cloud_map, const common::PointICloud &cloud_data,

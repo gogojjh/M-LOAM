@@ -25,13 +25,12 @@
 #include <tf/transform_broadcaster.h>
 
 #include <eigen3/Eigen/Dense>
-
-#include "../estimator/estimator.h"
-#include "../estimator/parameters.h"
-
 #include <pcl/common/transforms.h>
 
 #include "common/publisher.hpp"
+#include "../estimator/estimator.h"
+#include "../estimator/parameters.h"
+#include "mloam_msgs/Extrinsics.h"
 
 // point cloud
 extern ros::Publisher pub_laser_cloud;
@@ -47,11 +46,12 @@ extern std::vector<ros::Publisher> v_pub_surf_points_cur;
 
 extern std::vector<ros::Publisher> v_pub_corner_points_local_map;
 
-
 // odometry
-extern std::vector<ros::Publisher> v_pub_ext_base_to_laser;
 extern std::vector<ros::Publisher> v_pub_laser_odometry;
 extern std::vector<ros::Publisher> v_pub_laser_path;
+
+// extrinsic
+extern ros::Publisher pub_extrinsics;
 
 void clearPath();
 

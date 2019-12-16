@@ -27,22 +27,24 @@ ros::Publisher pub_surf_points_target_localmap;
 // local map
 std::vector<ros::Publisher> v_pub_surf_points_local_map;
 std::vector<ros::Publisher> v_pub_surf_points_cur;
-
 std::vector<ros::Publisher> v_pub_corner_points_local_map;
 
 // odometry
-ros::Publisher pub_ext_base_to_sensor;
 std::vector<ros::Publisher> v_pub_laser_odometry;
 std::vector<ros::Publisher> v_pub_laser_path;
 std::vector<nav_msgs::Path> v_laser_path;
 
-cloudFeature transformCloudFeature(const cloudFeature &cloud_feature, const Eigen::Matrix4f &trans)
+// extrinsics
+ros::Publisher pub_extrinsics;
+
+cloudFeature transformCloudFeature(const cloudFeature &cloud_feature, const Eigen::Matrix4f &trans, const int &n)
 {
     cloudFeature trans_cloud_feature;
     for (auto iter = cloud_feature.begin(); iter != cloud_feature.end(); iter ++)
     {
         PointICloud trans_cloud;
         pcl::transformPointCloud(iter->second, trans_cloud, trans);
+        for (auto &p: trans_cloud.points) p.intensity = n;
         trans_cloud_feature.insert(pair<std::string, PointICloud>(iter->first, trans_cloud));
     }
     return trans_cloud_feature;
@@ -61,7 +63,7 @@ void registerPub(ros::NodeHandle &nh)
     pub_corner_points_less_sharp = nh.advertise<sensor_msgs::PointCloud2>("/corner_points_less_sharp", 100);
     pub_surf_points_flat = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_flat", 100);
     pub_surf_points_less_flat = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_less_flat", 100);
-    pub_ext_base_to_sensor = nh.advertise<nav_msgs::Odometry>("/ext_base_to_sensor", 100);
+    pub_extrinsics = nh.advertise<mloam_msgs::Extrinsics>("/extrinsics", 100);
     for (int i = 0; i < NUM_OF_LASER; i++)
     {
         std::string laser_odom_topic, laser_path_topic;
@@ -92,8 +94,7 @@ void pubPointCloud(const Estimator &estimator, const double &time)
     {
         Pose pose_ext = Pose(estimator.qbl_[n], estimator.tbl_[n]);
         Eigen::Matrix4d transform_ext = pose_ext.T_;
-        cloudFeature cloud_feature_trans = transformCloudFeature(estimator.cur_feature_.second[n], transform_ext.cast<float>());
-        for (auto &p: cloud_feature_trans["laser_cloud"].points) p.intensity = n;
+        cloudFeature cloud_feature_trans = transformCloudFeature(estimator.cur_feature_.second[n], transform_ext.cast<float>(), n);
         laser_cloud_proj += cloud_feature_trans["laser_cloud"];
         if ((ESTIMATE_EXTRINSIC == 0) || (n == IDX_REF))
         {
@@ -199,7 +200,7 @@ void printStatistics(const Estimator &estimator, double t)
             }
             fout.close();
         }
-        
+
         {
             ofstream fout(MLOAM_GT_PATH.c_str(), ios::out);
             fout.setf(ios::fixed, ios::floatfield);
@@ -276,26 +277,34 @@ void pubOdometry(const Estimator &estimator, const double &time)
         v_pub_laser_path[IDX_REF].publish(v_laser_path[IDX_REF]);
     }
 
+    // publish extrinsics
+    mloam_msgs::Extrinsics extrinsics;
+    extrinsics.header.stamp = ros::Time(time);
+    extrinsics.header.frame_id = "/laser_init_" + std::to_string(IDX_REF);
+    extrinsics.converage = ESTIMATE_EXTRINSIC;
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
-        nav_msgs::Odometry ext_base_to_sensor;
-        ext_base_to_sensor.header.stamp = ros::Time(time);
-        ext_base_to_sensor.header.frame_id = "/world";
-        ext_base_to_sensor.child_frame_id = "/laser_init_" + std::to_string(n);
-        ext_base_to_sensor.pose.pose.orientation.x = estimator.qbl_[n].x();
-        ext_base_to_sensor.pose.pose.orientation.y = estimator.qbl_[n].y();
-        ext_base_to_sensor.pose.pose.orientation.z = estimator.qbl_[n].z();
-        ext_base_to_sensor.pose.pose.orientation.w = estimator.qbl_[n].w();
-        ext_base_to_sensor.pose.pose.position.x = estimator.tbl_[n](0);
-        ext_base_to_sensor.pose.pose.position.y = estimator.tbl_[n](1);
-        ext_base_to_sensor.pose.pose.position.z = estimator.tbl_[n](2);
-        pub_ext_base_to_sensor.publish(ext_base_to_sensor);
-        publishTF(ext_base_to_sensor);
+        nav_msgs::Odometry extrins;
+        extrins.header.seq = n;
+        extrins.header.stamp = ros::Time(time);
+        extrins.header.frame_id = "/laser_init_" + std::to_string(IDX_REF);
+        extrins.child_frame_id = "/laser_init_" + std::to_string(n);
+        extrins.pose.pose.orientation.x = estimator.qbl_[n].x();
+        extrins.pose.pose.orientation.y = estimator.qbl_[n].y();
+        extrins.pose.pose.orientation.z = estimator.qbl_[n].z();
+        extrins.pose.pose.orientation.w = estimator.qbl_[n].w();
+        extrins.pose.pose.position.x = estimator.tbl_[n](0);
+        extrins.pose.pose.position.y = estimator.tbl_[n](1);
+        extrins.pose.pose.position.z = estimator.tbl_[n](2);
+        publishTF(extrins);
 
-        ext_base_to_sensor.header.frame_id = "/laser_" + std::to_string(IDX_REF);
-        ext_base_to_sensor.child_frame_id = "/laser_" + std::to_string(n);
-        publishTF(ext_base_to_sensor);
+        extrins.header.frame_id = "/laser_" + std::to_string(IDX_REF);
+        extrins.child_frame_id = "/laser_" + std::to_string(n);
+        publishTF(extrins);
+
+        extrinsics.odoms.push_back(extrins);
     }
+    pub_extrinsics.publish(extrinsics);
 }
 
 //

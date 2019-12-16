@@ -15,14 +15,14 @@
         <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_file) --clock -r 1 --pause" />
     </group>
 
-    <node pkg="mloam" type="mloam_node" name="mloam_node" args="$(arg config_file)" output="screen" />
+    <node pkg="mloam" type="mloam_node" name="mloam_node" args="$(arg config_file)" />
 
-    <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" args="$(arg config_file)" />
+    <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" args="$(arg config_file)" output="screen" />
 
     <!-- publish static tf -->
     <!-- x y z yaw pitch roll -->
     <!-- x y z qx qy qz qw -->
-    <!-- world_base->base_link, world->laser_0     -->
+    <!-- world_base: the base_link of the robot; world_base->world, world->laser_0     -->
     <node name="static_tf_world_base_into_world_sensor" pkg="tf" type="static_transform_publisher"
         args="0 0.266 0.734 -0.216 0 0 0.976 world_base world 10"/>
 

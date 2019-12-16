@@ -14,50 +14,9 @@
 
 using namespace common;
 
-#define DISTORTION 1
-
 LidarTracker::LidarTracker()
 {
     ROS_INFO("Tracker begin");
-}
-
-// undistort lidar point
-void LidarTracker::TransformToStart(PointI const *const pi, PointI *const po, const Pose &pose)
-{
-    //interpolation ratio
-    double s;
-    if (DISTORTION)
-        s = (pi->intensity - int(pi->intensity)) / SCAN_PERIOD;
-    else
-        s = 1.0;
-    //s = 1;
-    Eigen::Quaterniond q_point_last = Eigen::Quaterniond::Identity().slerp(s, pose.q_);
-    Eigen::Vector3d t_point_last = s * pose.t_;
-    Eigen::Vector3d point(pi->x, pi->y, pi->z);
-    Eigen::Vector3d un_point = q_point_last * point + t_point_last;
-
-    po->x = un_point.x();
-    po->y = un_point.y();
-    po->z = un_point.z();
-    po->intensity = pi->intensity;
-}
-
-// transform all lidar points to the start of the next frame
-void LidarTracker::TransformToEnd(PointI const *const pi, PointI *const po, const Pose &pose)
-{
-    // undistort point first
-    pcl::PointXYZI un_point_tmp;
-    TransformToStart(pi, &un_point_tmp, pose);
-
-    Eigen::Vector3d un_point(un_point_tmp.x, un_point_tmp.y, un_point_tmp.z);
-    Eigen::Vector3d point_end = pose.q_.inverse() * (un_point - pose.t_);
-
-    po->x = point_end.x();
-    po->y = point_end.y();
-    po->z = point_end.z();
-
-    //Remove distortion time info
-    po->intensity = int(pi->intensity);
 }
 
 Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
@@ -133,7 +92,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         // find correspondence for corner features
         for (int i = 0; i < corner_points_sharp_num; ++i)
         {
-            TransformToStart(&(corner_points_sharp->points[i]), &point_sel, Pose(q_prev_cur, t_prev_cur));
+            TransformToStart(&(corner_points_sharp->points[i]), &point_sel, Pose(q_prev_cur, t_prev_cur), true);
             kdtree_corner_last->nearestKSearch(point_sel, 1, point_search_ind, point_search_sqdis);
 
             int closest_point_ind = -1, min_point_ind2 = -1;
@@ -201,11 +160,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
                                              corner_points_last->points[min_point_ind2].y,
                                              corner_points_last->points[min_point_ind2].z);
 
-                double s;
-                if (DISTORTION)
-                    s = (corner_points_sharp->points[i].intensity - int(corner_points_sharp->points[i].intensity)) / SCAN_PERIOD;
-                else
-                    s = 1.0;
+                double s = (corner_points_sharp->points[i].intensity - int(corner_points_sharp->points[i].intensity)) / SCAN_PERIOD;
                 ceres::CostFunction *cost_function = LidarEdgeFactor::Create(curr_point, last_point_a, last_point_b, s);
                 problem.AddResidualBlock(cost_function, loss_function, para_q, para_t);
                 num_corner_correspondence++;
@@ -215,7 +170,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         // find correspondence for plane features
         for (int i = 0; i < surf_points_sharp_num; ++i)
         {
-            TransformToStart(&(surf_points_flat->points[i]), &point_sel, Pose(q_prev_cur, t_prev_cur));
+            TransformToStart(&(surf_points_flat->points[i]), &point_sel, Pose(q_prev_cur, t_prev_cur), true);
             kdtree_surf_last->nearestKSearch(point_sel, 1, point_search_ind, point_search_sqdis);
 
             int closest_point_ind = -1, min_point_ind2 = -1, minPointInd3 = -1;
@@ -290,11 +245,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
                     Eigen::Vector3d last_point_c(surf_points_last->points[minPointInd3].x,
                                                  surf_points_last->points[minPointInd3].y,
                                                  surf_points_last->points[minPointInd3].z);
-                    double s;
-                    if (DISTORTION)
-                        s = (surf_points_flat->points[i].intensity - int(surf_points_flat->points[i].intensity)) / SCAN_PERIOD;
-                    else
-                        s = 1.0;
+                    double s = (surf_points_flat->points[i].intensity - int(surf_points_flat->points[i].intensity)) / SCAN_PERIOD;
                     ceres::CostFunction *cost_function = LidarPlaneFactor::Create(curr_point, last_point_a, last_point_b, last_point_c, s);
                     problem.AddResidualBlock(cost_function, loss_function, para_q, para_t);
                     num_plane_correspondence++;

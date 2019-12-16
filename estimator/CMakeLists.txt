@@ -15,11 +15,13 @@ find_package(catkin REQUIRED COMPONENTS
     cv_bridge
     camera_models
     image_transport
+    message_generation
 
     pcl_ros
     pcl_conversions
 
     mloam_common
+    mloam_msgs
 )
 
 find_package(OpenCV REQUIRED)
@@ -42,27 +44,31 @@ include_directories(
   ${CERES_INCLUDE_DIRS}
 )
 
-catkin_package()
+catkin_package(
+#  INCLUDE_DIRS include
+  CATKIN_DEPENDS mloam_msgs
+  DEPENDS PCL
+)
 
 ######################################################## float libraries
 add_library(mloam_lib_1
-    src/initial/initial_extrinsics.cpp
-    src/estimator/parameters.cpp
     src/estimator/estimator.cpp
-    src/estimator/pose.cpp
-    src/utility/visualization.cpp
-    src/utility/cloud_visualizer.cpp
-    src/factor/marginalization_factor.cpp
+    src/featureExtract/feature_extract.cpp
     src/lidarTracker/lidar_tracker.cpp
+    src/utility/visualization.cpp
+    src/utility/utility.cpp
     )
 target_link_libraries(mloam_lib_1 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES})
 
 ######################################################## fix libraries
 add_library(mloam_lib_2
+    src/estimator/parameters.cpp
+    src/estimator/pose.cpp
+    src/initial/initial_extrinsics.cpp
     src/imageSegmenter/image_segmenter.cpp
-    src/featureExtract/feature_extract.cpp
     src/factor/pose_local_parameterization.cpp
-    src/utility/utility.cpp
+    src/factor/marginalization_factor.cpp
+    src/utility/cloud_visualizer.cpp
     )
 target_link_libraries(mloam_lib_2 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES})
 

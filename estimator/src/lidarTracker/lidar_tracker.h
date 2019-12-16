@@ -34,14 +34,12 @@
 #include "../estimator/parameters.h"
 #include "../featureExtract/feature_extract.h"
 #include "../utility/tic_toc.h"
+#include "../utility/utility.h"
 
 class LidarTracker
 {
 public:
     LidarTracker();
-
-    void TransformToStart(common::PointI const *const pi, common::PointI *const po, const Pose &pose);
-    void TransformToEnd(common::PointI const *const pi, common::PointI *const po, const Pose &pose);
 
     Pose trackCloud(const cloudFeature &prev_cloud_feature, const cloudFeature &cur_cloud_feature, const Pose &pose_ini);
 };

@@ -14,6 +14,16 @@
 #include <cstring>
 #include <eigen3/Eigen/Dense>
 
+#include "common/types/type.h"
+
+#include "../estimator/parameters.h"
+#include "../estimator/pose.h"
+
+void TransformToStart(common::PointI const *const pi, common::PointI *const po, const Pose &pose, const bool &b_distortion);
+void TransformToEnd(common::PointI const *const pi, common::PointI *const po, const Pose &pose, const bool &b_distortion);
+void pointAssociateToMap(const common::PointI &pi, common::PointI &po, const Pose &pose);
+void pointAssociateTobeMapped(const common::PointI &pi, common::PointI &po, const Pose &pose);
+
 class Utility
 {
   public:
@@ -116,7 +126,17 @@ class Utility
         return Rz * Ry * Rx;
     }
 
-    static Eigen::Matrix3d g2R(const Eigen::Vector3d &g);
+    static Eigen::Matrix3d g2R(const Eigen::Vector3d &g)
+    {
+        Eigen::Matrix3d R0;
+        Eigen::Vector3d ng1 = g.normalized();
+        Eigen::Vector3d ng2{0, 0, 1.0};
+        R0 = Eigen::Quaterniond::FromTwoVectors(ng1, ng2).toRotationMatrix();
+        double yaw = Utility::R2ypr(R0).x();
+        R0 = Utility::ypr2R(Eigen::Vector3d{-yaw, 0, 0}) * R0;
+        // R0 = Utility::ypr2R(Eigen::Vector3d{-90, 0, 0}) * R0;
+        return R0;
+    }
 
     template <size_t N>
     struct uint_
@@ -145,5 +165,10 @@ class Utility
       else
         return angle_degrees +
             two_pi * std::floor((-angle_degrees + T(180)) / two_pi);
-    };
+    }
 };
+
+
+
+
+//

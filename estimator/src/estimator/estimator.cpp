@@ -632,7 +632,11 @@ void Estimator::optimizeMap()
                     // printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size()); // 500-1000
                     for (auto &feature: features_frame)
                     {
-                        const double &s = feature.score_;
+                        double s;
+                        if (n == IDX_REF)
+                            s = feature.score_;
+                        else
+                            s = 0.95;
                         const Eigen::Vector3d &p_data = feature.point_;
                         const Eigen::Vector4d &coeff_ref = feature.coeffs_;
                         LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s);
@@ -779,7 +783,8 @@ void Estimator::optimizeMap()
                         std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i];
                         for (auto &feature: features_frame)
                         {
-                            const double &s = feature.score_;
+                            double &s = feature.score_;
+                            // if (n == 1) s = 0.8; // TODO:
                             const Eigen::Vector3d &p_data = feature.point_;
                             const Eigen::Vector4d &coeff_ref = feature.coeffs_;
                             LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s);
@@ -1221,7 +1226,7 @@ void Estimator::visualizePCL()
         p_ori.y = f.point_.y();
         p_ori.z = f.point_.z();
         PointI p_sel;
-        f_extract_.pointAssociateToMap(p_ori, p_sel, pose_local_[1][WINDOW_SIZE]);
+        pointAssociateToMap(p_ori, p_sel, pose_local_[1][WINDOW_SIZE]);
         tmp_cloud_sel->push_back(Point{p_sel.x, p_sel.y, p_sel.z}); // target cloud
         tmp_normals_sel->push_back(Normal{float(f.coeffs_.x()), float(f.coeffs_.y()), float(f.coeffs_.z())}); // reference cloud normal
         // Eigen::Vector4d coeffs_normalized = f.coeffs;

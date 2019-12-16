@@ -4,8 +4,8 @@
 #common parameters
 mloam_result_save: 0
 output_path: "/home/jjiao/catkin_ws/src/localization/rpg_trajectory_evaluation/results/simu_jackal_mloam/test/mloam/test_mloam_eight/"
-mloam_odom_path: "stamped_mloam_right_odom_estimate.txt"
-mloam_map_path: "stamped_mloam_right_map_estimate.txt"
+mloam_odom_path: "stamped_mloam_odom_estimate.txt"
+mloam_map_path: "stamped_mloam_map_estimate.txt"
 mloam_gt_path: "stamped_groundtruth.txt"
 
 #Multiple thread support
@@ -18,7 +18,6 @@ keyframe_parallax: 0 # keyframe selection threshold (pixel)
 
 evaluate_residual: 1
 optimal_odometry: 1
-n_cumu_feature: 5
 
 ###############################################
 # laser parameters
@@ -26,7 +25,7 @@ num_of_laser: 2
 n_scans: 16
 
 # segmentation parameters
-segment_cloud: 1
+segment_cloud: 0
 horizon_scan: 400
 min_cluster_size: 15
 min_line_size: 10
@@ -35,7 +34,7 @@ segment_valid_line_num: 3
 
 # window sizes
 window_size: 8
-opt_window_size: 4
+opt_window_size: 3
 
 # Extrinsic parameter between IMU and Camera.
 estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
@@ -49,10 +48,14 @@ body_T_laser: !!opencv-matrix
    dt: d
    # data: [0, 0, 0, 1, 0, 0, 0,
    #        0, 0, 0, 1, 0, 0, 0] # qx qy qz qw px py pz
-   data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-          0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220]
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-   #        0.31, 0.0, 0.0, 0.94, 0, -0.2, 0.0]
+   #        0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220] # gt
+   # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
+   #        0.312, 0.0, 0.0, 0.940, 0, -0.500, -0.240] # gt_noise
+   data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
+          0.3173, 0.0, 0.0, 0.9483, 0.009, -0.4939, -0.2226] # estimate
+   # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
+   #        0.31, 0.0, 0.0, 0.94, 0, -0.2, 0.0] # initialization
 
 # <!-- laser_0 to laser_1 -->
 # <!-- 0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220 -->
@@ -104,8 +107,9 @@ pcl_viewer: 0
 pcl_viewer_normal_ratio: 10
 
 # calibration converage parameters
+n_cumu_feature: 10
 eig_initial: 200
-eig_thre_calib: 500
+eig_thre_calib: 1000
 n_calib: 10
 
 #
