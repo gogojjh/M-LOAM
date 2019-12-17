@@ -182,16 +182,22 @@ void odom_gt_callback(const nav_msgs::Odometry &odom_msg)
     if (laser_path.poses.size() == 0) pose_world_ref_ini = pose_world_ref;
     Pose pose_ref_ini_cur(pose_world_ref_ini.inverse() * pose_world_ref);
 
+    nav_msgs::Odometry laser_odom;
+    laser_odom.header = odom_msg.header;
+    laser_odom.header.frame_id = "/world";
+    laser_odom.child_frame_id = "/gt";
+    laser_odom.pose.pose.orientation.x = pose_ref_ini_cur.q_.x();
+    laser_odom.pose.pose.orientation.y = pose_ref_ini_cur.q_.y();
+    laser_odom.pose.pose.orientation.z = pose_ref_ini_cur.q_.z();
+    laser_odom.pose.pose.orientation.w = pose_ref_ini_cur.q_.w();
+    laser_odom.pose.pose.position.x = pose_ref_ini_cur.t_(0);
+    laser_odom.pose.pose.position.y = pose_ref_ini_cur.t_(1);
+    laser_odom.pose.pose.position.z = pose_ref_ini_cur.t_(2);
+    publishTF(laser_odom);
+
     geometry_msgs::PoseStamped laser_pose;
     laser_pose.header = odom_msg.header;
-    laser_pose.header.frame_id = "/world";
-    laser_pose.pose.orientation.x = pose_ref_ini_cur.q_.x();
-    laser_pose.pose.orientation.y = pose_ref_ini_cur.q_.y();
-    laser_pose.pose.orientation.z = pose_ref_ini_cur.q_.z();
-    laser_pose.pose.orientation.w = pose_ref_ini_cur.q_.w();
-    laser_pose.pose.position.x = pose_ref_ini_cur.t_(0);
-    laser_pose.pose.position.y = pose_ref_ini_cur.t_(1);
-    laser_pose.pose.position.z = pose_ref_ini_cur.t_(2);
+    laser_pose.pose = laser_odom.pose.pose;
     laser_path.header = laser_pose.header;
     laser_path.poses.push_back(laser_pose);
     pub_laser_path.publish(laser_path);

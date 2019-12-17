@@ -266,7 +266,7 @@ void Estimator::processMeasurements()
             process();
 
             printStatistics(*this, 0);
-            pubPointCloud(*this, cur_time_);
+            pubPointCloud(*this, cur_time_); // TODO: publish undistort point cloud
             pubOdometry(*this, cur_time_);
             m_process_.unlock();
 

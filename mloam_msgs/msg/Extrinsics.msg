@@ -1,3 +1,3 @@
 Header header
-uint8 converage
+uint8 status
 nav_msgs/Odometry[] odoms

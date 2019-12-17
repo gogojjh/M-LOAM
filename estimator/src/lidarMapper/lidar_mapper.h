@@ -63,9 +63,12 @@
 #include <vector>
 #include <map>
 #include <cassert>
+#include <algorithm>
+#include <utility>
 
 #include "common/common.hpp"
 #include "common/types/type.h"
+#include "common/publisher.hpp"
 #include "../utility/tic_toc.h"
 #include "../utility/utility.h"
 #include "../estimator/pose.h"
