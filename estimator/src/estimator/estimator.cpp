@@ -467,6 +467,7 @@ void Estimator::optimizeMap()
     for (auto i = 0; i < OPT_WINDOW_SIZE + 1; i++)
     {
         PoseLocalParameterization *local_parameterization = new PoseLocalParameterization();
+        local_parameterization->setParameter();
         problem.AddParameterBlock(para_pose_[i], SIZE_POSE, local_parameterization);
         local_param_ids.push_back(local_parameterization);
         para_ids.push_back(para_pose_[i]);
@@ -476,6 +477,7 @@ void Estimator::optimizeMap()
     for (auto i = 0; i < NUM_OF_LASER; i++)
     {
         PoseLocalParameterization *local_parameterization = new PoseLocalParameterization();
+        local_parameterization->setParameter();
         problem.AddParameterBlock(para_ex_pose_[i], SIZE_POSE, local_parameterization);
         local_param_ids.push_back(local_parameterization);
         para_ids.push_back(para_ex_pose_[i]);
@@ -1114,13 +1116,12 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
         for (auto i = 0; i < local_param_ids.size(); i++)
         {
             Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(6*i, 6*i, 6, 6);
-            local_param_ids[i]->setParameter();
+            // local_param_ids[i]->setParameter();
             Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6> > esolver(mat_H);
             Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real(); // 6*1
             Eigen::Matrix<double, 6, 6> mat_V_f = esolver.eigenvectors().real(); // 6*6, column is the corresponding eigenvector
             Eigen::Matrix<double, 6, 6> mat_V_p = mat_V_f;
 
-            local_param_ids[i]->is_degenerate_ = false;
             eig_thre = eig_thre_calib_[i];
             for (auto j = 0; j < mat_E.cols(); j++)
             {

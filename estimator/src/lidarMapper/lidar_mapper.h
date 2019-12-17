@@ -75,6 +75,7 @@
 #include "../estimator/parameters.h"
 #include "../factor/lidar_edge_factor.hpp"
 #include "../factor/lidar_plane_norm_factor.hpp"
+#include "../factor/pose_local_parameterization.h"
 #include "mloam_msgs/Extrinsics.h"
 
 

@@ -16,10 +16,11 @@ struct LidarPlaneNormFactor
 														 negative_OA_dot_norm(negative_OA_dot_norm_) {}
 
 	template <typename T>
-	bool operator()(const T *q, const T *t, T *residual) const
+	bool operator()(const T *param, T *residual) const
 	{
-		Eigen::Quaternion<T> q_w_curr{q[3], q[0], q[1], q[2]};
-		Eigen::Matrix<T, 3, 1> t_w_curr{t[0], t[1], t[2]};
+		Eigen::Quaternion<T> q_w_curr(param[6], param[3], param[4], param[5]);
+		Eigen::Matrix<T, 3, 1> t_w_curr(param[0], param[1], param[2]);
+
 		Eigen::Matrix<T, 3, 1> cp{T(curr_point.x()), T(curr_point.y()), T(curr_point.z())};
 		Eigen::Matrix<T, 3, 1> point_w;
 		point_w = q_w_curr * cp + t_w_curr;
@@ -33,7 +34,7 @@ struct LidarPlaneNormFactor
 									   const double negative_OA_dot_norm_)
 	{
 		return (new ceres::AutoDiffCostFunction<
-				LidarPlaneNormFactor, 1, 4, 3>(
+				LidarPlaneNormFactor, 1, 7>(
 			new LidarPlaneNormFactor(curr_point_, plane_unit_norm_, negative_OA_dot_norm_)));
 	}
 

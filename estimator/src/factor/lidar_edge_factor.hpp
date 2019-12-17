@@ -13,21 +13,21 @@ struct LidarEdgeFactor
 		: curr_point(curr_point_), last_point_a(last_point_a_), last_point_b(last_point_b_), s(s_) {}
 
 	template <typename T>
-	bool operator()(const T *q, const T *t, T *residual) const
+	bool operator()(const T *param, T *residual) const
 	{
+		Eigen::Quaternion<T> q_last_curr(param[6], param[3], param[4], param[5]);
+		Eigen::Matrix<T, 3, 1> t_last_curr(param[0], param[1], param[2]);
 
 		Eigen::Matrix<T, 3, 1> cp{T(curr_point.x()), T(curr_point.y()), T(curr_point.z())};
 		Eigen::Matrix<T, 3, 1> lpa{T(last_point_a.x()), T(last_point_a.y()), T(last_point_a.z())};
 		Eigen::Matrix<T, 3, 1> lpb{T(last_point_b.x()), T(last_point_b.y()), T(last_point_b.z())};
 
-		//Eigen::Quaternion<T> q_last_curr{q[3], T(s) * q[0], T(s) * q[1], T(s) * q[2]};
-		Eigen::Quaternion<T> q_last_curr{q[3], q[0], q[1], q[2]};
 		Eigen::Quaternion<T> q_identity{T(1), T(0), T(0), T(0)};
-		q_last_curr = q_identity.slerp(T(s), q_last_curr);
-		Eigen::Matrix<T, 3, 1> t_last_curr{T(s) * t[0], T(s) * t[1], T(s) * t[2]};
+		Eigen::Quaternion<T> q_last_curr_ipl = q_identity.slerp(T(s), q_last_curr);
+		Eigen::Matrix<T, 3, 1> t_last_curr_ipl = T(s) * t_last_curr;
 
 		Eigen::Matrix<T, 3, 1> lp;
-		lp = q_last_curr * cp + t_last_curr;
+		lp = q_last_curr_ipl * cp + t_last_curr_ipl;
 
 		Eigen::Matrix<T, 3, 1> nu = (lp - lpa).cross(lp - lpb);
 		Eigen::Matrix<T, 3, 1> de = lpa - lpb;
@@ -43,7 +43,7 @@ struct LidarEdgeFactor
 									   const Eigen::Vector3d last_point_b_, const double s_)
 	{
 		return (new ceres::AutoDiffCostFunction<
-				LidarEdgeFactor, 3, 4, 3>(
+				LidarEdgeFactor, 3, 7>(
 			new LidarEdgeFactor(curr_point_, last_point_a_, last_point_b_, s_)));
 	}
 
