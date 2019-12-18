@@ -6,9 +6,9 @@
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl_conversions/pcl_conversions.h>
 
-struct LidarEdgeFactor
+struct LidarMapEdgeFactor
 {
-	LidarEdgeFactor(Eigen::Vector3d curr_point_, Eigen::Vector3d last_point_a_,
+	LidarMapEdgeFactor(Eigen::Vector3d curr_point_, Eigen::Vector3d last_point_a_,
 					Eigen::Vector3d last_point_b_, double s_)
 		: curr_point(curr_point_), last_point_a(last_point_a_), last_point_b(last_point_b_), s(s_) {}
 
@@ -43,8 +43,8 @@ struct LidarEdgeFactor
 									   const Eigen::Vector3d last_point_b_, const double s_)
 	{
 		return (new ceres::AutoDiffCostFunction<
-				LidarEdgeFactor, 3, 7>(
-			new LidarEdgeFactor(curr_point_, last_point_a_, last_point_b_, s_)));
+				LidarMapEdgeFactor, 3, 7>(
+			new LidarMapEdgeFactor(curr_point_, last_point_a_, last_point_b_, s_)));
 	}
 
 	Eigen::Vector3d curr_point, last_point_a, last_point_b;

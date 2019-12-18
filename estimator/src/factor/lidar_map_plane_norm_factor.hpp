@@ -9,9 +9,9 @@
 #include <pcl_conversions/pcl_conversions.h>
 
 // calculate distrance from point to plane (using normal)
-struct LidarPlaneNormFactor
+struct LidarMapPlaneNormFactor
 {
-	LidarPlaneNormFactor(Eigen::Vector3d curr_point_, Eigen::Vector3d plane_unit_norm_,
+	LidarMapPlaneNormFactor(Eigen::Vector3d curr_point_, Eigen::Vector3d plane_unit_norm_,
 						 double negative_OA_dot_norm_) : curr_point(curr_point_), plane_unit_norm(plane_unit_norm_),
 														 negative_OA_dot_norm(negative_OA_dot_norm_) {}
 
@@ -34,8 +34,8 @@ struct LidarPlaneNormFactor
 									   const double negative_OA_dot_norm_)
 	{
 		return (new ceres::AutoDiffCostFunction<
-				LidarPlaneNormFactor, 1, 7>(
-			new LidarPlaneNormFactor(curr_point_, plane_unit_norm_, negative_OA_dot_norm_)));
+				LidarMapPlaneNormFactor, 1, 7>(
+			new LidarMapPlaneNormFactor(curr_point_, plane_unit_norm_, negative_OA_dot_norm_)));
 	}
 
 	Eigen::Vector3d curr_point;

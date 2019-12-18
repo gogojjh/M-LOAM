@@ -634,11 +634,7 @@ void Estimator::optimizeMap()
                     // printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size()); // 500-1000
                     for (auto &feature: features_frame)
                     {
-                        double s;
-                        if (n == IDX_REF)
-                            s = feature.score_;
-                        else
-                            s = 0.95;
+                        const double &s = feature.score_;
                         const Eigen::Vector3d &p_data = feature.point_;
                         const Eigen::Vector4d &coeff_ref = feature.coeffs_;
                         LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s);
@@ -786,7 +782,6 @@ void Estimator::optimizeMap()
                         for (auto &feature: features_frame)
                         {
                             double &s = feature.score_;
-                            // if (n == 1) s = 0.8; // TODO:
                             const Eigen::Vector3d &p_data = feature.point_;
                             const Eigen::Vector4d &coeff_ref = feature.coeffs_;
                             LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s);
