@@ -630,7 +630,6 @@ void process()
 						*/
 					}
 
-
 					printf("corner num %d used corner num %d \n", laser_cloud_corner_stack_num, corner_num);
 					printf("surf num %d used surf num %d \n", laser_cloud_surf_stack_num, surf_num);
 					printf("mapping data assosiation time %fms \n", t_data.toc());

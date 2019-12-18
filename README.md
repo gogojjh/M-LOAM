@@ -30,13 +30,18 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 ### 3. Example
 ```
     roslaunch mloam mloam_handheld.launch
-    rosbag play YOUR_DATASET_FOLDER/xxx.bag
 ```
 
 ### 4. Compare with A-LOAM
 ```
     roslaunch aloam_velodyne aloam_handheld.launch
 ```
+
+### 5. Simulation results
+> **red**: odometry; **green**: mapping; **blue**: gt
+
+<img src="picture/simu_husky_20191218/simu_husky_eight.png" width = 350 height = 175 />
+<img src="picture/simu_husky_20191218/simu_husky_eight_map_left.png" width = 350 height = 175 />
 
 <!--
 ---
