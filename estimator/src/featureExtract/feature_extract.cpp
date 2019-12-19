@@ -385,7 +385,7 @@ void FeatureExtract::extractCornerFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &k
                 double ld_p1 = -(w1.x() * point_proj.x + w1.y() * point_proj.y + w1.z() * point_proj.z);
                 double s = 1 - 0.9f * fabs(ld2);
                 Eigen::Vector4d coeff1(la, lb, lc, ld_p1);
-                Eigen::Vector4d coeff2(w2.x(), w2.y(), w2.z(), ld_p2);
+                Eigen::Vector4d coeff2(w2.x(), w2.y(), w2.z(), ld_p2);  // TODO
                 bool is_in_laser_fov = false;
                 if (CHECK_FOV)
                 {
@@ -412,17 +412,17 @@ void FeatureExtract::extractCornerFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &k
                 if (s > 0.1 && is_in_laser_fov)
                 {
                     PointPlaneFeature feature1, feature2;
-                    feature1.score_ = s * 0.5;
+                    feature1.score_ = s;
                     feature1.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
                     feature1.coeffs_ = coeff1;
                     features[cloud_cnt] = feature1;
                     cloud_cnt++;
 
-                    feature2.score_ = s * 0.5;
-                    feature2.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
-                    feature2.coeffs_ = coeff2;
-                    features[cloud_cnt] = feature2;
-                    cloud_cnt++;
+                    // feature2.score_ = s * 0.5;
+                    // feature2.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
+                    // feature2.coeffs_ = coeff2;
+                    // features[cloud_cnt] = feature2;
+                    // cloud_cnt++;
                 }
             }
         }
@@ -485,7 +485,7 @@ void FeatureExtract::extractSurfFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &kdt
 
             if (plane_valid)
             {
-                // pd2 smaller, s larger
+                // pd2 (distance) smaller, s larger
                 double pd2 = norm(0) * point_sel.x + norm(1) * point_sel.y + norm(2) * point_sel.z + negative_OA_dot_norm;
                 double s = 1 - 0.9f * fabs(pd2) / sqrt(sqrSum(point_sel.x, point_sel.y, point_sel.z));
                 Eigen::Vector4d coeff(norm(0), norm(1), norm(2), negative_OA_dot_norm);

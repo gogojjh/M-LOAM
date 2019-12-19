@@ -512,7 +512,7 @@ void process()
 
 					ceres::Solver::Options options;
 					options.linear_solver_type = ceres::DENSE_QR;
-					options.max_num_iterations = 8;
+					options.max_num_iterations = 10;
 					options.minimizer_progress_to_stdout = false;
 					options.check_gradients = false;
 					options.gradient_check_relative_precision = 1e-4;
@@ -521,11 +521,11 @@ void process()
 
 					PoseLocalParameterization *local_parameterization = new PoseLocalParameterization();
 					local_parameterization->setParameter();
+					problem1.AddParameterBlock(para_pose, SIZE_POSE, local_parameterization);
+					// problem2.AddParameterBlock(para_pose, SIZE_POSE, local_parameterization);
 
 					// ******************************************************
 					ROS_INFO("mloam modules");
-					problem1.AddParameterBlock(para_pose, SIZE_POSE, local_parameterization);
-					para_ids.push_back(para_pose);
 					std::vector<double> info_weight(NUM_OF_LASER, 0);
 					info_weight[0] = 1.0;
 					info_weight[1] = 1.0;
@@ -557,8 +557,7 @@ void process()
 	                        const Eigen::Vector3d &p_data = feature.point_;
 	                        const Eigen::Vector4d &coeff_ref = feature.coeffs_;
 							ceres::CostFunction *cost_function = LidarMapPlaneNormFactor::Create(p_data, coeff_ref, s, info_weight[n]);
-							ceres::internal::ResidualBlock *res_id = problem1.AddResidualBlock(cost_function, loss_function, para_pose);
-							res_ids.push_back(res_id);
+							problem1.AddResidualBlock(cost_function, loss_function, para_pose);
 						}
 
 						for (auto &feature: surf_map_features)
@@ -567,133 +566,121 @@ void process()
 	                        const Eigen::Vector3d &p_data = feature.point_;
 	                        const Eigen::Vector4d &coeff_ref = feature.coeffs_;
 							ceres::CostFunction *cost_function = LidarMapPlaneNormFactor::Create(p_data, coeff_ref, s, info_weight[n]);
-							ceres::internal::ResidualBlock *res_id = problem1.AddResidualBlock(cost_function, loss_function, para_pose);
-							res_ids.push_back(res_id);
+							problem1.AddResidualBlock(cost_function, loss_function, para_pose);
 						}
 					}
 					printf("prepare ceres data %fms\n", t_prepare.toc());
 					printf("corner num %d, used corner num %d\n", laser_cloud_corner_stack_num, corner_num);
 					printf("surf num %d, used surf num %d\n", laser_cloud_surf_stack_num, surf_num);
 					printf("residual block size: %d\n", problem1.NumResidualBlocks());
-					double cost;
-					ceres::Problem::EvaluateOptions e_option;
-					e_option.parameter_blocks = para_ids;
-					e_option.residual_blocks = res_ids;
-					problem1.Evaluate(e_option, &cost, NULL, NULL, NULL);
+					double cost = 0.0;
+					problem1.Evaluate(ceres::Problem::EvaluateOptions(), &cost, NULL, NULL, NULL);
 					printf("cost: %f\n", cost);
-					para_ids.clear();
-					res_ids.clear();
 
 					// ******************************************************
-					ROS_INFO("aloam modules");
-					problem2.AddParameterBlock(para_pose, SIZE_POSE, local_parameterization);
-					para_ids.push_back(para_pose);
-					corner_num = 0;
-					surf_num = 0;
-					for (int i = 0; i < laser_cloud_corner_stack_num; i++)
-					{
-						point_ori = laser_cloud_corner_stack->points[i];
-						pointAssociateToMap(point_ori, point_sel, pose_wmap_curr);
-						kdtree_corner_from_map->nearestKSearch(point_sel, 5, point_search_ind, point_search_sq_dis);
-
-						if (point_search_sq_dis[4] < 1.0)
-						{
-							std::vector<Eigen::Vector3d> nearCorners;
-							Eigen::Vector3d center(0, 0, 0);
-							for (int j = 0; j < 5; j++)
-							{
-								Eigen::Vector3d tmp(laser_cloud_corner_from_map->points[point_search_ind[j]].x,
-													laser_cloud_corner_from_map->points[point_search_ind[j]].y,
-													laser_cloud_corner_from_map->points[point_search_ind[j]].z);
-								center = center + tmp;
-								nearCorners.push_back(tmp);
-							}
-							center = center / 5.0;
-
-							Eigen::Matrix3d covMat = Eigen::Matrix3d::Zero();
-							for (int j = 0; j < 5; j++)
-							{
-								Eigen::Matrix<double, 3, 1> tmpZeroMean = nearCorners[j] - center;
-								covMat = covMat + tmpZeroMean * tmpZeroMean.transpose();
-							}
-							Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> saes(covMat);
-
-							Eigen::Vector3d unit_direction = saes.eigenvectors().col(2);
-							Eigen::Vector3d curr_point(point_ori.x, point_ori.y, point_ori.z);
-							if (saes.eigenvalues()[2] > 3 * saes.eigenvalues()[1])
-							{
-								Eigen::Vector3d point_on_line = center;
-								Eigen::Vector3d point_a, point_b;
-								point_a = 0.1 * unit_direction + point_on_line;
-								point_b = -0.1 * unit_direction + point_on_line;
-
-								ceres::CostFunction *cost_function = LidarEdgeFactor::Create(curr_point, point_a, point_b, 1.0);
-								ceres::internal::ResidualBlock *res_id = problem2.AddResidualBlock(cost_function, loss_function, para_pose);
-								res_ids.push_back(res_id);
-								corner_num++;
-							}
-						}
-					}
-
-					for (int i = 0; i < laser_cloud_surf_stack_num; i++)
-					{
-						point_ori = laser_cloud_surf_stack->points[i];
-						//double sqrtDis = point_ori.x * point_ori.x + point_ori.y * point_ori.y + point_ori.z * point_ori.z;
-						pointAssociateToMap(point_ori, point_sel, pose_wmap_curr);
-						kdtree_surf_from_map->nearestKSearch(point_sel, 5, point_search_ind, point_search_sq_dis); // find the nearest 5 points
-						Eigen::Matrix<double, 5, 3> matA0;
-						Eigen::Matrix<double, 5, 1> matB0 = -1 * Eigen::Matrix<double, 5, 1>::Ones();
-						if (point_search_sq_dis[4] < 1.0)
-						{
-							for (int j = 0; j < 5; j++)
-							{
-								matA0(j, 0) = laser_cloud_surf_from_map->points[point_search_ind[j]].x;
-								matA0(j, 1) = laser_cloud_surf_from_map->points[point_search_ind[j]].y;
-								matA0(j, 2) = laser_cloud_surf_from_map->points[point_search_ind[j]].z;
-								//printf(" pts %f %f %f ", matA0(j, 0), matA0(j, 1), matA0(j, 2));
-							}
-							// find the norm of plane
-							Eigen::Vector3d norm = matA0.colPivHouseholderQr().solve(matB0);
-							double negative_OA_dot_norm = 1 / norm.norm();
-							norm.normalize();
-
-							// Here n(pa, pb, pc) is unit norm of plane
-							bool planeValid = true;
-							for (int j = 0; j < 5; j++)
-							{
-								// if OX * n > 0.2, then plane is not fit well
-								if (fabs(norm(0) * laser_cloud_surf_from_map->points[point_search_ind[j]].x +
-										 norm(1) * laser_cloud_surf_from_map->points[point_search_ind[j]].y +
-										 norm(2) * laser_cloud_surf_from_map->points[point_search_ind[j]].z + negative_OA_dot_norm) > 0.2)
-								{
-									planeValid = false;
-									break;
-								}
-							}
-							Eigen::Vector3d curr_point(point_ori.x, point_ori.y, point_ori.z);
-							if (planeValid)
-							{
-								ceres::CostFunction *cost_function = LidarPlaneNormFactor::Create(curr_point, norm, negative_OA_dot_norm);
-								ceres::internal::ResidualBlock *res_id = problem2.AddResidualBlock(cost_function, loss_function, para_pose);
-								res_ids.push_back(res_id);
-								surf_num++;
-							}
-						}
-					}
-					printf("corner num %d, used corner num %d\n", laser_cloud_corner_stack_num, corner_num);
-					printf("surf num %d, used surf num %d\n", laser_cloud_surf_stack_num, surf_num);
-					printf("residual block size: %d\n", problem1.NumResidualBlocks());
-					e_option.parameter_blocks = para_ids;
-					e_option.residual_blocks = res_ids;
-					problem2.Evaluate(e_option, &cost, NULL, NULL, NULL);
-					printf("cost: %f\n", cost);
-					para_ids.clear();
-					res_ids.clear();					
+					// ROS_INFO("aloam modules");
+					// corner_num = 0;
+					// surf_num = 0;
+					// for (int i = 0; i < laser_cloud_corner_stack_num; i++)
+					// {
+					// 	point_ori = laser_cloud_corner_stack->points[i];
+					// 	pointAssociateToMap(point_ori, point_sel, pose_wmap_curr);
+					// 	kdtree_corner_from_map->nearestKSearch(point_sel, 5, point_search_ind, point_search_sq_dis);
+					//
+					// 	if (point_search_sq_dis[4] < 1.0)
+					// 	{
+					// 		std::vector<Eigen::Vector3d> nearCorners;
+					// 		Eigen::Vector3d center(0, 0, 0);
+					// 		for (int j = 0; j < 5; j++)
+					// 		{
+					// 			Eigen::Vector3d tmp(laser_cloud_corner_from_map->points[point_search_ind[j]].x,
+					// 								laser_cloud_corner_from_map->points[point_search_ind[j]].y,
+					// 								laser_cloud_corner_from_map->points[point_search_ind[j]].z);
+					// 			center = center + tmp;
+					// 			nearCorners.push_back(tmp);
+					// 		}
+					// 		center = center / 5.0;
+					//
+					// 		Eigen::Matrix3d covMat = Eigen::Matrix3d::Zero();
+					// 		for (int j = 0; j < 5; j++)
+					// 		{
+					// 			Eigen::Matrix<double, 3, 1> tmpZeroMean = nearCorners[j] - center;
+					// 			covMat = covMat + tmpZeroMean * tmpZeroMean.transpose();
+					// 		}
+					// 		Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> saes(covMat);
+					//
+					// 		Eigen::Vector3d unit_direction = saes.eigenvectors().col(2);
+					// 		Eigen::Vector3d curr_point(point_ori.x, point_ori.y, point_ori.z);
+					// 		if (saes.eigenvalues()[2] > 3 * saes.eigenvalues()[1])
+					// 		{
+					// 			Eigen::Vector3d point_on_line = center;
+					// 			Eigen::Vector3d point_a, point_b;
+					// 			point_a = 0.1 * unit_direction + point_on_line;
+					// 			point_b = -0.1 * unit_direction + point_on_line;
+					//
+					// 			ceres::CostFunction *cost_function = LidarEdgeFactor::Create(curr_point, point_a, point_b, 1.0);
+					// 			problem2.AddResidualBlock(cost_function, loss_function, para_pose);
+					// 			corner_num++;
+					// 		}
+					// 	}
+					// }
+					//
+					// for (int i = 0; i < laser_cloud_surf_stack_num; i++)
+					// {
+					// 	point_ori = laser_cloud_surf_stack->points[i];
+					// 	//double sqrtDis = point_ori.x * point_ori.x + point_ori.y * point_ori.y + point_ori.z * point_ori.z;
+					// 	pointAssociateToMap(point_ori, point_sel, pose_wmap_curr);
+					// 	kdtree_surf_from_map->nearestKSearch(point_sel, 5, point_search_ind, point_search_sq_dis); // find the nearest 5 points
+					// 	Eigen::Matrix<double, 5, 3> matA0;
+					// 	Eigen::Matrix<double, 5, 1> matB0 = -1 * Eigen::Matrix<double, 5, 1>::Ones();
+					// 	if (point_search_sq_dis[4] < 1.0)
+					// 	{
+					// 		for (int j = 0; j < 5; j++)
+					// 		{
+					// 			matA0(j, 0) = laser_cloud_surf_from_map->points[point_search_ind[j]].x;
+					// 			matA0(j, 1) = laser_cloud_surf_from_map->points[point_search_ind[j]].y;
+					// 			matA0(j, 2) = laser_cloud_surf_from_map->points[point_search_ind[j]].z;
+					// 			//printf(" pts %f %f %f ", matA0(j, 0), matA0(j, 1), matA0(j, 2));
+					// 		}
+					// 		// find the norm of plane
+					// 		Eigen::Vector3d norm = matA0.colPivHouseholderQr().solve(matB0);
+					// 		double negative_OA_dot_norm = 1 / norm.norm();
+					// 		norm.normalize();
+					//
+					// 		// Here n(pa, pb, pc) is unit norm of plane
+					// 		bool planeValid = true;
+					// 		for (int j = 0; j < 5; j++)
+					// 		{
+					// 			// if OX * n > 0.2, then plane is not fit well
+					// 			if (fabs(norm(0) * laser_cloud_surf_from_map->points[point_search_ind[j]].x +
+					// 					 norm(1) * laser_cloud_surf_from_map->points[point_search_ind[j]].y +
+					// 					 norm(2) * laser_cloud_surf_from_map->points[point_search_ind[j]].z + negative_OA_dot_norm) > 0.2)
+					// 			{
+					// 				planeValid = false;
+					// 				break;
+					// 			}
+					// 		}
+					// 		Eigen::Vector3d curr_point(point_ori.x, point_ori.y, point_ori.z);
+					// 		if (planeValid)
+					// 		{
+					// 			ceres::CostFunction *cost_function = LidarPlaneNormFactor::Create(curr_point, norm, negative_OA_dot_norm);
+					// 			problem2.AddResidualBlock(cost_function, loss_function, para_pose);
+					// 			surf_num++;
+					// 		}
+					// 	}
+					// }
+					//
+					// printf("corner num %d, used corner num %d\n", laser_cloud_corner_stack_num, corner_num);
+					// printf("surf num %d, used surf num %d\n", laser_cloud_surf_stack_num, surf_num);
+					// printf("residual block size: %d\n", problem2.NumResidualBlocks());
+					// cost = 0.0;
+					// problem2.Evaluate(ceres::Problem::EvaluateOptions(), &cost, NULL, NULL, NULL);
+					// printf("cost: %f\n", cost);
 
 					// ******************************************************
 					TicToc t_solver;
-					ceres::Solve(options, &problem2, &summary);
-					std::cout << summary.BriefReport() << std::endl;
+					ceres::Solve(options, &problem1, &summary);
+					std::cout << summary.FullReport() << std::endl;
 					printf("mapping solver time %fms\n", t_solver.toc());
 
 					//printf("time %f \n", time_laser_odometry);
@@ -952,6 +939,7 @@ int main(int argc, char **argv)
 {
 	ros::init(argc, argv, "lidar_mapper");
 	ros::NodeHandle nh;
+	ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
 
 	string config_file = argv[1];
 	readParameters(config_file);
