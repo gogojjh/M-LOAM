@@ -412,17 +412,17 @@ void FeatureExtract::extractCornerFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &k
                 if (s > 0.1 && is_in_laser_fov)
                 {
                     PointPlaneFeature feature1, feature2;
-                    feature1.score_ = s;
+                    feature1.score_ = s * 0.5;
                     feature1.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
                     feature1.coeffs_ = coeff1;
                     features[cloud_cnt] = feature1;
                     cloud_cnt++;
 
-                    // feature2.score_ = s * 0.5;
-                    // feature2.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
-                    // feature2.coeffs_ = coeff2;
-                    // features[cloud_cnt] = feature2;
-                    // cloud_cnt++;
+                    feature2.score_ = s * 0.5;
+                    feature2.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
+                    feature2.coeffs_ = coeff2;
+                    features[cloud_cnt] = feature2;
+                    cloud_cnt++;
                 }
             }
         }
