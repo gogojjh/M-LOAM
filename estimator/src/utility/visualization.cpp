@@ -93,8 +93,7 @@ void pubPointCloud(const Estimator &estimator, const double &time)
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
         Pose pose_ext = Pose(estimator.qbl_[n], estimator.tbl_[n]);
-        Eigen::Matrix4d transform_ext = pose_ext.T_;
-        cloudFeature cloud_feature_trans = transformCloudFeature(estimator.cur_feature_.second[n], transform_ext.cast<float>(), n);
+        cloudFeature cloud_feature_trans = transformCloudFeature(estimator.cur_feature_.second[n], pose_ext.T_.cast<float>(), n);
         if ((ESTIMATE_EXTRINSIC == 0) || (n == IDX_REF))
         {
             laser_cloud += cloud_feature_trans["laser_cloud"];

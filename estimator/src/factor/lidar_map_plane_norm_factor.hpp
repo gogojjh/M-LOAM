@@ -11,9 +11,8 @@
 // calculate distrance from point to plane (using normal)
 struct LidarMapPlaneNormFactor
 {
-	LidarMapPlaneNormFactor(Eigen::Vector3d curr_point_, Eigen::Vector3d plane_unit_norm_,
-						 double negative_OA_dot_norm_) : curr_point(curr_point_), plane_unit_norm(plane_unit_norm_),
-														 negative_OA_dot_norm(negative_OA_dot_norm_) {}
+	LidarMapPlaneNormFactor(const Eigen::Vector3d &point, const Eigen::Vector4d &coeff, const double &s, const double &sqrt_info_static = 1.0)
+		: point_(point), coeff_(coeff), s_(s), sqrt_info_static_(sqrt_info_static){}
 
 	template <typename T>
 	bool operator()(const T *param, T *residual) const
@@ -21,24 +20,22 @@ struct LidarMapPlaneNormFactor
 		Eigen::Quaternion<T> q_w_curr(param[6], param[3], param[4], param[5]);
 		Eigen::Matrix<T, 3, 1> t_w_curr(param[0], param[1], param[2]);
 
-		Eigen::Matrix<T, 3, 1> cp{T(curr_point.x()), T(curr_point.y()), T(curr_point.z())};
-		Eigen::Matrix<T, 3, 1> point_w;
-		point_w = q_w_curr * cp + t_w_curr;
-
-		Eigen::Matrix<T, 3, 1> norm(T(plane_unit_norm.x()), T(plane_unit_norm.y()), T(plane_unit_norm.z()));
-		residual[0] = norm.dot(point_w) + T(negative_OA_dot_norm);
+		Eigen::Matrix<T, 3, 1> w(T(coeff_(0)), T(coeff_(1)), T(coeff_(2)));
+		Eigen::Matrix<T, 3, 1> cp(T(point_(0)), T(point_(1)), T(point_(2)));
+		T d = T(coeff_(3));
+		T r = (w.dot(q_w_curr * cp + t_w_curr) + d) * T(s_);
+		residual[0] = T(sqrt_info_static_) * r;
 		return true;
 	}
 
-	static ceres::CostFunction *Create(const Eigen::Vector3d curr_point_, const Eigen::Vector3d plane_unit_norm_,
-									   const double negative_OA_dot_norm_)
+	static ceres::CostFunction *Create(const Eigen::Vector3d &point, const Eigen::Vector4d &coeff, const double &s, const double &sqrt_info_static)
 	{
 		return (new ceres::AutoDiffCostFunction<
-				LidarMapPlaneNormFactor, 1, 7>(
-			new LidarMapPlaneNormFactor(curr_point_, plane_unit_norm_, negative_OA_dot_norm_)));
+				LidarMapPlaneNormFactor, 1, 7>(new LidarMapPlaneNormFactor(point, coeff, s, sqrt_info_static)));
 	}
 
-	Eigen::Vector3d curr_point;
-	Eigen::Vector3d plane_unit_norm;
-	double negative_OA_dot_norm;
+	Eigen::Vector3d point_;
+	Eigen::Vector4d coeff_;
+	double s_;
+	double sqrt_info_static_;
 };

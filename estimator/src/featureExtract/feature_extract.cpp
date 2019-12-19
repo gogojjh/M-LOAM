@@ -288,12 +288,12 @@ void FeatureExtract::extractCloud(const double &cur_time, const PointCloud &lase
                 }
             }
         }
-        PointICloud surf_points_less_flat_scanDS;
+        PointICloud surf_points_less_flat_scan_ds;
         pcl::VoxelGrid<PointI> down_size_filter;
         down_size_filter.setInputCloud(surf_points_less_flat_scan);
         down_size_filter.setLeafSize(0.2, 0.2, 0.2);
-        down_size_filter.filter(surf_points_less_flat_scanDS);
-        surf_points_less_flat += surf_points_less_flat_scanDS;
+        down_size_filter.filter(surf_points_less_flat_scan_ds);
+        surf_points_less_flat += surf_points_less_flat_scan_ds;
     }
     // printf("sort q time %fms\n", t_q_sort);
     // printf("seperate points time %fms\n", t_pts.toc());
@@ -316,7 +316,8 @@ void FeatureExtract::extractCornerFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &k
     const PointICloud &cloud_data,
     const Pose &pose_local,
     std::vector<PointPlaneFeature> &features,
-    const int N_NEIGH)
+    const int &N_NEIGH,
+    const bool &CHECK_FOV)
 {
     features.clear();
     std::vector<int> point_search_idx(N_NEIGH, 0);
@@ -324,7 +325,8 @@ void FeatureExtract::extractCornerFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &k
 
     // extract edge coefficients and correspondences from edge map
     size_t cloud_size = cloud_data.points.size();
-    features.resize(cloud_size);
+    features.resize(cloud_size * 2);
+    size_t cloud_cnt = 0;
     for (size_t i = 0; i < cloud_size; i++)
     {
         PointI point_ori = cloud_data.points[i];
@@ -332,7 +334,7 @@ void FeatureExtract::extractCornerFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &k
         pointAssociateToMap(point_ori, point_sel, pose_local);
         int num_neighbors = N_NEIGH;
         kdtree_corner_from_map->nearestKSearch(point_sel, num_neighbors, point_search_idx, point_search_sq_dis);
-        if (point_search_sq_dis[4] < MIN_MATCH_SQ_DIS)
+        if (point_search_sq_dis[num_neighbors - 1] < MIN_MATCH_SQ_DIS)
         {
             // calculate the coefficients of edge points
             std::vector<Eigen::Vector3d> near_corners;
@@ -347,7 +349,7 @@ void FeatureExtract::extractCornerFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &k
             }
             center /= (1.0 * num_neighbors);
             Eigen::Matrix3d cov_mat = Eigen::Matrix3d::Zero();
-            for (int j = 0; j < 5; j++)
+            for (int j = 0; j < num_neighbors; j++)
             {
                 Eigen::Vector3d tmp_zero_mean = near_corners[j] - center;
                 cov_mat += tmp_zero_mean * tmp_zero_mean.transpose();
@@ -366,9 +368,9 @@ void FeatureExtract::extractCornerFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &k
                 X2 = -0.1 * unit_direction + point_on_line;
 
                 Eigen::Vector3d a012_vec = (X0 - X1).cross(X0 - X2);
+                double a012 = a012_vec.norm();
                 Eigen::Vector3d w1 = ((X1 - X2).cross(a012_vec)).normalized(); // w1
                 Eigen::Vector3d w2 = (X1 - X2).cross(w1); // w2
-                double a012 = a012_vec.norm();
                 double l12 = (X1 - X2).norm();
                 double la = w1.x();
                 double lb = w1.y();
@@ -379,12 +381,13 @@ void FeatureExtract::extractCornerFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &k
                 point_proj.x -= la * ld2;
                 point_proj.y -= lb * ld2;
                 point_proj.z -= lc * ld2;
-                double ld_p1 = -(w1.x() * point_proj.x + w1.y() * point_proj.y + w1.z() * point_proj.z);
                 double ld_p2 = -(w2.x() * point_proj.x + w2.y() * point_proj.y + w2.z() * point_proj.z);
+                double ld_p1 = -(w1.x() * point_proj.x + w1.y() * point_proj.y + w1.z() * point_proj.z);
                 double s = 1 - 0.9f * fabs(ld2);
-                Eigen::Vector4d coeff1(s*la, s*lb, s*lc, s*ld_p1);
-                Eigen::Vector4d coeff2(s*w2.x(), s*w2.y(), s*w2.z(), s*ld_p2);
+                Eigen::Vector4d coeff1(la, lb, lc, ld_p1);
+                Eigen::Vector4d coeff2(w2.x(), w2.y(), w2.z(), ld_p2);
                 bool is_in_laser_fov = false;
+                if (CHECK_FOV)
                 {
                     PointI point_on_z_axis, point_on_z_axis_trans;
                     point_on_z_axis.x = 0.0;
@@ -402,24 +405,29 @@ void FeatureExtract::extractCornerFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &k
                     double check2 = 100.0f + squared_side1 - squared_side2 + 10.0f * sqrt(3.0f) * sqrt(squared_side1);
                     // within +-60 degree
                     if (check1 < 0 && check2 > 0) is_in_laser_fov = true;
+                } else
+                {
+                    is_in_laser_fov = true;
                 }
                 if (s > 0.1 && is_in_laser_fov)
                 {
-                    PointPlaneFeature feature1;
+                    PointPlaneFeature feature1, feature2;
                     feature1.score_ = s * 0.5;
                     feature1.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
                     feature1.coeffs_ = coeff1;
-                    features.push_back(feature1);
+                    features[cloud_cnt] = feature1;
+                    cloud_cnt++;
 
-                    PointPlaneFeature feature2;
                     feature2.score_ = s * 0.5;
                     feature2.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
                     feature2.coeffs_ = coeff2;
-                    features.push_back(feature2);
+                    features[cloud_cnt] = feature2;
+                    cloud_cnt++;
                 }
             }
         }
     }
+    features.resize(cloud_cnt);
 }
 
 // should be performed once after several gradient descents
@@ -428,7 +436,8 @@ void FeatureExtract::extractSurfFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &kdt
     const PointICloud &cloud_data,
     const Pose &pose_local,
     std::vector<PointPlaneFeature> &features,
-    const int N_NEIGH)
+    const int &N_NEIGH,
+    const bool &CHECK_FOV)
 {
     features.clear();
 
@@ -481,6 +490,7 @@ void FeatureExtract::extractSurfFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &kdt
                 double s = 1 - 0.9f * fabs(pd2) / sqrt(sqrSum(point_sel.x, point_sel.y, point_sel.z));
                 Eigen::Vector4d coeff(norm(0), norm(1), norm(2), negative_OA_dot_norm);
                 bool is_in_laser_fov = false;
+                if (CHECK_FOV)
                 {
                     PointI transform_pos;
                     PointI point_on_z_axis, point_on_z_axis_trans;
@@ -498,8 +508,10 @@ void FeatureExtract::extractSurfFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &kdt
                     double check2 = 100.0f + squared_side1 - squared_side2 + 10.0f * sqrt(3.0f) * sqrt(squared_side1);
                     // within +-60 degree
                     if (check1 < 0 && check2 > 0) is_in_laser_fov = true;
+                } else
+                {
+                    is_in_laser_fov = true;
                 }
-
                 if (s > 0.1 && is_in_laser_fov)
                 {
                     PointPlaneFeature feature;
@@ -508,7 +520,6 @@ void FeatureExtract::extractSurfFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &kdt
                     feature.coeffs_ = coeff;
                     features[cloud_cnt] = feature;
                     cloud_cnt++;
-                    // TODO: remove some additional correspondences
                 }
             }
         }

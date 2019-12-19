@@ -33,8 +33,7 @@ public:
 		Eigen::Vector3d w(coeff_(0), coeff_(1), coeff_(2));
 		double d = coeff_(3);
 		double r = (w.dot(Q_ext_pi * point_ + t_ext_pi) + d) * s_;
-		double sqrt_info = sqrt_info_static_;
-		residuals[0] = sqrt_info * r;
+		residuals[0] = sqrt_info_static_ * r;
 
 		// jacobians: 3x7
         if (jacobians)
@@ -52,7 +51,7 @@ public:
 					SkewSymmetric(Rp.transpose() * (Ri * Rext * point_ + Ri * t_ext + t_i - t_pivot)));
 
                 jacobian_pose_pivot.setZero();
-                jacobian_pose_pivot.leftCols<6>() = sqrt_info * jaco_pivot;
+                jacobian_pose_pivot.leftCols<6>() = sqrt_info_static_ * jaco_pivot;
                 jacobian_pose_pivot.rightCols<1>().setZero();
             }
 
@@ -65,7 +64,7 @@ public:
 				jaco_i.rightCols<3>() = -w.transpose() * Rp.transpose() * Ri * SkewSymmetric(Rext * point_ + t_ext);
 
                 jacobian_pose_i.setZero();
-                jacobian_pose_i.leftCols<6>() = sqrt_info * jaco_i;
+                jacobian_pose_i.leftCols<6>() = sqrt_info_static_ * jaco_i;
                 jacobian_pose_i.rightCols<1>().setZero();
             }
 
@@ -79,7 +78,7 @@ public:
 				jaco_ex.rightCols<3>() = -w.transpose() * Rp.transpose() * Ri * Rext * SkewSymmetric(point_);
 
                 jacobian_pose_ex.setZero();
-                jacobian_pose_ex.leftCols<6>() = sqrt_info * jaco_ex;
+                jacobian_pose_ex.leftCols<6>() = sqrt_info_static_ * jaco_ex;
                 jacobian_pose_ex.rightCols<1>().setZero();
             }
         }
@@ -119,8 +118,7 @@ public:
 		Eigen::Vector3d w(coeff_(0), coeff_(1), coeff_(2));
         double d = coeff_(3);
 		double r = (w.dot(Q_ext_pi * point_ + t_ext_pi) + d) * s_;
-        double sqrt_info = sqrt_info_static_;
-        r *= sqrt_info;
+        r *= sqrt_info_static_;
 
         std::cout << "perturbation:" << std::endl;
         std::cout << r << std::endl;
@@ -161,7 +159,7 @@ public:
 			Eigen::Vector3d w(coeff_(0), coeff_(1), coeff_(2));
 	        double d = coeff_(3);
 			double tmp_r = (w.dot(Q_ext_pi * point_ + t_ext_pi) + d) * s_;
-	        tmp_r *= sqrt_info;
+	        tmp_r *= sqrt_info_static_;
             num_jacobian(k) = (tmp_r - r) / eps;
         }
         std::cout << num_jacobian.block<1, 6>(0, 0) << std::endl;

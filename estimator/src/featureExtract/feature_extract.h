@@ -45,11 +45,11 @@ public:
 
     void extractCornerFromMap(const pcl::KdTreeFLANN<common::PointI>::Ptr &kdtree_corner_from_map,
         const common::PointICloud &cloud_map, const common::PointICloud &cloud_data,
-        const Pose &pose_local, std::vector<PointPlaneFeature> &features, const int N_NEIGH = 5);
+        const Pose &pose_local, std::vector<PointPlaneFeature> &features, const int &N_NEIGH = 5, const bool &CHECK_FOV = true);
 
     void extractSurfFromMap(const pcl::KdTreeFLANN<common::PointI>::Ptr &kdtree_surf_from_map,
         const common::PointICloud &cloud_map, const common::PointICloud &cloud_data,
-        const Pose &pose_local, std::vector<PointPlaneFeature> &features, const int N_NEIGH = 5);
+        const Pose &pose_local, std::vector<PointPlaneFeature> &features, const int &N_NEIGH = 5, const bool &CHECK_FOV = true);
 
     bool half_passed_;
     pcl::VoxelGrid<common::PointI> down_size_filter_corner_;

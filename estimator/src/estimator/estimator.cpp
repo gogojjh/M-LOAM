@@ -541,7 +541,7 @@ void Estimator::optimizeMap()
                     const double &s = feature.score_;
                     const Eigen::Vector3d &p_data = feature.point_;
                     const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-                    LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s);
+                    LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s, 1.0);
                     ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
                         para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]);
                     res_ids_proj.push_back(res_id);
@@ -637,7 +637,7 @@ void Estimator::optimizeMap()
                         const double &s = feature.score_;
                         const Eigen::Vector3d &p_data = feature.point_;
                         const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-                        LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s);
+                        LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s, 1.0);
                         ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
                             para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]);
                         res_ids_proj.push_back(res_id);
@@ -712,7 +712,7 @@ void Estimator::optimizeMap()
                         const double &s = feature.score_;
                         const Eigen::Vector3d &p_data = feature.point_;
                         const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-                        LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s);
+                        LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s, 1.0);
                         ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
                             std::vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]}, std::vector<int>{0});
                         marginalization_info->addResidualBlockInfo(residual_block_info);
@@ -784,7 +784,7 @@ void Estimator::optimizeMap()
                             double &s = feature.score_;
                             const Eigen::Vector3d &p_data = feature.point_;
                             const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-                            LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s);
+                            LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s, 1.0);
                             ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
                                 vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]}, std::vector<int>{0});
                             marginalization_info->addResidualBlockInfo(residual_block_info);
@@ -904,9 +904,9 @@ void Estimator::buildCalibMap()
             int n_neigh = (n == IDX_REF ? 5:10);
             std::vector<PointPlaneFeature> tmp_surf_map_features, tmp_corner_map_features;
             f_extract_.extractSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
-                surf_points_stack_[n][i], pose_local_[n][i], tmp_surf_map_features, n_neigh);
+                surf_points_stack_[n][i], pose_local_[n][i], tmp_surf_map_features, n_neigh, true);
             f_extract_.extractCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
-                corner_points_stack_[n][i], pose_local_[n][i], tmp_corner_map_features, n_neigh);
+                corner_points_stack_[n][i], pose_local_[n][i], tmp_corner_map_features, n_neigh, true);
             std::copy(tmp_surf_map_features.begin(), tmp_surf_map_features.end(), std::back_inserter(surf_map_features_[n][i]));
             std::copy(tmp_corner_map_features.begin(), tmp_corner_map_features.end(), std::back_inserter(corner_map_features_[n][i]));
         }
@@ -971,9 +971,9 @@ void Estimator::buildLocalMap()
         {
             std::vector<PointPlaneFeature> tmp_map_features;
             f_extract_.extractSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
-                surf_points_stack_[n][i], pose_local_[n][i], tmp_map_features, n_neigh);
+                surf_points_stack_[n][i], pose_local_[n][i], tmp_map_features, n_neigh, true);
             // f_extract_.extractCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
-                //     corner_points_stack_[n][i], pose_local_[n][i], corner_map_features_[n][i], n_neigh);
+                //     corner_points_stack_[n][i], pose_local_[n][i], corner_map_features_[n][i], n_neigh, true);
             std::copy(tmp_map_features.begin(), tmp_map_features.end(), std::back_inserter(surf_map_features_[n][i]));
         }
     }

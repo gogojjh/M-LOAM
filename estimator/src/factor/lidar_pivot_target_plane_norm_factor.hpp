@@ -20,8 +20,7 @@ public:
 		Eigen::Vector3d w(coeff_(0), coeff_(1), coeff_(2));
 		double d = coeff_(3);
 		double r = (w.dot(Q_ext * point_ + t_ext) + d) * s_;
-		double sqrt_info = sqrt_info_static_;
-		residuals[0] = sqrt_info * r;
+		residuals[0] = sqrt_info_static_ * r;
 
 		if (jacobians)
 		{
@@ -35,7 +34,7 @@ public:
 				jaco_ext.rightCols<3>() = -w.transpose() * Rext * SkewSymmetric(point_);
 
                 jacobian_pose_ext.setZero();
-                jacobian_pose_ext.leftCols<6>() = sqrt_info * jaco_ext;
+                jacobian_pose_ext.leftCols<6>() = sqrt_info_static_ * jaco_ext;
                 jacobian_pose_ext.rightCols<1>().setZero();
             }
 		}
@@ -63,8 +62,7 @@ public:
 		double d = coeff_(3);
 		double r = (w.dot(Q_ext * point_ + t_ext) + d) * s_;
 		// double r = (w.dot(Q_p_ext_i * point_ + t_p_ext_i) + d);
-		double sqrt_info = sqrt_info_static_;
-        r *= sqrt_info;
+        r *= sqrt_info_static_;
 
         std::cout << "perturbation:" << std::endl;
         std::cout << r << std::endl;
@@ -88,7 +86,7 @@ public:
 			Eigen::Vector3d w(coeff_(0), coeff_(1), coeff_(2));
 			double d = coeff_(3);
 			double tmp_r = (w.dot(Q_ext * point_ + t_ext) + d) * s_;
-	        tmp_r *= sqrt_info;
+	        tmp_r *= sqrt_info_static_;
             num_jacobian(k) = (tmp_r - r) / eps;
         }
         std::cout << num_jacobian.block<1, 6>(0, 0) << std::endl;
