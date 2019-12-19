@@ -32,7 +32,7 @@ public:
 
 		Eigen::Vector3d w(coeff_(0), coeff_(1), coeff_(2));
 		double d = coeff_(3);
-		double r = (w.dot(Q_ext_pi * point_ + t_ext_pi) + d) * s_;
+		double r = w.dot(Q_ext_pi * point_ + t_ext_pi) + d;
 		residuals[0] = sqrt_info_static_ * r;
 
 		// jacobians: 3x7
@@ -117,7 +117,7 @@ public:
 
 		Eigen::Vector3d w(coeff_(0), coeff_(1), coeff_(2));
         double d = coeff_(3);
-		double r = (w.dot(Q_ext_pi * point_ + t_ext_pi) + d) * s_;
+		double r = w.dot(Q_ext_pi * point_ + t_ext_pi) + d;
         r *= sqrt_info_static_;
 
         std::cout << "perturbation:" << std::endl;
@@ -158,7 +158,7 @@ public:
 
 			Eigen::Vector3d w(coeff_(0), coeff_(1), coeff_(2));
 	        double d = coeff_(3);
-			double tmp_r = (w.dot(Q_ext_pi * point_ + t_ext_pi) + d) * s_;
+			double tmp_r = w.dot(Q_ext_pi * point_ + t_ext_pi) + d;
 	        tmp_r *= sqrt_info_static_;
             num_jacobian(k) = (tmp_r - r) / eps;
         }

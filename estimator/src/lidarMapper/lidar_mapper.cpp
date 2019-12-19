@@ -479,17 +479,36 @@ void process()
 				laser_cloud_corner_split[n].clear();
 				laser_cloud_surf_split[n].clear();
 			}
-			for (auto p: laser_cloud_corner_stack->points)
+			for (auto point: laser_cloud_corner_stack->points)
 			{
-				size_t idx = int(p.intensity);
-				laser_cloud_corner_split[idx].push_back(p);
+				size_t idx = int(point.intensity);
+				if (idx == IDX_REF)
+				{
+					laser_cloud_corner_split[idx].push_back(point);
+				}
+				else
+				{
+					PointI point_sel;
+					pointAssociateToMap(point, point_sel, pose_ext[idx].inverse());
+					if (sqrSum(point_sel.x, point_sel.y, point_sel.z) < ROI_RANGE_MAPPING)
+						laser_cloud_corner_split[idx].push_back(point);
+				}
 			}
-			for (auto p: laser_cloud_surf_stack->points)
+			for (auto point: laser_cloud_surf_stack->points)
 			{
-				size_t idx = int(p.intensity);
-				laser_cloud_surf_split[idx].push_back(p);
+				size_t idx = int(point.intensity);
+				if (idx == IDX_REF)
+				{
+					laser_cloud_surf_split[idx].push_back(point);
+				}
+				else
+				{
+					PointI point_sel;
+					pointAssociateToMap(point, point_sel, pose_ext[idx].inverse());
+					if (sqrSum(point_sel.x, point_sel.y, point_sel.z) < ROI_RANGE_MAPPING)
+						laser_cloud_surf_split[idx].push_back(point);
+				}
 			}
-			// for (auto n = 0; n < NUM_OF_LASER; n++) printf("size of cloud split: %d, %d\n", laser_cloud_corner_split[n].size(), laser_cloud_surf_split[n].size());
 
 			//***************************************************************************
 			// step 3: perform scan-to-map optimization
@@ -507,7 +526,6 @@ void process()
 				std::vector<ceres::internal::ResidualBlock *> res_ids;
 				for (int iter_cnt = 0; iter_cnt < 2; iter_cnt++)
 				{
-					// printf("%dth iteration:\n", iter_cnt);
 					printf("********************************\n");
 					ceres::Problem problem;
 					ceres::Solver::Summary summary;
@@ -530,18 +548,18 @@ void process()
 					// ROS_INFO("mloam modules");
 					std::vector<double> info_weight(NUM_OF_LASER, 0);
 					info_weight[0] = 1.0;
-					info_weight[1] = 0.7;
+					info_weight[1] = 1.0;
 					int corner_num = 0;
 					int surf_num = 0;
 					TicToc t_prepare;
 					for (auto n = 0; n < NUM_OF_LASER; n++)
 					{
 						// if ((n != IDX_REF) && (extrinsics.status)) continue;
-						if (n != IDX_REF) continue;
-						// PointICloud &laser_cloud_corner_points = laser_cloud_corner_split[n];
-						// PointICloud &laser_cloud_surf_points = laser_cloud_surf_split[n];
-						PointICloud &laser_cloud_corner_points = *laser_cloud_corner_stack;
-						PointICloud &laser_cloud_surf_points = *laser_cloud_surf_stack;
+						// if (n != IDX_REF) continue;
+						PointICloud &laser_cloud_corner_points = laser_cloud_corner_split[n];
+						PointICloud &laser_cloud_surf_points = laser_cloud_surf_split[n];
+						// PointICloud &laser_cloud_corner_points = *laser_cloud_corner_stack;
+						// PointICloud &laser_cloud_surf_points = *laser_cloud_surf_stack;
 
 						TicToc t_data;
 						int n_neigh = 5;
@@ -560,7 +578,7 @@ void process()
 							const double &s = feature.score_;
 	                        const Eigen::Vector3d &p_data = feature.point_;
 	                        const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-							ceres::CostFunction *cost_function = LidarMapPlaneNormFactor::Create(p_data, coeff_ref, 1.0, info_weight[n]);
+							ceres::CostFunction *cost_function = LidarMapPlaneNormFactor::Create(p_data, coeff_ref, s, info_weight[n]);
 							problem.AddResidualBlock(cost_function, loss_function, para_pose);
 						}
 
@@ -569,7 +587,7 @@ void process()
 							const double &s = feature.score_;
 	                        const Eigen::Vector3d &p_data = feature.point_;
 	                        const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-							ceres::CostFunction *cost_function = LidarMapPlaneNormFactor::Create(p_data, coeff_ref, 1.0, info_weight[n]);
+							ceres::CostFunction *cost_function = LidarMapPlaneNormFactor::Create(p_data, coeff_ref, s, info_weight[n]);
 							problem.AddResidualBlock(cost_function, loss_function, para_pose);
 						}
 					}
@@ -607,11 +625,11 @@ void process()
 			for (auto n = 0; n < NUM_OF_LASER; n++)
 			{
 				// if ((n != IDX_REF) && (extrinsics.status)) continue;
-				if (n != IDX_REF) continue;
-				// PointICloud &laser_cloud_corner_points = laser_cloud_corner_split[n];
-				// PointICloud &laser_cloud_surf_points = laser_cloud_surf_split[n];
-				PointICloud &laser_cloud_corner_points = *laser_cloud_corner_stack;
-				PointICloud &laser_cloud_surf_points = *laser_cloud_surf_stack;
+				// if (n != IDX_REF) continue;
+				PointICloud &laser_cloud_corner_points = laser_cloud_corner_split[n];
+				PointICloud &laser_cloud_surf_points = laser_cloud_surf_split[n];
+				// PointICloud &laser_cloud_corner_points = *laser_cloud_corner_stack;
+				// PointICloud &laser_cloud_surf_points = *laser_cloud_surf_stack;
 
 				// move the corner points from the lastest frame to different cubes
 				for (int i = 0; i < laser_cloud_corner_points.size(); i++)
@@ -805,8 +823,8 @@ int main(int argc, char **argv)
 	readParameters(config_file);
 
 	// set resolution
-	float lineRes = 0.4;
-	float planeRes = 0.8;
+	float lineRes = 0.2;
+	float planeRes = 0.4;
 	printf("line resolution:%f, plane resolution:%f\n", lineRes, planeRes);
 	down_size_filter_corner.setLeafSize(lineRes, lineRes,lineRes);
 	down_size_filter_surf.setLeafSize(planeRes, planeRes, planeRes);

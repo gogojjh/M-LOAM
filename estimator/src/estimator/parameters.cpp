@@ -47,6 +47,7 @@ int SEGMENT_VALID_LINE_NUM;
 std::string CLOUD0_TOPIC, CLOUD1_TOPIC;
 float LASER_SYNC_THRESHOLD;
 double ROI_RANGE;
+double ROI_RANGE_MAPPING;
 
 std::vector<Eigen::Matrix3d> RBL;
 std::vector<Eigen::Quaterniond> QBL;
@@ -156,13 +157,12 @@ void readParameters(std::string config_file)
     }
     else
     {
-        if ( ESTIMATE_EXTRINSIC == 1)
+        if (ESTIMATE_EXTRINSIC == 1)
         {
             ROS_WARN("Please optimize extrinsic param around initial guess!");
         }
         if (ESTIMATE_EXTRINSIC == 0)
         {
-            SEGMENT_CLOUD = 1;
             ROS_WARN("Fix extrinsic param ");
         }
 
@@ -189,6 +189,7 @@ void readParameters(std::string config_file)
     LASER_SYNC_THRESHOLD = fsSettings["laser_sync_threshold"];
     N_SCANS = fsSettings["n_scans"];
     ROI_RANGE = fsSettings["roi_range"];
+    ROI_RANGE_MAPPING = fsSettings["roi_range_mapping"];
 
     SEGMENT_CLOUD = fsSettings["segment_cloud"];
     HORIZON_SCAN = fsSettings["horizon_scan"];

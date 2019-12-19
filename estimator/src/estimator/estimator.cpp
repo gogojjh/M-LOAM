@@ -205,7 +205,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
     feature_frame.resize(NUM_OF_LASER);
     for (auto i = 0; i < v_laser_cloud_in.size(); i++)
     {
-        if (SEGMENT_CLOUD)
+        if ((SEGMENT_CLOUD) && (ESTIMATE_EXTRINSIC == 0))
         {
             PointCloud laser_cloud_segment;
             img_segment_.segmentCloud(v_laser_cloud_in[i], laser_cloud_segment);
@@ -230,7 +230,7 @@ void Estimator::inputCloud(const double &t, const PointCloud &laser_cloud_in)
     TicToc feature_ext_time;
     std::vector<cloudFeature> feature_frame;
     feature_frame.resize(1);
-    if (SEGMENT_CLOUD)
+    if ((SEGMENT_CLOUD) && (ESTIMATE_EXTRINSIC == 0))
     {
         PointCloud laser_cloud_segment;
         img_segment_.segmentCloud(laser_cloud_in, laser_cloud_segment);
@@ -442,7 +442,7 @@ void Estimator::optimizeMap()
     ceres::Solver::Summary summary;
     // ceres: set lossfunction and problem
     ceres::LossFunction *loss_function;
-    loss_function = new ceres::HuberLoss(0.5);
+    loss_function = new ceres::HuberLoss(0.1);
     // loss_function = new ceres::CauchyLoss(1.0);
     // ceres: set options and solve the non-linear equation
     ceres::Solver::Options options;
@@ -1184,7 +1184,6 @@ void Estimator::evalCalib()
         {
             ROS_WARN("Finish nonlinear calibration !");
             ESTIMATE_EXTRINSIC = 0;
-            SEGMENT_CLOUD = 1;
             for (auto n = 0; n < NUM_OF_LASER; n++)
                 if (n != IDX_REF)
                 {

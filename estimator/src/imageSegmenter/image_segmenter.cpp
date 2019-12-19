@@ -2,7 +2,7 @@
 
 using namespace common;
 
-const float segment_theta = 60.0 / 180.0 * M_PI;
+const float segment_theta = 40.0 / 180.0 * M_PI;
 
 ImageSegmenter::ImageSegmenter()
 {
@@ -91,31 +91,31 @@ void ImageSegmenter::segmentCloud(const PointCloud &laser_cloud_in, PointCloud &
 
     // TODO: use voxel grid to filter noisy points
     // We first apply a voxel grid to the input point cloud P, in order to filter- out noise in voxels where there is not enough evidence for occupancy
-    pcl::VoxelGrid<Point> down_size_filter;
-    down_size_filter.setLeafSize(0.05, 0.05, 0.05);
-    down_size_filter.setInputCloud(boost::make_shared<PointCloud>(laser_cloud_in));
-    down_size_filter.filter(laser_cloud_out);
+    // pcl::VoxelGrid<Point> down_size_filter;
+    // down_size_filter.setLeafSize(0.05, 0.05, 0.05);
+    // down_size_filter.setInputCloud(boost::make_shared<PointCloud>(laser_cloud_in));
+    // down_size_filter.filter(laser_cloud_out);
 
-    // projectCloud(laser_cloud_in);
-    //
-    // for (size_t i = 0; i < N_SCANS; i++)
-    //     for (size_t j = 0; j < horizon_scans_; j++)
-    //         if (label_mat_.at<int>(i,j) == 0) labelComponents(i, j);
-    //
-    // // labelConnectLine();
-    //
-    // laser_cloud_out.clear();
-    // for (size_t i = 0; i < N_SCANS; i++)
-    // {
-    //     for (size_t j = 0; j < horizon_scans_; j++)
-    //     {
-    //         if ((label_mat_.at<int>(i, j) > 0) && (label_mat_.at<int>(i, j) != 999999))
-    //         {
-    //             laser_cloud_out.push_back(cloud_matrix_->points[j + i*horizon_scans_]);
-    //         }
-    //     }
-    // }
-    printf("input cloud size:%d, output cloud size:%d\n", laser_cloud_in.size(), laser_cloud_out.size());
+    projectCloud(laser_cloud_in);
+
+    for (size_t i = 0; i < N_SCANS; i++)
+        for (size_t j = 0; j < horizon_scans_; j++)
+            if (label_mat_.at<int>(i,j) == 0) labelComponents(i, j);
+
+    // labelConnectLine();
+
+    laser_cloud_out.clear();
+    for (size_t i = 0; i < N_SCANS; i++)
+    {
+        for (size_t j = 0; j < horizon_scans_; j++)
+        {
+            if ((label_mat_.at<int>(i, j) > 0) && (label_mat_.at<int>(i, j) != 999999))
+            {
+                laser_cloud_out.push_back(cloud_matrix_->points[j + i*horizon_scans_]);
+            }
+        }
+    }
+    // printf("input cloud size:%d, output cloud size:%d\n", laser_cloud_in.size(), laser_cloud_out.size());
 }
 
 void ImageSegmenter::labelComponents(int row, int col)

@@ -25,7 +25,7 @@ num_of_laser: 2
 n_scans: 16
 
 # segmentation parameters
-segment_cloud: 0
+segment_cloud: 1
 horizon_scan: 400
 min_cluster_size: 15
 min_line_size: 10
@@ -81,6 +81,7 @@ cloud1_topic: "/right/velodyne_points"
 
 laser_sync_threshold: 0.07
 roi_range: 0.5
+roi_range_mapping: 15
 
 # odometry parameters
 scan_period: 0.1

@@ -23,7 +23,7 @@ struct LidarMapPlaneNormFactor
 		Eigen::Matrix<T, 3, 1> w(T(coeff_(0)), T(coeff_(1)), T(coeff_(2)));
 		Eigen::Matrix<T, 3, 1> cp(T(point_(0)), T(point_(1)), T(point_(2)));
 		T d = T(coeff_(3));
-		T r = (w.dot(q_w_curr * cp + t_w_curr) + d) * T(s_);
+		T r = w.dot(q_w_curr * cp + t_w_curr) + d;
 		residual[0] = T(sqrt_info_static_) * r;
 		return true;
 	}

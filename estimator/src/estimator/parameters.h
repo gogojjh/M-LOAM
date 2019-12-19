@@ -71,6 +71,7 @@ extern int SEGMENT_VALID_LINE_NUM;
 extern std::string CLOUD0_TOPIC, CLOUD1_TOPIC;
 extern float LASER_SYNC_THRESHOLD;
 extern double ROI_RANGE;
+extern double ROI_RANGE_MAPPING;
 
 extern std::vector<Eigen::Matrix3d> RBL;
 extern std::vector<Eigen::Quaterniond> QBL;
