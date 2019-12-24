@@ -23,6 +23,8 @@ void TransformToStart(common::PointI const *const pi, common::PointI *const po, 
 void TransformToEnd(common::PointI const *const pi, common::PointI *const po, const Pose &pose, const bool &b_distortion);
 void pointAssociateToMap(const common::PointI &pi, common::PointI &po, const Pose &pose);
 void pointAssociateTobeMapped(const common::PointI &pi, common::PointI &po, const Pose &pose);
+Eigen::Matrix<double, 4, 6> pointToFS(const Eigen::Vector4d &point);
+void evalPointUncertainty(const common::PointI &pi, Eigen::Matrix<double, 4, 4> &cov_po);
 
 class Utility
 {

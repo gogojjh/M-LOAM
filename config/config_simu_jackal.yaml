@@ -113,4 +113,13 @@ eig_initial: 200
 eig_thre_calib: 1000
 n_calib: 10
 
+# mapping uncertainty
+uncertainty_calib: !!opencv-matrix
+   rows: 1
+   cols: 9
+   dt: d
+   data: [0.01, 0.01, 0.01, 0.0025, 0.0025, 0.0025, 0.0025, 0.0025, 0.0025] # rotation, translation, point
+
+trace_threshold: 1.0
+
 #

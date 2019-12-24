@@ -474,6 +474,7 @@ void process()
 			int laser_cloud_surf_stack_num = laser_cloud_surf_stack->points.size();
 
 			//**************************************************************
+			// noisy point filtering
 			for (auto n = 0; n < NUM_OF_LASER; n++)
 			{
 				laser_cloud_corner_split[n].clear();
@@ -481,32 +482,36 @@ void process()
 			}
 			for (auto point: laser_cloud_corner_stack->points)
 			{
-				size_t idx = int(point.intensity);
-				if (idx == IDX_REF)
-				{
-					laser_cloud_corner_split[idx].push_back(point);
-				}
-				else
+				size_t idx = int(point.intensity); // indicate the lidar id
+				Eigen::Matrix<double, 4, 4> cov_po;
+				if (idx != IDX_REF)
 				{
 					PointI point_sel;
 					pointAssociateToMap(point, point_sel, pose_ext[idx].inverse());
-					if (sqrSum(point_sel.x, point_sel.y, point_sel.z) < ROI_RANGE_MAPPING)
-						laser_cloud_corner_split[idx].push_back(point);
+					evalPointUncertainty(point_sel, cov_po);
+					// if (sqrSum(point_sel.x, point_sel.y, point_sel.z) < ROI_RANGE_MAPPING)
+					// 	laser_cloud_corner_split[idx].push_back(point);
+					if (cov_po.trace() > TRACE_THRESHOLD) laser_cloud_corner_split[idx].push_back(point);
+				} else
+				{
+					laser_cloud_corner_split[idx].push_back(point);
 				}
 			}
 			for (auto point: laser_cloud_surf_stack->points)
 			{
-				size_t idx = int(point.intensity);
-				if (idx == IDX_REF)
-				{
-					laser_cloud_surf_split[idx].push_back(point);
-				}
-				else
+				size_t idx = int(point.intensity); // indicate the lidar id
+				Eigen::Matrix<double, 4, 4> cov_po;
+				if (idx != IDX_REF)
 				{
 					PointI point_sel;
 					pointAssociateToMap(point, point_sel, pose_ext[idx].inverse());
-					if (sqrSum(point_sel.x, point_sel.y, point_sel.z) < ROI_RANGE_MAPPING)
-						laser_cloud_surf_split[idx].push_back(point);
+					evalPointUncertainty(point_sel, cov_po);
+					// if (sqrSum(point_sel.x, point_sel.y, point_sel.z) < ROI_RANGE_MAPPING)
+					// 	laser_cloud_surf_split[idx].push_back(point);
+					if (cov_po.trace() > TRACE_THRESHOLD) laser_cloud_surf_split[idx].push_back(point);
+				} else
+				{
+					laser_cloud_surf_split[idx].push_back(point);
 				}
 			}
 

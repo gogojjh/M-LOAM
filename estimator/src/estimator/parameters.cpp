@@ -81,6 +81,9 @@ double EIG_INITIAL;
 double EIG_THRE_CALIB;
 int N_CALIB;
 
+Eigen::Matrix<double, 9, 9> XI;
+double TRACE_THRESHOLD;
+
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
 {
@@ -228,6 +231,18 @@ void readParameters(std::string config_file)
     EIG_INITIAL = fsSettings["eig_initial"];
     EIG_THRE_CALIB = fsSettings["eig_thre_calib"];
     N_CALIB = fsSettings["n_calib"];
+
+    // mapping uncertainty
+    cv::Mat cv_xi;
+    fsSettings["uncertainty_calib"] >> cv_xi;
+    Eigen::Matrix<double, 9, 1> xi_vec; // rotation, translation, point
+    xi_vec << cv_xi.ptr<double>(0)[0], cv_xi.ptr<double>(0)[1], cv_xi.ptr<double>(0)[2],
+              cv_xi.ptr<double>(0)[3], cv_xi.ptr<double>(0)[4], cv_xi.ptr<double>(0)[5],
+              cv_xi.ptr<double>(0)[6], cv_xi.ptr<double>(0)[7], cv_xi.ptr<double>(0)[8];
+    XI = xi_vec.asDiagonal();
+    std::cout << "initial covariance XI:" << std::endl << XI << std::endl;
+
+    TRACE_THRESHOLD = fsSettings["trace_threshold"];
 
     fsSettings.release();
 }

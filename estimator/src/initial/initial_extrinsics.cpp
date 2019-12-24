@@ -1,19 +1,6 @@
-/*******************************************************
- * Copyright (A) 2019, Aerial Robotics Group, Hong Kong University of Science and Technology
- *
- * This file is part of VINS.
- *
- * Licensed under the GNU General Public License v3.0;
- * you may not use this file except in compliance with the License.
- *
- * Author: Qin Tong (qintonguav@gmail.com)
- *
- * Reference: Monocular visual-inertial fusion with online initialization and camera-IMU calibration
- *******************************************************/
-
 #include "initial_extrinsics.h"
-#include<cstdlib>
-#include<ctime>
+#include <cstdlib>
+#include <ctime>
 
 using namespace Eigen;
 

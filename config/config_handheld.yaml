@@ -44,13 +44,13 @@ n_scans: 16
 # segmentation
 segment_cloud: 1
 horizon_scan: 1800
-min_cluster_size: 10
+min_cluster_size: 5
 min_line_size: 10
 segment_valid_point_num: 5
 segment_valid_line_num: 3
 
 # window sizes
-window_size: 7
+window_size: 10
 opt_window_size: 5
 
 # Extrinsic parameter between IMU and Camera.
@@ -118,8 +118,8 @@ pcl_viewer: 0
 pcl_viewer_normal_ratio: 10
 
 optimal_odometry: 1
-n_cumu_feature: 10
 
+n_cumu_feature: 10
 eig_initial: 200
 eig_thre_calib: 500
 n_calib: 10

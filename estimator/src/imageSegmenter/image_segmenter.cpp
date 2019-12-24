@@ -2,7 +2,7 @@
 
 using namespace common;
 
-const float segment_theta = 40.0 / 180.0 * M_PI;
+const float segment_theta = 30.0 / 180.0 * M_PI;
 
 ImageSegmenter::ImageSegmenter()
 {
