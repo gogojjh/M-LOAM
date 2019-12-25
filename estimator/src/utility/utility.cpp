@@ -13,7 +13,7 @@ using namespace common;
 // undistort lidar point
 void TransformToStart(const PointI &pi, PointI &po, const Pose &pose, const bool &b_distortion)
 {
-    // if (!pcl::traits::has_field<PointI, pcl::fields::intensity>::value)
+//     if (!pcl::traits::has_field<PointI, pcl::fields::intensity>::value)
     // {
     //     std::cerr << "Point does not have intensity field!" << std::endl;
     //     exit(EXIT_FAILURE);

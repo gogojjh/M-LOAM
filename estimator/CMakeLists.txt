@@ -75,8 +75,8 @@ target_link_libraries(mloam_lib_2 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS}
 add_executable(mloam_node src/rosNodeTest.cpp)
 target_link_libraries(mloam_node mloam_lib_1 mloam_lib_2)
 
-add_executable(lidar_mapper src/lidarMapper/lidar_mapper.cpp)
-target_link_libraries(lidar_mapper mloam_lib_1 mloam_lib_2)
+#add_executable(lidar_mapper src/lidarMapper/lidar_mapper.cpp)
+#target_link_libraries(lidar_mapper mloam_lib_1 mloam_lib_2)
 
 # add_executable(kitti_gps_test src/KITTIGPSTest.cpp)
 # target_link_libraries(kitti_gps_test mloam_lib_1 mloam_lib_2)
@@ -87,5 +87,8 @@ target_link_libraries(test_ceres ${catkin_LIBRARIES} ${PCL_LIBS})
 
 add_executable(test_merge_pointcloud ../test/test_merge_pointcloud.cpp)
 target_link_libraries(test_merge_pointcloud ${catkin_LIBRARIES} ${PCL_LIBS})
+
+add_executable(test_pointiwithcov ../test/test_pointiwithcov.cpp)
+target_link_libraries(test_pointiwithcov mloam_lib_1)
 
 #

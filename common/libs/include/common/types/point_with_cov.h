@@ -5,8 +5,14 @@
 
 #include <pcl/pcl_macros.h>
 #include <pcl/point_types.h>
+#include <pcl/register_point_struct.h>
 
-namespace common
+#include <bitset>
+#include <boost/mpl/contains.hpp>
+#include <boost/mpl/fold.hpp>
+#include <boost/mpl/vector.hpp>
+
+namespace pcl
 {
     // standard PCL style: http://pointclouds.org/documentation/tutorials/adding_custom_ptype.php
     // http://wiki.ros.org/pcl_ros/cturtle
@@ -43,7 +49,7 @@ namespace common
             cov_vec[4] = 0;
             cov_vec[5] = 0;
         }
-        inline PointIWithCov(const PointI &p, const Eigen::Matrix3f &cov_matrix)
+        inline PointIWithCov(const PointXYZI &p, const Eigen::Matrix3f &cov_matrix)
         {
             x = p.x; y = p.y; z = p.z; intensity = p.intensity;
             cov_vec[0] = cov_matrix(0, 0);
@@ -64,32 +70,14 @@ namespace common
         return out;
     }
 
-     // here we assume a xyz + "covariance" (as fields)
-    // POINT_CLOUD_REGISTER_POINT_STRUCT(_PointIWithCov,
-    //                                     (float, x, x)
-    //                                     (float, y, y)
-    //                                     (float, z, z)
-    //                                     (float, intensity, intensity)
-    //                                     (float, cov_vec[0], cov_xx)
-    //                                     (float, cov_vec[1], cov_xy)
-    //                                     (float, cov_vec[2], cov_xz)
-    //                                     (float, cov_vec[3], cov_yy)
-    //                                     (float, cov_vec[4], cov_yz)
-    //                                     (float, cov_vec[5], cov_zz))
-    // POINT_CLOUD_REGISTER_POINT_WRAPPER(PointIWithCov, _PointIWithCov)
-
-    typedef pcl::PointCloud<PointIWithCov> PointICovCloud;
-    typedef PointICovCloud::Ptr PointICovCloudPtr;
-    typedef PointICovCloud::ConstPtr PointICovCloudConstPtr;
-
-    inline PointI removeCov(const PointIWithCov &pi)
+    inline PointXYZI removeCov(const PointIWithCov &pi)
     {
-        PointI po;
+        PointXYZI po;
         po.x = pi.x; po.y = pi.y; po.z = pi.z;
         po.intensity = pi.intensity;
     }
 
-    inline PointIWithCov appendCov(const PointI &pi, const Eigen::Matrix3f &cov_matrix)
+    inline PointIWithCov appendCov(const PointXYZI &pi, const Eigen::Matrix3f &cov_matrix)
     {
         PointIWithCov po;
         po.x = pi.x; po.y = pi.y; po.z = pi.z; po.intensity = pi.intensity;
@@ -100,6 +88,23 @@ namespace common
         po.cov_vec[4] = cov_matrix(1, 2);
         po.cov_vec[5] = cov_matrix(2, 2);
     }
+}
+
+// here we assume a xyz + "covariance" (as fields)
+POINT_CLOUD_REGISTER_POINT_STRUCT (pcl::_PointIWithCov,           // here we assume a XYZ + "test" (as fields)
+                                   (float, x, x)
+                                   (float, y, y)
+                                   (float, z, z)
+                                   (float, intensity, intensity)
+                                   (float[6], cov_vec, cov)
+)
+POINT_CLOUD_REGISTER_POINT_WRAPPER(pcl::PointIWithCov, pcl::_PointIWithCov)
+
+namespace common
+{
+    typedef pcl::PointCloud<pcl::PointIWithCov> PointICovCloud;
+    typedef PointICovCloud::Ptr PointICovCloudPtr;
+    typedef PointICovCloud::ConstPtr PointICovCloudConstPtr;
 }
 
 #endif
