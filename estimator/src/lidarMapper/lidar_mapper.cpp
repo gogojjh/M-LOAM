@@ -491,7 +491,7 @@ void process()
 					evalPointUncertainty(point_sel, cov_po);
 					// if (sqrSum(point_sel.x, point_sel.y, point_sel.z) < ROI_RANGE_MAPPING)
 					// 	laser_cloud_corner_split[idx].push_back(point);
-					if (cov_po.trace() > TRACE_THRESHOLD) laser_cloud_corner_split[idx].push_back(point);
+					if (cov_po.norm() > NORM_THRESHOLD) laser_cloud_corner_split[idx].push_back(point);
 				} else
 				{
 					laser_cloud_corner_split[idx].push_back(point);
@@ -508,7 +508,7 @@ void process()
 					evalPointUncertainty(point_sel, cov_po);
 					// if (sqrSum(point_sel.x, point_sel.y, point_sel.z) < ROI_RANGE_MAPPING)
 					// 	laser_cloud_surf_split[idx].push_back(point);
-					if (cov_po.trace() > TRACE_THRESHOLD) laser_cloud_surf_split[idx].push_back(point);
+					if (cov_po.norm() > NORM_THRESHOLD) laser_cloud_surf_split[idx].push_back(point);
 				} else
 				{
 					laser_cloud_surf_split[idx].push_back(point);

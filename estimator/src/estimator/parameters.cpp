@@ -82,7 +82,7 @@ double EIG_THRE_CALIB;
 int N_CALIB;
 
 Eigen::Matrix<double, 9, 9> XI;
-double TRACE_THRESHOLD;
+double NORM_THRESHOLD;
 
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
@@ -242,7 +242,7 @@ void readParameters(std::string config_file)
     XI = xi_vec.asDiagonal();
     std::cout << "initial covariance XI:" << std::endl << XI << std::endl;
 
-    TRACE_THRESHOLD = fsSettings["trace_threshold"];
+    NORM_THRESHOLD = fsSettings["norm_threshold"];
 
     fsSettings.release();
 }
