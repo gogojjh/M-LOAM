@@ -19,12 +19,12 @@
 #include "../estimator/parameters.h"
 #include "../estimator/pose.h"
 
-void TransformToStart(common::PointI const *const pi, common::PointI *const po, const Pose &pose, const bool &b_distortion);
-void TransformToEnd(common::PointI const *const pi, common::PointI *const po, const Pose &pose, const bool &b_distortion);
+void TransformToStart(const common::PointI &pi, common::PointI &po, const Pose &pose, const bool &b_distortion);
+void TransformToEnd(const common::PointI &pi, common::PointI &po, const Pose &pose, const bool &b_distortion);
 void pointAssociateToMap(const common::PointI &pi, common::PointI &po, const Pose &pose);
 void pointAssociateTobeMapped(const common::PointI &pi, common::PointI &po, const Pose &pose);
+void evalPointUncertainty(const int &idx, const common::PointI &pi, Eigen::Matrix3d &cov_po);
 Eigen::Matrix<double, 4, 6> pointToFS(const Eigen::Vector4d &point);
-void evalPointUncertainty(const common::PointI &pi, Eigen::Matrix<double, 4, 4> &cov_po);
 
 class Utility
 {
@@ -159,14 +159,13 @@ class Utility
     }
 
     template <typename T>
-    static T normalizeAngle(const T& angle_degrees) {
-      T two_pi(2.0 * 180);
-      if (angle_degrees > 0)
-      return angle_degrees -
-          two_pi * std::floor((angle_degrees + T(180)) / two_pi);
-      else
-        return angle_degrees +
-            two_pi * std::floor((-angle_degrees + T(180)) / two_pi);
+    static T normalizeAngle(const T& angle_degrees)
+    {
+        T two_pi(2.0 * 180);
+        if (angle_degrees > 0)
+            return angle_degrees - two_pi * std::floor((angle_degrees + T(180)) / two_pi);
+        else
+            return angle_degrees + two_pi * std::floor((-angle_degrees + T(180)) / two_pi);
     }
 };
 

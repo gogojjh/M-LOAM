@@ -68,6 +68,7 @@
 
 #include "common/common.hpp"
 #include "common/types/type.h"
+#include "common/types/point_with_cov.h"
 #include "common/publisher.hpp"
 #include "../utility/tic_toc.h"
 #include "../utility/utility.h"

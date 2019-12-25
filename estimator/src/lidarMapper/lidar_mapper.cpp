@@ -480,38 +480,30 @@ void process()
 				laser_cloud_corner_split[n].clear();
 				laser_cloud_surf_split[n].clear();
 			}
-			for (auto point: laser_cloud_corner_stack->points)
+			for (auto point_ori: laser_cloud_corner_stack->points)
 			{
-				size_t idx = int(point.intensity); // indicate the lidar id
-				Eigen::Matrix<double, 4, 4> cov_po;
-				if (idx != IDX_REF)
+				int idx = int(point_ori.intensity); // indicate the lidar id
+				PointI point_sel;
+				Eigen::Matrix3d cov_po = Eigen::Matrix3d::Zero();
+				pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
+				evalPointUncertainty(idx, point_sel, cov_po);
+				if (cov_po.norm() < NORM_THRESHOLD)
 				{
-					PointI point_sel;
-					pointAssociateToMap(point, point_sel, pose_ext[idx].inverse());
-					evalPointUncertainty(point_sel, cov_po);
-					// if (sqrSum(point_sel.x, point_sel.y, point_sel.z) < ROI_RANGE_MAPPING)
-					// 	laser_cloud_corner_split[idx].push_back(point);
-					if (cov_po.norm() > NORM_THRESHOLD) laser_cloud_corner_split[idx].push_back(point);
-				} else
-				{
-					laser_cloud_corner_split[idx].push_back(point);
+					laser_cloud_corner_split[idx].push_back(point_ori);
+					PointIWithCov point_cov(point_ori, cov_po.cast<float>());
 				}
 			}
-			for (auto point: laser_cloud_surf_stack->points)
+			for (auto point_ori: laser_cloud_surf_stack->points)
 			{
-				size_t idx = int(point.intensity); // indicate the lidar id
-				Eigen::Matrix<double, 4, 4> cov_po;
-				if (idx != IDX_REF)
+				int idx = int(point_ori.intensity); // indicate the lidar id
+				PointI point_sel;
+				Eigen::Matrix3d cov_po = Eigen::Matrix3d::Zero();
+				pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
+				evalPointUncertainty(idx, point_sel, cov_po);
+				if (cov_po.norm() < NORM_THRESHOLD)
 				{
-					PointI point_sel;
-					pointAssociateToMap(point, point_sel, pose_ext[idx].inverse());
-					evalPointUncertainty(point_sel, cov_po);
-					// if (sqrSum(point_sel.x, point_sel.y, point_sel.z) < ROI_RANGE_MAPPING)
-					// 	laser_cloud_surf_split[idx].push_back(point);
-					if (cov_po.norm() > NORM_THRESHOLD) laser_cloud_surf_split[idx].push_back(point);
-				} else
-				{
-					laser_cloud_surf_split[idx].push_back(point);
+					laser_cloud_surf_split[idx].push_back(point_ori);
+					PointIWithCov point_cov(point_ori, cov_po.cast<float>());
 				}
 			}
 
@@ -629,12 +621,8 @@ void process()
 			TicToc t_add;
 			for (auto n = 0; n < NUM_OF_LASER; n++)
 			{
-				// if ((n != IDX_REF) && (extrinsics.status)) continue;
-				// if (n != IDX_REF) continue;
 				PointICloud &laser_cloud_corner_points = laser_cloud_corner_split[n];
 				PointICloud &laser_cloud_surf_points = laser_cloud_surf_split[n];
-				// PointICloud &laser_cloud_corner_points = *laser_cloud_corner_stack;
-				// PointICloud &laser_cloud_surf_points = *laser_cloud_surf_stack;
 
 				// move the corner points from the lastest frame to different cubes
 				for (int i = 0; i < laser_cloud_corner_points.size(); i++)

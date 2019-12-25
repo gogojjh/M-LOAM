@@ -5,6 +5,7 @@
 
 #include <pcl/point_types.h>            /* pcl::PointXYZ */
 #include <pcl/point_cloud.h>            /* pcl::PointCloud */
+
 #include <Eigen/Core>
 #include <vector>
 #include <tuple>
@@ -37,8 +38,7 @@ namespace common
         double y;
         double z;
         uint8_t intensity;
-
-        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     } EIGEN_ALIGN16;
 
     typedef pcl::PointCloud<PointD> PointDCloud;

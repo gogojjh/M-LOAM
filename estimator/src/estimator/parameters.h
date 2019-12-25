@@ -106,7 +106,7 @@ extern double EIG_THRE_CALIB;
 extern int N_CALIB;
 
 extern Eigen::Matrix<double, 9, 9> XI;
-extern double TRACE_THRESHOLD;
+extern double NORM_THRESHOLD;
 
 void readParameters(std::string config_file);
 

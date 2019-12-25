@@ -120,6 +120,6 @@ uncertainty_calib: !!opencv-matrix
    dt: d
    data: [0.01, 0.01, 0.01, 0.0025, 0.0025, 0.0025, 0.0025, 0.0025, 0.0025] # rotation, translation, point
 
-norm_threshold: 0.55
+norm_threshold: 0.82
 
 #
