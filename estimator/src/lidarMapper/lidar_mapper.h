@@ -69,8 +69,12 @@
 #include "common/common.hpp"
 #include "common/types/type.h"
 #include "common/publisher.hpp"
-#include "mloam_pcl/point_with_cov.h"
+
 #include "mloam_msgs/Extrinsics.h"
+
+#include "mloam_pcl/point_with_cov.h"
+#include "mloam_pcl/voxel_grid_covariance_mloam.h"
+#include "mloam_pcl/voxel_grid_covariance_mloam_impl.hpp"
 
 #include "../utility/tic_toc.h"
 #include "../utility/utility.h"

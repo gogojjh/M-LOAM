@@ -1,3 +1,5 @@
+#define PCL_NO_PRECOMPILE
+
 #include "lidar_mapper.h"
 
 using namespace common;
@@ -489,9 +491,8 @@ void process()
 				evalPointUncertainty(idx, point_sel, cov_po);
 				if (cov_po.norm() < NORM_THRESHOLD)
 				{
-					// pcl::PointIWithCov point_cov(point_ori, cov_po.cast<float>());
+					pcl::PointIWithCov point_cov(point_ori, cov_po.cast<float>());
 					laser_cloud_corner_split[idx].push_back(point_ori);
-					// laser_cloud_corner_split[idx].push_back(point_cov);
 				}
 			}
 			for (auto point_ori: laser_cloud_surf_stack->points)
@@ -503,7 +504,7 @@ void process()
 				evalPointUncertainty(idx, point_sel, cov_po);
 				if (cov_po.norm() < NORM_THRESHOLD)
 				{
-					// pcl::PointIWithCov point_cov(point_ori, cov_po.cast<float>());
+					pcl::PointIWithCov point_cov(point_ori, cov_po.cast<float>());
 					laser_cloud_surf_split[idx].push_back(point_ori);
 				}
 			}

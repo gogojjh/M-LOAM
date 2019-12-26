@@ -90,6 +90,6 @@ add_executable(test_merge_pointcloud ../test/test_merge_pointcloud.cpp)
 target_link_libraries(test_merge_pointcloud ${catkin_LIBRARIES} ${PCL_LIBS})
 
 add_executable(test_pointiwithcov ../test/test_pointiwithcov.cpp)
-target_link_libraries(test_pointiwithcov ${catkin_LIBRARIES} ${PCL_LIBS} ${pcl_ros_LIBRARIES})
+target_link_libraries(test_pointiwithcov ${catkin_LIBRARIES} ${PCL_LIBS})
 
 #
