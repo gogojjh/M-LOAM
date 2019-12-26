@@ -42,12 +42,7 @@ endif()
 
 add_definitions(${PCL_DEFINITIONS})
 
-include_directories(
-  ${catkin_INCLUDE_DIRS}
-  ${PCL_INCLUDE_DIRS}
-  ${EIGEN3_INCLUDE_DIR}
-  ${CERES_INCLUDE_DIRS}
-)
+include_directories(${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR} ${CERES_INCLUDE_DIRS})
 
 catkin_package(
 #  INCLUDE_DIRS include
@@ -77,6 +72,7 @@ add_library(mloam_lib_2
     )
 target_link_libraries(mloam_lib_2 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES})
 
+######## --------------------- EXECUTABLE --------------------- ########
 add_executable(mloam_node src/rosNodeTest.cpp)
 target_link_libraries(mloam_node mloam_lib_1 mloam_lib_2)
 
@@ -94,6 +90,6 @@ add_executable(test_merge_pointcloud ../test/test_merge_pointcloud.cpp)
 target_link_libraries(test_merge_pointcloud ${catkin_LIBRARIES} ${PCL_LIBS})
 
 add_executable(test_pointiwithcov ../test/test_pointiwithcov.cpp)
-target_link_libraries(test_pointiwithcov mloam_lib_1)
+target_link_libraries(test_pointiwithcov ${catkin_LIBRARIES} ${PCL_LIBS} ${pcl_ros_LIBRARIES})
 
 #

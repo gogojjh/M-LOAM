@@ -12,16 +12,21 @@
 #include <pcl/register_point_struct.h>
 
 #include <pcl/impl/instantiate.hpp>
+#include <pcl/filters/filter.h>
+#include <pcl/filters/impl/filter.hpp>
 #include <pcl/filters/voxel_grid.h>
-#include <pcl/filters/voxel_grid_covariance.h>
 #include <pcl/filters/impl/voxel_grid.hpp>
+#include <pcl/filters/voxel_grid_covariance.h>
 #include <pcl/filters/impl/voxel_grid_covariance.hpp>
+#include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/kdtree/impl/kdtree_flann.hpp>
 
 #include <bitset>
 #include <boost/mpl/contains.hpp>
 #include <boost/mpl/fold.hpp>
 #include <boost/mpl/vector.hpp>
 
+// pcl point type: https://github.com/PointCloudLibrary/pcl/blob/master/common/include/pcl/impl/point_types.hpp
 namespace pcl
 {
     struct EIGEN_ALIGN16 _PointIWithCov
@@ -34,6 +39,25 @@ namespace pcl
 
     struct PointIWithCov: public _PointIWithCov
     {
+        inline PointIWithCov()
+        {
+            x = y = z = 0.0f; intensity = 0;
+            cov_vec[0] = cov_vec[1] = cov_vec[2] = cov_vec[3] = cov_vec[4] = cov_vec[5] = 0.0f;
+        }
+
+        inline PointIWithCov(float _x, float _y, float _z, float _intensity,
+                float _cov_xx, float _cov_xy, float _cov_xz,
+                float _cov_yy, float _cov_yz, float _cov_zz)
+        {
+            x = _x; y = _y; z = _z; intensity = _intensity;
+            cov_vec[0] = _cov_xx;
+            cov_vec[1] = _cov_xy;
+            cov_vec[2] = _cov_xz;
+            cov_vec[3] = _cov_yy;
+            cov_vec[4] = _cov_yz;
+            cov_vec[5] = _cov_zz;
+        }
+
         inline PointIWithCov(const _PointIWithCov &p)
         {
             x = p.x; y = p.y; z = p.z; intensity = p.intensity;
@@ -45,11 +69,6 @@ namespace pcl
             cov_vec[5] = p.cov_vec[5];
         }
 
-        inline PointIWithCov()
-        {
-            x = y = z = 0.0f; intensity = 0;
-            cov_vec[0] = cov_vec[1] = cov_vec[2] = cov_vec[3] = cov_vec[4] = cov_vec[5] = 0.0f;
-        }
         inline PointIWithCov(const PointXYZI &p, const Eigen::Matrix3f &cov_matrix)
         {
             x = p.x; y = p.y; z = p.z; intensity = p.intensity;
