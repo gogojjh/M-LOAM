@@ -49,6 +49,8 @@
 #include <pcl/filters/impl/voxel_grid.hpp>
 #include <pcl/kdtree/kdtree_flann.h>
 
+#include <iostream>
+
 // pcl write a new type: http://pointclouds.org/documentation/tutorials/writing_new_classes.php#writing-a-new-pcl-class
 namespace pcl
 {

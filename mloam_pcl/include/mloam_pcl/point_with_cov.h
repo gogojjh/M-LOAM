@@ -86,7 +86,7 @@ namespace pcl
     {
         out << "(" << p.x << ", " << p.y << ", " << p.z << ", " << p.intensity << ", "
             << p.cov_vec[0] << ", " << p.cov_vec[1] << ", " << p.cov_vec[2] << ", "
-            << p.cov_vec[3] << ", " << p.cov_vec[4] << ", "<< p.cov_vec[5] << ")" << std::endl;
+            << p.cov_vec[3] << ", " << p.cov_vec[4] << ", "<< p.cov_vec[5] << ")";
         return out;
     }
 }
