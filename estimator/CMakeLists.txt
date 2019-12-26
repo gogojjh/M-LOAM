@@ -22,7 +22,10 @@ find_package(catkin REQUIRED COMPONENTS
 
     mloam_common
     mloam_msgs
+    mloam_pcl
 )
+
+#message(${catkin_INCLUDE_DIRS})
 
 find_package(OpenCV REQUIRED)
 find_package(PCL REQUIRED)
@@ -37,6 +40,8 @@ if (OPENMP_FOUND)
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 
+add_definitions(${PCL_DEFINITIONS})
+
 include_directories(
   ${catkin_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
@@ -46,7 +51,7 @@ include_directories(
 
 catkin_package(
 #  INCLUDE_DIRS include
-  CATKIN_DEPENDS mloam_msgs
+  CATKIN_DEPENDS mloam_msgs mloam_pcl
   DEPENDS PCL
 )
 
@@ -75,8 +80,8 @@ target_link_libraries(mloam_lib_2 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS}
 add_executable(mloam_node src/rosNodeTest.cpp)
 target_link_libraries(mloam_node mloam_lib_1 mloam_lib_2)
 
-#add_executable(lidar_mapper src/lidarMapper/lidar_mapper.cpp)
-#target_link_libraries(lidar_mapper mloam_lib_1 mloam_lib_2)
+add_executable(lidar_mapper src/lidarMapper/lidar_mapper.cpp)
+target_link_libraries(lidar_mapper mloam_lib_1 mloam_lib_2)
 
 # add_executable(kitti_gps_test src/KITTIGPSTest.cpp)
 # target_link_libraries(kitti_gps_test mloam_lib_1 mloam_lib_2)
