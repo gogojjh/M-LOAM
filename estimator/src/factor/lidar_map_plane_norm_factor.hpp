@@ -11,8 +11,8 @@
 // calculate distrance from point to plane (using normal)
 struct LidarMapPlaneNormFactor
 {
-	LidarMapPlaneNormFactor(const Eigen::Vector3d &point, const Eigen::Vector4d &coeff, const double &s, const double &sqrt_info_static = 1.0)
-		: point_(point), coeff_(coeff), s_(s), sqrt_info_static_(sqrt_info_static){}
+	LidarMapPlaneNormFactor(const Eigen::Vector3d &point, const Eigen::Vector4d &coeff, const double &s, const Eigen::Matrix3f &cov_matrix = Eigen::Matrix3f::Identity())
+		: point_(point), coeff_(coeff), s_(s), cov_matrix_(cov_matrix){}
 
 	template <typename T>
 	bool operator()(const T *param, T *residual) const
@@ -24,18 +24,19 @@ struct LidarMapPlaneNormFactor
 		Eigen::Matrix<T, 3, 1> cp(T(point_(0)), T(point_(1)), T(point_(2)));
 		T d = T(coeff_(3));
 		T r = w.dot(q_w_curr * cp + t_w_curr) + d;
-		residual[0] = T(sqrt_info_static_) * r;
+		residual[0] = r;
 		return true;
 	}
 
-	static ceres::CostFunction *Create(const Eigen::Vector3d &point, const Eigen::Vector4d &coeff, const double &s, const double &sqrt_info_static)
+	static ceres::CostFunction *Create(const Eigen::Vector3d &point, const Eigen::Vector4d &coeff, const double &s, const Eigen::Matrix3f &cov_matrix)
 	{
 		return (new ceres::AutoDiffCostFunction<
-				LidarMapPlaneNormFactor, 1, 7>(new LidarMapPlaneNormFactor(point, coeff, s, sqrt_info_static)));
+				LidarMapPlaneNormFactor, 1, 7>(new LidarMapPlaneNormFactor(point, coeff, s, cov_matrix)));
 	}
 
+	double s_;
 	Eigen::Vector3d point_;
 	Eigen::Vector4d coeff_;
-	double s_;
-	double sqrt_info_static_;
+	Eigen::Matrix3f cov_matrix_;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };

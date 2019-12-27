@@ -79,6 +79,9 @@ std::vector<Pose> pose_ext;
 std::vector<PointICloud> laser_cloud_corner_split;
 std::vector<PointICloud> laser_cloud_surf_split;
 
+std::vector<PointICovCloud> laser_cloud_corner_split_cov;
+std::vector<PointICovCloud> laser_cloud_surf_split_cov;
+
 // thread data buffer
 std::queue<sensor_msgs::PointCloud2ConstPtr> corner_last_buf;
 std::queue<sensor_msgs::PointCloud2ConstPtr> surf_last_buf;
@@ -481,6 +484,8 @@ void process()
 			{
 				laser_cloud_corner_split[n].clear();
 				laser_cloud_surf_split[n].clear();
+				laser_cloud_corner_split_cov[n].clear();
+				laser_cloud_surf_split_cov[n].clear();
 			}
 			for (auto point_ori: laser_cloud_corner_stack->points)
 			{
@@ -493,6 +498,7 @@ void process()
 				{
 					pcl::PointIWithCov point_cov(point_ori, cov_po.cast<float>());
 					laser_cloud_corner_split[idx].push_back(point_ori);
+					laser_cloud_corner_split_cov[idx].push_back(point_cov);
 				}
 			}
 			for (auto point_ori: laser_cloud_surf_stack->points)
@@ -506,6 +512,7 @@ void process()
 				{
 					pcl::PointIWithCov point_cov(point_ori, cov_po.cast<float>());
 					laser_cloud_surf_split[idx].push_back(point_ori);
+					laser_cloud_surf_split_cov[idx].push_back(point_cov);
 				}
 			}
 
@@ -545,48 +552,48 @@ void process()
 
 					// ******************************************************
 					// ROS_INFO("mloam modules");
-					std::vector<double> info_weight(NUM_OF_LASER, 0);
-					info_weight[0] = 1.0;
-					info_weight[1] = 1.0;
 					int corner_num = 0;
 					int surf_num = 0;
 					TicToc t_prepare;
 					for (auto n = 0; n < NUM_OF_LASER; n++)
 					{
 						// if ((n != IDX_REF) && (extrinsics.status)) continue;
-						// if (n != IDX_REF) continue;
 						PointICloud &laser_cloud_corner_points = laser_cloud_corner_split[n];
 						PointICloud &laser_cloud_surf_points = laser_cloud_surf_split[n];
-						// PointICloud &laser_cloud_corner_points = *laser_cloud_corner_stack;
-						// PointICloud &laser_cloud_surf_points = *laser_cloud_surf_stack;
 
 						TicToc t_data;
 						int n_neigh = 5;
 						Pose pose_local = pose_wmap_curr;
 						std::vector<PointPlaneFeature> corner_map_features, surf_map_features;
 						f_extract.extractCornerFromMap(kdtree_corner_from_map, *laser_cloud_corner_from_map,
-							laser_cloud_corner_points, pose_local, corner_map_features, n_neigh, false);
+													laser_cloud_corner_points, pose_local, corner_map_features, n_neigh, false);
 						f_extract.extractSurfFromMap(kdtree_surf_from_map, *laser_cloud_surf_from_map,
-							laser_cloud_surf_points, pose_local, surf_map_features, n_neigh, false);
+													laser_cloud_surf_points, pose_local, surf_map_features, n_neigh, false);
 						corner_num += corner_map_features.size() / 2;
 						surf_num += surf_map_features.size();
 						// printf("mapping data assosiation time %fms\n", t_data.toc());
 
 						for (auto &feature: corner_map_features)
 						{
+							const size_t &idx = feature.idx_;
 							const double &s = feature.score_;
 	                        const Eigen::Vector3d &p_data = feature.point_;
 	                        const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-							ceres::CostFunction *cost_function = LidarMapPlaneNormFactor::Create(p_data, coeff_ref, s, info_weight[n]);
+						    Eigen::Matrix3f cov_matrix;
+							// normalToCov(laser_cloud_corner_split_cov[n].points[idx], cov_matrix);
+							ceres::CostFunction *cost_function = LidarMapPlaneNormFactor::Create(p_data, coeff_ref, s, cov_matrix);
 							problem.AddResidualBlock(cost_function, loss_function, para_pose);
 						}
 
 						for (auto &feature: surf_map_features)
 						{
+							const size_t &idx = feature.idx_;
 							const double &s = feature.score_;
 	                        const Eigen::Vector3d &p_data = feature.point_;
 	                        const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-							ceres::CostFunction *cost_function = LidarMapPlaneNormFactor::Create(p_data, coeff_ref, s, info_weight[n]);
+	                        Eigen::Matrix3f cov_matrix;
+							// normalToCov(laser_cloud_surf_split_cov[n].points[idx], cov_matrix);
+							ceres::CostFunction *cost_function = LidarMapPlaneNormFactor::Create(p_data, coeff_ref, s, cov_matrix);
 							problem.AddResidualBlock(cost_function, loss_function, para_pose);
 						}
 					}
@@ -851,6 +858,9 @@ int main(int argc, char **argv)
 
 	laser_cloud_corner_split.resize(NUM_OF_LASER);
 	laser_cloud_surf_split.resize(NUM_OF_LASER);
+
+	laser_cloud_corner_split_cov.resize(NUM_OF_LASER);
+	laser_cloud_surf_split_cov.resize(NUM_OF_LASER);
 
 	std::thread mapping_process{process};
 	ros::spin();

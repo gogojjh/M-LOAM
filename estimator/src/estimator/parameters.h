@@ -19,6 +19,7 @@
 #include <ros/ros.h>
 
 #include <eigen3/Eigen/Dense>
+#include <eigen3/Eigen/StdVector>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/eigen.hpp>
 
@@ -139,9 +140,9 @@ typedef std::map<std::string, common::PointICloud> cloudFeature;
 class PointPlaneFeature
 {
 public:
+    size_t idx_;
     double score_;
     Eigen::Vector3d point_;
     Eigen::Vector4d coeffs_;
-
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };

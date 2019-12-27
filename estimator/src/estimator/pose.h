@@ -62,12 +62,11 @@ public:
     // Pose operator = (const Pose &pose);
     friend ostream &operator << (ostream &out, const Pose &pose);
 
-    Eigen::Quaterniond q_;
-    // q = [cos(theta/2), u*sin(theta/2)]
+    double td_;
+    Eigen::Quaterniond q_; // q = [cos(theta/2), u*sin(theta/2)]
     Eigen::Vector3d t_;
     Eigen::Matrix4d T_;
-
-    double td_;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 
 void computeMeanPose(const std::vector<std::pair<double, Pose> > &pose_array, Pose &pose_mean);

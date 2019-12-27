@@ -235,7 +235,6 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
         index = i;
     }
 
-    // TODO:
     // Fourth pass: compute centroids, insert them into their final position
     output.points.resize (total);
     if (save_leaf_layout_)

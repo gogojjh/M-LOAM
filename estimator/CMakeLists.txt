@@ -41,6 +41,7 @@ if (OPENMP_FOUND)
 endif()
 
 add_definitions(${PCL_DEFINITIONS})
+set(EIGEN_MAX_STATIC_ALIGN_BYTES 0)
 
 include_directories(${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR} ${CERES_INCLUDE_DIRS})
 

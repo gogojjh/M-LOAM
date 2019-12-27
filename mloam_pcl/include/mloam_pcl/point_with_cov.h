@@ -34,7 +34,7 @@ namespace pcl
         PCL_ADD_POINT4D; // preferred way of adding a XYZ+padding
         float intensity;
         float cov_vec[6]; // cxx, cxy, cxz, cyy, cyz, czz
-        EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     } EIGEN_ALIGN16;
 
     struct PointIWithCov: public _PointIWithCov
@@ -131,9 +131,10 @@ namespace common
 
     void normalToCov(const pcl::PointIWithCov &p, Eigen::Matrix3f &cov_matrix)
     {
+        cov_matrix.setZero();
         cov_matrix << p.cov_vec[0], p.cov_vec[1], p.cov_vec[2],
-            p.cov_vec[1], p.cov_vec[3], p.cov_vec[4],
-            p.cov_vec[2], p.cov_vec[4], p.cov_vec[5];
+                      p.cov_vec[1], p.cov_vec[3], p.cov_vec[4],
+                      p.cov_vec[2], p.cov_vec[4], p.cov_vec[5];
     }
 }
 

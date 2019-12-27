@@ -243,6 +243,7 @@ void readParameters(std::string config_file)
     std::cout << "initial covariance XI:" << std::endl << XI << std::endl;
 
     NORM_THRESHOLD = fsSettings["norm_threshold"];
+    std::cout << "norm threshold: " << NORM_THRESHOLD << std::endl;
 
     fsSettings.release();
 }
