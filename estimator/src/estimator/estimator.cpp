@@ -358,6 +358,13 @@ void Estimator::process()
             printf("mloam_tracker %fms\n", t_mloam_tracker.toc());
         }
     }
+    //----------------- TODO: undistort the corner and surf point cloud
+    // for (auto n = 0; n < NUM_OF_LASER; n++)
+    // {
+    //     Pose pose_ext(qbl_[n], tbl_);
+    //     Pose pose_tmp(pose_ext * pose_laser_cur_[IDX_REF]);
+    //     for (auto p: cur_feature_.second[n]["corner_points_less_sharp"]) TransformToStart(pose_laser_cur_[]);
+    // }
 
     //----------------- update pose and point cloud
     Qs_[cir_buf_cnt_] = pose_laser_cur_[IDX_REF].q_;
@@ -538,10 +545,9 @@ void Estimator::optimizeMap()
                 // printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size());
                 for (auto &feature: features_frame)
                 {
-                    const double &s = feature.score_;
                     const Eigen::Vector3d &p_data = feature.point_;
                     const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-                    LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s, 1.0);
+                    LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, 1.0);
                     ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
                         para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]);
                     res_ids_proj.push_back(res_id);
@@ -567,10 +573,9 @@ void Estimator::optimizeMap()
                     {
                         for (auto &feature: features_frame)
                         {
-                            const double &s = feature.score_;
                             const Eigen::Vector3d &p_data = feature.point_;
                             const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-                            LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref, s, 1.0);
+                            LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref, 1.0);
                             ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_ex_pose_[n]);
                             res_ids_proj.push_back(res_id);
                         }
@@ -596,10 +601,9 @@ void Estimator::optimizeMap()
                     {
                         for (auto &feature: features_frame)
                         {
-                            const double &s = feature.score_;
                             const Eigen::Vector3d &p_data = feature.point_;
                             const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-                            LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref, s, 1.0);
+                            LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref, 1.0);
                             ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_ex_pose_[n]);
                             res_ids_proj.push_back(res_id);
                         }
@@ -634,10 +638,9 @@ void Estimator::optimizeMap()
                     // printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size()); // 500-1000
                     for (auto &feature: features_frame)
                     {
-                        const double &s = feature.score_;
                         const Eigen::Vector3d &p_data = feature.point_;
                         const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-                        LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s, 1.0);
+                        LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, 1.0);
                         ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
                             para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]);
                         res_ids_proj.push_back(res_id);
@@ -709,10 +712,9 @@ void Estimator::optimizeMap()
                     std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i];
                     for (auto &feature: features_frame)
                     {
-                        const double &s = feature.score_;
                         const Eigen::Vector3d &p_data = feature.point_;
                         const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-                        LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s, 1.0);
+                        LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, 1.0);
                         ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
                             std::vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]}, std::vector<int>{0});
                         marginalization_info->addResidualBlockInfo(residual_block_info);
@@ -728,10 +730,9 @@ void Estimator::optimizeMap()
                         {
                             for (auto &feature: features_frame)
                             {
-                                const double &s = feature.score_;
                                 const Eigen::Vector3d &p_data = feature.point_;
                                 const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-                                LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref, s, 1.0);
+                                LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref, 1.0);
                                 ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
                                     std::vector<double *>{para_ex_pose_[n]}, std::vector<int>{});
                                 marginalization_info->addResidualBlockInfo(residual_block_info);
@@ -754,10 +755,9 @@ void Estimator::optimizeMap()
                         {
                             for (auto &feature: features_frame)
                             {
-                                const double &s = feature.score_;
                                 const Eigen::Vector3d &p_data = feature.point_;
                                 const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-                                LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref, s, 1.0);
+                                LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref, 1.0);
                                 ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
                                     std::vector<double *>{para_ex_pose_[n]}, std::vector<int>{});
                                 marginalization_info->addResidualBlockInfo(residual_block_info);
@@ -781,10 +781,9 @@ void Estimator::optimizeMap()
                         std::vector<PointPlaneFeature> &features_frame = surf_map_features_[n][i];
                         for (auto &feature: features_frame)
                         {
-                            double &s = feature.score_;
                             const Eigen::Vector3d &p_data = feature.point_;
                             const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-                            LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, s, 1.0);
+                            LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, 1.0);
                             ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
                                 vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]}, std::vector<int>{0});
                             marginalization_info->addResidualBlockInfo(residual_block_info);

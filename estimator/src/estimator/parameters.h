@@ -139,7 +139,6 @@ class PointPlaneFeature
 {
 public:
     size_t idx_;
-    double score_;
     Eigen::Vector3d point_;
     Eigen::Vector4d coeffs_;
 

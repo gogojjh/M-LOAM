@@ -576,24 +576,22 @@ void process()
 						for (auto &feature: corner_map_features)
 						{
 							const size_t &idx = feature.idx_;
-							const double &s = feature.score_;
 	                        const Eigen::Vector3d &p_data = feature.point_;
 	                        const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-						    Eigen::Matrix3f cov_matrix;
+						    Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
 							normalToCov(laser_cloud_corner_split_cov[n].points[idx], cov_matrix);
-							ceres::CostFunction *cost_function = LidarMapPlaneNormFactor::Create(p_data, coeff_ref, s, cov_matrix);
+							ceres::CostFunction *cost_function = LidarMapPlaneNormFactor::Create(p_data, coeff_ref, cov_matrix);
 							problem.AddResidualBlock(cost_function, loss_function, para_pose);
 						}
 
 						for (auto &feature: surf_map_features)
 						{
 							const size_t &idx = feature.idx_;
-							const double &s = feature.score_;
 	                        const Eigen::Vector3d &p_data = feature.point_;
 	                        const Eigen::Vector4d &coeff_ref = feature.coeffs_;
-	                        Eigen::Matrix3f cov_matrix;
+	                        Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
 							normalToCov(laser_cloud_surf_split_cov[n].points[idx], cov_matrix);
-							ceres::CostFunction *cost_function = LidarMapPlaneNormFactor::Create(p_data, coeff_ref, s, cov_matrix);
+							ceres::CostFunction *cost_function = LidarMapPlaneNormFactor::Create(p_data, coeff_ref, cov_matrix);
 							problem.AddResidualBlock(cost_function, loss_function, para_pose);
 						}
 					}

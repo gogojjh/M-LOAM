@@ -34,7 +34,7 @@ namespace pcl
         PCL_ADD_POINT4D; // preferred way of adding a XYZ+padding
         float intensity;
         float cov_vec[6]; // cxx, cxy, cxz, cyy, cyz, czz
-        
+
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     } EIGEN_ALIGN16;
 
@@ -119,7 +119,7 @@ namespace common
         po.intensity = pi.intensity;
     }
 
-    void appendCov(const pcl::PointXYZI &pi, pcl::PointIWithCov &po, const Eigen::Matrix3f &cov_matrix)
+    void appendCov(const pcl::PointXYZI &pi, pcl::PointIWithCov &po, const Eigen::Matrix3d &cov_matrix)
     {
         po.x = pi.x; po.y = pi.y; po.z = pi.z; po.intensity = pi.intensity;
         po.cov_vec[0] = cov_matrix(0, 0);
@@ -130,7 +130,7 @@ namespace common
         po.cov_vec[5] = cov_matrix(2, 2);
     }
 
-    void normalToCov(const pcl::PointIWithCov &p, Eigen::Matrix3f &cov_matrix)
+    void normalToCov(const pcl::PointIWithCov &p, Eigen::Matrix3d &cov_matrix)
     {
         cov_matrix.setZero();
         cov_matrix(0, 0) = p.cov_vec[0],
