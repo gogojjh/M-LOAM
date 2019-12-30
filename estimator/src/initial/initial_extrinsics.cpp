@@ -28,8 +28,7 @@ void InitialExtrinsics::clearState()
 
 void InitialExtrinsics::setParameter()
 {
-    calib_ext_.resize(NUM_OF_LASER);
-    for (size_t i = 0; i < NUM_OF_LASER; i++) calib_ext_[i] = Pose(QBL[i], TBL[i], TDBL[i]);
+    for (size_t i = 0; i < NUM_OF_LASER; i++) calib_ext_.push_back(Pose(QBL[i], TBL[i], TDBL[i]));
 
     cov_rot_state_ = std::vector<bool>(NUM_OF_LASER, false);
     full_cov_rot_state_ = false;
@@ -148,7 +147,7 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
             std::cout << "# ERROR: Quadratic equation cannot be solved due to negative determinant." << std::endl;
             return false;
         }
-        std::vector<Eigen::Quaterniond> q_yx;
+        std::vector<Eigen::Quaterniond, Eigen::aligned_allocator<Eigen::Quaterniond> > q_yx;
         q_yx.resize(2);
         double yaw[2];
         for (auto i = 0; i < 2; ++i)

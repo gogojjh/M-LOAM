@@ -225,6 +225,7 @@ int main(int argc, char **argv)
     string config_file = argv[1];
     cout << "config_file: " << argv[1] << endl;
     readParameters(config_file);
+    // readParameters("/home/jjiao/catkin_ws/src/localization/M-LOAM/config/config_simu_jackal.yaml");
     estimator.setParameter();
 
 // #ifdef EIGEN_DONT_PARALLELIZE

@@ -1,8 +1,8 @@
 /*******************************************************
  * Copyright (C) 2019, Aerial Robotics Group, Hong Kong University of Science and Technology
- * 
+ *
  * This file is part of VINS.
- * 
+ *
  * Licensed under the GNU General Public License v3.0;
  * you may not use this file except in compliance with the License.
  *
@@ -62,7 +62,7 @@ int main(int argc, char** argv)
 	if(file == NULL){
 	    printf("cannot find file: %stimes.txt\n", dataPath.c_str());
 	    ROS_BREAK();
-	    return 0;          
+	    return 0;
 	}
 	double imageTime;
 	vector<double> imageTimeList;
@@ -80,7 +80,7 @@ int main(int argc, char** argv)
 		printf("Output path dosen't exist: %s\n", OUTPUT_FOLDER.c_str());
 
 	for (size_t i = 0; i < imageTimeList.size(); i++)
-	{	
+	{
 		if(ros::ok())
 		{
 			printf("\nprocess image %d\n", (int)i);
@@ -104,14 +104,14 @@ int main(int argc, char** argv)
 
 
 			estimator.inputImage(imageTimeList[i], imLeft, imRight);
-			
+
 			Eigen::Matrix<double, 4, 4> pose;
 			estimator.getPoseInWorldFrame(pose);
 			if(outFile != NULL)
 				fprintf (outFile, "%f %f %f %f %f %f %f %f %f %f %f %f \n",pose(0,0), pose(0,1), pose(0,2),pose(0,3),
 																	       pose(1,0), pose(1,1), pose(1,2),pose(1,3),
 																	       pose(2,0), pose(2,1), pose(2,2),pose(2,3));
-			
+
 			//cv::imshow("leftImage", imLeft);
 			//cv::imshow("rightImage", imRight);
 			//cv::waitKey(2);

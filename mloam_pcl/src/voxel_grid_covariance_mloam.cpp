@@ -3,7 +3,7 @@
 #include <pcl/point_types.h>
 #include <pcl/impl/instantiate.hpp>
 
-#include "mloam_pcl/point_with_cov.h"
+#include "mloam_pcl/point_with_cov.hpp"
 #include "mloam_pcl/voxel_grid_covariance_mloam.h"
 #include "mloam_pcl/voxel_grid_covariance_mloam_impl.hpp"
 

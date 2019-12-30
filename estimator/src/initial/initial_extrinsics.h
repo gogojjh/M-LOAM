@@ -48,7 +48,7 @@ public:
 
 	void decomposeE(cv::Mat E, cv::Mat_<double> &R1, cv::Mat_<double> &R2, cv::Mat_<double> &t1, cv::Mat_<double> &t2);
 
-	std::vector<Pose> calib_ext_;
+	std::vector<Pose, Eigen::aligned_allocator<Pose> > calib_ext_;
 
 	std::vector<double> v_rd_;
 	std::vector<double> v_td_;
@@ -57,10 +57,11 @@ public:
 	std::vector<bool> cov_rot_state_, cov_pos_state_;
 	bool full_cov_rot_state_, full_cov_pos_state_;
 
-	std::vector<std::vector<Pose> > v_pose_;
+	std::vector<std::vector<Pose, Eigen::aligned_allocator<Pose> > > v_pose_;
 	// v_pose_[idx_ref][indices_[idx_data][i]], v_pose_[idx_data][indices_[idx_data][i]] as the screw motion pair
 	std::vector<std::vector<int> > indices_;
 
-
 	size_t frame_cnt_, pose_cnt_;
+
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };

@@ -52,6 +52,7 @@
 #include <tf/transform_datatypes.h>
 #include <tf/transform_broadcaster.h>
 #include <eigen3/Eigen/Dense>
+#include <eigen3/Eigen/StdVector>
 #include <ceres/ceres.h>
 #include <mutex>
 #include <queue>
@@ -72,7 +73,7 @@
 
 #include "mloam_msgs/Extrinsics.h"
 
-#include "mloam_pcl/point_with_cov.h"
+#include "mloam_pcl/point_with_cov.hpp"
 #include "mloam_pcl/voxel_grid_covariance_mloam.h"
 #include "mloam_pcl/voxel_grid_covariance_mloam_impl.hpp"
 
@@ -85,8 +86,6 @@
 #include "../factor/lidar_edge_factor.hpp"
 #include "../factor/lidar_plane_norm_factor.hpp"
 #include "../factor/pose_local_parameterization.h"
-
-
 
 
 //

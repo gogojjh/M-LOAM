@@ -1,7 +1,7 @@
 // Starting with PCL-1.7 you need to define PCL_NO_PRECOMPILE before you include any PCL headers to include the templated algorithms as well.
 #define PCL_NO_PRECOMPILE
 
-#include "mloam_pcl/point_with_cov.h"
+#include "mloam_pcl/point_with_cov.hpp"
 #include "mloam_pcl/voxel_grid_covariance_mloam.h"
 #include "mloam_pcl/voxel_grid_covariance_mloam_impl.hpp"
 

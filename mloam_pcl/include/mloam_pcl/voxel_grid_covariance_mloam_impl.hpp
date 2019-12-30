@@ -51,7 +51,6 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/impl/voxel_grid.hpp>
 
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 template <typename PointT> void
 pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)

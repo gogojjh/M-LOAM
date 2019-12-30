@@ -138,6 +138,8 @@ public:
         std::cout << std::endl << num_jacobian.block<6, 6>(0, 0);
     }
 
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
 private:
     const Eigen::Vector3d pos_;
     const Eigen::Quaterniond rot_;

@@ -49,8 +49,7 @@ float LASER_SYNC_THRESHOLD;
 double ROI_RANGE;
 double ROI_RANGE_MAPPING;
 
-std::vector<Eigen::Matrix3d> RBL;
-std::vector<Eigen::Quaterniond> QBL;
+std::vector<Eigen::Quaterniond, Eigen::aligned_allocator<Eigen::Quaterniond> > QBL;
 std::vector<Eigen::Vector3d> TBL;
 std::vector<double> TDBL;
 
@@ -243,7 +242,6 @@ void readParameters(std::string config_file)
     std::cout << "initial covariance XI:" << std::endl << XI << std::endl;
 
     NORM_THRESHOLD = fsSettings["norm_threshold"];
-    std::cout << "norm threshold: " << NORM_THRESHOLD << std::endl;
 
     fsSettings.release();
 }

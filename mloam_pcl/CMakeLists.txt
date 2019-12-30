@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(mloam_pcl)
-add_compile_options(-std=c++11)
+add_compile_options(-std=c++17)
 
 find_package(catkin REQUIRED COMPONENTS)
 
@@ -21,7 +21,7 @@ set(srcs
 )
 
 set(incs
-    include/mloam_pcl/point_with_cov.h
+    include/mloam_pcl/point_with_cov.hpp
     include/mloam_pcl/voxel_grid_covariance_mloam.h
 )
 

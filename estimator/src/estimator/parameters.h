@@ -19,7 +19,6 @@
 #include <ros/ros.h>
 
 #include <eigen3/Eigen/Dense>
-#include <eigen3/Eigen/StdVector>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/eigen.hpp>
 
@@ -74,8 +73,7 @@ extern float LASER_SYNC_THRESHOLD;
 extern double ROI_RANGE;
 extern double ROI_RANGE_MAPPING;
 
-extern std::vector<Eigen::Matrix3d> RBL;
-extern std::vector<Eigen::Quaterniond> QBL;
+extern std::vector<Eigen::Quaterniond, Eigen::aligned_allocator<Eigen::Quaterniond> > QBL;
 extern std::vector<Eigen::Vector3d> TBL;
 extern std::vector<double> TDBL;
 
@@ -144,5 +142,6 @@ public:
     double score_;
     Eigen::Vector3d point_;
     Eigen::Vector4d coeffs_;
+
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };

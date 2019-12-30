@@ -24,13 +24,14 @@
 * along with LIO-mapping.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef LIO_CIRCULARBUFFER_H_
-#define LIO_CIRCULARBUFFER_H_
+#ifndef CIRCULARBUFFER_H_
+#define CIRCULARBUFFER_H_
 
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
 #include <Eigen/Eigen>
+#include <Eigen/StdVector>
 
 // namespace lio {
 
@@ -197,7 +198,7 @@ public:
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-    private:
+private:
     size_t capacity_;   ///< buffer capacity
     size_t size_;       ///< current buffer size
     size_t start_idx_;   ///< current start index
@@ -206,4 +207,4 @@ public:
 
 // } // namespace lio
 
-#endif // LIO_CIRCULARBUFFER_H_
+#endif // CIRCULARBUFFER_H_

@@ -72,9 +72,9 @@ ros::Publisher pub_odom_aft_mapped, pub_odom_aft_mapped_high_frec, pub_laser_aft
 
 // extrinsics
 mloam_msgs::Extrinsics extrinsics;
-std::vector<Eigen::Quaterniond> q_ext;
+std::vector<Eigen::Matrix3d> r_ext;
 std::vector<Eigen::Vector3d> t_ext;
-std::vector<Pose> pose_ext;
+std::vector<Pose, Eigen::aligned_allocator<Pose> > pose_ext;
 
 std::vector<PointICloud> laser_cloud_corner_split;
 std::vector<PointICloud> laser_cloud_surf_split;
@@ -580,7 +580,7 @@ void process()
 	                        const Eigen::Vector3d &p_data = feature.point_;
 	                        const Eigen::Vector4d &coeff_ref = feature.coeffs_;
 						    Eigen::Matrix3f cov_matrix;
-							// normalToCov(laser_cloud_corner_split_cov[n].points[idx], cov_matrix);
+							normalToCov(laser_cloud_corner_split_cov[n].points[idx], cov_matrix);
 							ceres::CostFunction *cost_function = LidarMapPlaneNormFactor::Create(p_data, coeff_ref, s, cov_matrix);
 							problem.AddResidualBlock(cost_function, loss_function, para_pose);
 						}
@@ -592,7 +592,7 @@ void process()
 	                        const Eigen::Vector3d &p_data = feature.point_;
 	                        const Eigen::Vector4d &coeff_ref = feature.coeffs_;
 	                        Eigen::Matrix3f cov_matrix;
-							// normalToCov(laser_cloud_surf_split_cov[n].points[idx], cov_matrix);
+							normalToCov(laser_cloud_surf_split_cov[n].points[idx], cov_matrix);
 							ceres::CostFunction *cost_function = LidarMapPlaneNormFactor::Create(p_data, coeff_ref, s, cov_matrix);
 							problem.AddResidualBlock(cost_function, loss_function, para_pose);
 						}
@@ -821,8 +821,9 @@ int main(int argc, char **argv)
 	ros::NodeHandle nh;
 	ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
 
-	string config_file = argv[1];
-	readParameters(config_file);
+	// string config_file = argv[1];
+	// readParameters(config_file);
+	readParameters("/home/jjiao/catkin_ws/src/localization/M-LOAM/config/config_simu_jackal.yaml");
 
 	// set resolution
 	float lineRes = 0.2;
@@ -852,7 +853,7 @@ int main(int argc, char **argv)
 		laser_cloud_surf_array[i].reset(new PointICloud());
 	}
 
-	q_ext.resize(NUM_OF_LASER);
+	r_ext.resize(NUM_OF_LASER);
 	t_ext.resize(NUM_OF_LASER);
 	pose_ext.resize(NUM_OF_LASER);
 
