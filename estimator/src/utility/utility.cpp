@@ -13,11 +13,6 @@ using namespace common;
 // undistort lidar point
 void TransformToStart(const PointI &pi, PointI &po, const Pose &pose, const bool &b_distortion)
 {
-//     if (!pcl::traits::has_field<PointI, pcl::fields::intensity>::value)
-    // {
-    //     std::cerr << "Point does not have intensity field!" << std::endl;
-    //     exit(EXIT_FAILURE);
-    // }
     po = pi;
     double s; //interpolation ratio
     if (b_distortion)
@@ -37,11 +32,6 @@ void TransformToStart(const PointI &pi, PointI &po, const Pose &pose, const bool
 // transform all lidar points to original frame
 void TransformToEnd(const PointI &pi, PointI &po, const Pose &pose, const bool &b_distortion)
 {
-    // if (!pcl::traits::has_field<PointI, pcl::fields::intensity>::value)
-    // {
-    //     std::cerr << "Point does not have intensity field!" << std::endl;
-    //     exit(EXIT_FAILURE);
-    // }
     po = pi;
     PointI un_point_tmp;
     TransformToStart(pi, un_point_tmp, pose, b_distortion);
@@ -51,38 +41,6 @@ void TransformToEnd(const PointI &pi, PointI &po, const Pose &pose, const bool &
     po.y = point_end.y();
     po.z = point_end.z();
     po.intensity = int(pi.intensity);
-}
-
-void pointAssociateToMap(const PointI &pi, PointI &po, const Pose &pose)
-{
-    // if (!pcl::traits::has_field<PointI, pcl::fields::intensity>::value)
-    // {
-    //     std::cerr << "Point does not have intensity field!" << std::endl;
-    //     exit(EXIT_FAILURE);
-    // }
-    po = pi;
-    Eigen::Vector3d point_curr(pi.x, pi.y, pi.z);
-    Eigen::Vector3d point_trans = pose.q_ * point_curr + pose.t_;
-    po.x = point_trans.x();
-    po.y = point_trans.y();
-    po.z = point_trans.z();
-    po.intensity = pi.intensity;
-}
-
-void pointAssociateTobeMapped(const PointI &pi, PointI &po, const Pose &pose)
-{
-    // if (!pcl::traits::has_field<PointI, pcl::fields::intensity>::value)
-    // {
-    //     std::cerr << "Point does not have intensity field!" << std::endl;
-    //     exit(EXIT_FAILURE);
-    // }
-    po = pi;
-    Eigen::Vector3d point_curr(pi.x, pi.y, pi.z);
-    Eigen::Vector3d point_trans = pose.q_.inverse() * (point_curr - pose.t_);
-    po.x = point_trans.x();
-    po.y = point_trans.y();
-    po.z = point_trans.z();
-    po.intensity = pi.intensity;
 }
 
 void evalPointUncertainty(const int &idx, const PointI &pi, Eigen::Matrix3d &cov_po)

@@ -33,12 +33,12 @@ int laser_cloud_surrond_ind[125];
 PointICloud::Ptr laser_cloud_corner_last(new PointICloud());
 PointICloud::Ptr laser_cloud_surf_last(new PointICloud());
 
-// ouput: all visualble cube points
-PointICloud::Ptr laser_cloud_surrond(new PointICloud());
-
 // surround points in map to build tree
 PointICloud::Ptr laser_cloud_corner_from_map(new PointICloud());
 PointICloud::Ptr laser_cloud_surf_from_map(new PointICloud());
+
+PointICovCloud::Ptr laser_cloud_corner_from_map_cov(new PointICovCloud());
+PointICovCloud::Ptr laser_cloud_surf_from_map_cov(new PointICovCloud());
 
 //input & output: points in one frame. local --> global
 PointICloud::Ptr laser_cloud_full_res(new PointICloud());
@@ -46,6 +46,9 @@ PointICloud::Ptr laser_cloud_full_res(new PointICloud());
 // points in every cube
 PointICloud::Ptr laser_cloud_corner_array[laser_cloud_num];
 PointICloud::Ptr laser_cloud_surf_array[laser_cloud_num];
+
+PointICovCloud::Ptr laser_cloud_corner_array_cov[laser_cloud_num];
+PointICovCloud::Ptr laser_cloud_surf_array_cov[laser_cloud_num];
 
 //kd-tree
 pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_from_map(new pcl::KdTreeFLANN<PointI>());
@@ -60,14 +63,16 @@ Pose pose_wmap_curr, pose_wmap_wodom, pose_wodom_curr;
 pcl::VoxelGrid<PointI> down_size_filter_corner;
 pcl::VoxelGrid<PointI> down_size_filter_surf;
 
+pcl::VoxelGrid<PointIWithCov> down_size_filter_corner_map_cov;
+pcl::VoxelGrid<PointIWithCov> down_size_filter_surf_map_cov;
+
 std::vector<int> point_search_ind;
 std::vector<float> point_search_sq_dis;
 
-PointI point_ori, point_sel;
-
 nav_msgs::Path laser_after_mapped_path;
 
-ros::Publisher pub_laser_cloud_surround, pub_laser_cloud_map, pub_laser_cloud_full_res, pub_laser_cloud_corner_last_res, pub_laser_cloud_surf_last_res;
+ros::Publisher pub_laser_cloud_surround, pub_laser_cloud_map;
+ros::Publisher pub_laser_cloud_full_res, pub_laser_cloud_corner_last_res, pub_laser_cloud_surf_last_res;
 ros::Publisher pub_odom_aft_mapped, pub_odom_aft_mapped_high_frec, pub_laser_after_mapped_path;
 
 // extrinsics
@@ -75,9 +80,6 @@ mloam_msgs::Extrinsics extrinsics;
 std::vector<Eigen::Matrix3d> r_ext;
 std::vector<Eigen::Vector3d> t_ext;
 std::vector<Pose, Eigen::aligned_allocator<Pose> > pose_ext;
-
-std::vector<PointICloud> laser_cloud_corner_split;
-std::vector<PointICloud> laser_cloud_surf_split;
 
 std::vector<PointICovCloud> laser_cloud_corner_split_cov;
 std::vector<PointICovCloud> laser_cloud_surf_split_cov;
@@ -330,8 +332,8 @@ void process()
 						{
 							int old_cube_idx = toCubeIndex(i, j, k);
 							int new_cube_idx = toCubeIndex(i - 1, j, k);
-							std::swap(laser_cloud_corner_array[old_cube_idx], laser_cloud_corner_array[new_cube_idx]);
-							std::swap(laser_cloud_surf_array[old_cube_idx], laser_cloud_surf_array[new_cube_idx]);
+							std::swap(laser_cloud_corner_array_cov[old_cube_idx], laser_cloud_corner_array_cov[new_cube_idx]);
+							std::swap(laser_cloud_surf_array_cov[old_cube_idx], laser_cloud_surf_array_cov[new_cube_idx]);
 						}
 					}
 				}
@@ -349,8 +351,8 @@ void process()
 						{
 							int old_cube_idx = toCubeIndex(i, j, k);
 							int new_cube_idx = toCubeIndex(i + 1, j, k);
-							std::swap(laser_cloud_corner_array[old_cube_idx], laser_cloud_corner_array[new_cube_idx]);
-							std::swap(laser_cloud_surf_array[old_cube_idx], laser_cloud_surf_array[new_cube_idx]);
+							std::swap(laser_cloud_corner_array_cov[old_cube_idx], laser_cloud_corner_array_cov[new_cube_idx]);
+							std::swap(laser_cloud_surf_array_cov[old_cube_idx], laser_cloud_surf_array_cov[new_cube_idx]);
 						}
 					}
 				}
@@ -368,8 +370,8 @@ void process()
 						{
 							int old_cube_idx = toCubeIndex(i, j, k);
 							int new_cube_idx = toCubeIndex(i, j - 1, k);
-							std::swap(laser_cloud_corner_array[old_cube_idx], laser_cloud_corner_array[new_cube_idx]);
-							std::swap(laser_cloud_surf_array[old_cube_idx], laser_cloud_surf_array[new_cube_idx]);
+							std::swap(laser_cloud_corner_array_cov[old_cube_idx], laser_cloud_corner_array_cov[new_cube_idx]);
+							std::swap(laser_cloud_surf_array_cov[old_cube_idx], laser_cloud_surf_array_cov[new_cube_idx]);
 						}
 					}
 				}
@@ -387,8 +389,8 @@ void process()
 						{
 							int old_cube_idx = toCubeIndex(i, j, k);
 							int new_cube_idx = toCubeIndex(i, j + 1, k);
-							std::swap(laser_cloud_corner_array[old_cube_idx], laser_cloud_corner_array[new_cube_idx]);
-							std::swap(laser_cloud_surf_array[old_cube_idx], laser_cloud_surf_array[new_cube_idx]);
+							std::swap(laser_cloud_corner_array_cov[old_cube_idx], laser_cloud_corner_array_cov[new_cube_idx]);
+							std::swap(laser_cloud_surf_array_cov[old_cube_idx], laser_cloud_surf_array_cov[new_cube_idx]);
 						}
 					}
 				}
@@ -406,8 +408,8 @@ void process()
 						{
 							int old_cube_idx = toCubeIndex(i, j, k);
 							int new_cube_idx = toCubeIndex(i, j, k - 1);
-							std::swap(laser_cloud_corner_array[old_cube_idx], laser_cloud_corner_array[new_cube_idx]);
-							std::swap(laser_cloud_surf_array[old_cube_idx], laser_cloud_surf_array[new_cube_idx]);
+							std::swap(laser_cloud_corner_array_cov[old_cube_idx], laser_cloud_corner_array_cov[new_cube_idx]);
+							std::swap(laser_cloud_surf_array_cov[old_cube_idx], laser_cloud_surf_array_cov[new_cube_idx]);
 						}
 					}
 				}
@@ -425,8 +427,8 @@ void process()
 						{
 							int old_cube_idx = toCubeIndex(i, j, k);
 							int new_cube_idx = toCubeIndex(i, j, k + 1);
-							std::swap(laser_cloud_corner_array[old_cube_idx], laser_cloud_corner_array[new_cube_idx]);
-							std::swap(laser_cloud_surf_array[old_cube_idx], laser_cloud_surf_array[new_cube_idx]);
+							std::swap(laser_cloud_corner_array_cov[old_cube_idx], laser_cloud_corner_array_cov[new_cube_idx]);
+							std::swap(laser_cloud_surf_array_cov[old_cube_idx], laser_cloud_surf_array_cov[new_cube_idx]);
 						}
 					}
 				}
@@ -458,15 +460,15 @@ void process()
 				}
 			}
 
-			laser_cloud_corner_from_map->clear();
-			laser_cloud_surf_from_map->clear();
+			laser_cloud_corner_from_map_cov->clear();
+			laser_cloud_surf_from_map_cov->clear();
 			for (int i = 0; i < laser_cloud_valid_num; i++)
 			{
-				*laser_cloud_corner_from_map += *laser_cloud_corner_array[laser_cloud_valid_ind[i]];
-				*laser_cloud_surf_from_map += *laser_cloud_surf_array[laser_cloud_valid_ind[i]];
+				*laser_cloud_corner_from_map_cov += *laser_cloud_corner_array_cov[laser_cloud_valid_ind[i]];
+				*laser_cloud_surf_from_map_cov += *laser_cloud_surf_array_cov[laser_cloud_valid_ind[i]];
 			}
-			int laser_cloud_corner_from_map_num = laser_cloud_corner_from_map->points.size();
-			int laser_cloud_surf_from_map_num = laser_cloud_surf_from_map->points.size();
+			int laser_cloud_corner_from_map_num = laser_cloud_corner_from_map_cov->points.size();
+			int laser_cloud_surf_from_map_num = laser_cloud_surf_from_map_cov->points.size();
 
 			PointICloud::Ptr laser_cloud_corner_stack(new PointICloud());
 			down_size_filter_corner.setInputCloud(laser_cloud_corner_last);
@@ -482,8 +484,6 @@ void process()
 			// noisy point filtering
 			for (auto n = 0; n < NUM_OF_LASER; n++)
 			{
-				laser_cloud_corner_split[n].clear();
-				laser_cloud_surf_split[n].clear();
 				laser_cloud_corner_split_cov[n].clear();
 				laser_cloud_surf_split_cov[n].clear();
 			}
@@ -496,8 +496,7 @@ void process()
 				evalPointUncertainty(idx, point_sel, cov_po);
 				if (cov_po.norm() < NORM_THRESHOLD)
 				{
-					pcl::PointIWithCov point_cov(point_ori, cov_po.cast<float>());
-					laser_cloud_corner_split[idx].push_back(point_ori);
+					PointIWithCov point_cov(point_ori, cov_po.cast<float>());
 					laser_cloud_corner_split_cov[idx].push_back(point_cov);
 				}
 			}
@@ -510,8 +509,7 @@ void process()
 				evalPointUncertainty(idx, point_sel, cov_po);
 				if (cov_po.norm() < NORM_THRESHOLD)
 				{
-					pcl::PointIWithCov point_cov(point_ori, cov_po.cast<float>());
-					laser_cloud_surf_split[idx].push_back(point_ori);
+					PointIWithCov point_cov(point_ori, cov_po.cast<float>());
 					laser_cloud_surf_split_cov[idx].push_back(point_cov);
 				}
 			}
@@ -524,15 +522,17 @@ void process()
 			{
 				TicToc t_opt;
 				TicToc t_tree;
+				pcl::copyPointCloud(*laser_cloud_corner_from_map_cov, *laser_cloud_corner_from_map);
+				pcl::copyPointCloud(*laser_cloud_surf_from_map_cov, *laser_cloud_surf_from_map);
 				kdtree_corner_from_map->setInputCloud(laser_cloud_corner_from_map);
 				kdtree_surf_from_map->setInputCloud(laser_cloud_surf_from_map);
 				printf("build tree time %fms\n", t_tree.toc());
 
 				std::vector<double *> para_ids;
 				std::vector<ceres::internal::ResidualBlock *> res_ids;
+				printf("********************************\n");
 				for (int iter_cnt = 0; iter_cnt < 2; iter_cnt++)
 				{
-					printf("********************************\n");
 					ceres::Problem problem;
 					ceres::Solver::Summary summary;
 					ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1);
@@ -545,21 +545,23 @@ void process()
 					options.gradient_check_relative_precision = 1e-4;
 
 					vector2Double();
-
 					PoseLocalParameterization *local_parameterization = new PoseLocalParameterization();
 					local_parameterization->setParameter();
 					problem.AddParameterBlock(para_pose, SIZE_POSE, local_parameterization);
 
 					// ******************************************************
-					// ROS_INFO("mloam modules");
 					int corner_num = 0;
 					int surf_num = 0;
 					TicToc t_prepare;
 					for (auto n = 0; n < NUM_OF_LASER; n++)
 					{
 						// if ((n != IDX_REF) && (extrinsics.status)) continue;
-						PointICloud &laser_cloud_corner_points = laser_cloud_corner_split[n];
-						PointICloud &laser_cloud_surf_points = laser_cloud_surf_split[n];
+						PointICovCloud &laser_cloud_corner_points_cov = laser_cloud_corner_split_cov[n];
+						PointICovCloud &laser_cloud_surf_points_cov = laser_cloud_surf_split_cov[n];
+
+						PointICloud laser_cloud_corner_points, laser_cloud_surf_points;
+						pcl::copyPointCloud(laser_cloud_corner_points_cov, laser_cloud_corner_points);
+						pcl::copyPointCloud(laser_cloud_surf_points_cov, laser_cloud_surf_points);
 
 						TicToc t_data;
 						int n_neigh = 5;
@@ -571,7 +573,7 @@ void process()
 													laser_cloud_surf_points, pose_local, surf_map_features, n_neigh, false);
 						corner_num += corner_map_features.size() / 2;
 						surf_num += surf_map_features.size();
-						printf("mapping data assosiation time %fms\n", t_data.toc());
+						// printf("mapping data assosiation time %fms\n", t_data.toc());
 
 						for (auto &feature: corner_map_features)
 						{
@@ -595,12 +597,12 @@ void process()
 							problem.AddResidualBlock(cost_function, loss_function, para_pose);
 						}
 					}
-					// printf("prepare ceres data %fms\n", t_prepare.toc());
-					printf("corner num %d, used corner num %d\n", laser_cloud_corner_stack_num, corner_num);
-					printf("surf num %d, used surf num %d\n", laser_cloud_surf_stack_num, surf_num);
-					// printf("residual block size: %d\n", problem.NumResidualBlocks());
+					printf("prepare ceres data %fms\n", t_prepare.toc());
+					printf("corner num %d(%d), surf num %d(%d)\n", laser_cloud_corner_stack_num, corner_num, laser_cloud_surf_stack_num, surf_num);
+
 					double cost = 0.0;
 					problem.Evaluate(ceres::Problem::EvaluateOptions(), &cost, NULL, NULL, NULL);
+					// printf("residual block size: %d\n", problem.NumResidualBlocks());
 					// printf("cost: %f\n", cost);
 
 					// ******************************************************
@@ -608,14 +610,11 @@ void process()
 					ceres::Solve(options, &problem, &summary);
 					std::cout << summary.BriefReport() << std::endl;
 					printf("mapping solver time %fms\n", t_solver.toc());
-
-					//printf("time %f \n", time_laser_odometry);
-					//printf("corner factor num %d surf factor num %d\n", corner_num, surf_num);
-					//printf("result q %f %f %f %f result t %f %f %f\n", para_pose[3], para_pose[0], para_pose[1], para_pose[2],
-					//	   para_pose[4], para_pose[5], para_pose[6]);
 					double2Vector();
 					std::cout << iter_cnt << "th result: " << pose_wmap_curr << std::endl;
+					if (iter_cnt != 1) printf("-------------------------------------\n");
 				}
+				printf("********************************\n");
 				printf("mapping optimization time %fms\n", t_opt.toc());
 			}
 			else
@@ -628,47 +627,48 @@ void process()
 			TicToc t_add;
 			for (auto n = 0; n < NUM_OF_LASER; n++)
 			{
-				PointICloud &laser_cloud_corner_points = laser_cloud_corner_split[n];
-				PointICloud &laser_cloud_surf_points = laser_cloud_surf_split[n];
+				PointICovCloud &laser_cloud_corner_points_cov = laser_cloud_corner_split_cov[n];
+				PointICovCloud &laser_cloud_surf_points_cov = laser_cloud_surf_split_cov[n];
+				PointIWithCov point_cov;
 
 				// move the corner points from the lastest frame to different cubes
-				for (int i = 0; i < laser_cloud_corner_points.size(); i++)
+				for (int i = 0; i < laser_cloud_corner_points_cov.size(); i++)
 				{
-					pointAssociateToMap(laser_cloud_corner_points.points[i], point_sel, pose_wmap_curr);
-					int cube_i = int((point_sel.x + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_width;
-					int cube_j = int((point_sel.y + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_height;
-					int cube_k = int((point_sel.z + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_depth;
-					if (point_sel.x + CUBE_HALF < 0) cube_i--;
-					if (point_sel.y + CUBE_HALF < 0) cube_j--;
-					if (point_sel.z + CUBE_HALF < 0) cube_k--;
+					pointAssociateToMap(laser_cloud_corner_points_cov.points[i], point_cov, pose_wmap_curr);
+					int cube_i = int((point_cov.x + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_width;
+					int cube_j = int((point_cov.y + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_height;
+					int cube_k = int((point_cov.z + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_depth;
+					if (point_cov.x + CUBE_HALF < 0) cube_i--;
+					if (point_cov.y + CUBE_HALF < 0) cube_j--;
+					if (point_cov.z + CUBE_HALF < 0) cube_k--;
 
 					if (cube_i >= 0 && cube_i < laser_cloud_width &&
 						cube_j >= 0 && cube_j < laser_cloud_height &&
 						cube_k >= 0 && cube_k < laser_cloud_depth)
 					{
 						int cur_cube_idx = toCubeIndex(cube_i, cube_j, cube_k);
-						laser_cloud_corner_array[cur_cube_idx]->push_back(point_sel);
+						laser_cloud_corner_array_cov[cur_cube_idx]->push_back(point_cov);
 					}
 				}
 
 				// move the surf points from the lastest frame to different cubes
-				for (int i = 0; i < laser_cloud_surf_points.size(); i++)
+				for (int i = 0; i < laser_cloud_surf_points_cov.size(); i++)
 				{
-					pointAssociateToMap(laser_cloud_surf_points.points[i], point_sel, pose_wmap_curr);
-					int cube_i = int((point_sel.x + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_width;
-					int cube_j = int((point_sel.y + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_height;
-					int cube_k = int((point_sel.z + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_depth;
+					pointAssociateToMap(laser_cloud_surf_points_cov.points[i], point_cov, pose_wmap_curr);
+					int cube_i = int((point_cov.x + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_width;
+					int cube_j = int((point_cov.y + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_height;
+					int cube_k = int((point_cov.z + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_depth;
 
-					if (point_sel.x + CUBE_HALF < 0) cube_i--;
-					if (point_sel.y + CUBE_HALF < 0) cube_j--;
-					if (point_sel.z + CUBE_HALF < 0) cube_k--;
+					if (point_cov.x + CUBE_HALF < 0) cube_i--;
+					if (point_cov.y + CUBE_HALF < 0) cube_j--;
+					if (point_cov.z + CUBE_HALF < 0) cube_k--;
 
 					if (cube_i >= 0 && cube_i < laser_cloud_width &&
 						cube_j >= 0 && cube_j < laser_cloud_height &&
 						cube_k >= 0 && cube_k < laser_cloud_depth)
 					{
 						int cur_cube_idx = toCubeIndex(cube_i, cube_j, cube_k);
-						laser_cloud_surf_array[cur_cube_idx]->push_back(point_sel);
+						laser_cloud_surf_array_cov[cur_cube_idx]->push_back(point_cov);
 					}
 				}
 			}
@@ -679,46 +679,46 @@ void process()
 			for (int i = 0; i < laser_cloud_valid_num; i++)
 			{
 				int ind = laser_cloud_valid_ind[i];
-				PointICloud::Ptr tmpCorner(new PointICloud());
-				down_size_filter_corner.setInputCloud(laser_cloud_corner_array[ind]);
-				down_size_filter_corner.filter(*tmpCorner);
-				laser_cloud_corner_array[ind] = tmpCorner;
+				PointICovCloud::Ptr tmp_corner(new PointICovCloud());
+				down_size_filter_corner_map_cov.setInputCloud(laser_cloud_corner_array_cov[ind]);
+				down_size_filter_corner_map_cov.filter(*tmp_corner);
+				laser_cloud_corner_array_cov[ind] = tmp_corner;
 
-				PointICloud::Ptr tmpSurf(new PointICloud());
-				down_size_filter_surf.setInputCloud(laser_cloud_surf_array[ind]);
-				down_size_filter_surf.filter(*tmpSurf);
-				laser_cloud_surf_array[ind] = tmpSurf;
+				PointICovCloud::Ptr tmp_surf(new PointICovCloud());
+				down_size_filter_surf_map_cov.setInputCloud(laser_cloud_surf_array_cov[ind]);
+				down_size_filter_surf_map_cov.filter(*tmp_surf);
+				laser_cloud_surf_array_cov[ind] = tmp_surf;
 			}
 			printf("filter time %fms \n", t_filter.toc());
 
 			//**************************************************************
 			// publish surround map (use for optimization) for every 5 frame
 			TicToc t_pub;
-			if (frame_cnt % 5 == 0)
+			if ((pub_laser_cloud_surround.getNumSubscribers() != 0) && (frame_cnt % 5 ==0))
 			{
-				laser_cloud_surrond->clear();
+				PointICovCloud laser_cloud_surrond;
 				for (int i = 0; i < laser_cloud_surround_num; i++)
 				{
 					int ind = laser_cloud_surrond_ind[i];
-					*laser_cloud_surrond += *laser_cloud_corner_array[ind];
-					*laser_cloud_surrond += *laser_cloud_surf_array[ind];
+					laser_cloud_surrond += *laser_cloud_corner_array_cov[ind];
+					laser_cloud_surrond += *laser_cloud_surf_array_cov[ind];
 				}
 				sensor_msgs::PointCloud2 laser_cloud_surround_msg;
-				pcl::toROSMsg(*laser_cloud_surrond, laser_cloud_surround_msg);
+				pcl::toROSMsg(laser_cloud_surrond, laser_cloud_surround_msg);
 				laser_cloud_surround_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
 				laser_cloud_surround_msg.header.frame_id = "/world";
 				pub_laser_cloud_surround.publish(laser_cloud_surround_msg);
-				printf("size of surround map: %d\n", laser_cloud_surrond->size());
+				printf("size of surround map: %d\n", laser_cloud_surrond.size());
 			}
 
 			// publish valid map for every 5 frame
-			if (frame_cnt % 20 == 0)
+			if ((pub_laser_cloud_map.getNumSubscribers() != 0) && (frame_cnt % 20 == 0))
 			{
-				PointICloud laser_cloud_map;
+				PointICovCloud laser_cloud_map;
 				for (int i = 0; i < laser_cloud_num; i++)
 				{
-					laser_cloud_map += *laser_cloud_corner_array[i];
-					laser_cloud_map += *laser_cloud_surf_array[i];
+					laser_cloud_map += *laser_cloud_corner_array_cov[i];
+					laser_cloud_map += *laser_cloud_surf_array_cov[i];
 				}
 				sensor_msgs::PointCloud2 laser_cloud_msg;
 				pcl::toROSMsg(laser_cloud_map, laser_cloud_msg);
@@ -740,10 +740,13 @@ void process()
 			laser_cloud_full_res_msg.header.frame_id = "/world";
 			pub_laser_cloud_full_res.publish(laser_cloud_full_res_msg);
 
-			*laser_cloud_corner_last = laser_cloud_corner_split[IDX_REF];
-			for (int i = 0; i < laser_cloud_corner_last->points.size(); i++)
+			laser_cloud_corner_last->clear();
+			for (auto n = 0; n < NUM_OF_LASER; n++)
 			{
-				pointAssociateToMap(laser_cloud_corner_last->points[i], laser_cloud_corner_last->points[i], pose_wmap_curr);
+				PointICloud tmp_cloud;
+				pcl::copyPointCloud(laser_cloud_corner_split_cov[n], tmp_cloud);
+				for (auto point: tmp_cloud) pointAssociateToMap(point, point, pose_wmap_curr);
+				*laser_cloud_corner_last += tmp_cloud;
 			}
 			sensor_msgs::PointCloud2 laser_cloud_corner_last_msg;
 			pcl::toROSMsg(*laser_cloud_corner_last, laser_cloud_corner_last_msg);
@@ -751,10 +754,13 @@ void process()
 			laser_cloud_corner_last_msg.header.frame_id = "/world";
 			pub_laser_cloud_corner_last_res.publish(laser_cloud_corner_last_msg);
 
-			*laser_cloud_surf_last = laser_cloud_surf_split[IDX_REF];
-			for (int i = 0; i < laser_cloud_surf_last->points.size(); i++)
+			laser_cloud_surf_last->clear();
+			for (auto n = 0; n < NUM_OF_LASER; n++)
 			{
-				pointAssociateToMap(laser_cloud_surf_last->points[i], laser_cloud_surf_last->points[i], pose_wmap_curr);
+				PointICloud tmp_cloud;
+				pcl::copyPointCloud(laser_cloud_surf_split_cov[n], tmp_cloud);
+				for (auto point: tmp_cloud) pointAssociateToMap(point, point, pose_wmap_curr);
+				*laser_cloud_surf_last += tmp_cloud;
 			}
 			sensor_msgs::PointCloud2 laser_cloud_surf_last_msg;
 			pcl::toROSMsg(*laser_cloud_surf_last, laser_cloud_surf_last_msg);
@@ -824,11 +830,14 @@ int main(int argc, char **argv)
 	readParameters(config_file);
 
 	// set resolution
-	float lineRes = 0.4;
-	float planeRes = 0.8;
+	float lineRes = 0.2;
+	float planeRes = 0.4;
 	printf("line resolution:%f, plane resolution:%f\n", lineRes, planeRes);
+
 	down_size_filter_corner.setLeafSize(lineRes, lineRes,lineRes);
 	down_size_filter_surf.setLeafSize(planeRes, planeRes, planeRes);
+	down_size_filter_corner_map_cov.setLeafSize(lineRes, lineRes,lineRes);
+	down_size_filter_surf_map_cov.setLeafSize(planeRes, planeRes, planeRes);
 
 	ros::Subscriber sub_laser_cloud_full_res = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud", 100, laserCloudFullResHandler);
 	ros::Subscriber sub_laser_cloud_corner_last = nh.subscribe<sensor_msgs::PointCloud2>("/corner_points_less_sharp", 100, laserCloudCornerLastHandler);
@@ -847,16 +856,13 @@ int main(int argc, char **argv)
 	pub_laser_after_mapped_path = nh.advertise<nav_msgs::Path>("/laser_map_path", 100);
 	for (int i = 0; i < laser_cloud_num; i++)
 	{
-		laser_cloud_corner_array[i].reset(new PointICloud());
-		laser_cloud_surf_array[i].reset(new PointICloud());
+		laser_cloud_corner_array_cov[i].reset(new PointICovCloud());
+		laser_cloud_surf_array_cov[i].reset(new PointICovCloud());
 	}
 
 	r_ext.resize(NUM_OF_LASER);
 	t_ext.resize(NUM_OF_LASER);
 	pose_ext.resize(NUM_OF_LASER);
-
-	laser_cloud_corner_split.resize(NUM_OF_LASER);
-	laser_cloud_surf_split.resize(NUM_OF_LASER);
 
 	laser_cloud_corner_split_cov.resize(NUM_OF_LASER);
 	laser_cloud_surf_split_cov.resize(NUM_OF_LASER);

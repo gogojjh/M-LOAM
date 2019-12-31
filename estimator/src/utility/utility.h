@@ -21,10 +21,10 @@
 
 void TransformToStart(const common::PointI &pi, common::PointI &po, const Pose &pose, const bool &b_distortion);
 void TransformToEnd(const common::PointI &pi, common::PointI &po, const Pose &pose, const bool &b_distortion);
-void pointAssociateToMap(const common::PointI &pi, common::PointI &po, const Pose &pose);
-void pointAssociateTobeMapped(const common::PointI &pi, common::PointI &po, const Pose &pose);
-void evalPointUncertainty(const int &idx, const common::PointI &pi, Eigen::Matrix3d &cov_po);
-Eigen::Matrix<double, 4, 6> pointToFS(const Eigen::Vector4d &point);
+// void pointAssociateToMap(const common::PointType &pi, common::PointType &po, const Pose &pose);
+// void pointAssociateTobeMapped(const common::PointType &pi, common::PointType &po, const Pose &pose);
+void evalPointUncertainty(const int &idx, const common::PointI &pi, Eigen::Matrix<double, 3, 3> &cov_po);
+Eigen::Matrix<double, 4, 6> pointToFS(const Eigen::Matrix<double, 4, 1> &point);
 
 class Utility
 {
@@ -158,16 +158,51 @@ class Utility
         f(iter);
     }
 
-    template <typename T>
-    static T normalizeAngle(const T& angle_degrees)
+    template <typename Scalar>
+    static Scalar normalizeAngle(const Scalar& angle_degrees)
     {
-        T two_pi(2.0 * 180);
+        Scalar two_pi(2.0 * 180);
         if (angle_degrees > 0)
-            return angle_degrees - two_pi * std::floor((angle_degrees + T(180)) / two_pi);
+            return angle_degrees - two_pi * std::floor((angle_degrees + Scalar(180)) / two_pi);
         else
-            return angle_degrees + two_pi * std::floor((-angle_degrees + T(180)) / two_pi);
+            return angle_degrees + two_pi * std::floor((-angle_degrees + Scalar(180)) / two_pi);
     }
 };
+
+template <typename PointType>
+void pointAssociateToMap(const PointType &pi, PointType &po, const Pose &pose)
+{
+    if (!pcl::traits::has_field<PointType, pcl::fields::intensity>::value)
+    {
+        std::cerr << "[pointAssociateToMap] Point does not have intensity field!" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    po = pi;
+    Eigen::Vector3d point_curr(pi.x, pi.y, pi.z);
+    Eigen::Vector3d point_trans = pose.q_ * point_curr + pose.t_;
+    po.x = point_trans.x();
+    po.y = point_trans.y();
+    po.z = point_trans.z();
+    po.intensity = pi.intensity;
+}
+
+template <typename PointType>
+void pointAssociateTobeMapped(const PointType &pi, PointType &po, const Pose &pose)
+{
+    if (!pcl::traits::has_field<PointType, pcl::fields::intensity>::value)
+    {
+        std::cerr << "[pointAssociateTobeMapped] Point does not have intensity field!" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    po = pi;
+    Eigen::Vector3d point_curr(pi.x, pi.y, pi.z);
+    Eigen::Vector3d point_trans = pose.q_.inverse() * (point_curr - pose.t_);
+    po.x = point_trans.x();
+    po.y = point_trans.y();
+    po.z = point_trans.z();
+    po.intensity = pi.intensity;
+}
+
 
 
 

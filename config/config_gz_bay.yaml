@@ -51,6 +51,8 @@ body_T_laser: !!opencv-matrix
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
    #        0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220] # gt
 
+# for full tf: /opt/ros/kinetic/share/unity-lans-gz/param/lidar.yaml
+
 #unsynchronization parameters
 estimate_td: 0                      # 0 have an accurate time offset among sensors
                                     # 1 online estimate time offset among sensors

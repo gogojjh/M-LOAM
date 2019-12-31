@@ -77,14 +77,14 @@ add_library(mloam_lib_2
 target_link_libraries(mloam_lib_2 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES})
 
 ######## --------------------- EXECUTABLE --------------------- ########
-add_executable(mloam_node src/rosNodeTest.cpp)
-target_link_libraries(mloam_node mloam_lib_1 mloam_lib_2)
+add_executable(mloam_node_simu src/rosNodeSimu.cpp)
+target_link_libraries(mloam_node_simu mloam_lib_1 mloam_lib_2)
+
+add_executable(mloam_node_gz_bay src/rosNodeGZBay.cpp)
+target_link_libraries(mloam_node_gz_bay mloam_lib_1 mloam_lib_2)
 
 add_executable(lidar_mapper src/lidarMapper/lidar_mapper.cpp)
 target_link_libraries(lidar_mapper mloam_lib_1 mloam_lib_2)
-
-# add_executable(kitti_gps_test src/KITTIGPSTest.cpp)
-# target_link_libraries(kitti_gps_test mloam_lib_1 mloam_lib_2)
 
 ######## --------------------- TEST --------------------- ########
 add_executable(test_ceres ../test/test_ceres.cpp)
