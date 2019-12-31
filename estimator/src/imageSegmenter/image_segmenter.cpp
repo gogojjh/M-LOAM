@@ -2,8 +2,6 @@
 
 using namespace common;
 
-const float segment_theta = 30.0 / 180.0 * M_PI; // TODO
-
 ImageSegmenter::ImageSegmenter()
 {
     std::pair<int8_t, int8_t> neighbor;
@@ -162,7 +160,7 @@ void ImageSegmenter::labelComponents(int row, int col)
             dist = sqrt(d1*d1 + d2*d2 - 2*d1*d2*cos(alpha));
             alpha = iter->first == 0 ? segment_alphax_ : segment_alphay_;
             angle = atan2(d2*sin(alpha), (d1 - d2*cos(alpha)));
-            if (angle > segment_theta)
+            if (angle > SEGMENT_THETA)
             {
                 queue_indx_[queue_end_ind] = this_indx;
                 queue_indy_[queue_end_ind] = this_indy;
@@ -256,7 +254,7 @@ void ImageSegmenter::labelConnectLine()
                                     range_mat_.at<float>(i, end_indx + 1));
                 float alpha = segment_alphax_;
                 float angle = atan2(d2*sin(alpha), (d1 - d2*cos(alpha)));
-                if (angle > segment_theta)
+                if (angle > SEGMENT_THETA)
                 {
                     all_pushed_indx_[all_pushed_ind_size] = end_indx + 1;
                     all_pushed_ind_size++;
@@ -309,7 +307,7 @@ for (size_t i = 0; i < N_SCANS; i++)
                 alpha = iter->first == 0 ? segment_alphax_ : segment_alphay_;
                 // the core value to check connecting
                 angle = atan2(d2*sin(alpha), (d1 - d2*cos(alpha)));
-                if (angle > segment_theta)
+                if (angle > SEGMENT_THETA)
                 {
                     all_pushed_indx_[all_pushed_ind_size] = j;
                     all_pushed_ind_size++;

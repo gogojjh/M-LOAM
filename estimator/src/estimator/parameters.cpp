@@ -43,6 +43,7 @@ int MIN_CLUSTER_SIZE;
 int MIN_LINE_SIZE;
 int SEGMENT_VALID_POINT_NUM;
 int SEGMENT_VALID_LINE_NUM;
+float SEGMENT_THETA;
 
 std::string CLOUD0_TOPIC, CLOUD1_TOPIC;
 float LASER_SYNC_THRESHOLD;
@@ -82,6 +83,9 @@ int N_CALIB;
 
 Eigen::Matrix<double, 9, 9> XI;
 double NORM_THRESHOLD;
+
+float MAP_CORNER_RES;
+float MAP_SURF_RES;
 
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
@@ -199,6 +203,7 @@ void readParameters(std::string config_file)
     MIN_LINE_SIZE = fsSettings["min_line_size"];
     SEGMENT_VALID_POINT_NUM = fsSettings["segment_valid_point_num"];
     SEGMENT_VALID_LINE_NUM = fsSettings["segment_valid_line_num"];
+    SEGMENT_THETA = fsSettings["segment_theta"];
 
     IDX_REF = fsSettings["idx_ref"];
 
@@ -231,7 +236,7 @@ void readParameters(std::string config_file)
     EIG_THRE_CALIB = fsSettings["eig_thre_calib"];
     N_CALIB = fsSettings["n_calib"];
 
-    // mapping uncertainty
+    // mapping parameter
     cv::Mat cv_xi;
     fsSettings["uncertainty_calib"] >> cv_xi;
     Eigen::Matrix<double, 9, 1> xi_vec; // rotation, translation, point
@@ -242,6 +247,10 @@ void readParameters(std::string config_file)
     std::cout << "initial covariance XI:" << std::endl << XI << std::endl;
 
     NORM_THRESHOLD = fsSettings["norm_threshold"];
+
+    MAP_CORNER_RES = fsSettings["map_corner_res"];
+    MAP_SURF_RES = fsSettings["map_surf_res"];
+    std::cout << "map corner resolution:" << MAP_CORNER_RES << ", surf resolutionl: " << MAP_SURF_RES << std::endl;
 
     fsSettings.release();
 }

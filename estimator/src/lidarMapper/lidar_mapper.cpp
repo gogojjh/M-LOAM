@@ -44,9 +44,6 @@ PointICovCloud::Ptr laser_cloud_surf_from_map_cov(new PointICovCloud());
 PointICloud::Ptr laser_cloud_full_res(new PointICloud());
 
 // points in every cube
-PointICloud::Ptr laser_cloud_corner_array[laser_cloud_num];
-PointICloud::Ptr laser_cloud_surf_array[laser_cloud_num];
-
 PointICovCloud::Ptr laser_cloud_corner_array_cov[laser_cloud_num];
 PointICovCloud::Ptr laser_cloud_surf_array_cov[laser_cloud_num];
 
@@ -829,15 +826,10 @@ int main(int argc, char **argv)
 	string config_file = argv[1];
 	readParameters(config_file);
 
-	// set resolution
-	float lineRes = 0.2;
-	float planeRes = 0.4;
-	printf("line resolution:%f, plane resolution:%f\n", lineRes, planeRes);
-
-	down_size_filter_corner.setLeafSize(lineRes, lineRes,lineRes);
-	down_size_filter_surf.setLeafSize(planeRes, planeRes, planeRes);
-	down_size_filter_corner_map_cov.setLeafSize(lineRes, lineRes,lineRes);
-	down_size_filter_surf_map_cov.setLeafSize(planeRes, planeRes, planeRes);
+	down_size_filter_corner.setLeafSize(MAP_CORNER_RES, MAP_CORNER_RES,MAP_CORNER_RES);
+	down_size_filter_surf.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
+	down_size_filter_corner_map_cov.setLeafSize(MAP_CORNER_RES, MAP_CORNER_RES,MAP_CORNER_RES);
+	down_size_filter_surf_map_cov.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
 
 	ros::Subscriber sub_laser_cloud_full_res = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud", 100, laserCloudFullResHandler);
 	ros::Subscriber sub_laser_cloud_corner_last = nh.subscribe<sensor_msgs::PointCloud2>("/corner_points_less_sharp", 100, laserCloudCornerLastHandler);

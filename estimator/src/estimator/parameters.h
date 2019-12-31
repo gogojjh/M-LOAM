@@ -67,6 +67,7 @@ extern int MIN_CLUSTER_SIZE;
 extern int MIN_LINE_SIZE;
 extern int SEGMENT_VALID_POINT_NUM;
 extern int SEGMENT_VALID_LINE_NUM;
+extern float SEGMENT_THETA;
 
 extern std::string CLOUD0_TOPIC, CLOUD1_TOPIC;
 extern float LASER_SYNC_THRESHOLD;
@@ -106,6 +107,9 @@ extern int N_CALIB;
 
 extern Eigen::Matrix<double, 9, 9> XI;
 extern double NORM_THRESHOLD;
+
+extern float MAP_CORNER_RES;
+extern float MAP_SURF_RES;
 
 void readParameters(std::string config_file);
 

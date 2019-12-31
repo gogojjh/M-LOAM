@@ -31,6 +31,7 @@ min_cluster_size: 15
 min_line_size: 10
 segment_valid_point_num: 5
 segment_valid_line_num: 3
+segment_theta: 0.53
 
 # window sizes
 window_size: 8
@@ -122,4 +123,6 @@ uncertainty_calib: !!opencv-matrix
 
 norm_threshold: 0.82
 
+map_corner_res: 0.2
+map_surf_res: 0.4
 #
