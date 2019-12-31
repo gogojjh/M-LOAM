@@ -184,12 +184,13 @@ void printStatistics(const Estimator &estimator, double t)
         {
             ofstream fout(MLOAM_ODOM_PATH.c_str(), ios::out);
             fout.setf(ios::fixed, ios::floatfield);
-            fout.precision(5);
             for (auto i = 0; i < v_laser_path[IDX_REF].poses.size(); i++)
             {
                 geometry_msgs::PoseStamped &laser_pose = v_laser_path[IDX_REF].poses[i];
-                fout << laser_pose.header.stamp.toSec() << " "
-                    << laser_pose.pose.position.x << " "
+                fout.precision(15);
+                fout << laser_pose.header.stamp.toSec() << " ";
+                fout.precision(8);
+                fout << laser_pose.pose.position.x << " "
                     << laser_pose.pose.position.y << " "
                     << laser_pose.pose.position.z << " "
                     << laser_pose.pose.orientation.x << " "
@@ -203,12 +204,13 @@ void printStatistics(const Estimator &estimator, double t)
         {
             ofstream fout(MLOAM_GT_PATH.c_str(), ios::out);
             fout.setf(ios::fixed, ios::floatfield);
-            fout.precision(5);
             for (auto i = 0; i < estimator.laser_path_gt_.poses.size(); i++)
             {
                 geometry_msgs::PoseStamped laser_pose = estimator.laser_path_gt_.poses[i];
-                fout << laser_pose.header.stamp.toSec() << " "
-                    << laser_pose.pose.position.x << " "
+                fout.precision(15);
+                fout << laser_pose.header.stamp.toSec() << " ";
+                fout.precision(8);
+                fout << laser_pose.pose.position.x << " "
                     << laser_pose.pose.position.y << " "
                     << laser_pose.pose.position.z << " "
                     << laser_pose.pose.orientation.x << " "

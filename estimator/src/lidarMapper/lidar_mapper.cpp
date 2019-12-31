@@ -539,7 +539,7 @@ void process()
 
 					ceres::Solver::Options options;
 					options.linear_solver_type = ceres::DENSE_QR;
-					options.max_num_iterations = 20;
+					options.max_num_iterations = 40;
 					options.minimizer_progress_to_stdout = false;
 					options.check_gradients = false;
 					options.gradient_check_relative_precision = 1e-4;
@@ -571,7 +571,7 @@ void process()
 													laser_cloud_surf_points, pose_local, surf_map_features, n_neigh, false);
 						corner_num += corner_map_features.size() / 2;
 						surf_num += surf_map_features.size();
-						// printf("mapping data assosiation time %fms\n", t_data.toc());
+						printf("mapping data assosiation time %fms\n", t_data.toc());
 
 						for (auto &feature: corner_map_features)
 						{
@@ -790,12 +790,13 @@ void process()
 			if (MLOAM_RESULT_SAVE)
 			{
 				std::ofstream fout(MLOAM_MAP_PATH.c_str(), std::ios::out);
-				fout.precision(5);
 				for (size_t i = 0; i < laser_after_mapped_path.poses.size(); i++)
 				{
 					geometry_msgs::PoseStamped &laser_pose = laser_after_mapped_path.poses[i];
-					fout << laser_pose.header.stamp.toSec() << " "
-						<< laser_pose.pose.position.x << " "
+					fout.precision(15);
+					fout << laser_pose.header.stamp.toSec() << " ";
+					fout.precision(8);
+					fout << laser_pose.pose.position.x << " "
 						<< laser_pose.pose.position.y << " "
 						<< laser_pose.pose.position.z << " "
 						<< laser_pose.pose.orientation.x << " "
@@ -819,13 +820,12 @@ int main(int argc, char **argv)
 	ros::NodeHandle nh;
 	ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
 
-	// string config_file = argv[1];
-	// readParameters(config_file);
-	readParameters("/home/jjiao/catkin_ws/src/localization/M-LOAM/config/config_simu_jackal.yaml");
+	string config_file = argv[1];
+	readParameters(config_file);
 
 	// set resolution
-	float lineRes = 0.2;
-	float planeRes = 0.4;
+	float lineRes = 0.4;
+	float planeRes = 0.8;
 	printf("line resolution:%f, plane resolution:%f\n", lineRes, planeRes);
 	down_size_filter_corner.setLeafSize(lineRes, lineRes,lineRes);
 	down_size_filter_surf.setLeafSize(planeRes, planeRes, planeRes);

@@ -1,0 +1,29 @@
+<launch>
+
+    <arg name="bag_file_use" default="true" />
+    <arg name="config_file" default="$(find mloam)/../config/config_gz_bay.yaml" />
+    <arg name="base_link" default="base_link" />
+
+    <!-- Ros Bag -->
+    <param name="/use_sim_time" value="true" />
+    <group if="$(arg bag_file_use)">
+        <arg name="bag_file" default="/Monster/dataset/lidar_calibration/guangzhou_bay_20191231/1226ori_lidar.bag" />
+        <node pkg="rosbag" type="play" name="rosbag" args="--clock --pause -r 0.5 $(arg bag_file)" />
+    </group>
+
+    <!-- <node pkg="mloam" type="mloam_node" name="mloam_node" args="$(arg config_file)" output="screen"/> -->
+    <node pkg="mloam" type="mloam_node" name="mloam_node" args="$(arg config_file)" />
+
+    <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" args="$(arg config_file)" output="screen"/>
+    <!-- <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" args="$(arg config_file)" /> -->
+
+    <!-- publish static tf -->
+    <!-- x y z yaw pitch roll -->
+    <!-- x y z qx qy qz qw -->
+    <node name="static_tf_world_base_into_world_sensor" pkg="tf" type="static_transform_publisher"
+        args="0 0 0 0 0 0 1 world_base world 10"/>
+    <node name="static_tf_world_sensor_into_base_sensor" pkg="tf" type="static_transform_publisher"
+        args="0 0 0 0 0 0 1 world laser_0 10"/>
+    <!-- velodyne_second -->
+
+ </launch>

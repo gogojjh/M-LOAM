@@ -25,6 +25,10 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 #### 1.4. **OpenMP**
 ```sudo apt install libomp-dev```
 
+#### 1.5. **Eigen3**
+```sudo apt install libeigen-dev```
+> NOTE: to prevent Eigen error: https://eigen.tuxfamily.org/dox/group__TopicUnalignedArrayAssert.html
+
 ### 2. Build M-LOAM
 
 
@@ -38,11 +42,15 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
     roslaunch aloam_velodyne aloam_handheld.launch
 ```
 
-### 5. Simulation results
-> **red**: odometry; **green**: mapping; **blue**: gt
+### 5. Results
+**red**: odometry; **green**: mapping; **blue**: gt
 
-<img src="picture/simu_husky_20191218/simu_husky_eight.png" width = 350 height = 175 />
-<img src="picture/simu_husky_20191218/simu_husky_eight_map_left.png" width = 350 height = 175 />
+* Simulation (two LiDARs) <br>
+<img src="picture/simu_jakle_20191230/top.png" width = 350 height = 175 />
+
+* Guang Zhou Bay (two LiDARs) <br>
+<img src="picture/gz_bay_20191231/gz_bay_map_new.png" width = 350 height = 175 />
+<img src="picture/gz_bay_20191231/gz_bay_map_odom.png" width = 350 height = 175 />
 
 <!--
 ---
