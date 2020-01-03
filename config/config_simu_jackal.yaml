@@ -125,4 +125,5 @@ norm_threshold: 0.82
 
 map_corner_res: 0.2
 map_surf_res: 0.4
+map_eig_thre: 100
 #

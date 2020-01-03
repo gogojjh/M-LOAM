@@ -1086,75 +1086,73 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
     TicToc t_eval_degenracy;
     Eigen::MatrixXd mat_J_raw;
     CRSMatrix2EigenMatrix(jaco, mat_J_raw);
+    Eigen::MatrixXd &mat_J = mat_J_raw;
+    Eigen::MatrixXd mat_Jt = mat_J.transpose(); // A^T
+    Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J; // A^TA 48*48
+    bool b_vis = false; // to verify the structure of A^T*A
+    if (b_vis)
     {
-        Eigen::MatrixXd &mat_J = mat_J_raw;
-        Eigen::MatrixXd mat_Jt = mat_J.transpose(); // A^T
-        Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J; // A^TA 48*48
-        bool b_vis = false; // to verify the structure of A^T*A
-        if (b_vis)
+        printf("visualize the structure of H(J^T*J)\n");
+        for (auto i = 0; i < mat_JtJ.rows(); i++)
         {
-            printf("visualize the structure of H(J^T*J)\n");
-            for (auto i = 0; i < mat_JtJ.rows(); i++)
+            for (auto j = 0; j < mat_JtJ.cols(); j++)
             {
-                for (auto j = 0; j < mat_JtJ.cols(); j++)
-                {
-                    if (mat_JtJ(i, j) == 0) std::cout << "0 ";
-                                        else std::cout << "1 ";
-                }
-                std::cout << std::endl;
+                if (mat_JtJ(i, j) == 0) std::cout << "0 ";
+                                    else std::cout << "1 ";
             }
+            std::cout << std::endl;
         }
-
-        double eig_thre; // the larger, the better (with more constraints)
-        d_factor_calib_ = std::vector<double>(NUM_OF_LASER, 0);
-        for (auto i = 0; i < local_param_ids.size(); i++)
-        {
-            Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(6*i, 6*i, 6, 6);
-            // local_param_ids[i]->setParameter();
-            Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6> > esolver(mat_H);
-            Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real(); // 6*1
-            Eigen::Matrix<double, 6, 6> mat_V_f = esolver.eigenvectors().real(); // 6*6, column is the corresponding eigenvector
-            Eigen::Matrix<double, 6, 6> mat_V_p = mat_V_f;
-
-            eig_thre = eig_thre_calib_[i];
-            for (auto j = 0; j < mat_E.cols(); j++)
-            {
-                if (mat_E(0, j) < eig_thre)
-                {
-                    mat_V_p.col(j) = Eigen::Matrix<double, 6, 1>::Zero();
-                    local_param_ids[i]->is_degenerate_ = true;
-                } else
-                {
-                    break;
-                }
-            }
-            std::cout << i << ": D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose() << std::endl;
-            Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
-            assert(mat_P.rows() == 6);
-
-            if (i > OPT_WINDOW_SIZE)
-            {
-                if (mat_E(0, 0) >= EIG_THRE_CALIB)
-                {
-                    eig_thre_calib_[i] = EIG_THRE_CALIB;
-                    d_factor_calib_[i - OPT_WINDOW_SIZE - 1] = mat_E(0, 0);
-                }
-                else if (mat_E(0, 0) > eig_thre)
-                    eig_thre_calib_[i] = mat_E(0, 0);
-                else
-                    mat_P.setZero();
-            }
-            if (local_param_ids[i]->is_degenerate_)
-            {
-                local_param_ids[i]->V_update_ = mat_P;
-                // std::cout << "param " << i << " is degenerate !" << std::endl;
-                // std::cout << mat_P << std::endl;
-            }
-        }
-        std::cout << "eigen threshold " << eig_thre_calib_.size() << ": ";
-        for (auto i = 0; i < eig_thre_calib_.size(); i++) std::cout << eig_thre_calib_[i] << " ";
-        std::cout << std::endl;
     }
+
+    double eig_thre; // the larger, the better (with more constraints)
+    d_factor_calib_ = std::vector<double>(NUM_OF_LASER, 0);
+    for (auto i = 0; i < local_param_ids.size(); i++)
+    {
+        Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(6*i, 6*i, 6, 6);
+        // local_param_ids[i]->setParameter();
+        Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6> > esolver(mat_H);
+        Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real(); // 6*1
+        Eigen::Matrix<double, 6, 6> mat_V_f = esolver.eigenvectors().real(); // 6*6, column is the corresponding eigenvector
+        Eigen::Matrix<double, 6, 6> mat_V_p = mat_V_f;
+
+        eig_thre = eig_thre_calib_[i];
+        for (auto j = 0; j < mat_E.cols(); j++)
+        {
+            if (mat_E(0, j) < eig_thre)
+            {
+                mat_V_p.col(j) = Eigen::Matrix<double, 6, 1>::Zero();
+                local_param_ids[i]->is_degenerate_ = true;
+            } else
+            {
+                break;
+            }
+        }
+        std::cout << i << ": D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose() << std::endl;
+        Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
+        assert(mat_P.rows() == 6);
+
+        if (i > OPT_WINDOW_SIZE)
+        {
+            if (mat_E(0, 0) >= EIG_THRE_CALIB)
+            {
+                eig_thre_calib_[i] = EIG_THRE_CALIB;
+                d_factor_calib_[i - OPT_WINDOW_SIZE - 1] = mat_E(0, 0);
+            }
+            else if (mat_E(0, 0) > eig_thre)
+                eig_thre_calib_[i] = mat_E(0, 0);
+            else
+                mat_P.setZero();
+        }
+        if (local_param_ids[i]->is_degenerate_)
+        {
+            local_param_ids[i]->V_update_ = mat_P;
+            // std::cout << "param " << i << " is degenerate !" << std::endl;
+            // std::cout << mat_P << std::endl;
+        }
+    }
+    std::cout << "eigen threshold " << eig_thre_calib_.size() << ": ";
+    for (auto i = 0; i < eig_thre_calib_.size(); i++) std::cout << eig_thre_calib_[i] << " ";
+    std::cout << std::endl;
     printf("evaluate degeneracy %fms\n", t_eval_degenracy.toc());
 }
 

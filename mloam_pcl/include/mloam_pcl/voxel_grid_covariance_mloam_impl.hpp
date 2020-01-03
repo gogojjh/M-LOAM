@@ -281,7 +281,7 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
             if (cov_index >= 0)
             {
                 Eigen::VectorXf cov_vec = temporary.tail<6>();
-                Eigen::Matrix3f cov_po = Eigen::Matrix3f::Zero();
+                Eigen::Matrix3f cov_po = Eigen::Matrix3f::Identity();
                 cov_po << cov_vec[0], cov_vec[1], cov_vec[2],
                         cov_vec[1], cov_vec[3], cov_vec[4],
                         cov_vec[2], cov_vec[4], cov_vec[5];

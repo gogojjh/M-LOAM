@@ -110,6 +110,7 @@ extern double NORM_THRESHOLD;
 
 extern float MAP_CORNER_RES;
 extern float MAP_SURF_RES;
+extern float MAP_EIG_THRE;
 
 void readParameters(std::string config_file);
 

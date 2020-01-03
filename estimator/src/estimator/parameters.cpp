@@ -86,6 +86,7 @@ double NORM_THRESHOLD;
 
 float MAP_CORNER_RES;
 float MAP_SURF_RES;
+float MAP_EIG_THRE;
 
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
@@ -251,6 +252,8 @@ void readParameters(std::string config_file)
     MAP_CORNER_RES = fsSettings["map_corner_res"];
     MAP_SURF_RES = fsSettings["map_surf_res"];
     std::cout << "map corner resolution:" << MAP_CORNER_RES << ", surf resolutionl: " << MAP_SURF_RES << std::endl;
+
+    MAP_EIG_THRE = fsSettings["map_eig_thre"];
 
     fsSettings.release();
 }
