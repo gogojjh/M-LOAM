@@ -21,8 +21,6 @@
 
 void TransformToStart(const common::PointI &pi, common::PointI &po, const Pose &pose, const bool &b_distortion);
 void TransformToEnd(const common::PointI &pi, common::PointI &po, const Pose &pose, const bool &b_distortion);
-// void pointAssociateToMap(const common::PointType &pi, common::PointType &po, const Pose &pose);
-// void pointAssociateTobeMapped(const common::PointType &pi, common::PointType &po, const Pose &pose);
 void evalPointUncertainty(const int &idx, const common::PointI &pi, Eigen::Matrix<double, 3, 3> &cov_po);
 Eigen::Matrix<double, 4, 6> pointToFS(const Eigen::Matrix<double, 4, 1> &point);
 

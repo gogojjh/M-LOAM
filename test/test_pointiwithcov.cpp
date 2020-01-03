@@ -15,8 +15,8 @@
 
 #include "../estimator/src/utility/utility.h"
 
-// typedef pcl::PointIWithCov PointType;
-typedef pcl::PointXYZI PointType;
+typedef pcl::PointXYZIWithCov PointType;
+// typedef pcl::PointXYZI PointType;
 typedef pcl::PointCloud<PointType> PointCloud;
 
 int main()
@@ -31,12 +31,12 @@ int main()
     // }
     // std::cout << cloud_cov->size() << std::endl;
 
-    // PointType p1(0,0,0,0,0.0025,0,0,0.0025,0,0.0025);
-    // PointType p2(1,1,1,1,0.6825, -0.08, -0.12, 0.5625, -0.24, 0.3625);
-    // PointType p3(2,2,2,2,2.085, -0.245, -0.3675, 1.7175, -0.735, 1.105);
-    PointType p1; p1.x = 0; p1.y = 0, p1.z = 0; p1.intensity = 1.33;
-    PointType p2; p2.x = 1; p2.y = 1.3, p2.z = 1.2; p2.intensity = 2.15;
-    PointType p3; p3.x = 2; p3.y = 2.3, p3.z = 2.2; p3.intensity = 2.45;
+    PointType p1(0,0,0,0,0.0025, 0, 0, 0.0025, 0, 0.0025);
+    PointType p2(1,1,1,1,0.6825, -0.08, -0.12, 0.5625, -0.24, 0.3625);
+    PointType p3(2,2,2,2,2.085, -0.245, -0.3675, 1.7175, -0.735, 1.105);
+    // PointType p1; p1.x = 0; p1.y = 0, p1.z = 0; p1.intensity = 1.33;
+    // PointType p2; p2.x = 1; p2.y = 1.3, p2.z = 1.2; p2.intensity = 2.15;
+    // PointType p3; p3.x = 2; p3.y = 2.3, p3.z = 2.2; p3.intensity = 2.45;
     cloud_cov->push_back(p1);
     cloud_cov->push_back(p2);
     cloud_cov->push_back(p3);
@@ -50,8 +50,8 @@ int main()
     std::cout << cloud_cov_filter->size() << std::endl;
     for (auto p:cloud_cov_filter->points) std::cout << p << std::endl;
 
-    // pcl::KdTreeFLANN<PointType>::Ptr kdtree(new pcl::KdTreeFLANN<PointType>());
-    // kdtree->setInputCloud(cloud_cov);
+    pcl::KdTreeFLANN<PointType>::Ptr kdtree(new pcl::KdTreeFLANN<PointType>());
+    kdtree->setInputCloud(cloud_cov);
 
     return 0;
 }

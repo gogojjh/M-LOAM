@@ -57,11 +57,11 @@ double para_pose[SIZE_POSE];
 Pose pose_wmap_curr, pose_wmap_wodom, pose_wodom_curr;
 
 // downsampling voxel grid
-pcl::VoxelGrid<PointI> down_size_filter_corner;
-pcl::VoxelGrid<PointI> down_size_filter_surf;
+pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_corner;
+pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_surf;
 
-pcl::VoxelGrid<PointIWithCov> down_size_filter_corner_map_cov;
-pcl::VoxelGrid<PointIWithCov> down_size_filter_surf_map_cov;
+pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_corner_map_cov;
+pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_surf_map_cov;
 
 std::vector<int> point_search_ind;
 std::vector<float> point_search_sq_dis;
@@ -536,7 +536,8 @@ void process()
 
 					ceres::Solver::Options options;
 					options.linear_solver_type = ceres::DENSE_QR;
-					options.max_num_iterations = 40;
+					options.max_num_iterations = 15;
+					options.max_solver_time_in_seconds = 0.05;
 					options.minimizer_progress_to_stdout = false;
 					options.check_gradients = false;
 					options.gradient_check_relative_precision = 1e-4;
@@ -603,6 +604,7 @@ void process()
 					// printf("cost: %f\n", cost);
 
 					// ******************************************************
+					// TODO: add degenerate cases processing
 					TicToc t_solver;
 					ceres::Solve(options, &problem, &summary);
 					std::cout << summary.BriefReport() << std::endl;

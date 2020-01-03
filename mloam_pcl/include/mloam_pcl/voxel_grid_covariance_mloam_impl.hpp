@@ -120,7 +120,7 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
     // ---[ COV special case
     std::vector<pcl::PCLPointField> cov_fields;
     int cov_index = -1;
-    cov_index = pcl::getFieldIndex (*input_, "cov_zz", cov_fields); // offset 40
+    cov_index = pcl::getFieldIndex (*input_, "cov_xx", cov_fields); // offset 40
     if (cov_index >= 0)
     {
         cov_index = cov_fields[cov_index].offset;
@@ -271,29 +271,27 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
         // calculate centroid - sum values from all input points, that have the same idx value in index_vector array
         unsigned int first_index = first_and_last_indices_vector[cp].first;
         unsigned int last_index = first_and_last_indices_vector[cp].second;
-        if (!downsample_all_data_)
-        {
-            centroid[0] = input_->points[index_vector[first_index].cloud_point_index].x;
-            centroid[1] = input_->points[index_vector[first_index].cloud_point_index].y;
-            centroid[2] = input_->points[index_vector[first_index].cloud_point_index].z;
-        }
-        else
-        {
-            // ---[ RGB special case
-            if (rgba_index >= 0)
-            {
-                // Fill r/g/b data, assuming that the order is BGRA
-                pcl::RGB rgb;
-                memcpy (&rgb, reinterpret_cast<const char*> (&input_->points[index_vector[first_index].cloud_point_index]) + rgba_index, sizeof (RGB));
-                centroid[centroid_size-3] = rgb.r;
-                centroid[centroid_size-2] = rgb.g;
-                centroid[centroid_size-1] = rgb.b;
-            }
-            pcl::for_each_type <FieldList> (NdCopyPointEigenFunctor <PointT> (input_->points[index_vector[first_index].cloud_point_index], centroid));
-        }
+        unsigned int valid_cnt = last_index - first_index;
+        centroid.setZero();
 
-        for (unsigned int i = first_index + 1; i < last_index; ++i)
+        for (unsigned int i = first_index; i < last_index; ++i)
         {
+            pcl::for_each_type <FieldList> (NdCopyPointEigenFunctor <PointT> (input_->points[index_vector[i].cloud_point_index], temporary));
+            // --- select points with valid covariance
+            if (cov_index >= 0)
+            {
+                Eigen::VectorXf cov_vec = temporary.tail<6>();
+                Eigen::Matrix3f cov_po = Eigen::Matrix3f::Zero();
+                cov_po << cov_vec[0], cov_vec[1], cov_vec[2],
+                        cov_vec[1], cov_vec[3], cov_vec[4],
+                        cov_vec[2], cov_vec[4], cov_vec[5];
+                // std::cout << cov_po << std::endl;
+                if (cov_po.norm() > 0.6)
+                {
+                    valid_cnt--;
+                    continue;
+                }
+            }
             if (!downsample_all_data_)
             {
                 centroid[0] += input_->points[index_vector[i].cloud_point_index].x;
@@ -312,21 +310,23 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
                     temporary[centroid_size-2] = rgb.g;
                     temporary[centroid_size-1] = rgb.b;
                 }
-                pcl::for_each_type <FieldList> (NdCopyPointEigenFunctor <PointT> (input_->points[index_vector[i].cloud_point_index], temporary));
+                // pcl::for_each_type <FieldList> (NdCopyPointEigenFunctor <PointT> (input_->points[index_vector[i].cloud_point_index], temporary));
                 centroid += temporary;
             }
         }
+        if (valid_cnt == 0) valid_cnt = 1;
 
         // index is centroid final position in resulting PointCloud
         if (save_leaf_layout_) leaf_layout_[index_vector[first_index].idx] = index;
 
+        // compute the centroid
         if (cov_index >= 0)
         {
-            centroid.head(4) /= static_cast<float>(last_index - first_index);
-            centroid.tail(6) /= (static_cast<float>(last_index - first_index) * static_cast<float>(last_index - first_index));
+            centroid.head(4) /= static_cast<float>(valid_cnt);
+            centroid.tail(6) /= (static_cast<float>(valid_cnt) * static_cast<float>(valid_cnt));
         } else
         {
-            centroid /= static_cast<float>(last_index - first_index);
+            centroid /= static_cast<float>(valid_cnt);
         }
 
         // store centroid
