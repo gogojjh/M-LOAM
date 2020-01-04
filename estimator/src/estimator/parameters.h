@@ -60,6 +60,7 @@ extern int OPT_WINDOW_SIZE;
 extern float SCAN_PERIOD;
 extern float DISTANCE_SQ_THRESHOLD;
 extern float NEARBY_SCAN;
+extern int DISTORTION;
 
 extern int SEGMENT_CLOUD;
 extern int HORIZON_SCAN;

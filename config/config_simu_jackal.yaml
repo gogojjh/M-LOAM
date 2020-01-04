@@ -25,7 +25,7 @@ num_of_laser: 2
 n_scans: 16
 
 # segmentation parameters
-segment_cloud: 1
+segment_cloud: 0
 horizon_scan: 400
 min_cluster_size: 15
 min_line_size: 10
@@ -88,6 +88,7 @@ roi_range_mapping: 15
 scan_period: 0.1
 distance_sq_threshold: 25
 nearby_scan: 2.5
+distortion: 0 # gazebo simulation without distortion
 
 # movement type
 planar_movement: 1
@@ -125,5 +126,5 @@ norm_threshold: 0.82
 
 map_corner_res: 0.2
 map_surf_res: 0.4
-map_eig_thre: 100
+map_eig_thre: 1
 #

@@ -35,6 +35,7 @@ int OPT_WINDOW_SIZE;
 float SCAN_PERIOD;
 float DISTANCE_SQ_THRESHOLD;
 float NEARBY_SCAN;
+int DISTORTION;
 
 // segmentation
 int SEGMENT_CLOUD;
@@ -211,6 +212,7 @@ void readParameters(std::string config_file)
     SCAN_PERIOD = fsSettings["scan_period"];
     DISTANCE_SQ_THRESHOLD = fsSettings["distance_sq_threshold"];
     NEARBY_SCAN = fsSettings["nearby_scan"];
+    DISTORTION = fsSettings["distortion"];
 
     PLANAR_MOVEMENT = fsSettings["planar_movement"];
 

@@ -53,6 +53,7 @@
 #include <tf/transform_broadcaster.h>
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/StdVector>
+#include <opencv2/core/eigen.hpp>
 #include <ceres/ceres.h>
 #include <mutex>
 #include <queue>

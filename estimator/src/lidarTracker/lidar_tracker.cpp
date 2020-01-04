@@ -92,7 +92,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         // find correspondence for corner features
         for (int i = 0; i < corner_points_sharp_num; ++i)
         {
-            TransformToStart(corner_points_sharp->points[i], point_sel, Pose(q_prev_cur, t_prev_cur), true);
+            TransformToStart(corner_points_sharp->points[i], point_sel, Pose(q_prev_cur, t_prev_cur), DISTORTION);
             kdtree_corner_last->nearestKSearch(point_sel, 1, point_search_ind, point_search_sqdis);
 
             int closest_point_ind = -1, min_point_ind2 = -1;
@@ -170,7 +170,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         // find correspondence for plane features
         for (int i = 0; i < surf_points_sharp_num; ++i)
         {
-            TransformToStart(surf_points_flat->points[i], point_sel, Pose(q_prev_cur, t_prev_cur), true);
+            TransformToStart(surf_points_flat->points[i], point_sel, Pose(q_prev_cur, t_prev_cur), DISTORTION);
             kdtree_surf_last->nearestKSearch(point_sel, 1, point_search_ind, point_search_sqdis);
 
             int closest_point_ind = -1, min_point_ind2 = -1, minPointInd3 = -1;

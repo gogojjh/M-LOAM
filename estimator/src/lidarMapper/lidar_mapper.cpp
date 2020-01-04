@@ -207,6 +207,7 @@ void CRSMatrix2EigenMatrix(const ceres::CRSMatrix &crs_matrix, Eigen::MatrixXd &
     }
 }
 
+// TODO: the results are not good -> make wrong estimates
 void evalDegenracy(std::vector<PoseLocalParameterization *> &local_param_ids, const ceres::CRSMatrix &jaco)
 {
     printf("jacob: %d constraints, %d parameters\n", jaco.num_rows, jaco.num_cols); // 2000+, 6
@@ -219,9 +220,9 @@ void evalDegenracy(std::vector<PoseLocalParameterization *> &local_param_ids, co
 
     for (auto i = 0; i < local_param_ids.size(); i++)
     {
-        Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(6*i, 6*i, 6, 6);
+        Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(6*i, 6*i, 6, 6) / 400.0;
         Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6> > esolver(mat_H);
-        Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real() / 400.0; // 6*1
+        Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real(); // 6*1
         Eigen::Matrix<double, 6, 6> mat_V_f = esolver.eigenvectors().real(); // 6*6, column is the corresponding eigenvector
         Eigen::Matrix<double, 6, 6> mat_V_p = mat_V_f;
 		// std::cout << "H:" << std::endl << mat_H;
@@ -230,7 +231,7 @@ void evalDegenracy(std::vector<PoseLocalParameterization *> &local_param_ids, co
             if (mat_E(0, j) < MAP_EIG_THRE)
             {
                 mat_V_p.col(j) = Eigen::Matrix<double, 6, 1>::Zero();
-                // local_param_ids[i]->is_degenerate_ = true;
+                local_param_ids[i]->is_degenerate_ = true;
             } else
             {
                 break;
@@ -239,14 +240,54 @@ void evalDegenracy(std::vector<PoseLocalParameterization *> &local_param_ids, co
         std::cout << i << ": D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose() << std::endl;
         Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
         assert(mat_P.rows() == 6);
+		// std::cout << "jjiao:" << std::endl;
+		// std::cout << "mat_E: " << mat_E << std::endl;
+		// std::cout << "mat_V_f: " << std::endl << mat_V_f << std::endl;
+		// std::cout << "mat_V_p: " << std::endl << mat_V_p << std::endl;
+		// std::cout << "mat_P: " << std::endl << mat_P.transpose() << std::endl;
 
         if (local_param_ids[i]->is_degenerate_)
         {
-            local_param_ids[i]->V_update_ = mat_P;
+            local_param_ids[i]->V_update_ = mat_P.transpose();
             // std::cout << "param " << i << " is degenerate !" << std::endl;
-            // std::cout << mat_P << std::endl;
+            // std::cout << mat_P.transpose() << std::endl;
         }
     }
+
+	// {
+	// 	Eigen::Matrix<float, 6, 6> mat_H = mat_JtJ.cast<float>().block(0, 0, 6, 6) / 400.0;
+	// 	cv::Mat matP(6, 6, CV_32F, cv::Scalar::all(0));
+	// 	cv::Mat matAtA(6, 6, CV_32F, cv::Scalar::all(0));
+	// 	cv::Mat matE(1, 6, CV_32F, cv::Scalar::all(0));
+	// 	cv::Mat matV(6, 6, CV_32F, cv::Scalar::all(0));
+	// 	cv::Mat matV2(6, 6, CV_32F, cv::Scalar::all(0));
+	//
+	// 	cv::eigen2cv(mat_H, matAtA);
+	// 	cv::eigen(matAtA, matE, matV);
+	// 	matV.copyTo(matV2);
+	// 	bool isDegenerate;
+	// 	for (int i = 5; i >= 0; i--)
+	// 	{
+	// 		if (matE.at<float>(0, i) < 100.0)
+	// 		{
+	// 			for (int j = 0; j < 6; j++)
+	// 			{
+	// 				matV2.at<float>(i, j) = 0;
+	// 			}
+	// 			isDegenerate = true;
+	// 		} else
+	// 		{
+	// 			break;
+  	// 		}
+	// 	}
+	// 	std::cout << "Zhang:" << std::endl;
+	// 	std::cout << "mat_E: " << matE.t() << std::endl;
+	// 	std::cout << "mat_V_f: " << std::endl << matV.t() << std::endl;
+	// 	std::cout << "mat_V_p: " << std::endl << matV2.t() << std::endl;
+	// 	matP = matV.inv() * matV2;
+	// 	std::cout << "mat_P: " << std::endl << matP << std::endl;
+	// }
+
     printf("evaluate degeneracy %fms\n", t_eval_degenracy.toc());
 }
 
@@ -543,7 +584,7 @@ void process()
 				laser_cloud_corner_split_cov[n].clear();
 				laser_cloud_surf_split_cov[n].clear();
 			}
-			for (auto point_ori: laser_cloud_corner_stack->points)
+			for (auto &point_ori: laser_cloud_corner_stack->points)
 			{
 				int idx = int(point_ori.intensity); // indicate the lidar id
 				PointI point_sel;
@@ -556,7 +597,7 @@ void process()
 					laser_cloud_corner_split_cov[idx].push_back(point_cov);
 				}
 			}
-			for (auto point_ori: laser_cloud_surf_stack->points)
+			for (auto &point_ori: laser_cloud_surf_stack->points)
 			{
 				int idx = int(point_ori.intensity); // indicate the lidar id
 				PointI point_sel;
@@ -813,7 +854,7 @@ void process()
 			{
 				PointICloud tmp_cloud;
 				pcl::copyPointCloud(laser_cloud_corner_split_cov[n], tmp_cloud);
-				for (auto point: tmp_cloud) pointAssociateToMap(point, point, pose_wmap_curr);
+				for (auto &point: tmp_cloud) pointAssociateToMap(point, point, pose_wmap_curr);
 				*laser_cloud_corner_last += tmp_cloud;
 			}
 			sensor_msgs::PointCloud2 laser_cloud_corner_last_msg;
@@ -827,7 +868,7 @@ void process()
 			{
 				PointICloud tmp_cloud;
 				pcl::copyPointCloud(laser_cloud_surf_split_cov[n], tmp_cloud);
-				for (auto point: tmp_cloud) pointAssociateToMap(point, point, pose_wmap_curr);
+				for (auto &point: tmp_cloud) pointAssociateToMap(point, point, pose_wmap_curr);
 				*laser_cloud_surf_last += tmp_cloud;
 			}
 			sensor_msgs::PointCloud2 laser_cloud_surf_last_msg;

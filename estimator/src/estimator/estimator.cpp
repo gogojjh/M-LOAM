@@ -358,13 +358,22 @@ void Estimator::process()
             printf("mloam_tracker %fms\n", t_mloam_tracker.toc());
         }
     }
-    //----------------- TODO: undistort the corner and surf point cloud
-    // for (auto n = 0; n < NUM_OF_LASER; n++)
-    // {
-    //     Pose pose_ext(qbl_[n], tbl_);
-    //     Pose pose_tmp(pose_ext * pose_laser_cur_[IDX_REF]);
-    //     for (auto p: cur_feature_.second[n]["corner_points_less_sharp"]) TransformToStart(pose_laser_cur_[]);
-    // }
+
+    if (DISTORTION)
+    {
+        for (auto n = 0; n < NUM_OF_LASER; n++)
+        {
+            // if (n != IDX_REF) continue;
+            if ((n != IDX_REF) && (ESTIMATE_EXTRINSIC != 0)) continue;
+            Pose pose_ext(qbl_[n], tbl_[n]);
+            Pose pose_tmp = pose_ext.inverse() * pose_rlt_[IDX_REF] * pose_ext;
+            for (auto iter = cur_feature_.second[n].begin(); iter != cur_feature_.second[n].end(); iter ++)
+            {
+                if (iter->first.find("less") != std::string::npos)
+                    for (auto &point: iter->second) TransformToEnd(point, point, pose_tmp, DISTORTION);
+            }
+        }
+    }
 
     //----------------- update pose and point cloud
     Qs_[cir_buf_cnt_] = pose_laser_cur_[IDX_REF].q_;
@@ -1145,7 +1154,7 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
         }
         if (local_param_ids[i]->is_degenerate_)
         {
-            local_param_ids[i]->V_update_ = mat_P;
+            local_param_ids[i]->V_update_ = mat_P.transpose();
             // std::cout << "param " << i << " is degenerate !" << std::endl;
             // std::cout << mat_P << std::endl;
         }

@@ -10,7 +10,9 @@
 
 using namespace common;
 
-// undistort lidar point
+// project the distrot points on the last frame
+// a: last frame; c: frame for points capturing
+// p^a = T(s)*p^c
 void TransformToStart(const PointI &pi, PointI &po, const Pose &pose, const bool &b_distortion)
 {
     po = pi;
@@ -29,7 +31,9 @@ void TransformToStart(const PointI &pi, PointI &po, const Pose &pose, const bool
     po.intensity = pi.intensity;
 }
 
-// transform all lidar points to original frame
+// transform all lidar points on the current frame
+// a: last frame; b: current frame; c: frame for points capturing
+// p^a = T(s)*p^c, p^b = T^(-1)*T(s)*p^c
 void TransformToEnd(const PointI &pi, PointI &po, const Pose &pose, const bool &b_distortion)
 {
     po = pi;
