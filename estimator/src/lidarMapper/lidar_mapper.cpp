@@ -587,7 +587,7 @@ void process()
 				std::vector<double *> para_ids;
 				std::vector<ceres::internal::ResidualBlock *> res_ids;
 				printf("********************************\n");
-				for (int iter_cnt = 0; iter_cnt < 1; iter_cnt++)
+				for (int iter_cnt = 0; iter_cnt < 2; iter_cnt++)
 				{
 					ceres::Problem problem;
 					ceres::Solver::Summary summary;
@@ -595,8 +595,8 @@ void process()
 
 					ceres::Solver::Options options;
 					options.linear_solver_type = ceres::DENSE_QR;
-					options.max_num_iterations = 30;
-					options.max_solver_time_in_seconds = 0.05;
+					options.max_num_iterations = 15;
+					options.max_solver_time_in_seconds = 0.03;
 					options.minimizer_progress_to_stdout = false;
 					options.check_gradients = false;
 					options.gradient_check_relative_precision = 1e-4;
@@ -633,7 +633,7 @@ void process()
 						corner_num += corner_map_features.size() / 2;
 						surf_num += surf_map_features.size();
 						// printf("mapping data assosiation time %fms\n", t_data.toc());
-
+						CHECK_JACOBIAN = 0;
 						for (auto &feature: corner_map_features)
 						{
 							const size_t &idx = feature.idx_;
@@ -641,8 +641,8 @@ void process()
 	                        const Eigen::Vector4d &coeff_ref = feature.coeffs_;
 						    Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
 							normalToCov(laser_cloud_corner_split_cov[n].points[idx], cov_matrix);
-							ceres::CostFunction *cost_function = LidarMapPlaneNormFactor::Create(p_data, coeff_ref, cov_matrix);
-							problem.AddResidualBlock(cost_function, loss_function, para_pose);
+							LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(p_data, coeff_ref, cov_matrix);
+							problem.AddResidualBlock(f, loss_function, para_pose);
 						}
 
 						for (auto &feature: surf_map_features)
@@ -652,8 +652,15 @@ void process()
 	                        const Eigen::Vector4d &coeff_ref = feature.coeffs_;
 	                        Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
 							normalToCov(laser_cloud_surf_split_cov[n].points[idx], cov_matrix);
-							ceres::CostFunction *cost_function = LidarMapPlaneNormFactor::Create(p_data, coeff_ref, cov_matrix);
-							problem.AddResidualBlock(cost_function, loss_function, para_pose);
+							LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(p_data, coeff_ref, cov_matrix);
+							problem.AddResidualBlock(f, loss_function, para_pose);
+							if (CHECK_JACOBIAN)
+		                    {
+		                        double **tmp_param = new double *[1];
+		                        tmp_param[0] = para_pose;
+		                        f->check(tmp_param);
+		                        CHECK_JACOBIAN = 0;
+		                    }
 						}
 					}
 					printf("prepare ceres data %fms\n", t_prepare.toc());

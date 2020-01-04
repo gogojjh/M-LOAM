@@ -2,18 +2,19 @@
 
 #include <ceres/ceres.h>
 #include <ceres/rotation.h>
+
 #include <Eigen/Eigen>
 #include <Eigen/Dense>
 
-#include "common/algos/math.hpp"
+#include "../utility/utility.h"
 
 using namespace common;
 
 class LidarPivotPlaneNormFactor : public ceres::SizedCostFunction<1, 7, 7, 7>
 {
 public:
-	LidarPivotPlaneNormFactor(const Eigen::Vector3d &point, const Eigen::Vector4d &coeff, double sqrt_info_static = 1.0)
-    	: point_(point), coeff_(coeff), sqrt_info_static_(sqrt_info_static){}
+	LidarPivotPlaneNormFactor(const Eigen::Vector3d &point, const Eigen::Vector4d &coeff, double sqrt_info = 1.0)
+    	: point_(point), coeff_(coeff), sqrt_info_(sqrt_info){}
 
 	// residual = sum(w^(T) * (R * p + t) + d)
 	bool Evaluate(double const *const *param, double *residuals, double **jacobians) const
@@ -33,7 +34,7 @@ public:
 		Eigen::Vector3d w(coeff_(0), coeff_(1), coeff_(2));
 		double d = coeff_(3);
 		double r = w.dot(Q_ext_pi * point_ + t_ext_pi) + d;
-		residuals[0] = sqrt_info_static_ * r;
+		residuals[0] = sqrt_info_ * r;
 
 		// jacobians: 3x7
         if (jacobians)
@@ -48,10 +49,10 @@ public:
 
 				jaco_pivot.leftCols<3>() = -w.transpose() * Rp.transpose();
 				jaco_pivot.rightCols<3>() = w.transpose() * (
-					SkewSymmetric(Rp.transpose() * (Ri * Rext * point_ + Ri * t_ext + t_i - t_pivot)));
+					Utility::skewSymmetric(Rp.transpose() * (Ri * Rext * point_ + Ri * t_ext + t_i - t_pivot)));
 
                 jacobian_pose_pivot.setZero();
-                jacobian_pose_pivot.leftCols<6>() = sqrt_info_static_ * jaco_pivot;
+                jacobian_pose_pivot.leftCols<6>() = sqrt_info_ * jaco_pivot;
                 jacobian_pose_pivot.rightCols<1>().setZero();
             }
 
@@ -61,10 +62,10 @@ public:
                 Eigen::Matrix<double, 1, 6> jaco_i;
 
 				jaco_i.leftCols<3>() = w.transpose() * Rp.transpose();
-				jaco_i.rightCols<3>() = -w.transpose() * Rp.transpose() * Ri * SkewSymmetric(Rext * point_ + t_ext);
+				jaco_i.rightCols<3>() = -w.transpose() * Rp.transpose() * Ri * Utility::skewSymmetric(Rext * point_ + t_ext);
 
                 jacobian_pose_i.setZero();
-                jacobian_pose_i.leftCols<6>() = sqrt_info_static_ * jaco_i;
+                jacobian_pose_i.leftCols<6>() = sqrt_info_ * jaco_i;
                 jacobian_pose_i.rightCols<1>().setZero();
             }
 
@@ -75,10 +76,10 @@ public:
 
 				Eigen::Matrix<double, 1, 6> jaco_ex;
 				jaco_ex.leftCols<3>() = w.transpose() * Rp.transpose() * Ri;
-				jaco_ex.rightCols<3>() = -w.transpose() * Rp.transpose() * Ri * Rext * SkewSymmetric(point_);
+				jaco_ex.rightCols<3>() = -w.transpose() * Rp.transpose() * Ri * Rext * Utility::skewSymmetric(point_);
 
                 jacobian_pose_ex.setZero();
-                jacobian_pose_ex.leftCols<6>() = sqrt_info_static_ * jaco_ex;
+                jacobian_pose_ex.leftCols<6>() = sqrt_info_ * jaco_ex;
                 jacobian_pose_ex.rightCols<1>().setZero();
             }
         }
@@ -118,7 +119,7 @@ public:
 		Eigen::Vector3d w(coeff_(0), coeff_(1), coeff_(2));
         double d = coeff_(3);
 		double r = w.dot(Q_ext_pi * point_ + t_ext_pi) + d;
-        r *= sqrt_info_static_;
+        r *= sqrt_info_;
 
         std::cout << "perturbation:" << std::endl;
         std::cout << r << std::endl;
@@ -141,15 +142,15 @@ public:
 			if (a == 0)
 				t_pivot += delta;
 			else if (a == 1)
-				Q_pivot = Q_pivot * DeltaQ(delta);
+				Q_pivot = Q_pivot * Utility::deltaQ(delta);
 			else if (a == 2)
 				t_i += delta;
 			else if (a == 3)
-				Q_i = Q_i * DeltaQ(delta);
+				Q_i = Q_i * Utility::deltaQ(delta);
 			else if (a == 4)
 				t_ext += delta;
 			else if (a == 5)
-				Q_ext = Q_ext * DeltaQ(delta);
+				Q_ext = Q_ext * Utility::deltaQ(delta);
 
 			Eigen::Quaterniond Q_pi = Q_pivot.conjugate() * Q_i;
 			Eigen::Vector3d t_pi = Q_pivot.conjugate() * (t_i - t_pivot);
@@ -159,7 +160,7 @@ public:
 			Eigen::Vector3d w(coeff_(0), coeff_(1), coeff_(2));
 	        double d = coeff_(3);
 			double tmp_r = w.dot(Q_ext_pi * point_ + t_ext_pi) + d;
-	        tmp_r *= sqrt_info_static_;
+	        tmp_r *= sqrt_info_;
             num_jacobian(k) = (tmp_r - r) / eps;
         }
         std::cout << num_jacobian.block<1, 6>(0, 0) << std::endl;
@@ -170,7 +171,7 @@ public:
 private:
 	const Eigen::Vector3d point_;
 	const Eigen::Vector4d coeff_;
-	const double sqrt_info_static_;
+	const double sqrt_info_;
 };
 
 
