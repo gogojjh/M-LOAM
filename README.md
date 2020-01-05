@@ -46,12 +46,15 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 **red**: odometry; **green**: mapping; **blue**: gt
 
 * Simulation (two LiDARs) <br>
-<img src="picture/simu_jakle_20191230/top.png" width = 350 height = 175 />
+![](picture/simu_jakle_20191230/top.png)
 
 * Guang Zhou Bay (two LiDARs) <br>
-<img src="picture/gz_bay_20191231/gz_bay_map_new.png" width = 350 height = 175 />
-<img src="picture/gz_bay_20191231/gz_bay_map_odom.png" width = 350 height = 175 />
+**map**
+![](picture/gz_bay_20191231/gz_bay_map_new.png)
+**odom**
+![](picture/gz_bay_20191231/gz_bay_map_odom.png)
 
+<!-- *********************************************** -->
 <!--
 ---
 ### 2. Build A-LOAM
