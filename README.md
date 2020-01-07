@@ -49,10 +49,10 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 ![](picture/simu_jakle_20191230/top.png)
 
 * Guang Zhou Bay (two LiDARs) <br>
-**map**
+**map**<br>
 ![](picture/gz_bay_20191231/gz_bay_map_new.png)
-**odom**
-![](picture/gz_bay_20191231/gz_bay_map_odom.png)
+**odom**<br>
+![](picture/gz_bay_20191231/pcd_side_view.png)
 
 <!-- *********************************************** -->
 <!--
