@@ -16,9 +16,10 @@
         <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_file) --clock -r 1 --pause" />
     </group>
 
-    <node pkg="mloam" type="mloam_node_simu" name="mloam_node_simu" args="$(arg config_file)" />
+    <node pkg="mloam" type="mloam_node_simu" name="mloam_node_simu" args="$(arg config_file)"/>
 
     <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" args="$(arg config_file)" output="screen"/>
+
 
     <!-- publish static tf -->
     <!-- x y z yaw pitch roll -->

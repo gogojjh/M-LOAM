@@ -10,12 +10,11 @@
 
 using namespace common;
 
-// project the distrot points on the last frame
+// project all distorted points on the last frame
 // a: last frame; c: frame for points capturing
 // p^a = T(s)*p^c
 void TransformToStart(const PointI &pi, PointI &po, const Pose &pose, const bool &b_distortion)
 {
-    po = pi;
     double s; //interpolation ratio
     if (b_distortion)
         s = (pi.intensity - int(pi.intensity)) / SCAN_PERIOD;
@@ -31,12 +30,11 @@ void TransformToStart(const PointI &pi, PointI &po, const Pose &pose, const bool
     po.intensity = pi.intensity;
 }
 
-// transform all lidar points on the current frame
+// project all distorted lidar points on the current frame
 // a: last frame; b: current frame; c: frame for points capturing
 // p^a = T(s)*p^c, p^b = T^(-1)*T(s)*p^c
 void TransformToEnd(const PointI &pi, PointI &po, const Pose &pose, const bool &b_distortion)
 {
-    po = pi;
     PointI un_point_tmp;
     TransformToStart(pi, un_point_tmp, pose, b_distortion);
     Eigen::Vector3d un_point(un_point_tmp.x, un_point_tmp.y, un_point_tmp.z);

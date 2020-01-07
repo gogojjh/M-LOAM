@@ -215,7 +215,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
             f_extract_.extractCloud(t, v_laser_cloud_in[i], feature_frame[i]);
         }
     }
-    printf("featureExt time: %fms\n", feature_ext_time.toc());
+    printf("featureExt time: %fms (average: %fms)\n", feature_ext_time.toc(), feature_ext_time.toc()/v_laser_cloud_in.size());
 
     m_buf_.lock();
     feature_buf_.push(make_pair(t, feature_frame));
@@ -298,15 +298,14 @@ void Estimator::process()
             // feature tracker: estimate the relative transformations of each lidar
             for (auto i = 0; i < NUM_OF_LASER; i++)
             {
-                printf("[LASER %d]:\n", i);
                 cloudFeature &cur_cloud_feature = cur_feature_.second[i];
                 cloudFeature &prev_cloud_feature = prev_feature_.second[i];
                 pose_rlt_[i] = lidar_tracker_.trackCloud(prev_cloud_feature, cur_cloud_feature, pose_rlt_[i]);
                 pose_laser_cur_[i] = pose_laser_cur_[i] * pose_rlt_[i];
-                std::cout << "relative transform: " << pose_rlt_[i] << std::endl;
-                std::cout << "current transform: " << pose_laser_cur_[i] << std::endl;
+                std::cout << "LASER " << i << ", pose_rlt: " << pose_rlt_[i] << std::endl;
+                std::cout << "LASER " << i << ", pose_cur: " << pose_laser_cur_[i] << std::endl;
             }
-            printf("mloam_tracker %fms\n", t_mloam_tracker.toc());
+            printf("mloam_tracker %fms (average %fms)\n", t_mloam_tracker.toc(), t_mloam_tracker.toc() / NUM_OF_LASER);
 
             // initialize extrinsics
             for (auto i = 0; i < NUM_OF_LASER; i++) initial_extrinsics_.addPose(pose_rlt_[i], i);
@@ -911,9 +910,9 @@ void Estimator::buildCalibMap()
             if (((n == IDX_REF) && (i == pivot_idx)) || ((n != IDX_REF) && (i != pivot_idx))) continue;
             int n_neigh = (n == IDX_REF ? 5:10);
             std::vector<PointPlaneFeature> tmp_surf_map_features, tmp_corner_map_features;
-            f_extract_.extractSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
+            f_extract_.matchSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
                 surf_points_stack_[n][i], pose_local_[n][i], tmp_surf_map_features, n_neigh, true);
-            f_extract_.extractCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
+            f_extract_.matchCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
                 corner_points_stack_[n][i], pose_local_[n][i], tmp_corner_map_features, n_neigh, true);
             std::copy(tmp_surf_map_features.begin(), tmp_surf_map_features.end(), std::back_inserter(surf_map_features_[n][i]));
             std::copy(tmp_corner_map_features.begin(), tmp_corner_map_features.end(), std::back_inserter(corner_map_features_[n][i]));
@@ -978,7 +977,7 @@ void Estimator::buildLocalMap()
         for (auto i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
         {
             std::vector<PointPlaneFeature> tmp_map_features;
-            f_extract_.extractSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
+            f_extract_.matchSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
                 surf_points_stack_[n][i], pose_local_[n][i], tmp_map_features, n_neigh, true);
             // f_extract_.extractCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
                 //     corner_points_stack_[n][i], pose_local_[n][i], corner_map_features_[n][i], n_neigh, true);

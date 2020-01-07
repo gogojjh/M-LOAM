@@ -43,11 +43,19 @@ public:
     void cloudRearrange(const common::PointCloud &laser_cloud_in, std::vector<common::PointICloud> &laser_cloud_scans, int &cloud_size);
     void extractCloud(const double &cur_time, const common::PointCloud &laser_cloud_in, cloudFeature &cloud_feature);
 
-    void extractCornerFromMap(const pcl::KdTreeFLANN<common::PointI>::Ptr &kdtree_corner_from_map,
+    void matchCornerFromScan(const pcl::KdTreeFLANN<common::PointI>::Ptr &kdtree_corner_from_scan,
+        const common::PointICloud &cloud_scan, const common::PointICloud &cloud_data,
+        const Pose &pose_local, std::vector<PointPlaneFeature> &features);
+
+    void matchSurfFromScan(const pcl::KdTreeFLANN<common::PointI>::Ptr &kdtree_surf_from_scan,
+        const common::PointICloud &cloud_scan, const common::PointICloud &cloud_data,
+        const Pose &pose_local, std::vector<PointPlaneFeature> &features);
+
+    void matchCornerFromMap(const pcl::KdTreeFLANN<common::PointI>::Ptr &kdtree_corner_from_map,
         const common::PointICloud &cloud_map, const common::PointICloud &cloud_data,
         const Pose &pose_local, std::vector<PointPlaneFeature> &features, const int &N_NEIGH = 5, const bool &CHECK_FOV = true);
 
-    void extractSurfFromMap(const pcl::KdTreeFLANN<common::PointI>::Ptr &kdtree_surf_from_map,
+    void matchSurfFromMap(const pcl::KdTreeFLANN<common::PointI>::Ptr &kdtree_surf_from_map,
         const common::PointICloud &cloud_map, const common::PointICloud &cloud_data,
         const Pose &pose_local, std::vector<PointPlaneFeature> &features, const int &N_NEIGH = 5, const bool &CHECK_FOV = true);
 

@@ -1,0 +1,23 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/usr/local/",
+                "/opt/ros/kinetic/include/**",
+                "/usr/local/include/pcl-1.8/",
+                "~/catkin_ws/devel/include/**",
+                "~/catkin_ws/src/localization/M-LOAM/common/libs/include/**",
+                "~/catkin_ws/src/localization/M-LOAM/estimator/**",
+                "/usr/include/eigen3"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/clang",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "clang-x64"
+        }
+    ],
+    "version": 4
+}

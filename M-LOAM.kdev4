@@ -1,3 +1,4 @@
 [Project]
-Manager=KDevGenericManager
+CreatedFrom=
+Manager=KDevCustomBuildSystem
 Name=M-LOAM

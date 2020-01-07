@@ -41,8 +41,6 @@ class LidarTracker
 public:
     LidarTracker();
     Pose trackCloud(const cloudFeature &prev_cloud_feature, const cloudFeature &cur_cloud_feature, const Pose &pose_ini);
-
-    FeatureExtract f_extract_;
 };
 
 

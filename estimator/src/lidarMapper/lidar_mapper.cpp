@@ -667,9 +667,9 @@ void process()
 						int n_neigh = 5;
 						Pose pose_local = pose_wmap_curr;
 						std::vector<PointPlaneFeature> corner_map_features, surf_map_features;
-						f_extract.extractCornerFromMap(kdtree_corner_from_map, *laser_cloud_corner_from_map,
+						f_extract.matchCornerFromMap(kdtree_corner_from_map, *laser_cloud_corner_from_map,
 													laser_cloud_corner_points, pose_local, corner_map_features, n_neigh, false);
-						f_extract.extractSurfFromMap(kdtree_surf_from_map, *laser_cloud_surf_from_map,
+						f_extract.matchSurfFromMap(kdtree_surf_from_map, *laser_cloud_surf_from_map,
 													laser_cloud_surf_points, pose_local, surf_map_features, n_neigh, false);
 						corner_num += corner_map_features.size() / 2;
 						surf_num += surf_map_features.size();
