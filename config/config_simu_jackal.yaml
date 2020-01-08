@@ -38,7 +38,7 @@ window_size: 8
 opt_window_size: 3
 
 # Extrinsic parameter between IMU and Camera.
-estimate_extrinsic: 2   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
 optimal_extrinsic: 0
@@ -47,14 +47,14 @@ body_T_laser: !!opencv-matrix
    rows: 2
    cols: 7
    dt: d
-   data: [0, 0, 0, 1, 0, 0, 0,
-          0, 0, 0, 1, 0, 0, 0] # qx qy qz qw px py pz
+   # data: [0, 0, 0, 1, 0, 0, 0,
+   #        0, 0, 0, 1, 0, 0, 0] # qx qy qz qw px py pz
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
    #        0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220] # gt
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
    #        0.312, 0.0, 0.0, 0.940, 0, -0.500, -0.240] # gt_noise
-   # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-   #        0.3173, 0.0, 0.0, 0.9483, 0.009, -0.4939, -0.2226] # estimate
+   data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
+          0.3173, 0.0, 0.0, 0.9483, 0.009, -0.4939, -0.2226] # estimate
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
    #        0.31, 0.0, 0.0, 0.94, 0, -0.2, 0.0] # initialization
 
