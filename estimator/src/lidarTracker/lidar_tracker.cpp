@@ -19,32 +19,22 @@ LidarTracker::LidarTracker()
     ROS_INFO("Tracker begin");
 }
 
+// TODO: may use closed-form ICP to do
 Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
-    const cloudFeature &cur_cloud_feature,
-    const Pose &pose_ini)
+                              const cloudFeature &cur_cloud_feature,
+                              const Pose &pose_ini)
 {
     // step 1: prev feature and kdtree
-    PointICloudPtr corner_points_last(new PointICloud); 
-    PointICloudPtr surf_points_last(new PointICloud);
-    *corner_points_last = prev_cloud_feature.find("corner_points_less_sharp")->second; 
-    *surf_points_last = prev_cloud_feature.find("surf_points_less_flat")->second;
-    // TODO:
-    // PointICloudPtr corner_points_last = boost::make_shared<PointICloud>(prev_cloud_feature.find("corner_points_less_sharp")->second); 
-    int corner_points_last_num = corner_points_last->points.size();
-    int surf_points_last_num = surf_points_last->points.size();
-
+    PointICloudPtr corner_points_last = boost::make_shared<PointICloud>(prev_cloud_feature.find("corner_points_less_sharp")->second);
+    PointICloudPtr surf_points_last = boost::make_shared<PointICloud>(prev_cloud_feature.find("surf_points_less_flat")->second);
     pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_last(new pcl::KdTreeFLANN<PointI>());
     pcl::KdTreeFLANN<PointI>::Ptr kdtree_surf_last(new pcl::KdTreeFLANN<PointI>());
     kdtree_corner_last->setInputCloud(corner_points_last);
     kdtree_surf_last->setInputCloud(surf_points_last);
 
     // step 2: current feature
-    PointICloudPtr corner_points_sharp(new PointICloud); 
-    PointICloudPtr surf_points_flat(new PointICloud); 
-    *corner_points_sharp = cur_cloud_feature.find("corner_points_sharp")->second;
-    *surf_points_flat = cur_cloud_feature.find("surf_points_flat")->second;
-    int corner_points_sharp_num = corner_points_sharp->points.size();
-    int surf_points_sharp_num = surf_points_flat->points.size();
+    PointICloudPtr corner_points_sharp = boost::make_shared<PointICloud>(cur_cloud_feature.find("corner_points_sharp")->second);
+    PointICloudPtr surf_points_flat = boost::make_shared<PointICloud>(cur_cloud_feature.find("surf_points_flat")->second);
 
     // step 3: set initial pose
     Pose pose_last_curr(pose_ini);
@@ -141,8 +131,31 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         pose_last_curr.t_ = Eigen::Vector3d(para_pose[0], para_pose[1], para_pose[2]);
         pose_last_curr.q_ = Eigen::Quaterniond(para_pose[6], para_pose[3], para_pose[4], para_pose[5]);
     }
+    
     return pose_last_curr;
 }
+
+// TODO: test ICP
+// std::cout << "setting icp" << std::endl;
+// pcl::IterativeClosestPoint<PointI, PointI> icp;
+// icp.setMaxCorrespondenceDistance(0.1);
+// icp.setTransformationEpsilon(1e-4);
+// icp.setEuclideanFitnessEpsilon(0.01);
+// icp.setMaximumIterations(10);
+
+// std::cout << "icp input" << std::endl;
+// PointICloudPtr ref_cloud(new PointICloud);
+// *ref_cloud = prev_cloud_feature.find("laser_cloud")->second;
+// PointICloudPtr target_cloud(new PointICloud);
+// *target_cloud = cur_cloud_feature.find("laser_cloud")->second;
+// icp.setInputSource(ref_cloud);
+// icp.setInputTarget(target_cloud);
+// std::cout << "icp compute" << std::endl;
+// PointICloud final;
+// icp.align(final);
+// std::cout << "icp finish" << std::endl;
+// std::cout << "has converged:" << icp.hasConverged() << ", score: " << icp.getFitnessScore() << std::endl;
+// pose_last_curr = Pose(icp.getFinalTransformation().cast<double>());
 
 // TODO: apply solution remapping
 // ceres::Problem::EvaluateOptions e_option;

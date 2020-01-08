@@ -24,14 +24,13 @@ public:
 		double a = w.dot(q_last_curr * point_ + t_last_curr) + d;
 		Eigen::Map<Eigen::Vector3d> r(residuals);
 		r = a * w;
-
-		if (r.norm() != r.norm()) std::cout << coeff_.transpose() << " " << point_.transpose() << std::endl; // TODO: why? a feature
+		// if (r.norm() != r.norm()) std::cout << coeff_.transpose() << " " << point_.transpose() << std::endl; // TODO: why? a feature
 
 		if (jacobians)
 		{
 			Eigen::Matrix3d R = q_last_curr.toRotationMatrix();
 			Eigen::Matrix3d W = Eigen::Matrix3d::Zero();
-			for (size_t i = 0; i < W.rows(); i++) W.row(i) = w.transpose(); // [w^T;w^T;w^T]
+			for (size_t i = 0; i < W.rows(); i++) W.row(i) = w; // [w^T;w^T;w^T]
 			W = w.asDiagonal() * W;
 			if (jacobians[0])
 			{

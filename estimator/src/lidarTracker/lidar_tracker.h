@@ -26,6 +26,7 @@
 #include <pcl/point_types.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/registration/icp.h>
 
 #include "common/types/type.h"
 #include "common/algos/math.hpp"

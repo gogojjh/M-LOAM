@@ -437,8 +437,9 @@ void Estimator::process()
         cloudFeature tmp_cloud_feature;
         for (auto iter = cur_feature_.second[i].begin(); iter != cur_feature_.second[i].end(); iter++)
         {
-            if (iter->first.find("less") != std::string::npos)
-                tmp_cloud_feature.insert(make_pair(iter->first, iter->second));
+            // if (iter->first.find("less") != std::string::npos)
+            //     tmp_cloud_feature.insert(make_pair(iter->first, iter->second));
+            tmp_cloud_feature.insert(make_pair(iter->first, iter->second));
         }
         prev_feature_.second.push_back(tmp_cloud_feature);
     }
