@@ -381,26 +381,18 @@ void FeatureExtract::matchCornerFromScan(const pcl::KdTreeFLANN<PointI>::Ptr &kd
                                 cloud_scan.points[min_point_ind2].y,
                                 cloud_scan.points[min_point_ind2].z);
 
-            Eigen::Vector3d a012_vec = (X0 - X1).cross(X0 - X2);
-            double a012 = a012_vec.norm();
-            Eigen::Vector3d w1 = ((X1 - X2).cross(a012_vec)).normalized(); // w1
-            Eigen::Vector3d w2 = (X1 - X2).cross(w1);                      // w2
-            double l12 = (X1 - X2).norm();
-            double la = w1.x();
-            double lb = w1.y();
-            double lc = w1.z();
-            double ld2 = a012 / l12; // distance
-
-            PointI point_proj = point_sel;
-            point_proj.x -= la * ld2;
-            point_proj.y -= lb * ld2;
-            point_proj.z -= lc * ld2;
-            double ld_p1 = -(w1.x() * point_proj.x + w1.y() * point_proj.y + w1.z() * point_proj.z);
-            double ld_p2 = -(w2.x() * point_proj.x + w2.y() * point_proj.y + w2.z() * point_proj.z);
-            double s = 1 - 0.9f * fabs(ld2);
+            Eigen::Vector3d w2 = (X1 - X2).cross(X2 - X0);
+            w2.normalize();
+            Eigen::Vector3d w1 = w2.cross(X2 - X1);
+            w1.normalize();
+            double ld_1 = ((X1 - X0).cross(X2 - X0)).norm() / (X1 - X2).norm(); // the distance between point to plane
+            double ld_2 = 0.0;
+            double ld_p1 = -(w1.x() * point_sel.x + w1.y() * point_sel.y + w1.z() * point_sel.z - ld_1);
+            double ld_p2 = -(w2.x() * point_sel.x + w2.y() * point_sel.y + w2.z() * point_sel.z - ld_2);
+            double s = 1 - 0.9f * fabs(ld_1);
             if (s > 0.1)
             {
-                Eigen::Vector4d coeff1(la, lb, lc, ld_p1);
+                Eigen::Vector4d coeff1(w1.x(), w1.y(), w1.z(), ld_p1);
                 Eigen::Vector4d coeff2(w2.x(), w2.y(), w2.z(), ld_p2);
                 PointPlaneFeature feature1, feature2;
                 feature1.idx_ = i;
@@ -411,6 +403,44 @@ void FeatureExtract::matchCornerFromScan(const pcl::KdTreeFLANN<PointI>::Ptr &kd
                 feature2.point_ = Eigen::Vector3d{cloud_data.points[i].x, cloud_data.points[i].y, cloud_data.points[i].z};
                 feature2.coeffs_ = coeff2 * 0.5;
                 features.push_back(feature2);
+                std::cout << ld_p1 << "_" << ld_p2 << " ";
+            }
+            
+            { 
+                // haoyang code
+                // Eigen::Vector3d a012_vec = (X0 - X1).cross(X0 - X2);
+                // double a012 = a012_vec.norm();
+                // Eigen::Vector3d w1 = ((X1 - X2).cross(a012_vec)).normalized(); // w1
+                // Eigen::Vector3d w2 = (X1 - X2).cross(w1);                      // w2
+                // w2.normalize();
+                // double l12 = (X1 - X2).norm();
+                // double la = w1.x();
+                // double lb = w1.y();
+                // double lc = w1.z();
+                // double ld2 = a012 / l12; // distance
+
+                // PointI point_proj = point_sel;
+                // point_proj.x -= la * ld2; // point_proj = point_sel - ld2*w1
+                // point_proj.y -= lb * ld2;
+                // point_proj.z -= lc * ld2;
+                // double ld_p1 = -(w1.x() * point_proj.x + w1.y() * point_proj.y + w1.z() * point_proj.z); // = -(w1*point_sel - ld2)
+                // double ld_p2 = -(w2.x() * point_proj.x + w2.y() * point_proj.y + w2.z() * point_proj.z); // = -(w2*point_sel - w2*w1*ld2)
+                // double s = 1 - 0.9f * fabs(ld2);
+                // if (s > 0.1)
+                // {
+                //     Eigen::Vector4d coeff1(la, lb, lc, ld_p1);
+                //     Eigen::Vector4d coeff2(w2.x(), w2.y(), w2.z(), ld_p2);
+                //     PointPlaneFeature feature1, feature2;
+                //     feature1.idx_ = i;
+                //     feature1.point_ = Eigen::Vector3d{cloud_data.points[i].x, cloud_data.points[i].y, cloud_data.points[i].z};
+                //     feature1.coeffs_ = coeff1 * 0.5;
+                //     features.push_back(feature1);
+                //     feature2.idx_ = i;
+                //     feature2.point_ = Eigen::Vector3d{cloud_data.points[i].x, cloud_data.points[i].y, cloud_data.points[i].z};
+                //     feature2.coeffs_ = coeff2 * 0.5;
+                //     features.push_back(feature2);
+                // }
+                // std::cout << ld_p1 << "_" << ld_p2 << "; ";
             }
         }
     }
