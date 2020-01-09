@@ -380,11 +380,10 @@ void FeatureExtract::matchCornerFromScan(const pcl::KdTreeFLANN<PointI>::Ptr &kd
             Eigen::Vector3d X2(cloud_scan.points[min_point_ind2].x,
                                 cloud_scan.points[min_point_ind2].y,
                                 cloud_scan.points[min_point_ind2].z);
-            Eigen::Vector3d w2 = (X1 - X0).cross(X2 - X0);
-            w2.normalize();
-            Eigen::Vector3d w1 = w2.cross(X2 - X1);
-            w1.normalize();
-            double ld_1 = ((X1 - X0).cross(X2 - X0)).norm() / (X1 - X2).norm(); // distance 
+            Eigen::Vector3d n = (X1 - X0).cross(X2 - X0);
+            Eigen::Vector3d w2 = n.normalized();
+            Eigen::Vector3d w1 = (w2.cross(X2 - X1)).normalized();
+            double ld_1 = n.norm() / (X1 - X2).norm(); // distance
             double ld_2 = 0.0;
             double ld_p1 = -(w1.x() * point_sel.x + w1.y() * point_sel.y + w1.z() * point_sel.z - ld_1);
             double ld_p2 = -(w2.x() * point_sel.x + w2.y() * point_sel.y + w2.z() * point_sel.z - ld_2);
@@ -563,11 +562,10 @@ void FeatureExtract::matchCornerFromMap(const pcl::KdTreeFLANN<PointI>::Ptr &kdt
                 X1 = 0.1 * unit_direction + point_on_line;
                 X2 = -0.1 * unit_direction + point_on_line;
 
-                Eigen::Vector3d w2 = (X1 - X0).cross(X2 - X0);
-                w2.normalize();
-                Eigen::Vector3d w1 = w2.cross(X2 - X1);
-                w1.normalize();
-                double ld_1 = ((X1 - X0).cross(X2 - X0)).norm() / (X1 - X2).norm(); // the distance between point to plane
+                Eigen::Vector3d n = (X1 - X0).cross(X2 - X0);
+                Eigen::Vector3d w2 = n.normalized();
+                Eigen::Vector3d w1 = (w2.cross(X2 - X1)).normalized();
+                double ld_1 = n.norm() / (X1 - X2).norm(); // the distance between point to plane
                 double ld_2 = 0.0;
                 double ld_p1 = -(w1.x() * point_sel.x + w1.y() * point_sel.y + w1.z() * point_sel.z - ld_1);
                 double ld_p2 = -(w2.x() * point_sel.x + w2.y() * point_sel.y + w2.z() * point_sel.z - ld_2);
