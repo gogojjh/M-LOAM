@@ -721,6 +721,18 @@ void process()
 					printf("mapping solver time %fms\n", t_solver.toc());
 					double2Vector();
 					std::cout << iter_cnt << "th result: " << pose_wmap_curr << std::endl;
+
+					// ****************************************************** covariance evaluation
+					ceres::Covariance::Options options_covariance;
+					ceres::Covariance covariance(options_covariance);
+					std::vector<std::pair<const double*, const double *> > covariance_blocks;
+					covariance_blocks.push_back(std::make_pair(para_pose, para_pose));
+					CHECK(covariance.Compute(covariance_blocks, &problem));
+					double covariance_pose[SIZE_POSE * SIZE_POSE];
+					covariance.GetCovarianceBlock(para_pose, para_pose, covariance_pose);
+					Eigen::Map<Eigen::Matrix<double, SIZE_POSE, SIZE_POSE> > cov_pose(covariance_pose); // inverse[J'(x*) inverse[S] J(x*)]
+					std::cout << "Covariance of pose:" << std::endl << cov_pose << std::endl;
+
 					if (iter_cnt != 1) printf("-------------------------------------\n");
 				}
 				printf("********************************\n");

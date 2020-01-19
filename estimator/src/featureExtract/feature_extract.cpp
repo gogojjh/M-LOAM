@@ -217,7 +217,7 @@ void FeatureExtract::extractCloud(const double &cur_time, const PointCloud &lase
                         break;
                     }
                     cloud_neighbor_picked[ind] = 1;
-                    // remove the neighbor points with large curvature to make the points distributed at all direction
+                    // remove the neighbor points to make the points distributed at all places
                     for (int l = 1; l <= 5; l++)
                     {
                         float diff_x = laser_cloud->points[ind + l].x - laser_cloud->points[ind + l - 1].x;

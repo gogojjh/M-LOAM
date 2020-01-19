@@ -20,7 +20,8 @@ void TransformToStart(const PointI &pi, PointI &po, const Pose &pose, const bool
         s = (pi.intensity - int(pi.intensity)) / SCAN_PERIOD;
     else
         s = 1.0;
-    Eigen::Quaterniond q_point_last = Eigen::Quaterniond::Identity().slerp(s, pose.q_);
+    // spherically interpolates between q1 and q2 by the interpolation coefficient t
+    Eigen::Quaterniond q_point_last = Eigen::Quaterniond::Identity().slerp(s, pose.q_); 
     Eigen::Vector3d t_point_last = s * pose.t_;
     Eigen::Vector3d point(pi.x, pi.y, pi.z);
     Eigen::Vector3d un_point = q_point_last * point + t_point_last;

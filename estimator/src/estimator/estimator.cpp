@@ -679,6 +679,7 @@ void Estimator::optimizeMap()
 
     // ****************************************************
     // ceres: marginalization of current parameter block
+    // prepare all the residuals, jacobians, and dropped parameter blocks to construct marginalization prior 
     if (MARGINALIZATION_FACTOR)
     {
         TicToc t_whole_marginalization;
@@ -806,11 +807,12 @@ void Estimator::optimizeMap()
         //! for next iteration, the linearization poauto is assured and fixed
         //! adjust the memory of H and b to implement the Schur complement
         TicToc t_pre_margin;
-        marginalization_info->preMarginalize(); // compute the Jacobian
+        marginalization_info->preMarginalize(); // add parameter block given residual info
         printf("pre marginalization: %fms\n", t_pre_margin.toc());
 
         TicToc t_margin;
-        marginalization_info->marginalize(); // marginalize some states and keep the remaining states with prior residuals
+        // marginalize some states and keep the remaining states with prior residuals
+        marginalization_info->marginalize(); // compute linear residuals and jacobian
         printf("marginalization: %fms\n", t_margin.toc());
 
         //! indicate shared memory of parameter blocks except for the dropped state
@@ -839,6 +841,7 @@ void Estimator::optimizeMap()
 }
 
 /****************************************************************************************/
+// TODO: the calibration refinement should be use to refine with pivot map
 void Estimator::buildCalibMap()
 {
     TicToc t_build_map;
@@ -1097,7 +1100,7 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
     CRSMatrix2EigenMatrix(jaco, mat_J_raw);
     Eigen::MatrixXd &mat_J = mat_J_raw;
     Eigen::MatrixXd mat_Jt = mat_J.transpose(); // A^T
-    Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J; // A^TA 48*48
+    Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J; // A^TA 48*48, rewrite as a 6*6 diagonal matrix 
     bool b_vis = false; // to verify the structure of A^T*A
     if (b_vis)
     {

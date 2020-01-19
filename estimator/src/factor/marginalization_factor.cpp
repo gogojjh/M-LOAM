@@ -77,6 +77,9 @@ void ResidualBlockInfo::Evaluate()
     }
 }
 
+/********************************************************
+ * MarginalizationInfo
+ * *******************************************************/
 MarginalizationInfo::~MarginalizationInfo()
 {
     //ROS_WARN("release marginlizationinfo");
@@ -126,7 +129,7 @@ void MarginalizationInfo::preMarginalize()
         {
             long addr = reinterpret_cast<long>(it->parameter_blocks[i]);
             int size = block_sizes[i];
-            if (parameter_block_data.find(addr) == parameter_block_data.end())
+            if (parameter_block_data.find(addr) == parameter_block_data.end()) // such parameter block exists or not?
             {
                 double *data = new double[size];
                 memcpy(data, it->parameter_blocks[i], sizeof(double) * size);
@@ -200,7 +203,7 @@ void MarginalizationInfo::marginalize()
     n = pos - m; // size of optimized states
     //ROS_INFO("marginalization, pos: %d, m: %d, n: %d, size: %d", pos, m, n, (int)parameter_block_idx.size());
 
-    if(m == 0)
+    if (m == 0)
     {
         valid = false;
         printf("unstable tracking...\n");
@@ -293,6 +296,8 @@ void MarginalizationInfo::marginalize()
     A = Arr - Arm * Amm_inv * Amr;
     b = brr - Arm * Amm_inv * bmm;
 
+    // decompose A,b as Jacobian using the Eigenvalue decomposition
+    // A = J^{T}J, b = J^{T}b
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> saes2(A);
     Eigen::VectorXd S = Eigen::VectorXd((saes2.eigenvalues().array() > eps).select(saes2.eigenvalues().array(), 0));
     Eigen::VectorXd S_inv = Eigen::VectorXd((saes2.eigenvalues().array() > eps).select(saes2.eigenvalues().array().inverse(), 0));
@@ -331,6 +336,9 @@ std::vector<double *> MarginalizationInfo::getParameterBlocks(std::unordered_map
     return keep_block_addr;
 }
 
+/********************************************************
+ * MarginalizationFactor
+ * *******************************************************/
 MarginalizationFactor::MarginalizationFactor(MarginalizationInfo* _marginalization_info):marginalization_info(_marginalization_info)
 {
     int cnt = 0;
@@ -340,7 +348,7 @@ MarginalizationFactor::MarginalizationFactor(MarginalizationInfo* _marginalizati
         cnt += it;
     }
     //printf("residual size: %d, %d\n", cnt, n);
-    set_num_residuals(marginalization_info->n);
+    set_num_residuals(marginalization_info->n); // set number of residuals
 };
 
 bool MarginalizationFactor::Evaluate(double const *const *parameters, double *residuals, double **jacobians) const
@@ -355,7 +363,7 @@ bool MarginalizationFactor::Evaluate(double const *const *parameters, double *re
     //}
     int n = marginalization_info->n;
     int m = marginalization_info->m;
-    Eigen::VectorXd dx(n);
+    Eigen::VectorXd dx(n); // dx = x(update) - x0(initial)
     for (int i = 0; i < static_cast<int>(marginalization_info->keep_block_size.size()); i++)
     {
         int size = marginalization_info->keep_block_size[i];
@@ -374,7 +382,9 @@ bool MarginalizationFactor::Evaluate(double const *const *parameters, double *re
             }
         }
     }
-    Eigen::Map<Eigen::VectorXd>(residuals, n) = marginalization_info->linearized_residuals + marginalization_info->linearized_jacobians * dx;
+    // TODO: the marginalization error
+    // ||r+J*dx|| = r^{T}r + dx^{T}*J^{T}J*dx + dx^{T}*J^{T}r = b^{T}H^{+}b + dx^{T}*H*dx + 2dx^{T}*b (fit the algorithm)
+    Eigen::Map<Eigen::VectorXd>(residuals, n) = marginalization_info->linearized_residuals + marginalization_info->linearized_jacobians * dx; 
     // DLOG(INFO) << "linearized_residuals: " << marginalization_info->linearized_residuals.norm();
     // DLOG(INFO) << "linearized_residuals size: " << marginalization_info->linearized_residuals.rows();
     // DLOG(INFO) << "dr: " << (marginalization_info->linearized_jacobians * dx).norm();
@@ -388,7 +398,7 @@ bool MarginalizationFactor::Evaluate(double const *const *parameters, double *re
                 int idx = marginalization_info->keep_block_idx[i] - m;
                 Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> jacobian(jacobians[i], n, size);
                 jacobian.setZero();
-                jacobian.leftCols(local_size) = marginalization_info->linearized_jacobians.middleCols(idx, local_size);
+                jacobian.leftCols(local_size) = marginalization_info->linearized_jacobians.middleCols(idx, local_size); // using Jacobian representation is good to update
             }
         }
     }
