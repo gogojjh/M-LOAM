@@ -3,7 +3,7 @@
 ###############################################
 #common parameters
 mloam_result_save: 0
-output_path: "/home/jjiao/catkin_ws/src/localization/rpg_trajectory_evaluation/results/simu_jackal_mloam/test/mloam/test_mloam_eight/"
+output_path: "/home/jjiao/catkin_ws/src/localization/rpg_trajectory_evaluation/results/simu_jackal_mloam/test/mloam/test_mloam_random_walk_slow_1/"
 mloam_odom_path: "stamped_mloam_odom_estimate.txt"
 mloam_map_path: "stamped_mloam_map_estimate.txt"
 mloam_gt_path: "stamped_groundtruth.txt"

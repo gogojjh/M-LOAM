@@ -91,6 +91,8 @@ std::mutex m_buf;
 
 FeatureExtract f_extract;
 
+double covariance_pose[SIZE_POSE * SIZE_POSE];
+
 int toCubeIndex(const int &i, const int &j, const int &k)
 {
 	return (i + laser_cloud_width * j + laser_cloud_width * laser_cloud_height * k);
@@ -591,7 +593,7 @@ void process()
 				Eigen::Matrix3d cov_po = Eigen::Matrix3d::Zero();
 				pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
 				evalPointUncertainty(idx, point_sel, cov_po);
-				if (cov_po.norm() < NORM_THRESHOLD)
+				if (cov_po.norm() < NORM_THRESHOLD) // or use trace
 				{
 					PointIWithCov point_cov(point_ori, cov_po.cast<float>());
 					laser_cloud_corner_split_cov[idx].push_back(point_cov);
@@ -710,9 +712,9 @@ void process()
 					double cost = 0.0;
 					ceres::CRSMatrix jaco;
 					problem.Evaluate(ceres::Problem::EvaluateOptions(), &cost, NULL, NULL, &jaco);
-					evalDegenracy(local_param_ids, jaco);
 					// printf("residual block size: %d\n", problem.NumResidualBlocks());
 					// printf("cost: %f\n", cost);
+					evalDegenracy(local_param_ids, jaco);
 
 					// ******************************************************
 					TicToc t_solver;
@@ -722,16 +724,20 @@ void process()
 					double2Vector();
 					std::cout << iter_cnt << "th result: " << pose_wmap_curr << std::endl;
 
-					// ****************************************************** covariance evaluation
-					ceres::Covariance::Options options_covariance;
-					ceres::Covariance covariance(options_covariance);
-					std::vector<std::pair<const double*, const double *> > covariance_blocks;
-					covariance_blocks.push_back(std::make_pair(para_pose, para_pose));
-					CHECK(covariance.Compute(covariance_blocks, &problem));
-					double covariance_pose[SIZE_POSE * SIZE_POSE];
-					covariance.GetCovarianceBlock(para_pose, para_pose, covariance_pose);
-					Eigen::Map<Eigen::Matrix<double, SIZE_POSE, SIZE_POSE> > cov_pose(covariance_pose); // inverse[J'(x*) inverse[S] J(x*)]
-					std::cout << "Covariance of pose:" << std::endl << cov_pose << std::endl;
+					// TODO: a running error appears
+					// if (iter_cnt == 1)
+					// {
+					// 	// ****************************************************** covariance evaluation
+					// 	ceres::Covariance::Options options_covariance;
+					// 	ceres::Covariance covariance(options_covariance);
+					// 	std::vector<std::pair<const double*, const double *> > covariance_blocks;
+					// 	covariance_blocks.push_back(std::make_pair(para_pose, para_pose));
+					// 	CHECK(covariance.Compute(covariance_blocks, &problem));
+					// 	covariance.GetCovarianceBlock(para_pose, para_pose, covariance_pose);
+					// 	Eigen::Map<Eigen::Matrix<double, SIZE_POSE, SIZE_POSE> > cov_pose(covariance_pose); // inverse[J'(x*) inverse[S] J(x*)]
+					// 	// std::cout << "Covariance of pose:" << std::endl << cov_pose << std::endl;
+					// 	std::cout << "Trace of pose covariance: " << cov_pose.trace() << std::endl;
+					// }
 
 					if (iter_cnt != 1) printf("-------------------------------------\n");
 				}
