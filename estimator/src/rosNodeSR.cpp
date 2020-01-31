@@ -177,8 +177,7 @@ void restart_callback(const std_msgs::BoolConstPtr &restart_msg)
 void odom_gt_callback(const nav_msgs::Odometry &odom_msg)
 {
     Pose pose_world_base(odom_msg);
-    // Pose pose_base_ref(Eigen::Quaterniond(0.976, -0.216, 0, 0), Eigen::Vector3d(0, 0.266, 0.734));
-    Pose pose_base_ref(Eigen::Quaterniond(1, 0, 0, 0), Eigen::Vector3d(0, 0, 0));
+    Pose pose_base_ref(Eigen::Quaterniond(0.976, -0.216, 0, 0), Eigen::Vector3d(0, 0.266, 0.734));
     Pose pose_world_ref(pose_world_base * pose_base_ref);
     if (laser_path.poses.size() == 0) pose_world_ref_ini = pose_world_ref;
     Pose pose_ref_ini_cur(pose_world_ref_ini.inverse() * pose_world_ref);
@@ -212,7 +211,7 @@ int main(int argc, char **argv)
     {
         cout << "please intput: rosrun mlod mlod_node [config file] " << endl
              << "for example: "
-             << "rosrun mloam mloam_node "
+             << "rosrun mloam mloam_node_sr "
              << "~/catkin_ws/src/M-LOAM/config/config_handheld.yaml" << endl;
         return 1;
     }
@@ -220,7 +219,7 @@ int main(int argc, char **argv)
     google::InitGoogleLogging(argv[0]);
     google::ParseCommandLineFlags(&argc, &argv, true);
 
-    ros::init(argc, argv, "mloam_node");
+    ros::init(argc, argv, "mloam_node_sr");
     ros::NodeHandle n("~");
     ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
 
@@ -230,17 +229,13 @@ int main(int argc, char **argv)
     // readParameters("/home/jjiao/catkin_ws/src/localization/M-LOAM/config/config_simu_jackal.yaml");
     estimator.setParameter();
 
-// #ifdef EIGEN_DONT_PARALLELIZE
-//     ROS_DEBUG("EIGEN_DONT_PARALLELIZE");
-// #endif
     ROS_WARN("waiting for cloud...");
 
     registerPub(n);
     ros::Subscriber sub_cloud0 = n.subscribe(CLOUD0_TOPIC, 100, cloud0_callback);
     ros::Subscriber sub_cloud1 = n.subscribe(CLOUD1_TOPIC, 100, cloud1_callback);
     ros::Subscriber sub_restart = n.subscribe("/mlod_restart", 100, restart_callback);
-    // ros::Subscriber sub_odom_gt = n.subscribe("/base_odom_gt", 100, odom_gt_callback);
-    ros::Subscriber sub_odom_gt = n.subscribe("/mag_nail", 100, odom_gt_callback);
+    ros::Subscriber sub_odom_gt = n.subscribe("/base_odom_gt", 100, odom_gt_callback);
 
     pub_laser_path = n.advertise<nav_msgs::Path>("/laser_odom_path_gt", 100);
 

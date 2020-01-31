@@ -209,9 +209,9 @@ int main(int argc, char **argv)
 {
     if(argc < 2)
     {
-        cout << "please intput: rosrun mlod mlod_node [config file] " << endl
+        cout << "please intput: rosrun mlod mlod_node_rhd [config file] " << endl
              << "for example: "
-             << "rosrun mloam mloam_node "
+             << "rosrun mloam mloam_node_rhd "
              << "~/catkin_ws/src/M-LOAM/config/config_handheld.yaml" << endl;
         return 1;
     }
@@ -219,14 +219,13 @@ int main(int argc, char **argv)
     google::InitGoogleLogging(argv[0]);
     google::ParseCommandLineFlags(&argc, &argv, true);
 
-    ros::init(argc, argv, "mloam_node");
+    ros::init(argc, argv, "mloam_node_rhd");
     ros::NodeHandle n("~");
     ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
 
     string config_file = argv[1];
     cout << "config_file: " << argv[1] << endl;
     readParameters(config_file);
-    // readParameters("/home/jjiao/catkin_ws/src/localization/M-LOAM/config/config_simu_jackal.yaml");
     estimator.setParameter();
 
     ROS_WARN("waiting for cloud...");

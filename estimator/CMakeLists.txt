@@ -3,6 +3,7 @@ project(mloam)
 
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS "-std=c++17")
+#add_compile_options(-std=c++17)
 #-DEIGEN_USE_MKL_ALL")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
@@ -13,7 +14,6 @@ find_package(catkin REQUIRED COMPONENTS
     nav_msgs
     tf
     cv_bridge
-    camera_models
     image_transport
     message_generation
 
@@ -77,18 +77,21 @@ add_library(mloam_lib_2
 target_link_libraries(mloam_lib_2 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES})
 
 ######## --------------------- EXECUTABLE --------------------- ########
-add_executable(mloam_node_simu src/rosNodeSimu.cpp)
-target_link_libraries(mloam_node_simu mloam_lib_1 mloam_lib_2)
+add_executable(mloam_node_sr src/rosNodeSR.cpp)
+target_link_libraries(mloam_node_sr mloam_lib_1 mloam_lib_2)
 
-add_executable(mloam_node_gz_bay src/rosNodeGZBay.cpp)
-target_link_libraries(mloam_node_gz_bay mloam_lib_1 mloam_lib_2)
+add_executable(mloam_node_rhd src/rosNodeRHD.cpp)
+target_link_libraries(mloam_node_rhd mloam_lib_1 mloam_lib_2)
+
+add_executable(mloam_node_rt src/rosNodeRT.cpp)
+target_link_libraries(mloam_node_rt mloam_lib_1 mloam_lib_2)
 
 add_executable(lidar_mapper src/lidarMapper/lidar_mapper.cpp)
 target_link_libraries(lidar_mapper mloam_lib_1 mloam_lib_2)
 
 ######## --------------------- TEST --------------------- ########
-add_executable(test_ceres ../test/test_ceres.cpp)
-target_link_libraries(test_ceres ${catkin_LIBRARIES} ${PCL_LIBS})
+#add_executable(test_ceres ../test/test_ceres.cpp)
+#target_link_libraries(test_ceres ${catkin_LIBRARIES} ${PCL_LIBS})
 
 add_executable(test_merge_pointcloud ../test/test_merge_pointcloud.cpp)
 target_link_libraries(test_merge_pointcloud ${catkin_LIBRARIES} ${PCL_LIBS})
