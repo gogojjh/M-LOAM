@@ -1,0 +1,8 @@
+prefix=/usr/local
+
+Name: mloam
+Description: Description of mloam
+Version: 0.0.0
+Cflags: 
+Libs: -L/usr/local/lib 
+Requires: 

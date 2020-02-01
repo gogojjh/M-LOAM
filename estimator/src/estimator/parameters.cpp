@@ -15,6 +15,7 @@ std::string MLOAM_ODOM_PATH;
 std::string MLOAM_MAP_PATH;
 std::string MLOAM_GT_PATH;
 std::string EX_CALIB_RESULT_PATH;
+std::string EX_CALIB_EIG_PATH;
 
 int MULTIPLE_THREAD;
 
@@ -122,7 +123,6 @@ void readParameters(std::string config_file)
         std::cerr << "ERROR: Wrong path to settings" << std::endl;
     }
 
-
     fsSettings["cloud0_topic"] >> CLOUD0_TOPIC;
     fsSettings["cloud1_topic"] >> CLOUD1_TOPIC;
 
@@ -135,12 +135,26 @@ void readParameters(std::string config_file)
     MLOAM_RESULT_SAVE = fsSettings["mloam_result_save"];
     MLOAM_ODOM_PATH = OUTPUT_FOLDER + fsSettings["mloam_odom_path"];
 	MLOAM_MAP_PATH = OUTPUT_FOLDER + fsSettings["mloam_map_path"];
-    MLOAM_GT_PATH = OUTPUT_FOLDER + fsSettings["mloam_gt_path"];
-    std::cout << "gt path: " << MLOAM_GT_PATH << std::endl;
-    std::cout << "result path: " << MLOAM_ODOM_PATH << ", " << MLOAM_MAP_PATH << std::endl;
+    MLOAM_GT_PATH = OUTPUT_FOLDER + fsSettings["mloam_gt_path"];   
+    EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
+    EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "calib_eig.txt";
+    printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
+    if (MLOAM_RESULT_SAVE)
+    {
+        std::cout << "gt path: " << MLOAM_GT_PATH << std::endl;
+        std::cout << "odom path: " << MLOAM_ODOM_PATH << std::endl;
+        std::cout << "map path: " << MLOAM_MAP_PATH << std::endl;
+        std::cout << "calib path: " << EX_CALIB_RESULT_PATH << std::endl;
+        std::cout << "calib eig path: " << EX_CALIB_EIG_PATH << std::endl;
+        std::remove(MLOAM_ODOM_PATH.c_str());
+        std::remove(MLOAM_MAP_PATH.c_str());
+        std::remove(MLOAM_GT_PATH.c_str());
+        std::remove(EX_CALIB_RESULT_PATH.c_str());
+        std::remove(EX_CALIB_EIG_PATH.c_str());
+    }
 
     NUM_OF_LASER = fsSettings["num_of_laser"];
-    printf("Laser number %d\n", NUM_OF_LASER);
+    printf("laser number %d\n", NUM_OF_LASER);
     if(NUM_OF_LASER != 1 && NUM_OF_LASER != 2)
     {
         printf("num_of_cam should be 1 or 2\n");
@@ -153,10 +167,9 @@ void readParameters(std::string config_file)
 
     ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];
     OPTIMAL_EXTRINSIC = fsSettings["optimal_extrinsic"];
-    EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
     if (ESTIMATE_EXTRINSIC == 2)
     {
-        ROS_WARN("Have no prior about extrinsic param, calibrate extrinsic param");
+        ROS_WARN("have no prior about extrinsic param, calibrate extrinsic param");
         for (int i = 0; i < NUM_OF_LASER; i++)
         {
             QBL.push_back(Eigen::Quaterniond::Identity());
@@ -167,11 +180,11 @@ void readParameters(std::string config_file)
     {
         if (ESTIMATE_EXTRINSIC == 1)
         {
-            ROS_WARN("Please optimize extrinsic param around initial guess!");
+            ROS_WARN("please optimize extrinsic param around initial guess!");
         }
         if (ESTIMATE_EXTRINSIC == 0)
         {
-            ROS_WARN("Fix extrinsic param ");
+            ROS_WARN("fix extrinsic param ");
         }
 
         cv::Mat cv_T;

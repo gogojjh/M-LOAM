@@ -15,6 +15,7 @@
 #include <map>
 
 #include <nav_msgs/Odometry.h>
+#include <geometry_msgs/Pose.h>
 
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/StdVector>
@@ -32,6 +33,7 @@ public:
     Pose(const Eigen::Matrix3d &R, const Eigen::Vector3d &t, const double &td=0);
     Pose(const Eigen::Matrix4d &T, const double &td=0);
     Pose(const nav_msgs::Odometry &odom);
+    Pose(const geometry_msgs::Pose &pose);
 
     static Pose poseTransform(const Pose &pose1, const Pose &pose2);
 

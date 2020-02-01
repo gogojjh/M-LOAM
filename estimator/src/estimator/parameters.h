@@ -15,6 +15,7 @@
 #include <fstream>
 #include <map>
 #include <cassert>
+#include <cstdio>
 
 #include <ros/ros.h>
 
@@ -40,6 +41,7 @@ extern std::string MLOAM_ODOM_PATH;
 extern std::string MLOAM_MAP_PATH;
 extern std::string MLOAM_GT_PATH;
 extern std::string EX_CALIB_RESULT_PATH;
+extern std::string EX_CALIB_EIG_PATH;
 
 extern int MULTIPLE_THREAD;
 

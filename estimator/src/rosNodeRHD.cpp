@@ -174,16 +174,17 @@ void restart_callback(const std_msgs::BoolConstPtr &restart_msg)
     }
 }
 
-void odom_gt_callback(const nav_msgs::Odometry &odom_msg)
+void pose_gt_callback(const geometry_msgs::PoseStamped &pose_msg)
 {
-    Pose pose_world_base(odom_msg);
-    Pose pose_base_ref(Eigen::Quaterniond(0.976, -0.216, 0, 0), Eigen::Vector3d(0, 0.266, 0.734));
+    Pose pose_world_base(pose_msg.pose);
+    Pose pose_base_ref(Eigen::Quaterniond(0.972, -0.233, 0, 0), Eigen::Vector3d(0, 0.266, 0.734));
     Pose pose_world_ref(pose_world_base * pose_base_ref);
-    if (laser_path.poses.size() == 0) pose_world_ref_ini = pose_world_ref;
+    if (laser_path.poses.size() == 0)
+        pose_world_ref_ini = pose_world_ref;
     Pose pose_ref_ini_cur(pose_world_ref_ini.inverse() * pose_world_ref);
 
     nav_msgs::Odometry laser_odom;
-    laser_odom.header = odom_msg.header;
+    laser_odom.header = pose_msg.header;
     laser_odom.header.frame_id = "/world";
     laser_odom.child_frame_id = "/gt";
     laser_odom.pose.pose.orientation.x = pose_ref_ini_cur.q_.x();
@@ -196,7 +197,7 @@ void odom_gt_callback(const nav_msgs::Odometry &odom_msg)
     publishTF(laser_odom);
 
     geometry_msgs::PoseStamped laser_pose;
-    laser_pose.header = odom_msg.header;
+    laser_pose.header = pose_msg.header;
     laser_pose.header.frame_id = "/world";
     laser_pose.pose = laser_odom.pose.pose;
     laser_path.header = laser_pose.header;
@@ -234,7 +235,7 @@ int main(int argc, char **argv)
     ros::Subscriber sub_cloud0 = n.subscribe(CLOUD0_TOPIC, 100, cloud0_callback);
     ros::Subscriber sub_cloud1 = n.subscribe(CLOUD1_TOPIC, 100, cloud1_callback);
     ros::Subscriber sub_restart = n.subscribe("/mlod_restart", 100, restart_callback);
-    ros::Subscriber sub_odom_gt = n.subscribe("/base_odom_gt", 100, odom_gt_callback);
+    ros::Subscriber sub_pose_gt = n.subscribe("/base_pose_gt", 100, pose_gt_callback);
 
     pub_laser_path = n.advertise<nav_msgs::Path>("/laser_odom_path_gt", 100);
 

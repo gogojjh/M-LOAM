@@ -4,7 +4,7 @@
 
 using namespace Eigen;
 
-double EPSILON_R = 0.01;
+double EPSILON_R = 0.03;
 double EPSILON_T = 0.1;
 
 InitialExtrinsics::InitialExtrinsics() {}
@@ -172,7 +172,7 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
 
     Eigen::Vector3d rot_cov = svd.singularValues().tail<3>(); // singular value
     v_rot_cov_[idx_data].push_back(rot_cov(1));
-    printf("pose_cnt:%d, rot_cov:%f **********\n", pose_cnt_, rot_cov(1));
+    printf("------------------- pose_cnt:%d, rot_cov:%f\n", pose_cnt_, rot_cov(1));
     if (pose_cnt_ >= WINDOW_SIZE && rot_cov(1) > 0.25) // converage, the second smallest sigular value
     {
         calib_result = calib_ext_[idx_data];

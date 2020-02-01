@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/jjiao/catkin_ws/src/localization/M-LOAM/estimator/cmake-build-debug/devel/setup.sh

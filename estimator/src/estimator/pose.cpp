@@ -63,6 +63,20 @@ Pose::Pose(const nav_msgs::Odometry &odom)
     T_.setIdentity(); T_.topLeftCorner<3, 3>() = q_.toRotationMatrix(); T_.topRightCorner<3, 1>() = t_;
 }
 
+Pose::Pose(const geometry_msgs::Pose &pose)
+{
+    q_ = Eigen::Quaterniond(
+        pose.orientation.w,
+        pose.orientation.x,
+        pose.orientation.y,
+        pose.orientation.z);
+    t_ = Eigen::Vector3d(
+        pose.position.x,
+        pose.position.y,
+        pose.position.z);
+    T_.setIdentity(); T_.topLeftCorner<3, 3>() = q_.toRotationMatrix(); T_.topRightCorner<3, 1>() = t_;
+}
+
 Pose Pose::poseTransform(const Pose &pose1, const Pose &pose2)
 {
     // t12 = t1 + q1 * t2;

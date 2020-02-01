@@ -61,9 +61,9 @@ body_T_laser: !!opencv-matrix
 # <!-- laser_0 to laser_1 -->
 # <!-- 0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220 -->
 # <!-- base_link to laser_0 -->
-# <!-- -0.216 0 0 0.976 0 0.266 0.734 -->
+# <!-- -0.216 0 0 0.976 0 0.266 0.734 --> 25 degrees
 # <!-- base_link to laser_1 -->
-# <!-- 0.131 0 0 0.991 0 -0.260 0.736 -->
+# <!-- 0.131 0 0 0.991 0 -0.260 0.736 --> 15 degrees
 
 #unsynchronization parameters
 estimate_td: 0                      # 0 have an accurate time offset among sensors

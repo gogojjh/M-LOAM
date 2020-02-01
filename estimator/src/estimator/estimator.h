@@ -172,6 +172,7 @@ class Estimator
 
     std::vector<double> eig_thre_calib_;
     std::vector<double> d_factor_calib_;
+    std::vector<double> cur_eig_calib_;
     std::vector<std::vector<std::pair<double, Pose>, Eigen::aligned_allocator<std::pair<double, Pose> > > > pose_calib_;
 
     // for marginalization
@@ -179,6 +180,7 @@ class Estimator
     vector<double *> last_marginalization_parameter_blocks_;
 
     PlaneNormalVisualizer plane_normal_vis_;
+
 };
 
 

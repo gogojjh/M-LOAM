@@ -115,6 +115,7 @@ void Estimator::setParameter()
 
     eig_thre_calib_ = std::vector<double>(OPT_WINDOW_SIZE + NUM_OF_LASER + 1, EIG_INITIAL);
     d_factor_calib_ = std::vector<double>(NUM_OF_LASER, 0);
+    cur_eig_calib_ = std::vector<double>(NUM_OF_LASER, 0);
     pose_calib_.resize(NUM_OF_LASER);
 
     img_segment_.setScanParam(HORIZON_SCAN, MIN_CLUSTER_SIZE, MIN_LINE_SIZE, SEGMENT_VALID_POINT_NUM, SEGMENT_VALID_LINE_NUM);
@@ -178,6 +179,7 @@ void Estimator::clearState()
 
     eig_thre_calib_.clear();
     d_factor_calib_.clear();
+    cur_eig_calib_.clear();
     pose_calib_.clear();
 
     m_process_.unlock();
@@ -215,7 +217,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
             f_extract_.extractCloud(t, v_laser_cloud_in[i], feature_frame[i]);
         }
     }
-    printf("featureExt time: %fms (average: %fms)\n", feature_ext_time.toc(), feature_ext_time.toc()/v_laser_cloud_in.size());
+    printf("featureExt time: %fms (%u*%fms)\n", feature_ext_time.toc(), v_laser_cloud_in.size(), feature_ext_time.toc() / v_laser_cloud_in.size());
 
     m_buf_.lock();
     feature_buf_.push(make_pair(t, feature_frame));
@@ -302,10 +304,10 @@ void Estimator::process()
                 cloudFeature &prev_cloud_feature = prev_feature_.second[i];
                 pose_rlt_[i] = lidar_tracker_.trackCloud(prev_cloud_feature, cur_cloud_feature, pose_rlt_[i]);
                 pose_laser_cur_[i] = pose_laser_cur_[i] * pose_rlt_[i];
-                std::cout << "LASER " << i << ", pose_rlt: " << pose_rlt_[i] << std::endl;
-                std::cout << "LASER " << i << ", pose_cur: " << pose_laser_cur_[i] << std::endl;
+                // std::cout << "LASER " << i << ", pose_rlt: " << pose_rlt_[i] << std::endl;
+                // std::cout << "LASER " << i << ", pose_cur: " << pose_laser_cur_[i] << std::endl;
             }
-            printf("mloam_tracker %fms (average %fms)\n", t_mloam_tracker.toc(), t_mloam_tracker.toc() / NUM_OF_LASER);
+            printf("lidarTracker %fms (%d*%fms)\n", t_mloam_tracker.toc(), NUM_OF_LASER, t_mloam_tracker.toc() / NUM_OF_LASER);
 
             // initialize extrinsics
             for (auto i = 0; i < NUM_OF_LASER; i++) initial_extrinsics_.addPose(pose_rlt_[i], i);
@@ -318,7 +320,7 @@ void Estimator::process()
                     Pose calib_result;
                     if ((initial_extrinsics_.cov_rot_state_[i]) || (initial_extrinsics_.calibExRotation(IDX_REF, i, calib_result)))
                     {
-                        printf("sufficient translation movement is needed\n");
+                        // printf("sufficient translation movement is needed\n");
                         initial_extrinsics_.setCovRotation(i);
                         if ((initial_extrinsics_.cov_pos_state_[i]) || (initial_extrinsics_.calibExTranslation(IDX_REF, i, calib_result)))
                         {
@@ -350,11 +352,11 @@ void Estimator::process()
             cloudFeature &prev_cloud_feature = prev_feature_.second[IDX_REF];
             pose_rlt_[IDX_REF] = lidar_tracker_.trackCloud(prev_cloud_feature, cur_cloud_feature, pose_rlt_[IDX_REF]);
             pose_laser_cur_[IDX_REF] = Pose(Qs_[cir_buf_cnt_-1], Ts_[cir_buf_cnt_-1]) * pose_rlt_[IDX_REF];
-            std::cout << "relative transform: " << pose_rlt_[IDX_REF] << std::endl;
-            std::cout << "current transform: " << pose_laser_cur_[IDX_REF] << std::endl;
+            // std::cout << "relative transform: " << pose_rlt_[IDX_REF] << std::endl;
+            // std::cout << "current transform: " << pose_laser_cur_[IDX_REF] << std::endl;
             // Eigen::Vector3d ea = pose_rlt_[IDX_REF].T_.topLeftCorner<3, 3>().eulerAngles(2, 1, 0);
             // printf("relative euler (deg): %f, %f, %f\n", toDeg(ea(0)), toDeg(ea(1)), toDeg(ea(2)));
-            printf("mloam_tracker %fms\n", t_mloam_tracker.toc());
+            printf("lidarTracker %fms\n", t_mloam_tracker.toc());
         }
     }
 
@@ -443,8 +445,6 @@ void Estimator::process()
         }
         prev_feature_.second.push_back(tmp_cloud_feature);
     }
-    // or
-    // prev_feature_.second = cur_feature_.second;
 }
 
 // TODO: optimize_direct_calib
@@ -453,7 +453,7 @@ void Estimator::optimizeMap()
     TicToc t_prep_solver;
     int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
 
-    // -----------------
+    // ****************************************************
     ceres::Problem problem;
     ceres::Solver::Summary summary;
     // ceres: set lossfunction and problem
@@ -1118,6 +1118,7 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
 
     double eig_thre; // the larger, the better (with more constraints)
     d_factor_calib_ = std::vector<double>(NUM_OF_LASER, 0);
+    // cur_eig_calib_ = std::vector<double>(NUM_OF_LASER, 0);
     for (auto i = 0; i < local_param_ids.size(); i++)
     {
         Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(6*i, 6*i, 6, 6);
@@ -1145,6 +1146,7 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
 
         if (i > OPT_WINDOW_SIZE)
         {
+            cur_eig_calib_[i - OPT_WINDOW_SIZE - 1] = mat_E(0, 0);
             if (mat_E(0, 0) >= EIG_THRE_CALIB)
             {
                 eig_thre_calib_[i] = EIG_THRE_CALIB;
@@ -1162,10 +1164,10 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
             // std::cout << mat_P << std::endl;
         }
     }
-    std::cout << "eigen threshold " << eig_thre_calib_.size() << ": ";
+    std::cout << "eigen threshold :";
     for (auto i = 0; i < eig_thre_calib_.size(); i++) std::cout << eig_thre_calib_[i] << " ";
     std::cout << std::endl;
-    printf("evaluate degeneracy %fms\n", t_eval_degenracy.toc());
+    // printf("evaluate degeneracy %fms\n", t_eval_degenracy.toc());
 }
 
 void Estimator::evalCalib()
@@ -1175,7 +1177,7 @@ void Estimator::evalCalib()
         for (auto n = 0; n < NUM_OF_LASER; n++)
             if (d_factor_calib_[n] != 0) // with high constraints
             {
-                double weight = d_factor_calib_[n] / EIG_THRE_CALIB;
+                double weight = pow(d_factor_calib_[n] / EIG_THRE_CALIB, 1.0);
                 Pose pose_ext = Pose(qbl_[n], tbl_[n]);
                 pose_calib_[n].push_back(make_pair(weight, pose_ext));
             }

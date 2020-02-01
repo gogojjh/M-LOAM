@@ -375,6 +375,7 @@ void process()
 												 odometry_buf.front()->pose.pose.position.z);
 			odometry_buf.pop();
 
+			// TODO: not execuate when calibration is not stable
 			extrinsics = *ext_buf.front();
 			if (!extrinsics.status)
 			{
