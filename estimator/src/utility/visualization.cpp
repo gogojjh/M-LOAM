@@ -173,18 +173,18 @@ void printStatistics(const Estimator &estimator, double t)
         }
 
         {
-            ofstream fout(EX_CALIB_RESULT_PATH.c_str(), ios::out);
+            ofstream fout(EX_CALIB_RESULT_PATH.c_str(), ios::app);
             fout.setf(ios::fixed, ios::floatfield);
             fout.precision(5);
             for (auto i = 0; i < NUM_OF_LASER; i++)
             {
-                fout << i << " "
-                    << estimator.tbl_[i](0) << " "
-                    << estimator.tbl_[i](1) << " "
-                    << estimator.tbl_[i](2) << " "
-                    << estimator.qbl_[i].x() << " "
-                    << estimator.qbl_[i].y() << " "
-                    << estimator.qbl_[i].z() << " "
+                fout << estimator.cur_time_ << ", "
+                    << estimator.tbl_[i](0) << ", "
+                    << estimator.tbl_[i](1) << ", "
+                    << estimator.tbl_[i](2) << ", "
+                    << estimator.qbl_[i].x() << ", "
+                    << estimator.qbl_[i].y() << ", "
+                    << estimator.qbl_[i].z() << ", "
                     << estimator.qbl_[i].w() << std::endl;
             }
             fout.close();

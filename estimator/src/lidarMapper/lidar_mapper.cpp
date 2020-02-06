@@ -93,6 +93,8 @@ FeatureExtract f_extract;
 
 double covariance_pose[SIZE_POSE * SIZE_POSE];
 
+int UNCER_PROPA_SWITCH = 1;
+
 int toCubeIndex(const int &i, const int &j, const int &k)
 {
 	return (i + laser_cloud_width * j + laser_cloud_width * laser_cloud_height * k);
@@ -684,7 +686,10 @@ void process()
 	                        const Eigen::Vector3d &p_data = feature.point_;
 	                        const Eigen::Vector4d &coeff_ref = feature.coeffs_;
 						    Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
-							normalToCov(laser_cloud_corner_split_cov[n].points[idx], cov_matrix);
+							if (UNCER_PROPA_SWITCH)
+							{
+								normalToCov(laser_cloud_corner_split_cov[n].points[idx], cov_matrix);
+							}
 							LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(p_data, coeff_ref, cov_matrix);
 							problem.AddResidualBlock(f, loss_function, para_pose);
 						}
@@ -695,7 +700,10 @@ void process()
 	                        const Eigen::Vector3d &p_data = feature.point_;
 	                        const Eigen::Vector4d &coeff_ref = feature.coeffs_;
 	                        Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
-							normalToCov(laser_cloud_surf_split_cov[n].points[idx], cov_matrix);
+							if (UNCER_PROPA_SWITCH)
+							{
+								normalToCov(laser_cloud_surf_split_cov[n].points[idx], cov_matrix);
+							}
 							LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(p_data, coeff_ref, cov_matrix);
 							problem.AddResidualBlock(f, loss_function, para_pose);
 							if (CHECK_JACOBIAN)
@@ -956,6 +964,19 @@ int main(int argc, char **argv)
 
 	string config_file = argv[1];
 	readParameters(config_file);
+
+    MLOAM_RESULT_SAVE = std::stoi(argv[2]);
+    OUTPUT_FOLDER = argv[3];
+    MLOAM_MAP_PATH = OUTPUT_FOLDER + std::string(argv[4]);
+    printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
+    if (MLOAM_RESULT_SAVE)
+    {
+        std::cout << "map path: " << MLOAM_MAP_PATH << std::endl;
+        std::remove(MLOAM_MAP_PATH.c_str());
+    }	
+
+	UNCER_PROPA_SWITCH = std::stoi(argv[5]);
+	printf("uncertainty propagation switch (0/1): %d\n", UNCER_PROPA_SWITCH);
 
 	down_size_filter_corner.setLeafSize(MAP_CORNER_RES, MAP_CORNER_RES,MAP_CORNER_RES);
 	down_size_filter_surf.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);

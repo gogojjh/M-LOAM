@@ -1,13 +1,5 @@
 %YAML:1.0
 
-###############################################
-#common parameters
-mloam_result_save: 0
-output_path: "/home/jjiao/catkin_ws/src/localization/rpg_trajectory_evaluation/results/simu_jackal_mloam/test/mloam/test_mloam_random_walk_slow_1/"
-mloam_odom_path: "stamped_mloam_odom_estimate.txt"
-mloam_map_path: "stamped_mloam_map_estimate.txt"
-mloam_gt_path: "stamped_groundtruth.txt"
-
 #Multiple thread support
 multiple_thread: 0
 
@@ -25,7 +17,7 @@ num_of_laser: 2
 n_scans: 16
 
 # segmentation parameters
-segment_cloud: 0
+segment_cloud: 1
 horizon_scan: 400
 min_cluster_size: 15
 min_line_size: 10
@@ -50,20 +42,18 @@ body_T_laser: !!opencv-matrix
    # data: [0, 0, 0, 1, 0, 0, 0,
    #        0, 0, 0, 1, 0, 0, 0] # qx qy qz qw px py pz
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-   #        0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220] # gt
-   # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-   #        0.312, 0.0, 0.0, 0.940, 0, -0.500, -0.240] # gt_noise
+   #        0.31, 0.0, 0.0, 0.94, 0, -0.2, 0.0] # initialization   
    data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-          0.3173, 0.0, 0.0, 0.9483, 0.009, -0.4939, -0.2226] # estimate
+          0.33068, -0.00056, -0.00047, 0.94374, 0.00428, -0.48702, -0.21382] # estimate
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-   #        0.31, 0.0, 0.0, 0.94, 0, -0.2, 0.0] # initialization
+   #        0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220] # gt
 
-# <!-- laser_0 to laser_1 -->
-# <!-- 0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220 -->
-# <!-- base_link to laser_0 -->
-# <!-- -0.216 0 0 0.976 0 0.266 0.734 --> 25 degrees
-# <!-- base_link to laser_1 -->
-# <!-- 0.131 0 0 0.991 0 -0.260 0.736 --> 15 degrees
+   # <!-- laser_0 to laser_1 -->
+   # <!-- 0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220 -->
+   # <!-- base_link to laser_0 -->
+   # <!-- -0.216 0 0 0.976 0 0.266 0.734 --> 25 degrees
+   # <!-- base_link to laser_1 -->
+   # <!-- 0.131 0 0 0.991 0 -0.260 0.736 --> 15 degrees
 
 #unsynchronization parameters
 estimate_td: 0                      # 0 have an accurate time offset among sensors
@@ -112,8 +102,8 @@ pcl_viewer_normal_ratio: 10
 # calibration converage parameters
 n_cumu_feature: 10
 eig_initial: 200
-eig_thre_calib: 1000
-n_calib: 10
+eig_thre_calib: 700
+n_calib: 15
 
 # mapping uncertainty
 uncertainty_calib: !!opencv-matrix

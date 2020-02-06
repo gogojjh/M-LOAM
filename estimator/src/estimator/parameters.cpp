@@ -131,28 +131,6 @@ void readParameters(std::string config_file)
     SOLVER_TIME = fsSettings["max_solver_time"];
     NUM_ITERATIONS = fsSettings["max_num_iterations"];
 
-    fsSettings["output_path"] >> OUTPUT_FOLDER;
-    MLOAM_RESULT_SAVE = fsSettings["mloam_result_save"];
-    MLOAM_ODOM_PATH = OUTPUT_FOLDER + fsSettings["mloam_odom_path"];
-	MLOAM_MAP_PATH = OUTPUT_FOLDER + fsSettings["mloam_map_path"];
-    MLOAM_GT_PATH = OUTPUT_FOLDER + fsSettings["mloam_gt_path"];   
-    EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
-    EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "calib_eig.txt";
-    printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
-    if (MLOAM_RESULT_SAVE)
-    {
-        std::cout << "gt path: " << MLOAM_GT_PATH << std::endl;
-        std::cout << "odom path: " << MLOAM_ODOM_PATH << std::endl;
-        std::cout << "map path: " << MLOAM_MAP_PATH << std::endl;
-        std::cout << "calib path: " << EX_CALIB_RESULT_PATH << std::endl;
-        std::cout << "calib eig path: " << EX_CALIB_EIG_PATH << std::endl;
-        std::remove(MLOAM_ODOM_PATH.c_str());
-        std::remove(MLOAM_MAP_PATH.c_str());
-        std::remove(MLOAM_GT_PATH.c_str());
-        std::remove(EX_CALIB_RESULT_PATH.c_str());
-        std::remove(EX_CALIB_EIG_PATH.c_str());
-    }
-
     NUM_OF_LASER = fsSettings["num_of_laser"];
     printf("laser number %d\n", NUM_OF_LASER);
     if(NUM_OF_LASER != 1 && NUM_OF_LASER != 2)

@@ -1,8 +1,0 @@
-prefix=/home/jjiao/catkin_ws/src/localization/M-LOAM/estimator/cmake-build-debug/devel
-
-Name: mloam
-Description: Description of mloam
-Version: 0.0.0
-Cflags: 
-Libs: -L/home/jjiao/catkin_ws/src/localization/M-LOAM/estimator/cmake-build-debug/devel/lib 
-Requires: 

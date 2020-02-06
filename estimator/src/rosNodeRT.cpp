@@ -227,12 +227,29 @@ int main(int argc, char **argv)
     string config_file = argv[1];
     cout << "config_file: " << argv[1] << endl;
     readParameters(config_file);
-    // readParameters("/home/jjiao/catkin_ws/src/localization/M-LOAM/config/config_simu_jackal.yaml");
     estimator.setParameter();
 
-// #ifdef EIGEN_DONT_PARALLELIZE
-//     ROS_DEBUG("EIGEN_DONT_PARALLELIZE");
-// #endif
+    MLOAM_RESULT_SAVE = std::stoi(argv[2]);
+    OUTPUT_FOLDER = argv[3];
+    MLOAM_ODOM_PATH = OUTPUT_FOLDER + std::string(argv[4]);
+    MLOAM_GT_PATH = OUTPUT_FOLDER + argv[5];
+    EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
+    EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "calib_eig.txt";
+    printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
+    if (MLOAM_RESULT_SAVE)
+    {
+        std::cout << "gt path: " << MLOAM_GT_PATH << std::endl;
+        std::cout << "odom path: " << MLOAM_ODOM_PATH << std::endl;
+        std::cout << "map path: " << MLOAM_MAP_PATH << std::endl;
+        std::cout << "calib path: " << EX_CALIB_RESULT_PATH << std::endl;
+        std::cout << "calib eig path: " << EX_CALIB_EIG_PATH << std::endl;
+        std::remove(MLOAM_ODOM_PATH.c_str());
+        std::remove(MLOAM_MAP_PATH.c_str());
+        std::remove(MLOAM_GT_PATH.c_str());
+        std::remove(EX_CALIB_RESULT_PATH.c_str());
+        std::remove(EX_CALIB_EIG_PATH.c_str());
+    }
+
     ROS_WARN("waiting for cloud...");
 
     registerPub(n);
