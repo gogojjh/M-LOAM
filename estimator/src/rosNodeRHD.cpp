@@ -177,7 +177,8 @@ void restart_callback(const std_msgs::BoolConstPtr &restart_msg)
 void pose_gt_callback(const geometry_msgs::PoseStamped &pose_msg)
 {
     Pose pose_world_base(pose_msg.pose);
-    Pose pose_base_ref(Eigen::Quaterniond(0.972, -0.233, 0, 0), Eigen::Vector3d(0, 0.266, 0.734));
+    // Pose pose_base_ref(Eigen::Quaterniond(0.97055, 0.03359, -0.13054, 0.19966), Eigen::Vector3d(2.7381, 1.1267, -0.34695));
+    Pose pose_base_ref(Eigen::Quaterniond(1, 0, 0, 0), Eigen::Vector3d(0, 0, 0));
     Pose pose_world_ref(pose_world_base * pose_base_ref);
     if (laser_path.poses.size() == 0)
         pose_world_ref_ini = pose_world_ref;

@@ -630,8 +630,6 @@ void process()
 				kdtree_surf_from_map->setInputCloud(laser_cloud_surf_from_map);
 				printf("build tree time %fms\n", t_tree.toc());
 
-				std::vector<double *> para_ids;
-				std::vector<ceres::internal::ResidualBlock *> res_ids;
 				printf("********************************\n");
 				for (int iter_cnt = 0; iter_cnt < 2; iter_cnt++)
 				{
@@ -648,11 +646,16 @@ void process()
 					options.gradient_check_relative_precision = 1e-4;
 
 					vector2Double();
-					std::vector<PoseLocalParameterization *> local_param_ids;
+
 					PoseLocalParameterization *local_parameterization = new PoseLocalParameterization();
+					std::vector<PoseLocalParameterization *> local_param_ids;
 					local_parameterization->setParameter();
-					problem.AddParameterBlock(para_pose, SIZE_POSE, local_parameterization);
 					local_param_ids.push_back(local_parameterization);
+
+					std::vector<double *> para_ids;
+					std::vector<ceres::internal::ResidualBlock *> res_ids_proj;
+					problem.AddParameterBlock(para_pose, SIZE_POSE, local_parameterization);
+					para_ids.push_back(para_pose);
 
 					// ******************************************************
 					int corner_num = 0;
@@ -691,7 +694,8 @@ void process()
 								normalToCov(laser_cloud_corner_split_cov[n].points[idx], cov_matrix);
 							}
 							LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(p_data, coeff_ref, cov_matrix);
-							problem.AddResidualBlock(f, loss_function, para_pose);
+							ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
+							res_ids_proj.push_back(res_id);
 						}
 
 						for (auto &feature: surf_map_features)
@@ -705,7 +709,8 @@ void process()
 								normalToCov(laser_cloud_surf_split_cov[n].points[idx], cov_matrix);
 							}
 							LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(p_data, coeff_ref, cov_matrix);
-							problem.AddResidualBlock(f, loss_function, para_pose);
+							ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
+							res_ids_proj.push_back(res_id);
 							if (CHECK_JACOBIAN)
 		                    {
 		                        double **tmp_param = new double *[1];
@@ -720,9 +725,12 @@ void process()
 
 					double cost = 0.0;
 					ceres::CRSMatrix jaco;
-					problem.Evaluate(ceres::Problem::EvaluateOptions(), &cost, NULL, NULL, &jaco);
-					// printf("residual block size: %d\n", problem.NumResidualBlocks());
-					// printf("cost: %f\n", cost);
+					ceres::Problem::EvaluateOptions e_option;
+					e_option.parameter_blocks = para_ids;
+					e_option.residual_blocks = res_ids_proj;
+					problem.Evaluate(e_option, &cost, NULL, NULL, &jaco);
+					printf("residual block size: %d\n", problem.NumResidualBlocks());
+					printf("cost: %f\n", cost);
 					evalDegenracy(local_param_ids, jaco);
 
 					// ******************************************************
