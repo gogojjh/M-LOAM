@@ -38,6 +38,7 @@ public:
 
     void projectCloud(const common::PointCloud &laser_cloud_in);
     void segmentCloud(const common::PointCloud &laser_cloud_in, common::PointCloud &laser_cloud_out);
+    void labelGroundPoints();
     void labelComponents(int row, int col);
     void labelConnectLine();
 

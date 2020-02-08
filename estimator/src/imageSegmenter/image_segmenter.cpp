@@ -96,6 +96,8 @@ void ImageSegmenter::segmentCloud(const PointCloud &laser_cloud_in, PointCloud &
 
     projectCloud(laser_cloud_in);
 
+    // labelGroundPoints();
+
     for (size_t i = 0; i < N_SCANS; i++)
         for (size_t j = 0; j < horizon_scans_; j++)
             if (label_mat_.at<int>(i,j) == 0) labelComponents(i, j);
@@ -114,6 +116,14 @@ void ImageSegmenter::segmentCloud(const PointCloud &laser_cloud_in, PointCloud &
         }
     }
     // printf("input cloud size:%d, output cloud size:%d\n", laser_cloud_in.size(), laser_cloud_out.size());
+}
+
+void ImageSegmenter::labelGroundPoints()
+{
+    for (size_t i = N_SCANS - 6; i < N_SCANS; i++)
+        for (size_t j = 0; j < horizon_scans_; j++)
+            if (label_mat_.at<int>(i, j) == 0) range_mat_.at<int>(i, j) = label_count_;
+    label_count_++;
 }
 
 void ImageSegmenter::labelComponents(int row, int col)

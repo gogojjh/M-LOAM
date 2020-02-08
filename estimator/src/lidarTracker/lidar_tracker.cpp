@@ -40,7 +40,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
     Pose pose_last_curr(pose_ini);
     double para_pose[SIZE_POSE];
 
-    for (size_t iter_cnt = 0; iter_cnt < 2; iter_cnt++)
+    for (size_t iter_cnt = 0; iter_cnt < 1; iter_cnt++)
     {
         ceres::Problem problem;
         ceres::Solver::Summary summary;

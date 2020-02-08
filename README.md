@@ -35,11 +35,13 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 ### 3. Example
 ```
     roslaunch mloam mloam_handheld.launch
+    rostopic echo /extrinsics/odoms[1]/pose
 ```
 
 ### 4. Compare with A-LOAM
+> mloam_handheld.launch set run_aloam:=true
 ```
-    roslaunch aloam_velodyne aloam_handheld.launch
+    roslaunch mloam mloam_handheld.launch
 ```
 
 ### 5. Results
