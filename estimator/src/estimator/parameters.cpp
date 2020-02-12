@@ -83,7 +83,7 @@ double EIG_INITIAL;
 double EIG_THRE_CALIB;
 int N_CALIB;
 
-Eigen::Matrix<double, 9, 9> XI;
+Eigen::Matrix<double, 9, 9> THETA;
 double NORM_THRESHOLD;
 
 float MAP_CORNER_RES;
@@ -231,14 +231,14 @@ void readParameters(std::string config_file)
     N_CALIB = fsSettings["n_calib"];
 
     // mapping parameter
-    cv::Mat cv_xi;
-    fsSettings["uncertainty_calib"] >> cv_xi;
-    Eigen::Matrix<double, 9, 1> xi_vec; // rotation, translation, point
-    xi_vec << cv_xi.ptr<double>(0)[0], cv_xi.ptr<double>(0)[1], cv_xi.ptr<double>(0)[2],
-              cv_xi.ptr<double>(0)[3], cv_xi.ptr<double>(0)[4], cv_xi.ptr<double>(0)[5],
-              cv_xi.ptr<double>(0)[6], cv_xi.ptr<double>(0)[7], cv_xi.ptr<double>(0)[8];
-    XI = xi_vec.asDiagonal();
-    std::cout << "initial covariance XI:" << std::endl << XI << std::endl;
+    cv::Mat cv_theta;
+    fsSettings["uncertainty_calib"] >> cv_theta;
+    Eigen::Matrix<double, 9, 1> theta_vec; // rotation, translation, point
+    theta_vec << cv_theta.ptr<double>(0)[0], cv_theta.ptr<double>(0)[1], cv_theta.ptr<double>(0)[2],
+              cv_theta.ptr<double>(0)[3], cv_theta.ptr<double>(0)[4], cv_theta.ptr<double>(0)[5],
+              cv_theta.ptr<double>(0)[6], cv_theta.ptr<double>(0)[7], cv_theta.ptr<double>(0)[8];
+    THETA = theta_vec.asDiagonal();
+    std::cout << "initial covarianceTHETA:" << std::endl << THETA << std::endl;
 
     NORM_THRESHOLD = fsSettings["norm_threshold"];
 

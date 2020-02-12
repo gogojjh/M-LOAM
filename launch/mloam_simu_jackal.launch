@@ -24,7 +24,7 @@
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_jackal_simu_rect_box/random_walk_slow_1.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_jackal_simu_rect_box/random_walk_slow_2.bag" /> -->
         <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_jackal_simu_rect_box/random_walk_slow_3.bag" />
-        <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_file) --clock -r 0.7 --pause" />
+        <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_file) --clock -r 1 --pause" />
     </group>
 
     <group if="$(arg run_mloam)">

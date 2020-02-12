@@ -108,7 +108,7 @@ extern double EIG_INITIAL;
 extern double EIG_THRE_CALIB;
 extern int N_CALIB;
 
-extern Eigen::Matrix<double, 9, 9> XI;
+extern Eigen::Matrix<double, 9, 9> THETA;
 extern double NORM_THRESHOLD;
 
 extern float MAP_CORNER_RES;

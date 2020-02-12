@@ -289,7 +289,7 @@ void InitialExtrinsics::saveStatistics()
 {
     try
     {
-        ofstream fout(std::string(OUTPUT_FOLDER + "initialization.csv").c_str(), ios::out);
+        ofstream fout(std::string(OUTPUT_FOLDER + "initialization.txt").c_str(), ios::out);
         fout.setf(ios::fixed, ios::floatfield);
         fout.precision(5);
         // orientation

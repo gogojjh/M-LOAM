@@ -48,10 +48,11 @@ void TransformToEnd(const PointI &pi, PointI &po, const Pose &pose, const bool &
 
 void evalPointUncertainty(const int &idx, const PointI &pi, Eigen::Matrix3d &cov_po)
 {
+    //THETA: diag(P, Phi, Z) includes the translation, rotation, measurement uncertainty
     Eigen::Vector4d point_curr(pi.x, pi.y, pi.z, 1);
     if (idx == IDX_REF)
     {
-        cov_po = XI.bottomRightCorner<3, 3>(); // keep the covariance of points
+        cov_po = THETA.bottomRightCorner<3, 3>(); 
     } else
     {
         Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
@@ -63,7 +64,7 @@ void evalPointUncertainty(const int &idx, const PointI &pi, Eigen::Matrix3d &cov
         Eigen::Matrix<double, 4, 9> G;
         G.block<4, 6>(0, 0) = pointToFS(T * point_curr);
         G.block<4, 3>(0, 6) = T * D;
-        cov_po = Eigen::Matrix4d(G * XI * G.transpose()).topLeftCorner<3, 3>(); // 4x4
+        cov_po = Eigen::Matrix4d(G * THETA * G.transpose()).topLeftCorner<3, 3>(); // 4x4
     }
     // std::cout << "evalUncertainty:" << std::endl
     //           << point_curr.transpose() << std::endl
