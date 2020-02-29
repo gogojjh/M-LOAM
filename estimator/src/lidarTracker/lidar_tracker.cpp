@@ -48,7 +48,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
 
         ceres::Solver::Options options;
         options.linear_solver_type = ceres::DENSE_QR;
-        options.max_num_iterations = 10;
+        options.max_num_iterations = 6;
         // options.max_solver_time_in_seconds = 0.003;
         options.minimizer_progress_to_stdout = false;
         options.check_gradients = false;
@@ -73,7 +73,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
 
         int corner_num = corner_scan_features.size();
         int surf_num = surf_scan_features.size();
-        printf("iter:%d, use_corner:%d, use_surf:%d\n", iter_cnt, corner_num, surf_num);
+        // printf("iter:%d, use_corner:%d, use_surf:%d\n", iter_cnt, corner_num, surf_num);
         if ((corner_num + surf_num) < 10)
         {
             printf("less correspondence! *************************************************\n");
@@ -113,7 +113,6 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
             else
                 s = 1.0;            
             LidarScanPlaneNormFactor *f = new LidarScanPlaneNormFactor(p_data, coeff, s);
-            problem.AddResidualBlock(f, loss_function, para_pose);
             ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
             res_ids_proj.push_back(res_id);
         }
@@ -130,9 +129,9 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         // step 3: optimization
         TicToc t_solver;
         ceres::Solve(options, &problem, &summary);
-        std::cout << summary.BriefReport() << std::endl;
+        // std::cout << summary.BriefReport() << std::endl;
         // std::cout << summary.FullReport() << std::endl;
-        // printf("solver time %f ms \n", t_solver.toc());
+        // printf("solver time %f ms \n", t_solver.toc());            
     }
 
     Pose pose_prev_cur(Eigen::Quaterniond(para_pose[6], para_pose[3], para_pose[4], para_pose[5]), 
@@ -143,6 +142,8 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
 void LidarTracker::evalDegenracy(PoseLocalParameterization *local_parameterization, const ceres::CRSMatrix &jaco)
 {
     printf("jacob: %d constraints, %d parameters\n", jaco.num_rows, jaco.num_cols); // 2000+, 6
+    if (jaco.num_rows == 0)
+        return;
 	Eigen::MatrixXd mat_J;
 	CRSMatrix2EigenMatrix(jaco, mat_J);
 	Eigen::MatrixXd mat_Jt = mat_J.transpose(); // A^T
