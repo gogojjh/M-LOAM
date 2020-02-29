@@ -13,6 +13,7 @@
 #include <vector>
 #include <fstream>
 #include <map>
+#include <iomanip>
 
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Pose.h>
