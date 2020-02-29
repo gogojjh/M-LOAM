@@ -7,7 +7,7 @@
     <arg name="run_aloam" default="false" />
 
     <arg name="run_mloam_map_with_up" default="true" /> <!-- uncertainty propagation -->    
-    <arg name="mloam_result_save" default="1" />
+    <arg name="mloam_result_save" default="0" />
 
     <arg name="output_path" default="/home/jjiao/catkin_ws/src/localization/rpg_trajectory_evaluation/results/handheld/test/mloam_20200228/ri_room_calib_1/"/>
     <arg name="mloam_gt_path" default="stamped_groundtruth.txt" />    
@@ -30,10 +30,10 @@
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/handheld_20200207/ri_room_with_loop.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/handheld_20200207/ri_room_with_loop.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/20190809/room1.bag" /> -->
-        <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200228/ri_room_calib_filter.bag" />
+        <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200228/ri_room_calib_filter.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200228/ri_room_loop_filter.bag" /> -->
-        <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200228/ri_room_loop_test_vibration.bag" /> -->
-        <node pkg="rosbag" type="play" name="rosbag" args="--clock --pause -r 1 $(arg bag_file)" />
+        <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200228/ri_room_loop_test_vibration.bag" /> 
+        <node pkg="rosbag" type="play" name="rosbag" args="--clock --pause -r 0.7 $(arg bag_file)" />
     </group>
 
     <group if="$(arg run_mloam)">

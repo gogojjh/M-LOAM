@@ -41,6 +41,7 @@
 #include "../imageSegmenter/image_segmenter.h"
 #include "../featureExtract/feature_extract.h"
 #include "../lidarTracker/lidar_tracker.h"
+// #include "../lidarTracker/lidar_tracker_bck.h"
 #include "../initial/initial_extrinsics.h"
 #include "../utility/utility.h"
 #include "../utility/cloud_visualizer.h"
@@ -52,8 +53,6 @@
 #include "../factor/pose_local_parameterization.h"
 #include "../factor/marginalization_factor.h"
 #include "../factor/prior_factor.hpp"
-
-void CRSMatrix2EigenMatrix(const ceres::CRSMatrix &crs_matrix, Eigen::MatrixXd &eigen_matrix);
 
 class Estimator
 {

@@ -12,6 +12,9 @@
 #include <cmath>
 #include <cassert>
 #include <cstring>
+
+#include <ceres/ceres.h>
+
 #include <eigen3/Eigen/Dense>
 
 #include "common/types/type.h"
@@ -199,6 +202,22 @@ void pointAssociateTobeMapped(const PointType &pi, PointType &po, const Pose &po
     po.y = point_trans.y();
     po.z = point_trans.z();
     po.intensity = pi.intensity;
+}
+
+template <typename T>
+void CRSMatrix2EigenMatrix(const ceres::CRSMatrix &crs_matrix, Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> &eigen_matrix)
+{
+    eigen_matrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>::Zero(crs_matrix.num_rows, crs_matrix.num_cols);
+    for (auto row = 0; row < crs_matrix.num_rows; row++)
+    {
+        int start = crs_matrix.rows[row];
+        int end = crs_matrix.rows[row + 1] - 1;
+        for (auto i = start; i <= end; i++)
+        {
+            int col = crs_matrix.cols[i];
+            eigen_matrix(row, col) = T(crs_matrix.values[i]);
+        }
+    }
 }
 
 

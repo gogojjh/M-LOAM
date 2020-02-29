@@ -42,6 +42,7 @@ class LidarTracker
 public:
     LidarTracker();
     Pose trackCloud(const cloudFeature &prev_cloud_feature, const cloudFeature &cur_cloud_feature, const Pose &pose_ini);
+    void evalDegenracy(PoseLocalParameterization *local_parameterization, const ceres::CRSMatrix &jaco);
 
     FeatureExtract f_extract_;
 };

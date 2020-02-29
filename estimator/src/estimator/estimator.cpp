@@ -12,23 +12,6 @@
 
 using namespace common;
 
-void CRSMatrix2EigenMatrix(const ceres::CRSMatrix &crs_matrix, Eigen::MatrixXd &eigen_matrix)
-{
-    eigen_matrix = Eigen::MatrixXd::Zero(crs_matrix.num_rows, crs_matrix.num_cols);
-    for (auto row = 0; row < crs_matrix.num_rows; row++)
-    {
-        int start = crs_matrix.rows[row];
-        int end = crs_matrix.rows[row + 1] - 1;
-        for (auto i = start; i <= end; i++)
-        {
-            int col = crs_matrix.cols[i];
-            double value = crs_matrix.values[i];
-            eigen_matrix(row, col) = value;
-        }
-    }
-}
-
-
 Estimator::Estimator()
 {
     ROS_INFO("init begins");
@@ -304,7 +287,7 @@ void Estimator::process()
                 cloudFeature &prev_cloud_feature = prev_feature_.second[i];
                 pose_rlt_[i] = lidar_tracker_.trackCloud(prev_cloud_feature, cur_cloud_feature, pose_rlt_[i]);
                 pose_laser_cur_[i] = pose_laser_cur_[i] * pose_rlt_[i];
-                // std::cout << "LASER " << i << ", pose_rlt: " << pose_rlt_[i] << std::endl;
+                std::cout << "LASER " << i << ", pose_rlt: " << pose_rlt_[i] << std::endl;
                 // std::cout << "LASER " << i << ", pose_cur: " << pose_laser_cur_[i] << std::endl;
             }
             printf("lidarTracker %fms (%d*%fms)\n", t_mloam_tracker.toc(), NUM_OF_LASER, t_mloam_tracker.toc() / NUM_OF_LASER);
@@ -1116,9 +1099,8 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
     printf("jacob: %d constraints, %d parameters (%d pose_param, %d ext_param)\n",
         jaco.num_rows, jaco.num_cols, 6*(OPT_WINDOW_SIZE + 1), 6*NUM_OF_LASER); // 58, feature_size(2700) x 50
     TicToc t_eval_degenracy;
-    Eigen::MatrixXd mat_J_raw;
-    CRSMatrix2EigenMatrix(jaco, mat_J_raw);
-    Eigen::MatrixXd &mat_J = mat_J_raw;
+    Eigen::MatrixXd mat_J;
+    CRSMatrix2EigenMatrix(jaco, mat_J);
     Eigen::MatrixXd mat_Jt = mat_J.transpose(); // A^T
     Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J; // A^TA 48*48, rewrite as a 6*6 diagonal matrix 
     bool b_vis = false; // to verify the structure of A^T*A

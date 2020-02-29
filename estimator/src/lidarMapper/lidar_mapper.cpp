@@ -195,30 +195,13 @@ void double2Vector()
 	pose_wmap_curr.q_ = Eigen::Quaterniond(para_pose[6], para_pose[3], para_pose[4], para_pose[5]);
 }
 
-void CRSMatrix2EigenMatrix(const ceres::CRSMatrix &crs_matrix, Eigen::MatrixXd &eigen_matrix)
-{
-    eigen_matrix = Eigen::MatrixXd::Zero(crs_matrix.num_rows, crs_matrix.num_cols);
-    for (auto row = 0; row < crs_matrix.num_rows; row++)
-    {
-        int start = crs_matrix.rows[row];
-        int end = crs_matrix.rows[row + 1] - 1;
-        for (auto i = start; i <= end; i++)
-        {
-            int col = crs_matrix.cols[i];
-            double value = crs_matrix.values[i];
-            eigen_matrix(row, col) = value;
-        }
-    }
-}
-
 // TODO: the results are not good -> make wrong estimates
 void evalDegenracy(std::vector<PoseLocalParameterization *> &local_param_ids, const ceres::CRSMatrix &jaco)
 {
     printf("jacob: %d constraints, %d parameters\n", jaco.num_rows, jaco.num_cols); // 2000+, 6
 	TicToc t_eval_degenracy;
-	Eigen::MatrixXd mat_J_raw;
-	CRSMatrix2EigenMatrix(jaco, mat_J_raw);
-	Eigen::MatrixXd &mat_J = mat_J_raw;
+	Eigen::MatrixXd mat_J;
+	CRSMatrix2EigenMatrix(jaco, mat_J);
 	Eigen::MatrixXd mat_Jt = mat_J.transpose(); // A^T
 	Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J; // A^TA 48*48
 	for (auto i = 0; i < local_param_ids.size(); i++)
