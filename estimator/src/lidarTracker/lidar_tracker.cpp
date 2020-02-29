@@ -40,7 +40,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
     double para_pose[SIZE_POSE] = {pose_ini.t_(0), pose_ini.t_(1), pose_ini.t_(2),
                                    pose_ini.q_.x(), pose_ini.q_.y(), pose_ini.q_.z(), pose_ini.q_.w()};
 
-    for (size_t iter_cnt = 0; iter_cnt < 1; iter_cnt++)
+    for (size_t iter_cnt = 0; iter_cnt < 2; iter_cnt++)
     {
         ceres::Problem problem;
         ceres::Solver::Summary summary;
@@ -123,7 +123,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         e_option.parameter_blocks = para_ids;
         e_option.residual_blocks = res_ids_proj;
         problem.Evaluate(e_option, &cost, NULL, NULL, &jaco);    
-        printf("cost: %f\n", cost);
+        // printf("cost: %f\n", cost);
         evalDegenracy(local_parameterization, jaco);
 
         // step 3: optimization
@@ -141,7 +141,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
 
 void LidarTracker::evalDegenracy(PoseLocalParameterization *local_parameterization, const ceres::CRSMatrix &jaco)
 {
-    printf("jacob: %d constraints, %d parameters\n", jaco.num_rows, jaco.num_cols); // 2000+, 6
+    // printf("jacob: %d constraints, %d parameters\n", jaco.num_rows, jaco.num_cols); // 2000+, 6
     if (jaco.num_rows == 0)
         return;
 	Eigen::MatrixXd mat_J;
@@ -164,7 +164,7 @@ void LidarTracker::evalDegenracy(PoseLocalParameterization *local_parameterizati
             break;
         }
     }
-    std::cout << "[trackCloud] D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose() << std::endl;
+    // std::cout << "[trackCloud] D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose() << std::endl;
     Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
     assert(mat_P.rows() == 6);
     if (local_parameterization->is_degenerate_)

@@ -161,8 +161,11 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
                 Eigen::Vector3d last_point_b(corner_points_last->points[min_point_ind2].x,
                                              corner_points_last->points[min_point_ind2].y,
                                              corner_points_last->points[min_point_ind2].z);
-
-                double s = (corner_points_sharp->points[i].intensity - int(corner_points_sharp->points[i].intensity)) / SCAN_PERIOD;
+                double s;
+                if (DISTORTION)
+                    s = (corner_points_sharp->points[i].intensity - int(corner_points_sharp->points[i].intensity)) / SCAN_PERIOD;
+                else
+                    s = 1.0;
                 ceres::CostFunction *cost_function = LidarEdgeFactor::Create(curr_point, last_point_a, last_point_b, s);
                 problem.AddResidualBlock(cost_function, loss_function, para_q, para_t);
                 num_corner_correspondence++;
@@ -247,7 +250,11 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
                     Eigen::Vector3d last_point_c(surf_points_last->points[minPointInd3].x,
                                                  surf_points_last->points[minPointInd3].y,
                                                  surf_points_last->points[minPointInd3].z);
-                    double s = (surf_points_flat->points[i].intensity - int(surf_points_flat->points[i].intensity)) / SCAN_PERIOD;
+                    double s;
+                    if (DISTORTION) 
+                        s = (surf_points_flat->points[i].intensity - int(surf_points_flat->points[i].intensity)) / SCAN_PERIOD;
+                    else    
+                        s = 1.0;
                     ceres::CostFunction *cost_function = LidarPlaneFactor::Create(curr_point, last_point_a, last_point_b, last_point_c, s);
                     problem.AddResidualBlock(cost_function, loss_function, para_q, para_t);
                     num_plane_correspondence++;
@@ -266,42 +273,11 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         TicToc t_solver;
         ceres::Solver::Options options;
         options.linear_solver_type = ceres::DENSE_QR;
-        options.max_num_iterations = 6;
+        options.max_num_iterations = 4;
         options.minimizer_progress_to_stdout = false;
         ceres::Solver::Summary summary;
         ceres::Solve(options, &problem, &summary);
         // printf("solver time %f ms \n", t_solver.toc());
-
-        // TODO: apply solution remapping
-        // ceres::Problem::EvaluateOptions e_option;
-        // double cost;
-        // ceres::CRSMatrix jaco;
-        // problem.Evaluate(e_option, &cost, NULL, NULL, &jaco);
-        // ceres::CRSMatrix &crs_matrix = jaco;
-        // Eigen::MatrixXd eigen_matrix = Eigen::MatrixXd::Zero(jaco.num_rows, crs_matrix.num_cols);
-        // for (int row = 0; row < crs_matrix.num_rows; row++)
-        // {
-        //     int start = crs_matrix.rows[row];
-        //     int end = crs_matrix.rows[row + 1] - 1;
-        //     for (int i = start; i <= end; i++)
-        //     {
-        //         int col = crs_matrix.cols[i];
-        //         double value = crs_matrix.values[i];
-        //         eigen_matrix(row, col) = value;
-        //     }
-        // }
-        // Eigen::MatrixXd &mat_A = eigen_matrix;
-        // Eigen::MatrixXd mat_At = mat_A.transpose(); // A^T
-        // Eigen::MatrixXd mat_AtA = mat_At * mat_A; // A^TA
-        //
-        // Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> esolver(mat_AtA);
-        // Eigen::MatrixXd mat_E = esolver.eigenvalues().real();
-        // Eigen::MatrixXd mat_V = esolver.eigenvectors().real();
-        //
-        // printf("######### mat_E size: %d, %d\n", mat_E.rows(), mat_E.cols()); // 50x50
-        // // printf("######### degeneracy factor %f\n", mat_E(0, 0));
-        // for (size_t i = 0; i < mat_E.rows(); i++) printf("%f, ", mat_E(i, 0));
-        // printf("\n");
     }
     // printf("optimization twice time %f \n", t_opt.toc());
 

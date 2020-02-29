@@ -196,48 +196,47 @@ void double2Vector()
 }
 
 // TODO: the results are not good -> make wrong estimates
-void evalDegenracy(std::vector<PoseLocalParameterization *> &local_param_ids, const ceres::CRSMatrix &jaco)
+void evalDegenracy(PoseLocalParameterization *local_parameterization, const ceres::CRSMatrix &jaco)
 {
     printf("jacob: %d constraints, %d parameters\n", jaco.num_rows, jaco.num_cols); // 2000+, 6
+	if (jaco.num_rows == 0)
+		return;
 	TicToc t_eval_degenracy;
 	Eigen::MatrixXd mat_J;
 	CRSMatrix2EigenMatrix(jaco, mat_J);
 	Eigen::MatrixXd mat_Jt = mat_J.transpose(); // A^T
 	Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J; // A^TA 48*48
-	for (auto i = 0; i < local_param_ids.size(); i++)
+	Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(0, 0, 6, 6) / 400.0;
+	Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6> > esolver(mat_H);
+	Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real(); // 6*1
+	Eigen::Matrix<double, 6, 6> mat_V_f = esolver.eigenvectors().real(); // 6*6, column is the corresponding eigenvector
+	Eigen::Matrix<double, 6, 6> mat_V_p = mat_V_f;
+	// std::cout << "H:" << std::endl << mat_H;
+	for (auto j = 0; j < mat_E.cols(); j++)
 	{
-		Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(6*i, 6*i, 6, 6) / 400.0;
-		Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6> > esolver(mat_H);
-		Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real(); // 6*1
-		Eigen::Matrix<double, 6, 6> mat_V_f = esolver.eigenvectors().real(); // 6*6, column is the corresponding eigenvector
-		Eigen::Matrix<double, 6, 6> mat_V_p = mat_V_f;
-		// std::cout << "H:" << std::endl << mat_H;
-		for (auto j = 0; j < mat_E.cols(); j++)
+		if (mat_E(0, j) < MAP_EIG_THRE)
 		{
-			if (mat_E(0, j) < MAP_EIG_THRE)
-			{
-				mat_V_p.col(j) = Eigen::Matrix<double, 6, 1>::Zero();
-				local_param_ids[i]->is_degenerate_ = true;
-			} else
-			{
-				break;
-			}
+			mat_V_p.col(j) = Eigen::Matrix<double, 6, 1>::Zero();
+			local_parameterization->is_degenerate_ = true;
+		} else
+		{
+			break;
 		}
-		std::cout << i << ": D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose() << std::endl;
-		Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
-		assert(mat_P.rows() == 6);
-		// std::cout << "jjiao:" << std::endl;
-		// std::cout << "mat_E: " << mat_E << std::endl;
-		// std::cout << "mat_V_f: " << std::endl << mat_V_f << std::endl;
-		// std::cout << "mat_V_p: " << std::endl << mat_V_p << std::endl;
-		// std::cout << "mat_P: " << std::endl << mat_P.transpose() << std::endl;
+	}
+	std::cout << "D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose() << std::endl;
+	Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
+	assert(mat_P.rows() == 6);
+	// std::cout << "jjiao:" << std::endl;
+	// std::cout << "mat_E: " << mat_E << std::endl;
+	// std::cout << "mat_V_f: " << std::endl << mat_V_f << std::endl;
+	// std::cout << "mat_V_p: " << std::endl << mat_V_p << std::endl;
+	// std::cout << "mat_P: " << std::endl << mat_P.transpose() << std::endl;
 
-		if (local_param_ids[i]->is_degenerate_)
-		{
-			local_param_ids[i]->V_update_ = mat_P.transpose();
-			// std::cout << "param " << i << " is degenerate !" << std::endl;
-			// std::cout << mat_P.transpose() << std::endl;
-		}
+	if (local_parameterization->is_degenerate_)
+	{
+		local_parameterization->V_update_ = mat_P.transpose();
+		// std::cout << "param " << i << " is degenerate !" << std::endl;
+		// std::cout << mat_P.transpose() << std::endl;
 	}
 
 	// {
@@ -274,7 +273,7 @@ void evalDegenracy(std::vector<PoseLocalParameterization *> &local_param_ids, co
 	// 	std::cout << "mat_P: " << std::endl << matP << std::endl;
 	// }
 
-    printf("evaluate degeneracy %fms\n", t_eval_degenracy.toc());
+    // printf("evaluate degeneracy %fms\n", t_eval_degenracy.toc());
 }
 
 void process()
@@ -621,7 +620,7 @@ void process()
 
 					ceres::Solver::Options options;
 					options.linear_solver_type = ceres::DENSE_QR;
-					options.max_num_iterations = 15;
+					options.max_num_iterations = 20;
 					options.max_solver_time_in_seconds = 0.03;
 					options.minimizer_progress_to_stdout = false;
 					options.check_gradients = false;
@@ -630,9 +629,7 @@ void process()
 					vector2Double();
 
 					PoseLocalParameterization *local_parameterization = new PoseLocalParameterization();
-					std::vector<PoseLocalParameterization *> local_param_ids;
 					local_parameterization->setParameter();
-					local_param_ids.push_back(local_parameterization);
 
 					std::vector<double *> para_ids;
 					std::vector<ceres::internal::ResidualBlock *> res_ids_proj;
@@ -706,30 +703,22 @@ void process()
 					printf("prepare ceres data %fms\n", t_prepare.toc());
 					printf("corner num %d(%d), surf num %d(%d)\n", laser_cloud_corner_stack_num, corner_num, laser_cloud_surf_stack_num, surf_num);
 
-					try
-					{
-						double cost = 0.0;
-						ceres::CRSMatrix jaco;
-						ceres::Problem::EvaluateOptions e_option;
-						e_option.parameter_blocks = para_ids;
-						e_option.residual_blocks = res_ids_proj;
-						problem.Evaluate(e_option, &cost, NULL, NULL, &jaco);
-						printf("residual block size: %d\n", problem.NumResidualBlocks());
-						printf("cost: %f\n", cost);
-						evalDegenracy(local_param_ids, jaco);
+					// double cost = 0.0;
+					// ceres::CRSMatrix jaco;
+					// ceres::Problem::EvaluateOptions e_option;
+					// e_option.parameter_blocks = para_ids;
+					// e_option.residual_blocks = res_ids_proj;
+					// problem.Evaluate(e_option, &cost, NULL, NULL, &jaco);
+					// printf("residual block size: %d\n", problem.NumResidualBlocks());
+					// printf("cost: %f\n", cost);
+					// evalDegenracy(local_parameterization, jaco);
 
-						// ******************************************************
-						TicToc t_solver;
-						ceres::Solve(options, &problem, &summary);
-						std::cout << summary.BriefReport() << std::endl;
-						// std::cout << summary.FullReport() << std::endl;
-						printf("mapping solver time %fms\n", t_solver.toc());
-					}
-					catch(const std::exception& e)
-					{
-						std::cerr << e.what() << '\n';
-						std::cerr << "ceres bugs" << std::endl;
-					}				
+					// ******************************************************
+					TicToc t_solver;
+					ceres::Solve(options, &problem, &summary);
+					std::cout << summary.BriefReport() << std::endl;
+					// std::cout << summary.FullReport() << std::endl;
+					printf("mapping solver time %fms\n", t_solver.toc());		
 
 					double2Vector();
 					std::cout << iter_cnt << "th result: " << pose_wmap_curr << std::endl;
