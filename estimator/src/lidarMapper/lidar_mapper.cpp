@@ -703,15 +703,15 @@ void process()
 					printf("prepare ceres data %fms\n", t_prepare.toc());
 					printf("corner num %d(%d), surf num %d(%d)\n", laser_cloud_corner_stack_num, corner_num, laser_cloud_surf_stack_num, surf_num);
 
-					// double cost = 0.0;
-					// ceres::CRSMatrix jaco;
-					// ceres::Problem::EvaluateOptions e_option;
-					// e_option.parameter_blocks = para_ids;
-					// e_option.residual_blocks = res_ids_proj;
-					// problem.Evaluate(e_option, &cost, NULL, NULL, &jaco);
-					// printf("residual block size: %d\n", problem.NumResidualBlocks());
-					// printf("cost: %f\n", cost);
-					// evalDegenracy(local_parameterization, jaco);
+					double cost = 0.0;
+					ceres::CRSMatrix jaco;
+					ceres::Problem::EvaluateOptions e_option;
+					e_option.parameter_blocks = para_ids;
+					e_option.residual_blocks = res_ids_proj;
+					problem.Evaluate(e_option, &cost, NULL, NULL, &jaco);
+					printf("residual block size: %d\n", problem.NumResidualBlocks());
+					printf("cost: %f\n", cost);
+					evalDegenracy(local_parameterization, jaco);
 
 					// ******************************************************
 					TicToc t_solver;
