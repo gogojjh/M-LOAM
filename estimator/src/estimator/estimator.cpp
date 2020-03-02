@@ -454,7 +454,7 @@ void Estimator::optimizeMap()
     //options.use_explicit_schur_complement = true;
     //options.minimizer_progress_to_stdout = true;
     //options.use_nonmonotonic_steps = true;
-    options.max_solver_time_in_seconds = SOLVER_TIME;
+    // options.max_solver_time_in_seconds = SOLVER_TIME;
 
     // ****************************************************
     // ceres: add parameter block
@@ -1161,7 +1161,7 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
             else
                 mat_P.setZero();
         }
-        
+
         if (local_param_ids[i]->is_degenerate_)
         {
             local_param_ids[i]->V_update_ = mat_P.transpose();

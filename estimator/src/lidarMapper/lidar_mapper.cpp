@@ -628,12 +628,12 @@ void process()
 					ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1);
 
 					ceres::Solver::Options options;
-					options.linear_solver_type = ceres::DENSE_QR;
-					options.max_num_iterations = 20;
-					options.max_solver_time_in_seconds = 0.03;
+					options.linear_solver_type = ceres::DENSE_SCHUR;
+					options.max_num_iterations = 30;
+					// options.max_solver_time_in_seconds = 0.03;
 					options.minimizer_progress_to_stdout = false;
 					options.check_gradients = false;
-					options.gradient_check_relative_precision = 1e-4;
+					options.gradient_check_relative_precision = 1e-10;
 
 					vector2Double();
 
