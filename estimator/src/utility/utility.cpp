@@ -39,18 +39,11 @@ void TransformToEnd(const PointI &pi, PointI &po, const Pose &pose, const bool &
     PointI un_point_tmp;
     TransformToStart(pi, un_point_tmp, pose, b_distortion);
     Eigen::Vector3d un_point(un_point_tmp.x, un_point_tmp.y, un_point_tmp.z);
-    Eigen::Vector3d point_end = pose.q_.inverse() * un_point - (pose.q_.inverse() * pose.t_);
+    Eigen::Vector3d point_end = pose.q_.inverse() * (un_point - pose.t_);
     po.x = point_end.x();
     po.y = point_end.y();
     po.z = point_end.z();
     po.intensity = pi.intensity;
-    // std::cout << "************* " << b_distortion << std::endl;
-    // std::cout << pi.x << ", " << pi.y << ", " << pi.z << std::endl;
-    // std::cout << pose << std::endl;
-    // std::cout << un_point.transpose() << std::endl;
-    // std::cout << point_end.transpose() << std::endl;
-    // std::cout << po.x << ", " << po.y << ", " << po.z << std::endl;
-    // exit(EXIT_FAILURE);
 }
 
 void evalPointUncertainty(const int &idx, const PointI &pi, Eigen::Matrix3d &cov_po)

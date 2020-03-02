@@ -54,7 +54,7 @@ void pointAssociateTobeMapped(const PointType &pi, PointType &po, const Pose &po
     }
     po = pi;
     Eigen::Vector3d point_curr(pi.x, pi.y, pi.z);
-    Eigen::Vector3d point_trans = pose.q_.inverse() * point_curr - (pose.q_.inverse() * pose.t_);
+    Eigen::Vector3d point_trans = pose.q_.inverse() * (point_curr - pose.t_);
     po.x = point_trans.x();
     po.y = point_trans.y();
     po.z = point_trans.z();

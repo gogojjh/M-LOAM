@@ -58,7 +58,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         local_parameterization->setParameter();
 
         std::vector<double *> para_ids;
-        std::vector<ceres::internal::ResidualBlock *> res_ids_proj;
+        std::vector<ceres::ResidualBlockId> res_ids_proj;
         problem.AddParameterBlock(para_pose, SIZE_POSE, local_parameterization);
         para_ids.push_back(para_pose);
 
@@ -91,7 +91,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
             else
                 s = 1.0;
             LidarScanPlaneNormFactor *f = new LidarScanPlaneNormFactor(p_data, coeff, s);
-            ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
+            ceres::ResidualBlockId res_id = problem.AddResidualBlock(f, loss_function, para_pose);
             res_ids_proj.push_back(res_id);
             if (CHECK_JACOBIAN)
             {
@@ -113,7 +113,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
             else
                 s = 1.0;            
             LidarScanPlaneNormFactor *f = new LidarScanPlaneNormFactor(p_data, coeff, s);
-            ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
+            ceres::ResidualBlockId res_id = problem.AddResidualBlock(f, loss_function, para_pose);
             res_ids_proj.push_back(res_id);
         }
 
@@ -122,9 +122,9 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         ceres::Problem::EvaluateOptions e_option;
         e_option.parameter_blocks = para_ids;
         e_option.residual_blocks = res_ids_proj;
-        problem.Evaluate(e_option, &cost, NULL, NULL, &jaco);    
-        // printf("cost: %f\n", cost);
-        // evalDegenracy(local_parameterization, jaco);
+        problem.Evaluate(e_option, &cost, nullptr, nullptr, &jaco);
+        // std::cout << res_ids_proj.size() << std::endl;
+        evalDegenracy(local_parameterization, jaco);
 
         // step 3: optimization
         TicToc t_solver;
@@ -142,8 +142,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
 void LidarTracker::evalDegenracy(PoseLocalParameterization *local_parameterization, const ceres::CRSMatrix &jaco)
 {
     // printf("jacob: %d constraints, %d parameters\n", jaco.num_rows, jaco.num_cols); // 2000+, 6
-    if (jaco.num_rows == 0)
-        return;
+    if (jaco.num_rows == 0) return;
 	Eigen::MatrixXd mat_J;
 	CRSMatrix2EigenMatrix(jaco, mat_J);
 	Eigen::MatrixXd mat_Jt = mat_J.transpose(); // A^T
@@ -166,7 +165,6 @@ void LidarTracker::evalDegenracy(PoseLocalParameterization *local_parameterizati
     }
     // std::cout << "[trackCloud] D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose() << std::endl;
     Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
-    assert(mat_P.rows() == 6);
     if (local_parameterization->is_degenerate_)
     {
         local_parameterization->V_update_ = mat_P.transpose();

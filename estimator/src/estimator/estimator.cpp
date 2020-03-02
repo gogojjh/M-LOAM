@@ -96,7 +96,7 @@ void Estimator::setParameter()
     }
     para_td_ = new double[NUM_OF_LASER];
 
-    eig_thre_calib_ = std::vector<double>(OPT_WINDOW_SIZE + NUM_OF_LASER + 1, EIG_INITIAL);
+    eig_thre_calib_ = std::vector<double>(OPT_WINDOW_SIZE + NUM_OF_LASER + 1, 50);
     d_factor_calib_ = std::vector<double>(NUM_OF_LASER, 0);
     cur_eig_calib_ = std::vector<double>(NUM_OF_LASER, 0);
     pose_calib_.resize(NUM_OF_LASER);
@@ -333,7 +333,6 @@ void Estimator::process()
             pose_rlt_[IDX_REF] = lidar_tracker_.trackCloud(prev_cloud_feature, cur_cloud_feature, pose_rlt_[IDX_REF]);
             pose_laser_cur_[IDX_REF] = Pose(Qs_[cir_buf_cnt_-1], Ts_[cir_buf_cnt_-1]) * pose_rlt_[IDX_REF];
             std::cout << "pose_rlt: " << pose_rlt_[IDX_REF] << std::endl;
-            // std::cout << "relative transform: " << pose_rlt_[IDX_REF] << std::endl;
             // std::cout << "current transform: " << pose_laser_cur_[IDX_REF] << std::endl;
             // Eigen::Vector3d ea = pose_rlt_[IDX_REF].T_.topLeftCorner<3, 3>().eulerAngles(2, 1, 0);
             // printf("relative euler (deg): %f, %f, %f\n", toDeg(ea(0)), toDeg(ea(1)), toDeg(ea(2)));
@@ -349,21 +348,8 @@ void Estimator::process()
             {
                 PointICloud &corner_points = cur_feature_.second[n]["corner_points_less_sharp"];
                 PointICloud &surf_points = cur_feature_.second[n]["surf_points_less_flat"];
-                if (plane_normal_vis_.init_)
-                {
-                    PointCloud::Ptr point_world_xyz(new PointCloud);
-                    pcl::copyPointCloud(corner_points, *point_world_xyz);
-                    plane_normal_vis_.UpdateCloud(point_world_xyz, "before", {255, 0, 0});
-                }
-
                 for (auto &point : corner_points) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
                 for (auto &point : surf_points) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
-                if (plane_normal_vis_.init_)
-                {
-                    PointCloud::Ptr point_world_xyz(new PointCloud);
-                    pcl::copyPointCloud(corner_points, *point_world_xyz);
-                    plane_normal_vis_.UpdateCloud(point_world_xyz, "after", {0, 0, 255});
-                }
             }
             else 
             {
@@ -1093,7 +1079,7 @@ void Estimator::evalResidual(ceres::Problem &problem,
 	{
 		e_option.parameter_blocks = para_ids;
 		e_option.residual_blocks = res_ids_proj;
-		problem.Evaluate(e_option, &cost, NULL, NULL, &jaco);
+        problem.Evaluate(e_option, &cost, nullptr, nullptr, &jaco);
         printf("cost proj: %f\n", cost);
         if (b_eval_degenracy) evalDegenracy(local_param_ids, jaco);
 	}
@@ -1103,7 +1089,7 @@ void Estimator::evalResidual(ceres::Problem &problem,
 		{
 			e_option.parameter_blocks = para_ids;
 			e_option.residual_blocks = res_ids_marg;
-			problem.Evaluate(e_option, &cost, NULL, NULL, &jaco);
+            problem.Evaluate(e_option, &cost, nullptr, nullptr, &jaco);
             printf("cost marg: %f\n", cost);
 		}
 	}
@@ -1145,11 +1131,9 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
         Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real(); // 6*1
         Eigen::Matrix<double, 6, 6> mat_V_f = esolver.eigenvectors().real(); // 6*6, column is the corresponding eigenvector
         Eigen::Matrix<double, 6, 6> mat_V_p = mat_V_f;
-
-        eig_thre = eig_thre_calib_[i];
         for (auto j = 0; j < mat_E.cols(); j++)
         {
-            if (mat_E(0, j) < eig_thre)
+            if (mat_E(0, j) < eig_thre_calib_[i])
             {
                 mat_V_p.col(j) = Eigen::Matrix<double, 6, 1>::Zero();
                 local_param_ids[i]->is_degenerate_ = true;
@@ -1163,6 +1147,7 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
         Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
         assert(mat_P.rows() == 6);
 
+        // about extrinsics
         if (i > OPT_WINDOW_SIZE)
         {
             cur_eig_calib_[i - OPT_WINDOW_SIZE - 1] = mat_E(0, 0);
@@ -1171,11 +1156,12 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
                 eig_thre_calib_[i] = EIG_THRE_CALIB;
                 d_factor_calib_[i - OPT_WINDOW_SIZE - 1] = mat_E(0, 0);
             }
-            else if (mat_E(0, 0) > eig_thre)
+            else if (mat_E(0, 0) > eig_thre_calib_[i])
                 eig_thre_calib_[i] = mat_E(0, 0);
             else
                 mat_P.setZero();
         }
+        
         if (local_param_ids[i]->is_degenerate_)
         {
             local_param_ids[i]->V_update_ = mat_P.transpose();

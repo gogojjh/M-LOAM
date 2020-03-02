@@ -92,8 +92,9 @@ std::mutex m_buf;
 FeatureExtract f_extract;
 
 double covariance_pose[SIZE_POSE * SIZE_POSE];
-
 int UNCER_PROPA_SWITCH = 1;
+
+std::vector<std::vector<double> > d_factor_list(6);
 
 int toCubeIndex(const int &i, const int &j, const int &k)
 {
@@ -198,9 +199,8 @@ void double2Vector()
 // TODO: the results are not good -> make wrong estimates
 void evalDegenracy(PoseLocalParameterization *local_parameterization, const ceres::CRSMatrix &jaco)
 {
-    printf("jacob: %d constraints, %d parameters\n", jaco.num_rows, jaco.num_cols); // 2000+, 6
-	if (jaco.num_rows == 0)
-		return;
+    // printf("jacob: %d constraints, %d parameters\n", jaco.num_rows, jaco.num_cols); // 2000+, 6
+	if (jaco.num_rows == 0) return;
 	TicToc t_eval_degenracy;
 	Eigen::MatrixXd mat_J;
 	CRSMatrix2EigenMatrix(jaco, mat_J);
@@ -223,6 +223,14 @@ void evalDegenracy(PoseLocalParameterization *local_parameterization, const cere
 			break;
 		}
 	}
+
+	d_factor_list[0].push_back(mat_E(0, 0));
+	d_factor_list[1].push_back(mat_E(0, 1));
+	d_factor_list[2].push_back(mat_E(0, 2));
+	d_factor_list[3].push_back(mat_E(0, 3));
+	d_factor_list[4].push_back(mat_E(0, 4));
+	d_factor_list[5].push_back(mat_E(0, 5));
+
 	std::cout << "D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose() << std::endl;
 	Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
 	assert(mat_P.rows() == 6);
@@ -358,8 +366,8 @@ void process()
 												 odometry_buf.front()->pose.pose.position.z);
 			odometry_buf.pop();
 
-			// TODO: not execuate when calibration is not stable
 			extrinsics = *ext_buf.front();
+			ext_buf.pop();
 			if (!extrinsics.status)
 			{
 				ROS_INFO("Calibration is stable!");
@@ -374,19 +382,20 @@ void process()
 													 extrinsics.odoms[n].pose.pose.position.z);
 				}
 			}
-			ext_buf.pop();
 
 			while(!corner_last_buf.empty())
 			{
 				corner_last_buf.pop();
 				printf("drop lidar frame in mapping for real time performance \n");
 			}
+			
+			if (extrinsics.status) continue;
 			m_buf.unlock();
-			frame_cnt++;
-			ROS_WARN("frame: %d", frame_cnt);
-			// processMeasurements();
 
 			//***************************************************************************
+			frame_cnt++;
+			ROS_WARN("frame: %d", frame_cnt);
+
 			TicToc t_whole;
 			transformAssociateToMap();
 
@@ -708,9 +717,9 @@ void process()
 					ceres::Problem::EvaluateOptions e_option;
 					e_option.parameter_blocks = para_ids;
 					e_option.residual_blocks = res_ids_proj;
-					problem.Evaluate(e_option, &cost, NULL, NULL, &jaco);
-					printf("residual block size: %d\n", problem.NumResidualBlocks());
-					printf("cost: %f\n", cost);
+					problem.Evaluate(e_option, &cost, nullptr, nullptr, &jaco);
+					// printf("residual block size: %d\n", problem.NumResidualBlocks());
+					// printf("cost: %f\n", cost);
 					evalDegenracy(local_parameterization, jaco);
 
 					// ******************************************************
@@ -935,6 +944,19 @@ void process()
 						<< laser_pose.pose.orientation.y << " "
 						<< laser_pose.pose.orientation.z << " "
 						<< laser_pose.pose.orientation.w << std::endl;
+				}
+				fout.close();
+
+				fout.open(std::string(OUTPUT_FOLDER + "mapping_factor.txt").c_str(), std::ios::out);
+				for (size_t i = 0; i < d_factor_list[0].size(); i++)
+				{
+					fout.precision(8);
+					fout << d_factor_list[0][i] << " "
+						 << d_factor_list[1][i] << " "
+						 << d_factor_list[2][i] << " "
+						 << d_factor_list[3][i] << " "
+						 << d_factor_list[4][i] << " "
+						 << d_factor_list[5][i] << std::endl;
 				}
 				fout.close();
 			}

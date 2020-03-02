@@ -56,6 +56,10 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 **odom**<br>
 ![](picture/gz_bay_20191231/pcd_side_view.png)
 
+### 6. Additional Features (have not fixed)
+* point interpolation
+
+
 <!-- *********************************************** -->
 <!--
 ---
