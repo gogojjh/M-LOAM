@@ -45,7 +45,7 @@ cloudFeature transformCloudFeature(const cloudFeature &cloud_feature, const Eige
         PointICloud trans_cloud;
         pcl::transformPointCloud(iter->second, trans_cloud, trans);
         // for (auto &p: trans_cloud.points) p.intensity = n + (p.intensity - int(p.intensity));
-        for (auto &p: trans_cloud.points) p.intensity = n;
+        // for (auto &p: trans_cloud.points) p.intensity = n;
         trans_cloud_feature.insert(pair<std::string, PointICloud>(iter->first, trans_cloud));
     }
     return trans_cloud_feature;
@@ -95,7 +95,7 @@ void pubPointCloud(const Estimator &estimator, const double &time)
     {
         Pose pose_ext = Pose(estimator.qbl_[n], estimator.tbl_[n]);
         cloudFeature cloud_feature_trans = transformCloudFeature(estimator.cur_feature_.second[n], pose_ext.T_.cast<float>(), n);
-        if ((ESTIMATE_EXTRINSIC == 0) || (n == IDX_REF))
+        if (n == IDX_REF)
         {
             laser_cloud += cloud_feature_trans["laser_cloud"];
             // corner_points_sharp += cloud_feature_trans["corner_points_sharp"];

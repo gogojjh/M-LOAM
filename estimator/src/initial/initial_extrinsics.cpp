@@ -95,7 +95,6 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
 
     // -------------------------------
     // initial rotation
-    TicToc t_calib_rot;
     pose_cnt_ = indices_[idx_data].size();
     // printf("********** pose_cnt %d\n", pose_cnt_);
     Eigen::MatrixXd A(pose_cnt_ * 4, 4); // a cumulative Q matrix
@@ -176,7 +175,7 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
     if (pose_cnt_ >= WINDOW_SIZE && rot_cov(1) > 0.25) // converage, the second smallest sigular value
     {
         calib_result = calib_ext_[idx_data];
-        // printf("calib ext rot: %fms\n", t_calib_rot.toc());
+        setCovRotation(idx_data);
         return true;
     }
     else
@@ -203,6 +202,7 @@ bool InitialExtrinsics::calibExTranslation(const size_t &idx_ref, const size_t &
        ((!PLANAR_MOVEMENT) && (calibExTranslationNonPlanar(idx_ref, idx_data))))
     {
         calib_result = calib_ext_[idx_data];
+        setCovTranslation(idx_data);
         return true;
     } else
     {

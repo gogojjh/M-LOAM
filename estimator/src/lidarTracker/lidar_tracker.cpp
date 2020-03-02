@@ -70,7 +70,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         pose_local.q_ = Eigen::Quaterniond(para_pose[6], para_pose[3], para_pose[4], para_pose[5]);                  
         f_extract_.matchCornerFromScan(kdtree_corner_last, *corner_points_last, *corner_points_sharp, pose_local, corner_scan_features);
         f_extract_.matchSurfFromScan(kdtree_surf_last, *surf_points_last, *surf_points_flat, pose_local, surf_scan_features);
-
+        
         int corner_num = corner_scan_features.size();
         int surf_num = surf_scan_features.size();
         // printf("iter:%d, use_corner:%d, use_surf:%d\n", iter_cnt, corner_num, surf_num);
@@ -79,7 +79,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
             printf("less correspondence! *************************************************\n");
         }
 
-        // CHECK_JACOBIAN = 1;
+        CHECK_JACOBIAN = 0;
         for (auto &feature : corner_scan_features)
         {
             const size_t &idx = feature.idx_;
@@ -93,13 +93,13 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
             LidarScanPlaneNormFactor *f = new LidarScanPlaneNormFactor(p_data, coeff, s);
             ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
             res_ids_proj.push_back(res_id);
-            // if (CHECK_JACOBIAN)
-            // {
-            //     double **tmp_param = new double *[1];
-            //     tmp_param[0] = para_pose;
-            //     f->check(tmp_param);
-            //     CHECK_JACOBIAN = 0;
-            // }
+            if (CHECK_JACOBIAN)
+            {
+                double **tmp_param = new double *[1];
+                tmp_param[0] = para_pose;
+                f->check(tmp_param);
+                CHECK_JACOBIAN = 0; 
+            }
         }
 
         for (auto &feature : surf_scan_features)
@@ -124,7 +124,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         e_option.residual_blocks = res_ids_proj;
         problem.Evaluate(e_option, &cost, NULL, NULL, &jaco);    
         // printf("cost: %f\n", cost);
-        evalDegenracy(local_parameterization, jaco);
+        // evalDegenracy(local_parameterization, jaco);
 
         // step 3: optimization
         TicToc t_solver;
@@ -155,7 +155,7 @@ void LidarTracker::evalDegenracy(PoseLocalParameterization *local_parameterizati
     Eigen::Matrix<double, 6, 6> mat_V_p = mat_V_f;
     for (auto j = 0; j < mat_E.cols(); j++)
     {
-        if (mat_E(0, j) < 100)
+        if (mat_E(0, j) < 10)
         {
             mat_V_p.col(j) = Eigen::Matrix<double, 6, 1>::Zero();
             local_parameterization->is_degenerate_ = true;

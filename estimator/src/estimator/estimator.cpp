@@ -287,7 +287,7 @@ void Estimator::process()
                 cloudFeature &prev_cloud_feature = prev_feature_.second[i];
                 pose_rlt_[i] = lidar_tracker_.trackCloud(prev_cloud_feature, cur_cloud_feature, pose_rlt_[i]);
                 pose_laser_cur_[i] = pose_laser_cur_[i] * pose_rlt_[i];
-                // std::cout << "LASER_" << i << ", pose_rlt: " << pose_rlt_[i] << std::endl;
+                std::cout << "LASER_" << i << ", pose_rlt: " << pose_rlt_[i] << std::endl;
                 // std::cout << "LASER_" << i << ", pose_cur: " << pose_laser_cur_[i] << std::endl;
             }
             printf("lidarTracker %fms (%d*%fms)\n", t_mloam_tracker.toc(), NUM_OF_LASER, t_mloam_tracker.toc() / NUM_OF_LASER);
@@ -301,14 +301,12 @@ void Estimator::process()
                 for (auto i = 0; i < NUM_OF_LASER; i++)
                 {
                     Pose calib_result;
+                    if (initial_extrinsics_.cov_rot_state_[i]) continue;
                     if (initial_extrinsics_.calibExRotation(IDX_REF, i, calib_result))
                     {
-                        initial_extrinsics_.setCovRotation(i);
                         if (initial_extrinsics_.calibExTranslation(IDX_REF, i, calib_result))
                         {
-                            initial_extrinsics_.setCovTranslation(i);
-                            ROS_WARN_STREAM("number of pose: " << initial_extrinsics_.frame_cnt_);
-                            ROS_WARN_STREAM("initial extrinsic of laser_" << i << ": " << calib_result);
+                            std::cout << "Initial extrinsic of laser_" << i << ": " << calib_result << std::endl;
                             qbl_[i] = calib_result.q_;
                             tbl_[i] = calib_result.t_;
                             // tdbl_[i] = calib_result.td_;
@@ -320,7 +318,7 @@ void Estimator::process()
                 }
                 if ((initial_extrinsics_.full_cov_rot_state_) && (initial_extrinsics_.full_cov_pos_state_))
                 {
-                    ROS_WARN("all initial extrinsic rotation calib success");
+                    ROS_WARN("All initial extrinsic rotation calib success");
                     ESTIMATE_EXTRINSIC = 1;
                     initial_extrinsics_.saveStatistics();
                 }
@@ -334,6 +332,7 @@ void Estimator::process()
             cloudFeature &prev_cloud_feature = prev_feature_.second[IDX_REF];
             pose_rlt_[IDX_REF] = lidar_tracker_.trackCloud(prev_cloud_feature, cur_cloud_feature, pose_rlt_[IDX_REF]);
             pose_laser_cur_[IDX_REF] = Pose(Qs_[cir_buf_cnt_-1], Ts_[cir_buf_cnt_-1]) * pose_rlt_[IDX_REF];
+            std::cout << "pose_rlt: " << pose_rlt_[IDX_REF] << std::endl;
             // std::cout << "relative transform: " << pose_rlt_[IDX_REF] << std::endl;
             // std::cout << "current transform: " << pose_laser_cur_[IDX_REF] << std::endl;
             // Eigen::Vector3d ea = pose_rlt_[IDX_REF].T_.topLeftCorner<3, 3>().eulerAngles(2, 1, 0);
@@ -346,14 +345,34 @@ void Estimator::process()
     {
         for (auto n = 0; n < NUM_OF_LASER; n++)
         {
-            // if (n != IDX_REF) continue;
-            if ((n != IDX_REF) && (ESTIMATE_EXTRINSIC != 0)) continue;
-            Pose pose_ext(qbl_[n], tbl_[n]);
-            Pose pose_tmp = pose_ext.inverse() * pose_rlt_[IDX_REF] * pose_ext;
-            for (auto iter = cur_feature_.second[n].begin(); iter != cur_feature_.second[n].end(); iter ++)
+            if (ESTIMATE_EXTRINSIC == 2) 
             {
-                if (iter->first.find("less") != std::string::npos)
-                    for (auto &point: iter->second) TransformToEnd(point, point, pose_tmp, DISTORTION);
+                PointICloud &corner_points = cur_feature_.second[n]["corner_points_less_sharp"];
+                PointICloud &surf_points = cur_feature_.second[n]["surf_points_less_flat"];
+                if (plane_normal_vis_.init_)
+                {
+                    PointCloud::Ptr point_world_xyz(new PointCloud);
+                    pcl::copyPointCloud(corner_points, *point_world_xyz);
+                    plane_normal_vis_.UpdateCloud(point_world_xyz, "before", {255, 0, 0});
+                }
+
+                for (auto &point : corner_points) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
+                for (auto &point : surf_points) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
+                if (plane_normal_vis_.init_)
+                {
+                    PointCloud::Ptr point_world_xyz(new PointCloud);
+                    pcl::copyPointCloud(corner_points, *point_world_xyz);
+                    plane_normal_vis_.UpdateCloud(point_world_xyz, "after", {0, 0, 255});
+                }
+            }
+            else 
+            {
+                Pose pose_ext(qbl_[n], tbl_[n]);
+                Pose pose_local = pose_ext.inverse() * pose_rlt_[IDX_REF] * pose_ext;
+                PointICloud &corner_points = cur_feature_.second[n]["corner_points_less_sharp"];
+                PointICloud &surf_points = cur_feature_.second[n]["surf_points_less_flat"];
+                for (auto &point : corner_points) TransformToEnd(point, point, pose_local, DISTORTION);
+                for (auto &point : surf_points) TransformToEnd(point, point, pose_local, DISTORTION);
             }
         }
     }
@@ -412,20 +431,17 @@ void Estimator::process()
         }
     }
 
-    // swap features
+    // pass cur_feature to prev_feature
     prev_time_ = cur_time_;
     prev_feature_.first = prev_time_;
     prev_feature_.second.clear();
-    for (auto i = 0; i < cur_feature_.second.size(); i++)
+    prev_feature_.second.resize(NUM_OF_LASER);
+    for (auto n = 0; n < NUM_OF_LASER; n++)
     {
-        cloudFeature tmp_cloud_feature;
-        for (auto iter = cur_feature_.second[i].begin(); iter != cur_feature_.second[i].end(); iter++)
-        {
-            // if (iter->first.find("less") != std::string::npos)
-            //     tmp_cloud_feature.insert(make_pair(iter->first, iter->second));
-            tmp_cloud_feature.insert(make_pair(iter->first, iter->second));
-        }
-        prev_feature_.second.push_back(tmp_cloud_feature);
+        prev_feature_.second[n].insert(make_pair("corner_points_less_sharp", 
+            cur_feature_.second[n].find("corner_points_less_sharp")->second));
+        prev_feature_.second[n].insert(make_pair("surf_points_less_flat", 
+            cur_feature_.second[n].find("surf_points_less_flat")->second));
     }
 }
 
@@ -1098,8 +1114,7 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
 {
     printf("jacob: %d constraints, %d parameters (%d pose_param, %d ext_param)\n",
         jaco.num_rows, jaco.num_cols, 6*(OPT_WINDOW_SIZE + 1), 6*NUM_OF_LASER); // 58, feature_size(2700) x 50
-    if (jaco.num_rows == 0)
-        return;
+    if (jaco.num_rows == 0) return;
     TicToc t_eval_degenracy;
     Eigen::MatrixXd mat_J;
     CRSMatrix2EigenMatrix(jaco, mat_J);
@@ -1218,37 +1233,37 @@ void Estimator::evalCalib()
 
 void Estimator::visualizePCL()
 {
-    if (plane_normal_vis_.init_)
-    {
-        PointCloud::Ptr point_world_xyz(new PointCloud);
-        pcl::copyPointCloud(surf_points_local_map_filtered_[1], *point_world_xyz);
-        plane_normal_vis_.UpdateCloud(point_world_xyz, "cloud_all");
-    }
-    int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
-    std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d> > plane_coeffs;
-    PointCloud::Ptr tmp_cloud_sel(new PointCloud); // surf_points_stack_[n][i]
-    NormalCloud::Ptr tmp_normals_sel(new NormalCloud); // surf_points_local_map_filtered_[n]
-    printf("feature size: %u\n", surf_map_features_[1][WINDOW_SIZE].size());
-    for (auto &f : surf_map_features_[1][WINDOW_SIZE])
-    {
-        PointI p_ori;
-        p_ori.x = f.point_.x();
-        p_ori.y = f.point_.y();
-        p_ori.z = f.point_.z();
-        PointI p_sel;
-        pointAssociateToMap(p_ori, p_sel, pose_local_[1][WINDOW_SIZE]);
-        tmp_cloud_sel->push_back(Point{p_sel.x, p_sel.y, p_sel.z}); // target cloud
-        tmp_normals_sel->push_back(Normal{float(f.coeffs_.x()), float(f.coeffs_.y()), float(f.coeffs_.z())}); // reference cloud normal
-        // Eigen::Vector4d coeffs_normalized = f.coeffs;
-        // double s_normal = coeffs_normalized.head<3>().norm();
-        // coeffs_normalized = coeffs_normalized / s_normal;
-        // plane_coeffs.push_back(coeffs_normalized);
-        // DLOG(INFO) << p_sel.x * f.coeffs.x() + p_sel.y * f.coeffs.y() + p_sel.z * f.coeffs.z() + f.coeffs.w();
-    }
-    if (plane_normal_vis_.init_)
-    {
-        plane_normal_vis_.UpdateCloudAndNormals(tmp_cloud_sel, tmp_normals_sel, PCL_VIEWER_NORMAL_RATIO, "cloud1", "normal1");
-    }
+    // if (plane_normal_vis_.init_)
+    // {
+    //     PointCloud::Ptr point_world_xyz(new PointCloud);
+    //     pcl::copyPointCloud(surf_points_local_map_filtered_[1], *point_world_xyz);
+    //     plane_normal_vis_.UpdateCloud(point_world_xyz, "cloud_all");
+    // }
+    // int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
+    // std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d> > plane_coeffs;
+    // PointCloud::Ptr tmp_cloud_sel(new PointCloud); // surf_points_stack_[n][i]
+    // NormalCloud::Ptr tmp_normals_sel(new NormalCloud); // surf_points_local_map_filtered_[n]
+    // printf("feature size: %u\n", surf_map_features_[1][WINDOW_SIZE].size());
+    // for (auto &f : surf_map_features_[1][WINDOW_SIZE])
+    // {
+    //     PointI p_ori;
+    //     p_ori.x = f.point_.x();
+    //     p_ori.y = f.point_.y();
+    //     p_ori.z = f.point_.z();
+    //     PointI p_sel;
+    //     pointAssociateToMap(p_ori, p_sel, pose_local_[1][WINDOW_SIZE]);
+    //     tmp_cloud_sel->push_back(Point{p_sel.x, p_sel.y, p_sel.z}); // target cloud
+    //     tmp_normals_sel->push_back(Normal{float(f.coeffs_.x()), float(f.coeffs_.y()), float(f.coeffs_.z())}); // reference cloud normal
+    //     // Eigen::Vector4d coeffs_normalized = f.coeffs;
+    //     // double s_normal = coeffs_normalized.head<3>().norm();
+    //     // coeffs_normalized = coeffs_normalized / s_normal;
+    //     // plane_coeffs.push_back(coeffs_normalized);
+    //     // DLOG(INFO) << p_sel.x * f.coeffs.x() + p_sel.y * f.coeffs.y() + p_sel.z * f.coeffs.z() + f.coeffs.w();
+    // }
+    // if (plane_normal_vis_.init_)
+    // {
+    //     plane_normal_vis_.UpdateCloudAndNormals(tmp_cloud_sel, tmp_normals_sel, PCL_VIEWER_NORMAL_RATIO, "cloud1", "normal1");
+    // }
     // std::cout << "pose pivot to j: " << pose_local_[1][WINDOW_SIZE] << std::endl;
 }
 
