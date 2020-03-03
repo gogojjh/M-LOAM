@@ -40,6 +40,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
     double para_pose[SIZE_POSE] = {pose_ini.t_(0), pose_ini.t_(1), pose_ini.t_(2),
                                    pose_ini.q_.x(), pose_ini.q_.y(), pose_ini.q_.z(), pose_ini.q_.w()};
 
+    // TODO: implement lego-loam
     for (size_t iter_cnt = 0; iter_cnt < 2; iter_cnt++)
     {
         ceres::Problem problem;
@@ -77,6 +78,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         if ((corner_num + surf_num) < 10)
         {
             printf("less correspondence! *************************************************\n");
+            continue;
         }
 
         CHECK_JACOBIAN = 0;

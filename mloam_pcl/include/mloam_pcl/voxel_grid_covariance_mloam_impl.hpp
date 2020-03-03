@@ -323,7 +323,7 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
         if (cov_index >= 0)
         {
             centroid.head(4) /= static_cast<float>(valid_cnt);
-            centroid.tail(6) /= (static_cast<float>(valid_cnt) * static_cast<float>(valid_cnt));
+            centroid.tail(7) /= (static_cast<float>(valid_cnt) * static_cast<float>(valid_cnt));
         } else
         {
             centroid /= static_cast<float>(valid_cnt);

@@ -17,17 +17,17 @@ num_of_laser: 2
 n_scans: 16
 
 # segmmentation
-segment_cloud: 0
+segment_cloud: 1
 horizon_scan: 1800
-min_cluster_size: 10
+min_cluster_size: 20
 min_line_size: 10
 segment_valid_point_num: 5
 segment_valid_line_num: 3
 segment_theta: 0.53
 
 # window sizes
-window_size: 8
-opt_window_size: 4
+window_size: 5
+opt_window_size: 3
 
 # Extrinsic parameter between IMU and Camera.
 estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.

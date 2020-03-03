@@ -623,11 +623,11 @@ void process()
 
 					ceres::Solver::Options options;
 					options.linear_solver_type = ceres::DENSE_SCHUR;
-					options.max_num_iterations = 40;
+					options.max_num_iterations = 30;
 					// options.max_solver_time_in_seconds = 0.03;
 					options.minimizer_progress_to_stdout = false;
 					options.check_gradients = false;
-					options.gradient_check_relative_precision = 1e-10;
+					options.gradient_check_relative_precision = 1e-4;
 
 					vector2Double();
 
@@ -709,7 +709,7 @@ void process()
 									CHECK_JACOBIAN = 0;
 								}
 							}
-							printf("surf num %d(%d)\n", laser_cloud_surf_stack_num, surf_num);
+							// printf("surf num %d(%d)\n", laser_cloud_surf_stack_num, surf_num);
 						}
 					}
 					printf("prepare ceres data %fms\n", t_prepare.toc());
@@ -720,8 +720,6 @@ void process()
 					e_option.parameter_blocks = para_ids;
 					e_option.residual_blocks = res_ids_proj;
 					problem.Evaluate(e_option, &cost, nullptr, nullptr, &jaco);
-					// printf("residual block size: %d\n", problem.NumResidualBlocks());
-					// printf("cost: %f\n", cost);
 					evalDegenracy(local_parameterization, jaco);
 
 					// ******************************************************
@@ -876,33 +874,34 @@ void process()
 			laser_cloud_full_res_msg.header.frame_id = "/world";
 			pub_laser_cloud_full_res.publish(laser_cloud_full_res_msg);
 
-			laser_cloud_corner_last->clear();
-			for (auto n = 0; n < NUM_OF_LASER; n++)
-			{
-				PointICloud tmp_cloud;
-				pcl::copyPointCloud(laser_cloud_corner_split_cov[n], tmp_cloud);
-				for (auto &point: tmp_cloud) pointAssociateToMap(point, point, pose_wmap_curr);
-				*laser_cloud_corner_last += tmp_cloud;
-			}
-			sensor_msgs::PointCloud2 laser_cloud_corner_last_msg;
-			pcl::toROSMsg(*laser_cloud_corner_last, laser_cloud_corner_last_msg);
-			laser_cloud_corner_last_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
-			laser_cloud_corner_last_msg.header.frame_id = "/world";
-			pub_laser_cloud_corner_last_res.publish(laser_cloud_corner_last_msg);
+			// uncomment if time is not important
+			// laser_cloud_corner_last->clear();
+			// for (auto n = 0; n < NUM_OF_LASER; n++)
+			// {
+			// 	PointICloud tmp_cloud;
+			// 	pcl::copyPointCloud(laser_cloud_corner_split_cov[n], tmp_cloud);
+			// 	for (auto &point: tmp_cloud) pointAssociateToMap(point, point, pose_wmap_curr);
+			// 	*laser_cloud_corner_last += tmp_cloud;
+			// }
+			// sensor_msgs::PointCloud2 laser_cloud_corner_last_msg;
+			// pcl::toROSMsg(*laser_cloud_corner_last, laser_cloud_corner_last_msg);
+			// laser_cloud_corner_last_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
+			// laser_cloud_corner_last_msg.header.frame_id = "/world";
+			// pub_laser_cloud_corner_last_res.publish(laser_cloud_corner_last_msg);
 
-			laser_cloud_surf_last->clear();
-			for (auto n = 0; n < NUM_OF_LASER; n++)
-			{
-				PointICloud tmp_cloud;
-				pcl::copyPointCloud(laser_cloud_surf_split_cov[n], tmp_cloud);
-				for (auto &point: tmp_cloud) pointAssociateToMap(point, point, pose_wmap_curr);
-				*laser_cloud_surf_last += tmp_cloud;
-			}
-			sensor_msgs::PointCloud2 laser_cloud_surf_last_msg;
-			pcl::toROSMsg(*laser_cloud_surf_last, laser_cloud_surf_last_msg);
-			laser_cloud_surf_last_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
-			laser_cloud_surf_last_msg.header.frame_id = "/world";
-			pub_laser_cloud_surf_last_res.publish(laser_cloud_surf_last_msg);
+			// laser_cloud_surf_last->clear();
+			// for (auto n = 0; n < NUM_OF_LASER; n++)
+			// {
+			// 	PointICloud tmp_cloud;
+			// 	pcl::copyPointCloud(laser_cloud_surf_split_cov[n], tmp_cloud);
+			// 	for (auto &point: tmp_cloud) pointAssociateToMap(point, point, pose_wmap_curr);
+			// 	*laser_cloud_surf_last += tmp_cloud;
+			// }
+			// sensor_msgs::PointCloud2 laser_cloud_surf_last_msg;
+			// pcl::toROSMsg(*laser_cloud_surf_last, laser_cloud_surf_last_msg);
+			// laser_cloud_surf_last_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
+			// laser_cloud_surf_last_msg.header.frame_id = "/world";
+			// pub_laser_cloud_surf_last_res.publish(laser_cloud_surf_last_msg);
 
 			printf("mapping pub time %fms \n", t_pub.toc());
 			printf("whole mapping time %fms +++++\n", t_whole.toc());
