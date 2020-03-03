@@ -51,4 +51,3 @@ for (auto j = 0; j < mat_E.cols(); j++)
 }
 std::cout << i << ": D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose() << std::endl;
 Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
-assert(mat_P.rows() == 6);

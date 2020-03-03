@@ -17,7 +17,7 @@ num_of_laser: 2
 n_scans: 16
 
 # segmmentation
-segment_cloud: 1
+segment_cloud: 0
 horizon_scan: 1800
 min_cluster_size: 10
 min_line_size: 10
@@ -87,7 +87,7 @@ min_plane_dis: 0.2
 # factor
 marginalization_factor: 1
 point_plane_factor: 1
-point_edge_factor: 1
+point_edge_factor: 0
 prior_factor: 0
 prior_factor_pos: 5
 prior_factor_rot: 1
