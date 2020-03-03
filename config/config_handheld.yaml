@@ -5,7 +5,7 @@ multiple_thread: 0
 
 #optimization PARAMETERS
 max_solver_time: 0.07  # max solver itration time (s), to guarantee real time
-max_num_iterations: 10   # max solver itrations, to guarantee real time
+max_num_iterations: 15   # max solver itrations, to guarantee real time
 keyframe_parallax: 0 # keyframe selection threshold (pixel)
 
 evaluate_residual: 1
@@ -17,17 +17,17 @@ num_of_laser: 2
 n_scans: 16
 
 # segmmentation
-segment_cloud: 0
+segment_cloud: 1
 horizon_scan: 1800
-min_cluster_size: 5
+min_cluster_size: 10
 min_line_size: 10
 segment_valid_point_num: 5
 segment_valid_line_num: 3
 segment_theta: 0.53
 
 # window sizes
-window_size: 7
-opt_window_size: 3
+window_size: 8
+opt_window_size: 4
 
 # Extrinsic parameter between IMU and Camera.
 estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
@@ -46,11 +46,11 @@ body_T_laser: !!opencv-matrix
    # data: [0, 0, 0, 1, 0, 0, 0,
    #        0.3113, -0.0103, -0.03334, 0.94956, 0.1130, -0.47195, -0.10341] # qx qy qz qw px py pz    
 # refinement
-   data: [0, 0, 0, 1, 0, 0, 0,
-          0.3345, -0.0037, 0.0050, 0.9424, 0.025, -0.4510, -0.1472] # qx qy qz qw px py pz                      
-# iv data   
    # data: [0, 0, 0, 1, 0, 0, 0,
-   #        0.34087, -0.0101817, 0.0147921, 0.945613, 0.0334837, -0.540249, -0.141798]
+   #        0.3345, -0.0037, 0.0050, 0.9424, 0.025, -0.4510, -0.1472] # qx qy qz qw px py pz                      
+# iv data   
+   data: [0, 0, 0, 1, 0, 0, 0,
+          0.34087, -0.0101817, 0.0147921, 0.945613, 0.0334837, -0.540249, -0.141798]
 
 #unsynchronization parameters
 estimate_td: 0                      # 0 have an accurate time offset among sensors
@@ -98,7 +98,7 @@ pcl_viewer_normal_ratio: 10
 
 # calibration converage parameters
 n_cumu_feature: 10
-eig_initial: 50
+eig_initial: 120
 eig_thre_calib: 450
 n_calib: 10
 
@@ -113,5 +113,5 @@ norm_threshold: 0.82
 
 map_corner_res: 0.2
 map_surf_res: 0.4
-map_eig_thre: 100
+map_eig_thre: 200
 #

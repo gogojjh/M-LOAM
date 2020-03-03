@@ -94,7 +94,8 @@ FeatureExtract f_extract;
 double covariance_pose[SIZE_POSE * SIZE_POSE];
 int UNCER_PROPA_SWITCH = 1;
 
-std::vector<std::vector<double> > d_factor_list(6);
+std::vector<Eigen::Matrix<double, 1, 6> > d_factor_list;
+std::vector<Eigen::Matrix<double, 6, 6> > d_eigvec_list;
 
 int toCubeIndex(const int &i, const int &j, const int &k)
 {
@@ -223,17 +224,10 @@ void evalDegenracy(PoseLocalParameterization *local_parameterization, const cere
 			break;
 		}
 	}
-
-	d_factor_list[0].push_back(mat_E(0, 0));
-	d_factor_list[1].push_back(mat_E(0, 1));
-	d_factor_list[2].push_back(mat_E(0, 2));
-	d_factor_list[3].push_back(mat_E(0, 3));
-	d_factor_list[4].push_back(mat_E(0, 4));
-	d_factor_list[5].push_back(mat_E(0, 5));
-
+	d_factor_list.push_back(mat_E);
+	d_eigvec_list.push_back(mat_V_f);
 	std::cout << "D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose() << std::endl;
 	Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
-	assert(mat_P.rows() == 6);
 	// std::cout << "jjiao:" << std::endl;
 	// std::cout << "mat_E: " << mat_E << std::endl;
 	// std::cout << "mat_V_f: " << std::endl << mat_V_f << std::endl;
@@ -242,7 +236,7 @@ void evalDegenracy(PoseLocalParameterization *local_parameterization, const cere
 
 	if (local_parameterization->is_degenerate_)
 	{
-		local_parameterization->V_update_ = mat_P.transpose();
+		local_parameterization->V_update_ = mat_P;
 		// std::cout << "param " << i << " is degenerate !" << std::endl;
 		// std::cout << mat_P.transpose() << std::endl;
 	}
@@ -948,16 +942,13 @@ void process()
 				fout.close();
 
 				fout.open(std::string(OUTPUT_FOLDER + "mapping_factor.txt").c_str(), std::ios::out);
-				for (size_t i = 0; i < d_factor_list[0].size(); i++)
-				{
-					fout.precision(8);
-					fout << d_factor_list[0][i] << " "
-						 << d_factor_list[1][i] << " "
-						 << d_factor_list[2][i] << " "
-						 << d_factor_list[3][i] << " "
-						 << d_factor_list[4][i] << " "
-						 << d_factor_list[5][i] << std::endl;
-				}
+				fout.precision(8);
+				for (size_t i = 0; i < d_factor_list.size(); i++) fout << d_factor_list[i] << std::endl;
+				fout.close();
+
+				fout.open(std::string(OUTPUT_FOLDER + "mapping_d_eigvec.txt").c_str(), std::ios::out);
+				fout.precision(8);
+				for (size_t i = 0; i < d_eigvec_list.size(); i++) fout << d_eigvec_list[i] << std::endl;
 				fout.close();
 			}
 			// std::cout << "pose_wmap_curr: " << pose_wmap_curr << std::endl;

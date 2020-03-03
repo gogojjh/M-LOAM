@@ -47,7 +47,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1);
 
         ceres::Solver::Options options;
-        options.linear_solver_type = ceres::DENSE_QR;
+        options.linear_solver_type = ceres::DENSE_SCHUR;
         options.max_num_iterations = 6;
         // options.max_solver_time_in_seconds = 0.003;
         options.minimizer_progress_to_stdout = false;
@@ -167,7 +167,7 @@ void LidarTracker::evalDegenracy(PoseLocalParameterization *local_parameterizati
     Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
     if (local_parameterization->is_degenerate_)
     {
-        local_parameterization->V_update_ = mat_P.transpose();
+        local_parameterization->V_update_ = mat_P;
         // std::cout << "param " << i << " is degenerate !" << std::endl;
         // std::cout << mat_P.transpose() << std::endl;
     }

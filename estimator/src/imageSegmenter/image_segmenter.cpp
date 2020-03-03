@@ -12,8 +12,8 @@ ImageSegmenter::ImageSegmenter()
 }
 
 void ImageSegmenter::setScanParam(const int &horizon_scans,
-                                    const int &min_cluster_size, const int &min_line_size,
-                                    const int &segment_valid_point_num, const int &segment_valid_line_num)
+                                const int &min_cluster_size, const int &min_line_size,
+                                const int &segment_valid_point_num, const int &segment_valid_line_num)
 {
     horizon_scans_ = horizon_scans;
     ang_res_x_ = 360.0 / horizon_scans_;
@@ -86,17 +86,9 @@ void ImageSegmenter::projectCloud(const PointCloud &laser_cloud_in)
 void ImageSegmenter::segmentCloud(const PointCloud &laser_cloud_in, PointCloud &laser_cloud_out)
 {
     setParameter();
-
-    // TODO: use voxel grid to filter noisy points
-    // We first apply a voxel grid to the input point cloud P, in order to filter- out noise in voxels where there is not enough evidence for occupancy
-    // pcl::VoxelGrid<Point> down_size_filter;
-    // down_size_filter.setLeafSize(0.05, 0.05, 0.05);
-    // down_size_filter.setInputCloud(boost::make_shared<PointCloud>(laser_cloud_in));
-    // down_size_filter.filter(laser_cloud_out);
-
     projectCloud(laser_cloud_in);
 
-    // labelGroundPoints();
+    labelGroundPoints();
 
     for (size_t i = 0; i < N_SCANS; i++)
         for (size_t j = 0; j < horizon_scans_; j++)
@@ -120,9 +112,9 @@ void ImageSegmenter::segmentCloud(const PointCloud &laser_cloud_in, PointCloud &
 
 void ImageSegmenter::labelGroundPoints()
 {
-    for (size_t i = N_SCANS - 6; i < N_SCANS; i++)
+    for (size_t i = 0; i < 6; i++)
         for (size_t j = 0; j < horizon_scans_; j++)
-            if (label_mat_.at<int>(i, j) == 0) range_mat_.at<int>(i, j) = label_count_;
+            if (label_mat_.at<int>(i, j) == 0) label_mat_.at<int>(i, j) = label_count_;
     label_count_++;
 }
 
@@ -236,68 +228,67 @@ void ImageSegmenter::labelComponents(int row, int col)
 }
 
 // keep the long continuous lines, they are likely on large planes including ground
-void ImageSegmenter::labelConnectLine()
-{
-    for (size_t i = 0; i < N_SCANS; i++)
-    {
-        size_t start_indx;
-        for (start_indx = 0; start_indx < horizon_scans_ - 1; start_indx++)
-            if (label_mat_.at<int>(i, start_indx) == 999999)
-                break;
-        size_t end_indx = start_indx;
+// void ImageSegmenter::labelConnectLine()
+// {
+//     for (size_t i = 0; i < N_SCANS; i++)
+//     {
+//         size_t start_indx;
+//         for (start_indx = 0; start_indx < horizon_scans_ - 1; start_indx++)
+//             if (label_mat_.at<int>(i, start_indx) == 999999)
+//                 break;
+//         size_t end_indx = start_indx;
 
-        all_pushed_indx_[0] = start_indx;
-        int all_pushed_ind_size = 1;
-        while (end_indx <= horizon_scans_ - 2)
-        {
-            bool b_exit;
-            if (label_mat_.at<int>(i, end_indx + 1) == -1) b_exit = false;
-            else if (label_mat_.at<int>(i, end_indx + 1) != 999999) b_exit = true;
-            else
-            {
-                // all_pushed_indx_[all_pushed_ind_size] = end_indx + 1;
-                // all_pushed_ind_size++;
-                // b_exit = false;
-                float d1 = std::max(range_mat_.at<float>(i, end_indx),
-                                    range_mat_.at<float>(i, end_indx + 1));
-                float d2 = std::min(range_mat_.at<float>(i, end_indx),
-                                    range_mat_.at<float>(i, end_indx + 1));
-                float alpha = segment_alphax_;
-                float angle = atan2(d2*sin(alpha), (d1 - d2*cos(alpha)));
-                if (angle > SEGMENT_THETA)
-                {
-                    all_pushed_indx_[all_pushed_ind_size] = end_indx + 1;
-                    all_pushed_ind_size++;
-                    b_exit = false;
-                } else
-                    b_exit = true;
-            }
-            if (end_indx == horizon_scans_ - 2) b_exit = true;
-            if (b_exit)
-            {
-                if ((all_pushed_ind_size > min_line_size_) &&
-                    ((1.0 * all_pushed_ind_size / (end_indx + 1 - start_indx)) > 0.5)) // TODO
-                {
-                    printf("label count: %d, size: %d, %f\%\n", label_count_, all_pushed_ind_size,
-                        1.0 * all_pushed_ind_size / (end_indx + 1 - start_indx));
-                    label_count_++;
-                    for (size_t k = 0; k < all_pushed_ind_size; k++)
-                    {
-                        label_mat_.at<int>(i, all_pushed_indx_[k]) = label_count_;
-                    }
-                }
-                start_indx = end_indx + 1;
-                end_indx = start_indx;
-                all_pushed_indx_[0] = start_indx;
-                all_pushed_ind_size = 1;
-            } else
-            {
-                end_indx++;
-            }
-        }
-    }
-}
-
+//         all_pushed_indx_[0] = start_indx;
+//         int all_pushed_ind_size = 1;
+//         while (end_indx <= horizon_scans_ - 2)
+//         {
+//             bool b_exit;
+//             if (label_mat_.at<int>(i, end_indx + 1) == -1) b_exit = false;
+//             else if (label_mat_.at<int>(i, end_indx + 1) != 999999) b_exit = true;
+//             else
+//             {
+//                 // all_pushed_indx_[all_pushed_ind_size] = end_indx + 1;
+//                 // all_pushed_ind_size++;
+//                 // b_exit = false;
+//                 float d1 = std::max(range_mat_.at<float>(i, end_indx),
+//                                     range_mat_.at<float>(i, end_indx + 1));
+//                 float d2 = std::min(range_mat_.at<float>(i, end_indx),
+//                                     range_mat_.at<float>(i, end_indx + 1));
+//                 float alpha = segment_alphax_;
+//                 float angle = atan2(d2*sin(alpha), (d1 - d2*cos(alpha)));
+//                 if (angle > SEGMENT_THETA)
+//                 {
+//                     all_pushed_indx_[all_pushed_ind_size] = end_indx + 1;
+//                     all_pushed_ind_size++;
+//                     b_exit = false;
+//                 } else
+//                     b_exit = true;
+//             }
+//             if (end_indx == horizon_scans_ - 2) b_exit = true;
+//             if (b_exit)
+//             {
+//                 if ((all_pushed_ind_size > min_line_size_) &&
+//                     ((1.0 * all_pushed_ind_size / (end_indx + 1 - start_indx)) > 0.5)) // TODO
+//                 {
+//                     printf("label count: %d, size: %d, %f\%\n", label_count_, all_pushed_ind_size,
+//                         1.0 * all_pushed_ind_size / (end_indx + 1 - start_indx));
+//                     label_count_++;
+//                     for (size_t k = 0; k < all_pushed_ind_size; k++)
+//                     {
+//                         label_mat_.at<int>(i, all_pushed_indx_[k]) = label_count_;
+//                     }
+//                 }
+//                 start_indx = end_indx + 1;
+//                 end_indx = start_indx;
+//                 all_pushed_indx_[0] = start_indx;
+//                 all_pushed_ind_size = 1;
+//             } else
+//             {
+//                 end_indx++;
+//             }
+//         }
+//     }
+// }
 
 /*
 for (size_t i = 0; i < N_SCANS; i++)

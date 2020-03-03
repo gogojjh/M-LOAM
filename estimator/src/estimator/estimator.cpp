@@ -248,7 +248,7 @@ void Estimator::processMeasurements()
             m_buf_.unlock();
 
             m_process_.lock();
-            process();
+            // process();
 
             printStatistics(*this, 0);
             pubPointCloud(*this, cur_time_); // TODO: publish undistort point cloud
@@ -446,7 +446,7 @@ void Estimator::optimizeMap()
     // loss_function = new ceres::CauchyLoss(1.0);
     // ceres: set options and solve the non-linear equation
     ceres::Solver::Options options;
-    options.linear_solver_type = ceres::DENSE_QR;
+    options.linear_solver_type = ceres::DENSE_SCHUR;
     // options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
     options.num_threads = 6;
     // options.trust_region_strategy_type = ceres::DOGLEG;
@@ -1142,12 +1142,9 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
                 break;
             }
         }
-        // std::cout << i << ": D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose() << std::endl;
-        std::cout << i << ": D factor: " << mat_E(0, 0) << std::endl;
+        std::cout << i << " D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose() << std::endl;
         Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
-        assert(mat_P.rows() == 6);
 
-        // about extrinsics
         if (i > OPT_WINDOW_SIZE)
         {
             cur_eig_calib_[i - OPT_WINDOW_SIZE - 1] = mat_E(0, 0);
@@ -1159,12 +1156,12 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
             else if (mat_E(0, 0) > eig_thre_calib_[i])
                 eig_thre_calib_[i] = mat_E(0, 0);
             else
-                mat_P.setZero();
+                mat_P.setZero(); // not update extrinsics
         }
 
         if (local_param_ids[i]->is_degenerate_)
         {
-            local_param_ids[i]->V_update_ = mat_P.transpose();
+            local_param_ids[i]->V_update_ = mat_P;
             // std::cout << "param " << i << " is degenerate !" << std::endl;
             // std::cout << mat_P << std::endl;
         }

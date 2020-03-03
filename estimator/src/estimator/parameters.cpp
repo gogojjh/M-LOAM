@@ -238,7 +238,7 @@ void readParameters(std::string config_file)
               cv_theta.ptr<double>(0)[3], cv_theta.ptr<double>(0)[4], cv_theta.ptr<double>(0)[5],
               cv_theta.ptr<double>(0)[6], cv_theta.ptr<double>(0)[7], cv_theta.ptr<double>(0)[8];
     THETA = theta_vec.asDiagonal();
-    std::cout << "initial covarianceTHETA:" << std::endl << THETA << std::endl;
+    std::cout << "THETA:" << std::endl << THETA << std::endl;
 
     NORM_THRESHOLD = fsSettings["norm_threshold"];
 

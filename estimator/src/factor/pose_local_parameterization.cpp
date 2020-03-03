@@ -12,7 +12,6 @@
 void PoseLocalParameterization::setParameter()
 {
     is_degenerate_ = false;
-    is_update_ = true;
     V_update_ = Eigen::Matrix<double, 6, 6>::Identity();
 }
 

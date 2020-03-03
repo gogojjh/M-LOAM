@@ -24,6 +24,5 @@ public:
     void setParameter();
 
     bool is_degenerate_;
-    bool is_update_;
     Eigen::Matrix<double, 6, 6> V_update_;
 };
