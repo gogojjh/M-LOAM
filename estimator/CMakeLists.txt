@@ -6,6 +6,7 @@ set(CMAKE_CXX_FLAGS "-std=c++17")
 #add_compile_options(-std=c++17)
 #-DEIGEN_USE_MKL_ALL")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall")
 
 find_package(catkin REQUIRED COMPONENTS
     roscpp
@@ -32,7 +33,7 @@ find_package(PCL REQUIRED)
 find_package(Ceres REQUIRED)
 # find_package(glog REQUIRED)
 
-find_package(Eigen3)
+find_package(Eigen)
 #option(EIGEN_DONT_VECTORIZE "Disables explicit vectorization when defined." ON)
 
 find_package(OpenMP REQUIRED)

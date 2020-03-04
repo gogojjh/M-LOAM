@@ -245,7 +245,6 @@ int main(int argc, char **argv)
         std::remove(EX_CALIB_RESULT_PATH.c_str());
         std::remove(EX_CALIB_EIG_PATH.c_str());
     }
-
     ROS_WARN("waiting for cloud...");
 
     registerPub(n);
@@ -253,7 +252,6 @@ int main(int argc, char **argv)
     ros::Subscriber sub_cloud1 = n.subscribe(CLOUD1_TOPIC, 100, cloud1_callback);
     ros::Subscriber sub_restart = n.subscribe("/mlod_restart", 100, restart_callback);
     ros::Subscriber sub_pose_gt = n.subscribe("/base_pose_gt", 100, pose_gt_callback);
-
     pub_laser_path = n.advertise<nav_msgs::Path>("/laser_odom_path_gt", 100);
 
     std::thread sync_thread(sync_process);
@@ -262,13 +260,17 @@ int main(int argc, char **argv)
     {
         cloud_visualizer_thread = std::thread(&PlaneNormalVisualizer::Spin, &estimator.plane_normal_vis_);
     }
-    ros::spin();
+    ros::Rate loop_rate(100);
+    while (ros::ok())
+    {
+        ros::spinOnce();
+        loop_rate.sleep();
+    }
 
     cloud_visualizer_thread.join();
     sync_thread.join();
 
     return 0;
-
 }
 
 

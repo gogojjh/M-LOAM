@@ -623,7 +623,7 @@ void process()
 
 					ceres::Solver::Options options;
 					options.linear_solver_type = ceres::DENSE_SCHUR;
-					options.max_num_iterations = 30;
+					options.max_num_iterations = 20;
 					// options.max_solver_time_in_seconds = 0.03;
 					options.minimizer_progress_to_stdout = false;
 					options.check_gradients = false;
@@ -1020,7 +1020,21 @@ int main(int argc, char **argv)
 	laser_cloud_surf_split_cov.resize(NUM_OF_LASER);
 
 	std::thread mapping_process{process};
-	ros::spin();
+	ros::Rate loop_rate(100);
+	while (ros::ok())
+	{
+		ros::spinOnce();
+		loop_rate.sleep();
+	}
+
+	printf("Saving laser_map cloud to /tmp/mloam_mapping_cloud.pcd\n");
+	PointICovCloud laser_cloud_map;
+	for (int i = 0; i < laser_cloud_num; i++)
+	{
+		laser_cloud_map += *laser_cloud_corner_array_cov[i];
+		laser_cloud_map += *laser_cloud_surf_array_cov[i];
+	}
+	pcl::io::savePCDFileASCII("/tmp/mloam_mapping_cloud.pcd", laser_cloud_map);
 
 	return 0;
 }
