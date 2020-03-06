@@ -212,7 +212,8 @@ void evalDegenracy(PoseLocalParameterization *local_parameterization, const cere
 	Eigen::Matrix<double, 6, 6> mat_V_f = esolver.eigenvectors().real(); // 6*6, column is the corresponding eigenvector
 	Eigen::Matrix<double, 6, 6> mat_V_p = mat_V_f;
 
-	Eigen::Map<Eigen::Matrix<double, 6, 6>> cov_pose(covariance_pose);
+	// covariance of sensor noise: A New Approach to 3D ICP Covariance Estimation/ Censi's approach
+	Eigen::Map<Eigen::Matrix<double, 6, 6> > cov_pose(covariance_pose);
 	cov_pose = mat_H.inverse();
 	// std::cout << "pose cov: " << std::endl << cov_pose << std::endl;
 	// std::cout << "trace: " << std::endl << cov_pose.trace() << std::endl;

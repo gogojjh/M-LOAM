@@ -31,6 +31,7 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(OpenCV REQUIRED)
 find_package(PCL REQUIRED)
 find_package(Ceres REQUIRED)
+find_package(Sophus REQUIRED)
 # find_package(glog REQUIRED)
 
 find_package(Eigen)
@@ -47,7 +48,7 @@ endif()
 # add_definitions(${EIGEN3_DEFINITIONS})
 # set(EIGEN_MAX_STATIC_ALIGN_BYTES 0)
 
-include_directories(${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR} ${CERES_INCLUDE_DIRS})
+include_directories(${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR} ${CERES_INCLUDE_DIRS} ${Sophus_INCLUDE_DIRS})
 
 catkin_package(
 #  INCLUDE_DIRS include
@@ -63,7 +64,7 @@ add_library(mloam_lib_1
     src/utility/visualization.cpp
     src/utility/utility.cpp
     )
-target_link_libraries(mloam_lib_1 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES})
+target_link_libraries(mloam_lib_1 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES} ${Sophus_LIBRARIES})
 
 ######################################################## fix libraries
 add_library(mloam_lib_2
@@ -75,7 +76,7 @@ add_library(mloam_lib_2
     src/factor/marginalization_factor.cpp
     src/utility/cloud_visualizer.cpp
     )
-target_link_libraries(mloam_lib_2 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES})
+target_link_libraries(mloam_lib_2 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES} ${Sophus_LIBRARIES})
 
 ######## --------------------- EXECUTABLE --------------------- ########
 add_executable(mloam_node_sr src/rosNodeSR.cpp)

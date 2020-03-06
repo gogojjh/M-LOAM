@@ -299,20 +299,22 @@ void pubOdometry(const Estimator &estimator, const double &time)
     extrinsics.status = ESTIMATE_EXTRINSIC;
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
-        nav_msgs::Odometry extrins;
-        extrins.header.seq = n;
-        extrins.header.stamp = ros::Time(time);
-        extrins.header.frame_id = "/laser_" + std::to_string(IDX_REF);
-        extrins.child_frame_id = "/laser_" + std::to_string(n);
-        extrins.pose.pose.orientation.x = estimator.qbl_[n].x();
-        extrins.pose.pose.orientation.y = estimator.qbl_[n].y();
-        extrins.pose.pose.orientation.z = estimator.qbl_[n].z();
-        extrins.pose.pose.orientation.w = estimator.qbl_[n].w();
-        extrins.pose.pose.position.x = estimator.tbl_[n](0);
-        extrins.pose.pose.position.y = estimator.tbl_[n](1);
-        extrins.pose.pose.position.z = estimator.tbl_[n](2);
-        publishTF(extrins);
-        extrinsics.odoms.push_back(extrins);
+        nav_msgs::Odometry exts;
+        exts.header.seq = n;
+        exts.header.stamp = ros::Time(time);
+        exts.header.frame_id = "/laser_" + std::to_string(IDX_REF);
+        exts.child_frame_id = "/laser_" + std::to_string(n);
+        exts.pose.pose.orientation.x = estimator.qbl_[n].x();
+        exts.pose.pose.orientation.y = estimator.qbl_[n].y();
+        exts.pose.pose.orientation.z = estimator.qbl_[n].z();
+        exts.pose.pose.orientation.w = estimator.qbl_[n].w();
+        exts.pose.pose.position.x = estimator.tbl_[n](0);
+        exts.pose.pose.position.y = estimator.tbl_[n](1);
+        exts.pose.pose.position.z = estimator.tbl_[n](2);
+        for (size_t i = 0; i < 6; i++)
+            for (size_t j = 0; j < 6; j++) exts.pose.covariance[i * 6 + j] = float(estimator.covbl_[n](i, j));
+        publishTF(exts);
+        extrinsics.odoms.push_back(exts);
     }
     pub_extrinsics.publish(extrinsics);
 }

@@ -45,7 +45,7 @@ public:
     Pose operator * (const Pose &pose);
     friend ostream &operator << (ostream &out, const Pose &pose);
 
-    Eigen::Matrix<double, 6, 1> tose3();
+     Eigen::Matrix<double, 6, 1> se3() const;
 
     double td_;
     Eigen::Quaterniond q_; // q = [cos(theta/2), u*sin(theta/2)]
@@ -55,7 +55,6 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW // TODO: the Eigen bugs in initializing the class
 };
 
-Eigen::Matrix<double, 6, 1> Pose::tose3();
-void computeMeanPose(const std::vector<std::pair<double, Pose>, Eigen::aligned_allocator<std::pair<double, Pose>>> &pose_array, Pose &pose_mean);
+void computeMeanPose(const std::vector<std::pair<double, Pose>, Eigen::aligned_allocator<std::pair<double, Pose>>> &pose_array, Pose &pose_mean, Eigen::Matrix<double, 6, 6> &pose_cov);
 
 //

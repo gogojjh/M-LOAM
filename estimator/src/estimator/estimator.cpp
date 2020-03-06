@@ -39,11 +39,13 @@ void Estimator::setParameter()
     qbl_.resize(NUM_OF_LASER);
     tbl_.resize(NUM_OF_LASER);
     tdbl_.resize(NUM_OF_LASER);
+    covbl_.resize(NUM_OF_LASER);
     for (auto i = 0; i < NUM_OF_LASER; i++)
     {
         qbl_[i] = QBL[i];
         tbl_[i] = TBL[i];
         tdbl_[i] = TDBL[i];
+        covbl_[i] = THETA.topLeftCorner<6, 6>();
         cout << "Given extrinsic Laser_" << i << ": " << Pose(QBL[i], TBL[i], TDBL[i]) << endl;
     }
 
@@ -128,6 +130,7 @@ void Estimator::clearState()
     qbl_.clear();
     tbl_.clear();
     tdbl_.clear();
+    covbl_.clear();
 
     initial_extrinsics_.clearState();
 
@@ -1200,10 +1203,12 @@ void Estimator::evalCalib()
             for (auto n = 0; n < NUM_OF_LASER; n++)
                 if (n != IDX_REF)
                 {
-                    Pose pose_mean_calib;
-                    computeMeanPose(pose_calib_[n], pose_mean_calib); // compute the mean calibration parameters
-                    qbl_[n] = pose_mean_calib.q_;
-                    tbl_[n] = pose_mean_calib.t_;
+                    Pose pose_mean;
+                    Eigen::Matrix<double, 6, 6> pose_cov;
+                    computeMeanPose(pose_calib_[n], pose_mean, pose_cov); // compute the mean calibration parameters
+                    qbl_[n] = pose_mean.q_;
+                    tbl_[n] = pose_mean.t_;
+                    covbl_[n] = pose_cov;
                     // std::cout << "laser_" << n << ": " << pose_mean_calib << std::endl;
                 }
             // ini_fixed_local_map_ = false; // reconstruct new optimized map

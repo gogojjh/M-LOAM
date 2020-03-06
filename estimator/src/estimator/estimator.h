@@ -128,6 +128,7 @@ class Estimator
     std::vector<Eigen::Quaterniond, Eigen::aligned_allocator<Eigen::Quaterniond> > qbl_;
     std::vector<Eigen::Vector3d> tbl_;
     std::vector<double> tdbl_;
+    std::vector<Eigen::Matrix<double, 6, 6> > covbl_;
 
     nav_msgs::Path laser_path_gt_;
 
