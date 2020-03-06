@@ -69,5 +69,6 @@
         "set": "cpp",
         "string": "cpp"
     },
-    "cmake.configureOnOpen": true
+    "cmake.configureOnOpen": true,
+    "C_Cpp.errorSquiggles": "Disabled"
 }

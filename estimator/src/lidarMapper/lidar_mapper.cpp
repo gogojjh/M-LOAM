@@ -91,10 +91,10 @@ std::mutex m_buf;
 
 FeatureExtract f_extract;
 
-double covariance_pose[SIZE_POSE * SIZE_POSE];
 int UNCER_PROPA_SWITCH = 1;
+double covariance_pose[6 * 6];
 
-std::vector<Eigen::Matrix<double, 1, 6> > d_factor_list;
+std::vector<Eigen::Matrix<double, 1, 6>> d_factor_list;
 std::vector<Eigen::Matrix<double, 6, 6> > d_eigvec_list;
 
 int toCubeIndex(const int &i, const int &j, const int &k)
@@ -197,7 +197,6 @@ void double2Vector()
 	pose_wmap_curr.q_ = Eigen::Quaterniond(para_pose[6], para_pose[3], para_pose[4], para_pose[5]);
 }
 
-// TODO: the results are not good -> make wrong estimates
 void evalDegenracy(PoseLocalParameterization *local_parameterization, const ceres::CRSMatrix &jaco)
 {
     // printf("jacob: %d constraints, %d parameters\n", jaco.num_rows, jaco.num_cols); // 2000+, 6
@@ -212,7 +211,12 @@ void evalDegenracy(PoseLocalParameterization *local_parameterization, const cere
 	Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real(); // 6*1
 	Eigen::Matrix<double, 6, 6> mat_V_f = esolver.eigenvectors().real(); // 6*6, column is the corresponding eigenvector
 	Eigen::Matrix<double, 6, 6> mat_V_p = mat_V_f;
-	// std::cout << "H:" << std::endl << mat_H;
+	
+	Eigen::Map<Eigen::Matrix<double, 6, 6>> cov_pose(covariance_pose);
+	cov_pose = mat_H.inverse();
+	// std::cout << "pose cov: " << std::endl << cov_pose << std::endl;
+	// std::cout << "trace: " << std::endl << cov_pose.trace() << std::endl;
+
 	for (auto j = 0; j < mat_E.cols(); j++)
 	{
 		if (mat_E(0, j) < MAP_EIG_THRE)
@@ -276,7 +280,24 @@ void evalDegenracy(PoseLocalParameterization *local_parameterization, const cere
 	// }
 
     // printf("evaluate degeneracy %fms\n", t_eval_degenracy.toc());
+
+	// // TODO: estimation pose covariance
+	// Eigen::Matrix<double, 6, 1> vec_ini;
+	// vec_ini << 0.04, 0.04, 0.04, 0.0225, 0.0225, 0.0225;
+	// Eigen::Matrix<double, 6, 6> cov_ini = vec_ini.asDiagonal();
+	// Eigen::MatrixXd identity_matrix(mat_J.rows(), mat_J.cols());
+	// identity_matrix.setIdentity();
+	// std::cout << identity_matrix.rows() << " " << identity_matrix.cols() << std::endl;
+	// Eigen::Matrix<double, 6, 6> cov_1 = (identity_matrix - mat_J).transpose() * cov_ini * (identity_matrix - mat_J) / 400.0;
+	// std::cout << cov_1 << std::endl;
+
+	// Eigen::Matrix<double, 6, 6> cov_2;
+	// cov_2.setZero();
+
+	// Eigen::Matrix<double, 6, 6> cov_pose = cov_1 + cov_2;
+	// std::cout << "Covariance: " << std::endl << cov_pose << std::endl << "Trace: " << cov_pose.trace() << std::endl;
 }
+
 
 void process()
 {
@@ -678,7 +699,7 @@ void process()
 								ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
 								res_ids_proj.push_back(res_id);
 							}
-							printf("corner num %d(%d)\n", laser_cloud_corner_stack_num, corner_num);
+							// printf("corner num %d(%d)\n", laser_cloud_corner_stack_num, corner_num);
 						}
 
 						if (POINT_PLANE_FACTOR)
@@ -732,20 +753,20 @@ void process()
 					double2Vector();
 					std::cout << iter_cnt << "th result: " << pose_wmap_curr << std::endl;
 
-					// TODO: a running error appears
+					// ****************************************************** covariance evaluation
 					// if (iter_cnt == 1)
 					// {
-					// 	// ****************************************************** covariance evaluation
 					// 	ceres::Covariance::Options options_covariance;
 					// 	ceres::Covariance covariance(options_covariance);
-					// 	std::vector<std::pair<const double*, const double *> > covariance_blocks;
+					// 	std::vector<std::pair<const double *, const double *>> covariance_blocks;
 					// 	covariance_blocks.push_back(std::make_pair(para_pose, para_pose));
 					// 	CHECK(covariance.Compute(covariance_blocks, &problem));
 					// 	covariance.GetCovarianceBlock(para_pose, para_pose, covariance_pose);
 					// 	Eigen::Map<Eigen::Matrix<double, SIZE_POSE, SIZE_POSE> > cov_pose(covariance_pose); // inverse[J'(x*) inverse[S] J(x*)]
-					// 	// std::cout << "Covariance of pose:" << std::endl << cov_pose << std::endl;
+					// 	std::cout << "Covariance of pose:" << std::endl << cov_pose << std::endl;
 					// 	std::cout << "Trace of pose covariance: " << cov_pose.trace() << std::endl;
 					// }
+
 					if (iter_cnt != 1) printf("-------------------------------------\n");
 				}
 				printf("********************************\n");
@@ -917,6 +938,8 @@ void process()
 			odom_aft_mapped.pose.pose.position.x = pose_wmap_curr.t_.x();
 			odom_aft_mapped.pose.pose.position.y = pose_wmap_curr.t_.y();
 			odom_aft_mapped.pose.pose.position.z = pose_wmap_curr.t_.z();
+			for (size_t i = 0; i < 6; i++)
+				for (size_t j = 0; j < 6; j++) odom_aft_mapped.pose.covariance[i * 6 + j] = float(covariance_pose[i * 6 + j]);
 			pub_odom_aft_mapped.publish(odom_aft_mapped);
 
 			geometry_msgs::PoseStamped laser_after_mapped_pose;

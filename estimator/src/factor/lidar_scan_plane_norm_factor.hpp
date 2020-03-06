@@ -24,7 +24,6 @@ public:
 		double a = w.dot(q_last_curr * point_ + t_last_curr) + d;
 		Eigen::Map<Eigen::Vector3d> r(residuals);
 		r = a * w;
-		// if (r.norm() != r.norm()) std::cout << coeff_.transpose() << " " << point_.transpose() << std::endl; // TODO: why? a feature
 
 		if (jacobians)
 		{
