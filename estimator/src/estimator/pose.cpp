@@ -103,39 +103,29 @@ ostream & operator << (ostream &out, const Pose &pose)
     return out;
 }
 
+Eigen::Matrix<double, 6, 1> Pose::tose3()
+{
+    Sophus::SE3 SE3_qt(q_, t_);
+    Eigen::vector<double, 6, 1> xi = SE3_qt.log();
+    // Sophus::SE3::hat(xi)
+    // Sophus::SE3::vee(Sophus::SE3::hat(xi)) == xi
+    return xi;
+}
+
 // quaternion averaging: https://wiki.unity3d.com/index.php/Averaging_Quaternions_and_Vectors
 // ceres: pose graph optimization: https://ceres-solver.googlesource.com/ceres-solver/+/master/examples/slam/pose_graph_3d
 // review of rotation averaging: Rotation Averaging IJCV
 // TODO: Solution 2: using pose graph optimization T_mean = argmin_{T} \sum||(T-T_mean)||^{2}
-void computeMeanPose(const std::vector<std::pair<double, Pose>, Eigen::aligned_allocator<std::pair<double, Pose> > > &pose_array, Pose &pose_mean)
+void computeMeanPose(const std::vector<std::pair<double, Pose>, Eigen::aligned_allocator<std::pair<double, Pose>>> &pose_array, Pose &pose_mean)
 {
     // Solution 1: approximation if the separate quaternions are relatively close to each other.
     double weight_total = 0;
-    for (auto iter = pose_array.begin(); iter != pose_array.end(); iter++)  weight_total += iter->first;
-
-    // translation averaging
-    Eigen::Vector3d t_mean = Eigen::Vector3d::Zero();
-    for (auto iter = pose_array.begin(); iter != pose_array.end(); iter++)
+    Eigen::Matrix<double, 6, 1> xi_total = 0;
+    for (auto iter = pose_array.begin(); iter != pose_array.end(); iter ++)
     {
-        std::cout << iter->first << ", " << iter->second << std::endl;
-        t_mean += iter->first * iter->second.t_;
+        weight_total += iter->first;
+        xi_total += iter->first * iter->second.tose3();
     }
-    t_mean /= weight_total;
-
-    // rotation averaging
-    double x = 0, y = 0, z = 0, w = 0;
-    for (auto iter = pose_array.begin(); iter != pose_array.end(); iter++)
-    {
-        x += iter->first * iter->second.q_.x();
-        y += iter->first * iter->second.q_.y();
-        z += iter->first * iter->second.q_.z();
-        w += iter->first * iter->second.q_.w();
-    }
-    x /= weight_total;
-    y /= weight_total;
-    z /= weight_total;
-    w /= weight_total;
-    Eigen::Quaterniond q_mean(w, x, y, z);
-
-    pose_mean = Pose(q_mean, t_mean);
+    Sophus::SE3 SE3_mean = Sophus::SE3::exp(xi_total / weight_total);
+    pose_mean = Pose(SE3_mean.matrix());
 }

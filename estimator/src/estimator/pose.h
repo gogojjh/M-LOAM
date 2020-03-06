@@ -21,6 +21,9 @@
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/StdVector>
 
+#include <sophus/so3.hpp>
+#include <sophus/se3.hpp>
+
 #include "common/types/type.h"
 
 using namespace std;
@@ -42,6 +45,8 @@ public:
     Pose operator * (const Pose &pose);
     friend ostream &operator << (ostream &out, const Pose &pose);
 
+    Eigen::Matrix<double, 6, 1> tose3();
+
     double td_;
     Eigen::Quaterniond q_; // q = [cos(theta/2), u*sin(theta/2)]
     Eigen::Vector3d t_;
@@ -50,6 +55,7 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW // TODO: the Eigen bugs in initializing the class
 };
 
-void computeMeanPose(const std::vector<std::pair<double, Pose>, Eigen::aligned_allocator<std::pair<double, Pose> > > &pose_array, Pose &pose_mean);
+Eigen::Matrix<double, 6, 1> Pose::tose3();
+void computeMeanPose(const std::vector<std::pair<double, Pose>, Eigen::aligned_allocator<std::pair<double, Pose>>> &pose_array, Pose &pose_mean);
 
 //

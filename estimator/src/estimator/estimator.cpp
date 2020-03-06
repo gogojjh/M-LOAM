@@ -1188,7 +1188,7 @@ void Estimator::evalCalib()
         for (auto n = 0; n < NUM_OF_LASER; n++)
             if ((n != IDX_REF) && (pose_calib_[n].size() < N_CALIB))
             {
-                ROS_WARN("pose_calib size: %d", pose_calib_[n].size());
+                ROS_WARN("eligible calib size: %d", pose_calib_[n].size());
                 is_converage = false;
                 break;
             }

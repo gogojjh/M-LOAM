@@ -211,11 +211,12 @@ void evalDegenracy(PoseLocalParameterization *local_parameterization, const cere
 	Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real(); // 6*1
 	Eigen::Matrix<double, 6, 6> mat_V_f = esolver.eigenvectors().real(); // 6*6, column is the corresponding eigenvector
 	Eigen::Matrix<double, 6, 6> mat_V_p = mat_V_f;
-	
+
 	Eigen::Map<Eigen::Matrix<double, 6, 6>> cov_pose(covariance_pose);
 	cov_pose = mat_H.inverse();
 	// std::cout << "pose cov: " << std::endl << cov_pose << std::endl;
 	// std::cout << "trace: " << std::endl << cov_pose.trace() << std::endl;
+	// std::cout << "pose uncertain quantity: " << 1 / mat_E << std::endl;
 
 	for (auto j = 0; j < mat_E.cols(); j++)
 	{
