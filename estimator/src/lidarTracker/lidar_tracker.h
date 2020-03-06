@@ -19,7 +19,6 @@
 #include <cmath>
 #include <map>
 
-#include <opencv2/opencv.hpp>
 #include <eigen3/Eigen/Dense>
 
 #include <pcl/point_cloud.h>
@@ -27,6 +26,8 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/registration/icp.h>
+
+#include <opencv2/opencv.hpp>
 
 #include "common/types/type.h"
 #include "common/algos/math.hpp"

@@ -45,10 +45,7 @@ void Estimator::setParameter()
         qbl_[i] = QBL[i];
         tbl_[i] = TBL[i];
         tdbl_[i] = TDBL[i];
-        if (i == IDX_REF)
-            covbl_[i].setZero(); 
-        else
-            covbl_[i] = THETA.topLeftCorner<6, 6>();
+        covbl_[i] = COV_EXT[i];
         cout << "Given extrinsic Laser_" << i << ": " << Pose(QBL[i], TBL[i], TDBL[i]) << endl;
     }
 
@@ -1211,7 +1208,8 @@ void Estimator::evalCalib()
                     computeMeanPose(pose_calib_[n], pose_mean, pose_cov); // compute the mean calibration parameters
                     qbl_[n] = pose_mean.q_;
                     tbl_[n] = pose_mean.t_;
-                    covbl_[n] = pose_cov;
+                    // covbl_[n] = pose_cov;
+                    covbl_[n] = pose_cov.diagonal().asDiagonal();
                     // std::cout << "laser_" << n << ": " << pose_mean_calib << std::endl;
                 }
             // ini_fixed_local_map_ = false; // reconstruct new optimized map

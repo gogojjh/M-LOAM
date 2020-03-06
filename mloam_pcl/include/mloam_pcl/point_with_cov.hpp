@@ -71,7 +71,7 @@ namespace pcl
             cov_vec[3] = p.cov_vec[3];
             cov_vec[4] = p.cov_vec[4];
             cov_vec[5] = p.cov_vec[5];
-            cov_trace = p.cov_vec[0] + p.cov_vec[3] + p.cov_vec[5];
+            cov_trace = p.cov_trace;
         }
 
         inline PointXYZIWithCov(const PointXYZI &p, const Eigen::Matrix3f &cov_matrix)

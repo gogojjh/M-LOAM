@@ -144,7 +144,7 @@ void computeMeanPose(const std::vector<std::pair<double, Pose>, Eigen::aligned_a
         Eigen::Matrix<double, 6, 1> xi = iter->second.se3();
         pose_cov += pow(iter->first, 2.0) * (xi - xi_mean) * (xi - xi_mean).transpose();
     }
-    pose_cov /= (pose_array.size() - 1)
+    pose_cov /= (pose_array.size() - 1);
 
     std::cout << "calib mean: " << pose_mean << std::endl;
     std::cout << "calib cov: " << std::endl << pose_cov << std::endl;

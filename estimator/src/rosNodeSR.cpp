@@ -22,13 +22,13 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
-#include <opencv2/opencv.hpp>
-
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/kdtree/kdtree_flann.h>
+
+#include <opencv2/opencv.hpp>
 
 #include <ros/ros.h>
 #include <std_msgs/Header.h>
@@ -237,18 +237,13 @@ int main(int argc, char **argv)
     printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
     if (MLOAM_RESULT_SAVE)
     {
-        std::cout << "gt path: " << MLOAM_GT_PATH << std::endl;
-        std::cout << "odom path: " << MLOAM_ODOM_PATH << std::endl;
-        std::cout << "map path: " << MLOAM_MAP_PATH << std::endl;
-        std::cout << "calib path: " << EX_CALIB_RESULT_PATH << std::endl;
-        std::cout << "calib eig path: " << EX_CALIB_EIG_PATH << std::endl;
+        std::cout << "output path: " << OUTPUT_FOLDER << std::endl;
         std::remove(MLOAM_ODOM_PATH.c_str());
         std::remove(MLOAM_MAP_PATH.c_str());
         std::remove(MLOAM_GT_PATH.c_str());
         std::remove(EX_CALIB_RESULT_PATH.c_str());
         std::remove(EX_CALIB_EIG_PATH.c_str());
     }
-
     ROS_WARN("waiting for cloud...");
 
     registerPub(n);
@@ -265,13 +260,17 @@ int main(int argc, char **argv)
     {
         cloud_visualizer_thread = std::thread(&PlaneNormalVisualizer::Spin, &estimator.plane_normal_vis_);
     }
-    ros::spin();
+    ros::Rate loop_rate(100);
+    while (ros::ok())
+    {
+        ros::spinOnce();
+        loop_rate.sleep();
+    }
 
     cloud_visualizer_thread.join();
     sync_thread.join();
 
     return 0;
-
 }
 
 

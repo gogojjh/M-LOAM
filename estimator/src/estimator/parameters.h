@@ -20,13 +20,14 @@
 #include <ros/ros.h>
 
 #include <eigen3/Eigen/Dense>
-#include <opencv2/opencv.hpp>
-#include <opencv2/core/eigen.hpp>
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/kdtree/kdtree_flann.h>
+
+#include <opencv2/opencv.hpp>
+#include <opencv2/core/eigen.hpp>
 
 #include "common/types/type.h"
 #include "common/csvfile.h"
@@ -108,12 +109,13 @@ extern double EIG_INITIAL;
 extern double EIG_THRE_CALIB;
 extern int N_CALIB;
 
-extern Eigen::Matrix<double, 9, 9> THETA;
-extern double NORM_THRESHOLD;
-
 extern float MAP_CORNER_RES;
 extern float MAP_SURF_RES;
 extern float MAP_EIG_THRE;
+
+extern std::vector<Eigen::Matrix<double, 6, 6> > COV_EXT;
+extern Eigen::Matrix<double, 3, 3> COV_MEASUREMENT;
+extern double TRACE_THRESHOLD;
 
 void readParameters(std::string config_file);
 

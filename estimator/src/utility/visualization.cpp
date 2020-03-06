@@ -312,7 +312,8 @@ void pubOdometry(const Estimator &estimator, const double &time)
         exts.pose.pose.position.y = estimator.tbl_[n](1);
         exts.pose.pose.position.z = estimator.tbl_[n](2);
         for (size_t i = 0; i < 6; i++)
-            for (size_t j = 0; j < 6; j++) exts.pose.covariance[i * 6 + j] = float(estimator.covbl_[n](i, j));
+            for (size_t j = 0; j < 6; j++) 
+                exts.pose.covariance[i * 6 + j] = float(estimator.covbl_[n](i, j));
         publishTF(exts);
         extrinsics.odoms.push_back(exts);
     }

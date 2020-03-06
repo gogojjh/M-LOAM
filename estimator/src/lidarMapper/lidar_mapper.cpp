@@ -92,7 +92,8 @@ std::mutex m_buf;
 FeatureExtract f_extract;
 
 int UNCER_PROPA_SWITCH = 1;
-double covariance_pose[6 * 6];
+std::vector<Eigen::Matrix<double, 6, 6> > cov_ext;
+Eigen::Matrix<double, 6, 6> cov_mapping;
 
 std::vector<Eigen::Matrix<double, 1, 6>> d_factor_list;
 std::vector<Eigen::Matrix<double, 6, 6> > d_eigvec_list;
@@ -197,110 +198,6 @@ void double2Vector()
 	pose_wmap_curr.q_ = Eigen::Quaterniond(para_pose[6], para_pose[3], para_pose[4], para_pose[5]);
 }
 
-void evalDegenracy(PoseLocalParameterization *local_parameterization, const ceres::CRSMatrix &jaco)
-{
-    // printf("jacob: %d constraints, %d parameters\n", jaco.num_rows, jaco.num_cols); // 2000+, 6
-	if (jaco.num_rows == 0) return;
-	TicToc t_eval_degenracy;
-	Eigen::MatrixXd mat_J;
-	CRSMatrix2EigenMatrix(jaco, mat_J);
-	Eigen::MatrixXd mat_Jt = mat_J.transpose(); // A^T
-	Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J; // A^TA 48*48
-	Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(0, 0, 6, 6) / 400.0;
-	Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6> > esolver(mat_H);
-	Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real(); // 6*1
-	Eigen::Matrix<double, 6, 6> mat_V_f = esolver.eigenvectors().real(); // 6*6, column is the corresponding eigenvector
-	Eigen::Matrix<double, 6, 6> mat_V_p = mat_V_f;
-
-	// covariance of sensor noise: A New Approach to 3D ICP Covariance Estimation/ Censi's approach
-	Eigen::Map<Eigen::Matrix<double, 6, 6> > cov_pose(covariance_pose);
-	cov_pose = mat_H.inverse();
-	// std::cout << "pose cov: " << std::endl << cov_pose << std::endl;
-	// std::cout << "trace: " << std::endl << cov_pose.trace() << std::endl;
-	// std::cout << "pose uncertain quantity: " << 1 / mat_E << std::endl;
-
-	for (auto j = 0; j < mat_E.cols(); j++)
-	{
-		if (mat_E(0, j) < MAP_EIG_THRE)
-		{
-			mat_V_p.col(j) = Eigen::Matrix<double, 6, 1>::Zero();
-			local_parameterization->is_degenerate_ = true;
-		} else
-		{
-			break;
-		}
-	}
-	d_factor_list.push_back(mat_E);
-	d_eigvec_list.push_back(mat_V_f);
-	std::cout << "D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose() << std::endl;
-	Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
-	// std::cout << "jjiao:" << std::endl;
-	// std::cout << "mat_E: " << mat_E << std::endl;
-	// std::cout << "mat_V_f: " << std::endl << mat_V_f << std::endl;
-	// std::cout << "mat_V_p: " << std::endl << mat_V_p << std::endl;
-	// std::cout << "mat_P: " << std::endl << mat_P.transpose() << std::endl;
-
-	if (local_parameterization->is_degenerate_)
-	{
-		local_parameterization->V_update_ = mat_P;
-		// std::cout << "param " << i << " is degenerate !" << std::endl;
-		// std::cout << mat_P.transpose() << std::endl;
-	}
-
-	// {
-	// 	Eigen::Matrix<float, 6, 6> mat_H = mat_JtJ.cast<float>().block(0, 0, 6, 6) / 400.0;
-	// 	cv::Mat matP(6, 6, CV_32F, cv::Scalar::all(0));
-	// 	cv::Mat matAtA(6, 6, CV_32F, cv::Scalar::all(0));
-	// 	cv::Mat matE(1, 6, CV_32F, cv::Scalar::all(0));
-	// 	cv::Mat matV(6, 6, CV_32F, cv::Scalar::all(0));
-	// 	cv::Mat matV2(6, 6, CV_32F, cv::Scalar::all(0));
-	//
-	// 	cv::eigen2cv(mat_H, matAtA);
-	// 	cv::eigen(matAtA, matE, matV);
-	// 	matV.copyTo(matV2);
-	// 	bool isDegenerate;
-	// 	for (int i = 5; i >= 0; i--)
-	// 	{
-	// 		if (matE.at<float>(0, i) < 100.0)
-	// 		{
-	// 			for (int j = 0; j < 6; j++)
-	// 			{
-	// 				matV2.at<float>(i, j) = 0;
-	// 			}
-	// 			isDegenerate = true;
-	// 		} else
-	// 		{
-	// 			break;
-  	// 		}
-	// 	}
-	// 	std::cout << "Zhang:" << std::endl;
-	// 	std::cout << "mat_E: " << matE.t() << std::endl;
-	// 	std::cout << "mat_V_f: " << std::endl << matV.t() << std::endl;
-	// 	std::cout << "mat_V_p: " << std::endl << matV2.t() << std::endl;
-	// 	matP = matV.inv() * matV2;
-	// 	std::cout << "mat_P: " << std::endl << matP << std::endl;
-	// }
-
-    // printf("evaluate degeneracy %fms\n", t_eval_degenracy.toc());
-
-	// // TODO: estimation pose covariance
-	// Eigen::Matrix<double, 6, 1> vec_ini;
-	// vec_ini << 0.04, 0.04, 0.04, 0.0225, 0.0225, 0.0225;
-	// Eigen::Matrix<double, 6, 6> cov_ini = vec_ini.asDiagonal();
-	// Eigen::MatrixXd identity_matrix(mat_J.rows(), mat_J.cols());
-	// identity_matrix.setIdentity();
-	// std::cout << identity_matrix.rows() << " " << identity_matrix.cols() << std::endl;
-	// Eigen::Matrix<double, 6, 6> cov_1 = (identity_matrix - mat_J).transpose() * cov_ini * (identity_matrix - mat_J) / 400.0;
-	// std::cout << cov_1 << std::endl;
-
-	// Eigen::Matrix<double, 6, 6> cov_2;
-	// cov_2.setZero();
-
-	// Eigen::Matrix<double, 6, 6> cov_pose = cov_1 + cov_2;
-	// std::cout << "Covariance: " << std::endl << cov_pose << std::endl << "Trace: " << cov_pose.trace() << std::endl;
-}
-
-
 void process()
 {
 	while(1)
@@ -397,6 +294,9 @@ void process()
 					pose_ext[n].t_ = Eigen::Vector3d(extrinsics.odoms[n].pose.pose.position.x,
 													 extrinsics.odoms[n].pose.pose.position.y,
 													 extrinsics.odoms[n].pose.pose.position.z);
+					for (size_t i = 0; i < 6; i++)
+						for (size_t j = 0; j < 6; j++)
+							cov_ext[n](i, j) = double(extrinsics.odoms[n].pose.covariance[i * 6 + j]);
 				}
 			}
 
@@ -600,27 +500,19 @@ void process()
 			{
 				int idx = int(point_ori.intensity); // indicate the lidar id
 				PointI point_sel;
-				Eigen::Matrix3d cov_po = Eigen::Matrix3d::Zero();
-				pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
-				evalPointUncertainty(idx, point_sel, cov_po);
-				if (cov_po.norm() < NORM_THRESHOLD) // or use trace
-				{
-					PointIWithCov point_cov(point_ori, cov_po.cast<float>());
-					laser_cloud_corner_split_cov[idx].push_back(point_cov);
-				}
+				PointIWithCov point_cov;
+				pointAssociateToMap(point_ori, point_sel, pose_ext[idx]);
+				evalPointUncertainty(point_sel, point_cov, cov_ext[idx]);
+				if (point_cov.cov_trace < TRACE_THRESHOLD) laser_cloud_corner_split_cov[idx].push_back(point_cov);
 			}
 			for (auto &point_ori: laser_cloud_surf_stack->points)
 			{
 				int idx = int(point_ori.intensity); // indicate the lidar id
 				PointI point_sel;
-				Eigen::Matrix3d cov_po = Eigen::Matrix3d::Zero();
-				pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
-				evalPointUncertainty(idx, point_sel, cov_po);
-				if (cov_po.norm() < NORM_THRESHOLD)
-				{
-					PointIWithCov point_cov(point_ori, cov_po.cast<float>());
-					laser_cloud_surf_split_cov[idx].push_back(point_cov);
-				}
+				PointIWithCov point_cov;
+				pointAssociateToMap(point_ori, point_sel, pose_ext[idx]);
+				evalPointUncertainty(point_sel, point_cov, cov_ext[idx]);
+				if (point_cov.cov_trace < TRACE_THRESHOLD) laser_cloud_surf_split_cov[idx].push_back(point_cov);
 			}
 
 			//***************************************************************************
@@ -754,21 +646,6 @@ void process()
 
 					double2Vector();
 					std::cout << iter_cnt << "th result: " << pose_wmap_curr << std::endl;
-
-					// ****************************************************** covariance evaluation
-					// if (iter_cnt == 1)
-					// {
-					// 	ceres::Covariance::Options options_covariance;
-					// 	ceres::Covariance covariance(options_covariance);
-					// 	std::vector<std::pair<const double *, const double *>> covariance_blocks;
-					// 	covariance_blocks.push_back(std::make_pair(para_pose, para_pose));
-					// 	CHECK(covariance.Compute(covariance_blocks, &problem));
-					// 	covariance.GetCovarianceBlock(para_pose, para_pose, covariance_pose);
-					// 	Eigen::Map<Eigen::Matrix<double, SIZE_POSE, SIZE_POSE> > cov_pose(covariance_pose); // inverse[J'(x*) inverse[S] J(x*)]
-					// 	std::cout << "Covariance of pose:" << std::endl << cov_pose << std::endl;
-					// 	std::cout << "Trace of pose covariance: " << cov_pose.trace() << std::endl;
-					// }
-
 					if (iter_cnt != 1) printf("-------------------------------------\n");
 				}
 				printf("********************************\n");
@@ -780,18 +657,25 @@ void process()
 			}
 			transformUpdate();
 
-			// add new map points to the cubes
+			// *******************************************************************
+			// TODO: add new map points to the cubes
 			TicToc t_add;
 			for (auto n = 0; n < NUM_OF_LASER; n++)
 			{
 				PointICovCloud &laser_cloud_corner_points_cov = laser_cloud_corner_split_cov[n];
 				PointICovCloud &laser_cloud_surf_points_cov = laser_cloud_surf_split_cov[n];
-				PointIWithCov point_cov;
 
 				// move the corner points from the lastest frame to different cubes
 				for (int i = 0; i < laser_cloud_corner_points_cov.size(); i++)
 				{
+					PointIWithCov point_cov;
 					pointAssociateToMap(laser_cloud_corner_points_cov.points[i], point_cov, pose_wmap_curr);
+					// PointI point_ori, point_sel; 
+					// removeCov(laser_cloud_corner_points_cov.points[i], point_ori);
+					// pointAssociateToMap(point_ori, point_sel, pose_wmap_curr);
+					// evalPointUncertainty(point_sel, point_cov, cov_mapping);
+					// if (point_cov.cov_trace > TRACE_THRESHOLD) continue;
+					// pointAssociateToMap(point_cov, point_cov, pose_wmap_curr);
 					int cube_i = int((point_cov.x + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_width;
 					int cube_j = int((point_cov.y + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_height;
 					int cube_k = int((point_cov.z + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_depth;
@@ -811,7 +695,14 @@ void process()
 				// move the surf points from the lastest frame to different cubes
 				for (int i = 0; i < laser_cloud_surf_points_cov.size(); i++)
 				{
-					pointAssociateToMap(laser_cloud_surf_points_cov.points[i], point_cov, pose_wmap_curr);
+					PointIWithCov point_cov;
+					pointAssociateToMap(laser_cloud_corner_points_cov.points[i], point_cov, pose_wmap_curr);
+					// PointIWithCov point_ori = laser_cloud_surf_points_cov.points[i];
+					// compoundPose(T1, Sigma1, T2, Sigma2);
+					// evalPointUncertainty(laser_cloud_surf_points_cov.points[i], point_cov, cov_mapping);
+					// if (point_cov.cov_trace > TRACE_THRESHOLD) continue;
+					// pointAssociateToMap(point_cov, point_cov, pose_wmap_curr);
+					// pointAssociateToMap(point_ori, point_cov, pose_wmap_curr);
 					int cube_i = int((point_cov.x + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_width;
 					int cube_j = int((point_cov.y + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_height;
 					int cube_k = int((point_cov.z + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_depth;
@@ -897,34 +788,36 @@ void process()
 			laser_cloud_full_res_msg.header.frame_id = "/world";
 			pub_laser_cloud_full_res.publish(laser_cloud_full_res_msg);
 
+			// **********************************************************************************
 			// uncomment if time is not important
-			// laser_cloud_corner_last->clear();
-			// for (auto n = 0; n < NUM_OF_LASER; n++)
-			// {
-			// 	PointICloud tmp_cloud;
-			// 	pcl::copyPointCloud(laser_cloud_corner_split_cov[n], tmp_cloud);
-			// 	for (auto &point: tmp_cloud) pointAssociateToMap(point, point, pose_wmap_curr);
-			// 	*laser_cloud_corner_last += tmp_cloud;
-			// }
-			// sensor_msgs::PointCloud2 laser_cloud_corner_last_msg;
-			// pcl::toROSMsg(*laser_cloud_corner_last, laser_cloud_corner_last_msg);
-			// laser_cloud_corner_last_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
-			// laser_cloud_corner_last_msg.header.frame_id = "/world";
-			// pub_laser_cloud_corner_last_res.publish(laser_cloud_corner_last_msg);
+			laser_cloud_corner_last->clear();
+			for (auto n = 0; n < NUM_OF_LASER; n++)
+			{
+				PointICloud tmp_cloud;
+				pcl::copyPointCloud(laser_cloud_corner_split_cov[n], tmp_cloud);
+				for (auto &point: tmp_cloud) pointAssociateToMap(point, point, pose_wmap_curr);
+				*laser_cloud_corner_last += tmp_cloud;
+			}
+			sensor_msgs::PointCloud2 laser_cloud_corner_last_msg;
+			pcl::toROSMsg(*laser_cloud_corner_last, laser_cloud_corner_last_msg);
+			laser_cloud_corner_last_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
+			laser_cloud_corner_last_msg.header.frame_id = "/world";
+			pub_laser_cloud_corner_last_res.publish(laser_cloud_corner_last_msg);
 
-			// laser_cloud_surf_last->clear();
-			// for (auto n = 0; n < NUM_OF_LASER; n++)
-			// {
-			// 	PointICloud tmp_cloud;
-			// 	pcl::copyPointCloud(laser_cloud_surf_split_cov[n], tmp_cloud);
-			// 	for (auto &point: tmp_cloud) pointAssociateToMap(point, point, pose_wmap_curr);
-			// 	*laser_cloud_surf_last += tmp_cloud;
-			// }
-			// sensor_msgs::PointCloud2 laser_cloud_surf_last_msg;
-			// pcl::toROSMsg(*laser_cloud_surf_last, laser_cloud_surf_last_msg);
-			// laser_cloud_surf_last_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
-			// laser_cloud_surf_last_msg.header.frame_id = "/world";
-			// pub_laser_cloud_surf_last_res.publish(laser_cloud_surf_last_msg);
+			laser_cloud_surf_last->clear();
+			for (auto n = 0; n < NUM_OF_LASER; n++)
+			{
+				PointICloud tmp_cloud;
+				pcl::copyPointCloud(laser_cloud_surf_split_cov[n], tmp_cloud);
+				for (auto &point: tmp_cloud) pointAssociateToMap(point, point, pose_wmap_curr);
+				*laser_cloud_surf_last += tmp_cloud;
+			}
+			sensor_msgs::PointCloud2 laser_cloud_surf_last_msg;
+			pcl::toROSMsg(*laser_cloud_surf_last, laser_cloud_surf_last_msg);
+			laser_cloud_surf_last_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
+			laser_cloud_surf_last_msg.header.frame_id = "/world";
+			pub_laser_cloud_surf_last_res.publish(laser_cloud_surf_last_msg);
+			// **********************************************************************************
 
 			printf("mapping pub time %fms \n", t_pub.toc());
 			printf("whole mapping time %fms +++++\n", t_whole.toc());
@@ -941,7 +834,8 @@ void process()
 			odom_aft_mapped.pose.pose.position.y = pose_wmap_curr.t_.y();
 			odom_aft_mapped.pose.pose.position.z = pose_wmap_curr.t_.z();
 			for (size_t i = 0; i < 6; i++)
-				for (size_t j = 0; j < 6; j++) odom_aft_mapped.pose.covariance[i * 6 + j] = float(covariance_pose[i * 6 + j]);
+				for (size_t j = 0; j < 6; j++)
+					odom_aft_mapped.pose.covariance[i * 6 + j] = float(cov_mapping(i, j));
 			pub_odom_aft_mapped.publish(odom_aft_mapped);
 
 			geometry_msgs::PoseStamped laser_after_mapped_pose;
@@ -988,6 +882,110 @@ void process()
 		std::chrono::milliseconds dura(2);
         std::this_thread::sleep_for(dura);
 	}
+}
+
+void evalDegenracy(PoseLocalParameterization *local_parameterization, const ceres::CRSMatrix &jaco)
+{
+	// printf("jacob: %d constraints, %d parameters\n", jaco.num_rows, jaco.num_cols); // 2000+, 6
+	if (jaco.num_rows == 0)
+		return;
+	TicToc t_eval_degenracy;
+	Eigen::MatrixXd mat_J;
+	CRSMatrix2EigenMatrix(jaco, mat_J);
+	Eigen::MatrixXd mat_Jt = mat_J.transpose(); // A^T
+	Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J;   // A^TA 48*48
+	Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(0, 0, 6, 6) / 400.0;
+	Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6>> esolver(mat_H);
+	Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real();	// 6*1
+	Eigen::Matrix<double, 6, 6> mat_V_f = esolver.eigenvectors().real(); // 6*6, column is the corresponding eigenvector
+	Eigen::Matrix<double, 6, 6> mat_V_p = mat_V_f;
+
+	// covariance of sensor noise: A New Approach to 3D ICP Covariance Estimation/ Censi's approach
+	cov_mapping = mat_H.inverse();
+	// std::cout << "pose cov: " << std::endl << cov_pose << std::endl;
+	// std::cout << "trace: " << std::endl << cov_pose.trace() << std::endl;
+	// std::cout << "pose uncertain quantity: " << 1 / mat_E << std::endl;
+
+	for (auto j = 0; j < mat_E.cols(); j++)
+	{
+		if (mat_E(0, j) < MAP_EIG_THRE)
+		{
+			mat_V_p.col(j) = Eigen::Matrix<double, 6, 1>::Zero();
+			local_parameterization->is_degenerate_ = true;
+		}
+		else
+		{
+			break;
+		}
+	}
+	d_factor_list.push_back(mat_E);
+	d_eigvec_list.push_back(mat_V_f);
+	std::cout << "D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose() << std::endl;
+	Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
+	// std::cout << "jjiao:" << std::endl;
+	// std::cout << "mat_E: " << mat_E << std::endl;
+	// std::cout << "mat_V_f: " << std::endl << mat_V_f << std::endl;
+	// std::cout << "mat_V_p: " << std::endl << mat_V_p << std::endl;
+	// std::cout << "mat_P: " << std::endl << mat_P.transpose() << std::endl;
+
+	if (local_parameterization->is_degenerate_)
+	{
+		local_parameterization->V_update_ = mat_P;
+		// std::cout << "param " << i << " is degenerate !" << std::endl;
+		// std::cout << mat_P.transpose() << std::endl;
+	}
+
+	// {
+	// 	Eigen::Matrix<float, 6, 6> mat_H = mat_JtJ.cast<float>().block(0, 0, 6, 6) / 400.0;
+	// 	cv::Mat matP(6, 6, CV_32F, cv::Scalar::all(0));
+	// 	cv::Mat matAtA(6, 6, CV_32F, cv::Scalar::all(0));
+	// 	cv::Mat matE(1, 6, CV_32F, cv::Scalar::all(0));
+	// 	cv::Mat matV(6, 6, CV_32F, cv::Scalar::all(0));
+	// 	cv::Mat matV2(6, 6, CV_32F, cv::Scalar::all(0));
+	//
+	// 	cv::eigen2cv(mat_H, matAtA);
+	// 	cv::eigen(matAtA, matE, matV);
+	// 	matV.copyTo(matV2);
+	// 	bool isDegenerate;
+	// 	for (int i = 5; i >= 0; i--)
+	// 	{
+	// 		if (matE.at<float>(0, i) < 100.0)
+	// 		{
+	// 			for (int j = 0; j < 6; j++)
+	// 			{
+	// 				matV2.at<float>(i, j) = 0;
+	// 			}
+	// 			isDegenerate = true;
+	// 		} else
+	// 		{
+	// 			break;
+	// 		}
+	// 	}
+	// 	std::cout << "Zhang:" << std::endl;
+	// 	std::cout << "mat_E: " << matE.t() << std::endl;
+	// 	std::cout << "mat_V_f: " << std::endl << matV.t() << std::endl;
+	// 	std::cout << "mat_V_p: " << std::endl << matV2.t() << std::endl;
+	// 	matP = matV.inv() * matV2;
+	// 	std::cout << "mat_P: " << std::endl << matP << std::endl;
+	// }
+
+	// printf("evaluate degeneracy %fms\n", t_eval_degenracy.toc());
+
+	// // TODO: estimation pose covariance
+	// Eigen::Matrix<double, 6, 1> vec_ini;
+	// vec_ini << 0.04, 0.04, 0.04, 0.0225, 0.0225, 0.0225;
+	// Eigen::Matrix<double, 6, 6> cov_ini = vec_ini.asDiagonal();
+	// Eigen::MatrixXd identity_matrix(mat_J.rows(), mat_J.cols());
+	// identity_matrix.setIdentity();
+	// std::cout << identity_matrix.rows() << " " << identity_matrix.cols() << std::endl;
+	// Eigen::Matrix<double, 6, 6> cov_1 = (identity_matrix - mat_J).transpose() * cov_ini * (identity_matrix - mat_J) / 400.0;
+	// std::cout << cov_1 << std::endl;
+
+	// Eigen::Matrix<double, 6, 6> cov_2;
+	// cov_2.setZero();
+
+	// Eigen::Matrix<double, 6, 6> cov_pose = cov_1 + cov_2;
+	// std::cout << "Covariance: " << std::endl << cov_pose << std::endl << "Trace: " << cov_pose.trace() << std::endl;
 }
 
 int main(int argc, char **argv)
@@ -1040,6 +1038,7 @@ int main(int argc, char **argv)
 	r_ext.resize(NUM_OF_LASER);
 	t_ext.resize(NUM_OF_LASER);
 	pose_ext.resize(NUM_OF_LASER);
+	cov_ext.resize(NUM_OF_LASER);
 
 	laser_cloud_corner_split_cov.resize(NUM_OF_LASER);
 	laser_cloud_surf_split_cov.resize(NUM_OF_LASER);

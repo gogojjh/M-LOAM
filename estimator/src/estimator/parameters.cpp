@@ -83,12 +83,13 @@ double EIG_INITIAL;
 double EIG_THRE_CALIB;
 int N_CALIB;
 
-Eigen::Matrix<double, 9, 9> THETA;
-double NORM_THRESHOLD;
-
 float MAP_CORNER_RES;
 float MAP_SURF_RES;
 float MAP_EIG_THRE;
+
+std::vector<Eigen::Matrix<double, 6, 6> > COV_EXT;
+Eigen::Matrix<double, 3, 3> COV_MEASUREMENT;
+double TRACE_THRESHOLD;
 
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
@@ -145,13 +146,15 @@ void readParameters(std::string config_file)
 
     ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];
     OPTIMAL_EXTRINSIC = fsSettings["optimal_extrinsic"];
+    QBL.resize(NUM_OF_LASER);
+    TBL.resize(NUM_OF_LASER);
     if (ESTIMATE_EXTRINSIC == 2)
     {
         ROS_WARN("have no prior about extrinsic param, calibrate extrinsic param");
         for (int i = 0; i < NUM_OF_LASER; i++)
         {
-            QBL.push_back(Eigen::Quaterniond::Identity());
-            TBL.push_back(Eigen::Vector3d::Zero());
+            QBL[i] = Eigen::Quaterniond::Identity();
+            TBL[i] = Eigen::Vector3d::Zero();
         }
     }
     else
@@ -169,8 +172,8 @@ void readParameters(std::string config_file)
         fsSettings["body_T_laser"] >> cv_T;
         for (int i = 0; i < NUM_OF_LASER; i++)
         {
-            QBL.push_back(Eigen::Quaterniond(cv_T.ptr<double>(i)[3], cv_T.ptr<double>(i)[0], cv_T.ptr<double>(i)[1], cv_T.ptr<double>(i)[2]));
-            TBL.push_back(Eigen::Vector3d(cv_T.ptr<double>(i)[4], cv_T.ptr<double>(i)[5], cv_T.ptr<double>(i)[6]));
+            QBL[i] = Eigen::Quaterniond(cv_T.ptr<double>(i)[3], cv_T.ptr<double>(i)[0], cv_T.ptr<double>(i)[1], cv_T.ptr<double>(i)[2]);
+            TBL[i] = Eigen::Vector3d(cv_T.ptr<double>(i)[4], cv_T.ptr<double>(i)[5], cv_T.ptr<double>(i)[6]);
         }
     }
     int pn = config_file.find_last_of('/');
@@ -231,22 +234,29 @@ void readParameters(std::string config_file)
     N_CALIB = fsSettings["n_calib"];
 
     // mapping parameter
-    cv::Mat cv_theta;
-    fsSettings["uncertainty_calib"] >> cv_theta;
-    Eigen::Matrix<double, 9, 1> theta_vec; // rotation, translation, point
-    theta_vec << cv_theta.ptr<double>(0)[0], cv_theta.ptr<double>(0)[1], cv_theta.ptr<double>(0)[2],
-              cv_theta.ptr<double>(0)[3], cv_theta.ptr<double>(0)[4], cv_theta.ptr<double>(0)[5],
-              cv_theta.ptr<double>(0)[6], cv_theta.ptr<double>(0)[7], cv_theta.ptr<double>(0)[8];
-    THETA = theta_vec.asDiagonal();
-    std::cout << "THETA:" << std::endl << THETA << std::endl;
-
-    NORM_THRESHOLD = fsSettings["norm_threshold"];
-
     MAP_CORNER_RES = fsSettings["map_corner_res"];
     MAP_SURF_RES = fsSettings["map_surf_res"];
     std::cout << "map corner resolution:" << MAP_CORNER_RES << ", surf resolutionl: " << MAP_SURF_RES << std::endl;
 
     MAP_EIG_THRE = fsSettings["map_eig_thre"];
+
+    cv::Mat cv_uct;
+    COV_EXT.resize(NUM_OF_LASER);
+    fsSettings["uct_ext"] >> cv_uct;
+    for (int i = 0; i < NUM_OF_LASER; i++)
+    {
+        Eigen::Matrix<double, 6, 1> vec_uct_ext; // rotation, translation, point
+        vec_uct_ext << cv_uct.ptr<double>(i)[0], cv_uct.ptr<double>(i)[1], cv_uct.ptr<double>(i)[2],
+            cv_uct.ptr<double>(i)[3], cv_uct.ptr<double>(i)[4], cv_uct.ptr<double>(i)[5];
+        COV_EXT[i] = vec_uct_ext.asDiagonal();
+    }
+
+    fsSettings["uct_measurement"] >> cv_uct;
+    Eigen::Vector3d vec_uct_measurement;
+    vec_uct_measurement << cv_uct.ptr<double>(0)[0], cv_uct.ptr<double>(0)[1], cv_uct.ptr<double>(0)[2];
+    COV_MEASUREMENT = vec_uct_measurement.asDiagonal();
+
+    TRACE_THRESHOLD = fsSettings["trace_threshold"];
 
     fsSettings.release();
 }

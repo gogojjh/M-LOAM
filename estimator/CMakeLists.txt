@@ -29,7 +29,7 @@ find_package(catkin REQUIRED COMPONENTS
 #message(${catkin_INCLUDE_DIRS})
 
 find_package(OpenCV REQUIRED)
-find_package(PCL REQUIRED)
+find_package(PCL 1.8 REQUIRED)
 find_package(Ceres REQUIRED)
 find_package(Sophus REQUIRED)
 # find_package(glog REQUIRED)
@@ -64,7 +64,7 @@ add_library(mloam_lib_1
     src/utility/visualization.cpp
     src/utility/utility.cpp
     )
-target_link_libraries(mloam_lib_1 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES} ${Sophus_LIBRARIES})
+target_link_libraries(mloam_lib_1 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES})
 
 ######################################################## fix libraries
 add_library(mloam_lib_2
@@ -76,7 +76,7 @@ add_library(mloam_lib_2
     src/factor/marginalization_factor.cpp
     src/utility/cloud_visualizer.cpp
     )
-target_link_libraries(mloam_lib_2 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES} ${Sophus_LIBRARIES})
+target_link_libraries(mloam_lib_2 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES})
 
 ######## --------------------- EXECUTABLE --------------------- ########
 add_executable(mloam_node_sr src/rosNodeSR.cpp)

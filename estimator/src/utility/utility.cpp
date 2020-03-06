@@ -46,39 +46,4 @@ void TransformToEnd(const PointI &pi, PointI &po, const Pose &pose, const bool &
     po.intensity = pi.intensity;
 }
 
-void evalPointUncertainty(const int &idx, const PointI &pi, Eigen::Matrix3d &cov_po)
-{
-    //THETA: diag(P, Phi, Z) includes the translation, rotation, measurement uncertainty
-    Eigen::Vector4d point_curr(pi.x, pi.y, pi.z, 1);
-    if (idx == IDX_REF)
-    {
-        cov_po = THETA.bottomRightCorner<3, 3>(); 
-    } else
-    {
-        Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
-        Eigen::Matrix<double, 4, 3> D;
-        D << 1, 0, 0,
-             0, 1, 0,
-             0, 0, 1,
-             0, 0, 0;
-        Eigen::Matrix<double, 4, 9> G;
-        G.block<4, 6>(0, 0) = pointToFS(T * point_curr);
-        G.block<4, 3>(0, 6) = T * D;
-        cov_po = Eigen::Matrix4d(G * THETA * G.transpose()).topLeftCorner<3, 3>(); // 4x4
-    }
-    // std::cout << "evalUncertainty:" << std::endl
-    //           << point_curr.transpose() << std::endl
-    //           << cov_po << std::endl;
-    // exit(EXIT_FAILURE);
-}
-
-// pointToFS turns a 4x1 homogeneous point into a special 4x6 matrix
-Eigen::Matrix<double, 4, 6> pointToFS(const Eigen::Vector4d &point)
-{
-    Eigen::Matrix<double, 4, 6> G = Eigen::Matrix<double, 4, 6>::Zero();
-    G.block<3, 3>(0, 0) = point(3) * Eigen::Matrix<double, 3, 3>::Identity();
-    G.block<3, 3>(0, 3) = -Utility::skewSymmetric(point.block<3, 1>(0, 0));
-    return G;
-}
-
 //

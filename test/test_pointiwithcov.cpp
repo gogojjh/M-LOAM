@@ -21,6 +21,7 @@ typedef pcl::PointCloud<PointType> PointCloud;
 
 int main()
 {
+    std::cout << "Testing pointiwithcov.cpp" << std::endl;
     pcl::PointCloud<PointType>::Ptr cloud_cov(new pcl::PointCloud<PointType>);
     // for (size_t i = 0; i < 100; i++)
     // {

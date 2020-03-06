@@ -90,7 +90,7 @@ min_plane_dis: 0.2
 # factor
 marginalization_factor: 1
 point_plane_factor: 1
-point_edge_factor: 1
+point_edge_factor: 0
 prior_factor: 0
 prior_factor_pos: 0.5
 prior_factor_rot: 1
@@ -105,16 +105,24 @@ eig_initial: 200
 eig_thre_calib: 700
 n_calib: 15
 
-# mapping uncertainty
-uncertainty_calib: !!opencv-matrix
-   rows: 1
-   cols: 9
-   dt: d
-   data: [0.01, 0.01, 0.01, 0.0025, 0.0025, 0.0025, 0.0025, 0.0025, 0.0025] # rotation, translation, point
-
-norm_threshold: 0.82
-
+# mapping 
 map_corner_res: 0.2
 map_surf_res: 0.4
-map_eig_thre: 1
-#
+map_eig_thre: 200
+
+# uncertainty parameter
+# translation, rotation, point (rho, phi, zeta)
+uct_ext: !!opencv-matrix
+   rows: 2
+   cols: 6
+   dt: d
+   data: [0, 0, 0, 0, 0, 0,
+          0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01] 
+
+uct_measurement: !!opencv-matrix
+   rows: 1
+   cols: 3
+   dt: d
+   data: [0.0004, 0.0004, 0.0004]
+
+trace_threshold: 1
