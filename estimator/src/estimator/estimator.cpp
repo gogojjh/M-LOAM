@@ -45,7 +45,10 @@ void Estimator::setParameter()
         qbl_[i] = QBL[i];
         tbl_[i] = TBL[i];
         tdbl_[i] = TDBL[i];
-        covbl_[i] = THETA.topLeftCorner<6, 6>();
+        if (i == IDX_REF)
+            covbl_[i].setZero(); 
+        else
+            covbl_[i] = THETA.topLeftCorner<6, 6>();
         cout << "Given extrinsic Laser_" << i << ": " << Pose(QBL[i], TBL[i], TDBL[i]) << endl;
     }
 
