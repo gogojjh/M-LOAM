@@ -25,7 +25,7 @@
 void TransformToStart(const common::PointI &pi, common::PointI &po, const Pose &pose, const bool &b_distortion);
 void TransformToEnd(const common::PointI &pi, common::PointI &po, const Pose &pose, const bool &b_distortion);
 
-template <typename PointType>
+template<typename PointType>
 void pointAssociateToMap(const PointType &pi, PointType &po, const Pose &pose)
 {
     if (!pcl::traits::has_field<PointType, pcl::fields::intensity>::value)

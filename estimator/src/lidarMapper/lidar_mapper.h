@@ -99,7 +99,13 @@ Eigen::Matrix<double, 4, 6> pointToFS(const Eigen::Vector4d &point)
     return G;
 }
 
-void evalPointUncertainty(const common::PointI &pi, common::PointIWithCov &po, const Eigen::Matrix<double, 6, 6> &cov_pose)
+/*
+ * pi: the original point for evaluating uncertainty
+ * cov_point: associated covariance of the point
+ * pose: pose
+ * cov_pose: associated covariance of the pose
+ */
+void evalPointUncertainty(const common::PointI &pi, Eigen::Matrix3d &cov_point, const Pose &pose, const Eigen::Matrix<double, 6, 6> &cov_pose)
 {
     //THETA: diag(P, Phi, Z) includes the translation, rotation, measurement uncertainty
     Eigen::Matrix<double, 9, 9> cov_input = Eigen::Matrix<double, 9, 9>::Zero();
@@ -107,6 +113,7 @@ void evalPointUncertainty(const common::PointI &pi, common::PointIWithCov &po, c
     cov_input.bottomRightCorner<3, 3>() = COV_MEASUREMENT;
 
     Eigen::Vector4d point_curr(pi.x, pi.y, pi.z, 1);
+    // Eigen::Matrix4d &T = pose.T_;
     Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
     Eigen::Matrix<double, 4, 3> D;
     D << 1, 0, 0,
@@ -116,15 +123,13 @@ void evalPointUncertainty(const common::PointI &pi, common::PointIWithCov &po, c
     Eigen::Matrix<double, 4, 9> G = Eigen::Matrix<double, 4, 9>::Zero();
     G.block<4, 6>(0, 0) = pointToFS(T * point_curr);
     G.block<4, 3>(0, 6) = T * D;
-    Eigen::Matrix3d cov_point = Eigen::Matrix4d(G * cov_input * G.transpose()).topLeftCorner<3, 3>(); // 3x3
-    common::appendCov(pi, po, cov_point);
-
-    // std::cout << cov_input << std::endl;
-    // std::cout << G << std::endl;
-    // std::cout << "evalUncertainty:" << std::endl
-    //           << point_curr.transpose() << std::endl
-    //           << cov_point << std::endl;
-    // exit(EXIT_FAILURE);
+    cov_point = Eigen::Matrix4d(G * cov_input * G.transpose()).topLeftCorner<3, 3>(); // 3x3
+//     std::cout << cov_input << std::endl;
+//     std::cout << G << std::endl;
+//     std::cout << "evalUncertainty:" << std::endl
+//               << point_curr.transpose() << std::endl
+//               << cov_point << std::endl;
+//     exit(EXIT_FAILURE);
 }
 
 //

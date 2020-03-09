@@ -60,9 +60,9 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
 
         PoseLocalParameterization *local_parameterization = new PoseLocalParameterization();
         local_parameterization->setParameter();
-        local_parameterization->V_update_(0, 0) = 0;
-        local_parameterization->V_update_(1, 1) = 0;
-        local_parameterization->V_update_(5, 5) = 0;
+        local_parameterization->V_update_(0, 0) = 0; // x
+        local_parameterization->V_update_(1, 1) = 0; // y
+        local_parameterization->V_update_(5, 5) = 0; // yaw
         problem.AddParameterBlock(para_pose, SIZE_POSE, local_parameterization);
 
         std::vector<PointPlaneFeature> surf_scan_features;
@@ -107,9 +107,9 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
 
         PoseLocalParameterization *local_parameterization = new PoseLocalParameterization();
         local_parameterization->setParameter();
-        local_parameterization->V_update_(2, 2) = 0;
-        local_parameterization->V_update_(3, 3) = 0;
-        local_parameterization->V_update_(4, 4) = 0;
+        local_parameterization->V_update_(2, 2) = 0; // z
+        local_parameterization->V_update_(3, 3) = 0; // roll
+        local_parameterization->V_update_(4, 4) = 0; // pitch
         problem.AddParameterBlock(para_pose, SIZE_POSE, local_parameterization);
 
         TicToc t_prepare;
