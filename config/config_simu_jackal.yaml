@@ -29,11 +29,12 @@ segment_theta: 0.53
 window_size: 8
 opt_window_size: 3
 
+optimal_extrinsic: 0
+
 # Extrinsic parameter between IMU and Camera.
 estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
-optimal_extrinsic: 0
 
 body_T_laser: !!opencv-matrix
    rows: 2
@@ -123,6 +124,6 @@ uct_measurement: !!opencv-matrix
    rows: 1
    cols: 3
    dt: d
-   data: [0.0004, 0.0004, 0.0004]
+   data: [0.0025, 0.0025, 0.0025]
 
 trace_threshold: 1

@@ -124,7 +124,7 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
     if (cov_index >= 0)
     {
         cov_index = cov_fields[cov_index].offset;
-        if (!downsample_all_data_) centroid_size += 6;
+        if (!downsample_all_data_) centroid_size += 7;
     }
     // std::cout << cov_index << std::endl;
     // std::cout << centroid_size << std::endl;
@@ -274,17 +274,19 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
         unsigned int valid_cnt = last_index - first_index;
         centroid.setZero();
 
+        float weight_total = 0.0f;
         for (unsigned int i = first_index; i < last_index; ++i)
         {
             pcl::for_each_type <FieldList> (NdCopyPointEigenFunctor <PointT> (input_->points[index_vector[i].cloud_point_index], temporary));
+
             // --- select points with valid covariance
             if (cov_index >= 0)
             {
                 Eigen::VectorXf cov_vec = temporary.tail<6>();
                 Eigen::Matrix3f cov_po = Eigen::Matrix3f::Identity();
                 cov_po << cov_vec[0], cov_vec[1], cov_vec[2],
-                        cov_vec[1], cov_vec[3], cov_vec[4],
-                        cov_vec[2], cov_vec[4], cov_vec[5];
+                          cov_vec[1], cov_vec[3], cov_vec[4],
+                          cov_vec[2], cov_vec[4], cov_vec[5];
                 // std::cout << cov_po << std::endl;
                 if (cov_po.norm() > 0.6)
                 {
@@ -292,6 +294,7 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
                     continue;
                 }
             }
+
             if (!downsample_all_data_)
             {
                 centroid[0] += input_->points[index_vector[i].cloud_point_index].x;
@@ -309,9 +312,19 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
                     temporary[centroid_size-3] = rgb.r;
                     temporary[centroid_size-2] = rgb.g;
                     temporary[centroid_size-1] = rgb.b;
+                } else
+                // if (cov_index >= 0)
+                // {
+                //     // float weight = 1 / temporary[10] / 134;
+                //     float weight = 1;
+                //     weight_total += weight;
+                //     centroid.head(4) += weight * temporary.head(4);
+                //     centroid.tail(7) += weight * temporary.tail(7);
+                // } else
+                {
+                    // pcl::for_each_type <FieldList> (NdCopyPointEigenFunctor <PointT> (input_->points[index_vector[i].cloud_point_index], temporary));
+                    centroid += temporary;
                 }
-                // pcl::for_each_type <FieldList> (NdCopyPointEigenFunctor <PointT> (input_->points[index_vector[i].cloud_point_index], temporary));
-                centroid += temporary;
             }
         }
         if (valid_cnt == 0) valid_cnt = 1;
@@ -323,7 +336,10 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
         if (cov_index >= 0)
         {
             centroid.head(4) /= static_cast<float>(valid_cnt);
+            // centroid.tail(7) /= (static_cast<float>(valid_cnt) * static_cast<float>(valid_cnt));
             centroid.tail(7) /= (static_cast<float>(valid_cnt) * static_cast<float>(valid_cnt));
+            // centroid.head(4) /= (weight_total);
+            // centroid.tail(7) /= (weight_total);
         } else
         {
             centroid /= static_cast<float>(valid_cnt);

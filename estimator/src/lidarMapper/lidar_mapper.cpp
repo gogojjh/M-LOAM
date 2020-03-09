@@ -98,6 +98,9 @@ Eigen::Matrix<double, 6, 6> cov_mapping;
 std::vector<Eigen::Matrix<double, 1, 6>> d_factor_list;
 std::vector<Eigen::Matrix<double, 6, 6> > d_eigvec_list;
 
+std::vector<Pose> pose_compound;
+std::vector<Eigen::Matrix<double, 6, 6> > cov_compound;
+
 int toCubeIndex(const int &i, const int &j, const int &k)
 {
 	return (i + laser_cloud_width * j + laser_cloud_width * laser_cloud_height * k);
@@ -490,33 +493,33 @@ void process()
 			int laser_cloud_surf_stack_num = laser_cloud_surf_stack->points.size();
 
 			//**************************************************************
-			// noisy point filtering
+			// noisy point filtering on input calibrated points
 			for (auto n = 0; n < NUM_OF_LASER; n++)
 			{
 				laser_cloud_corner_split_cov[n].clear();
 				laser_cloud_surf_split_cov[n].clear();
 			}
-			for (auto &point_ori: laser_cloud_corner_stack->points)
+			for (PointI &point_ori: *laser_cloud_corner_stack)
 			{
 				int idx = int(point_ori.intensity); // indicate the lidar id
 				PointI point_sel;
 				Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
 				pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
 				evalPointUncertainty(point_sel, cov_point, pose_ext[idx], cov_ext[idx]);
-				if (cov_point.trace() < TRACE_THRESHOLD)
+				if (cov_point.trace() <= TRACE_THRESHOLD)
 				{
 					PointIWithCov point_cov(point_ori, cov_point.cast<float>());
 					laser_cloud_corner_split_cov[idx].push_back(point_cov);
 				}
 			}
-			for (auto &point_ori: laser_cloud_surf_stack->points)
+			for (PointI &point_ori: *laser_cloud_surf_stack)
 			{
 				int idx = int(point_ori.intensity); // indicate the lidar id
 				PointI point_sel;
 				Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
 				pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
 				evalPointUncertainty(point_sel, cov_point, pose_ext[idx], cov_ext[idx]);
-				if (cov_point.trace() < TRACE_THRESHOLD)
+				if (cov_point.trace() <= TRACE_THRESHOLD)
 				{
 					PointIWithCov point_cov(point_ori, cov_point.cast<float>());
 					laser_cloud_surf_split_cov[idx].push_back(point_cov);
@@ -578,14 +581,11 @@ void process()
 
 						TicToc t_data;
 						int n_neigh = 5;
-						Pose pose_local = pose_wmap_curr;
-						// printf("mapping data assosiation time %fms\n", t_data.toc());
-
 						if (POINT_EDGE_FACTOR)
 						{
 							std::vector<PointPlaneFeature> corner_map_features;
 							f_extract.matchCornerFromMap(kdtree_corner_from_map, *laser_cloud_corner_from_map,
-														laser_cloud_corner_points, pose_local, corner_map_features, n_neigh, false);
+														 laser_cloud_corner_points, pose_wmap_curr, corner_map_features, n_neigh, false);
 							corner_num += corner_map_features.size() / 2;
 							for (auto &feature: corner_map_features)
 							{
@@ -595,7 +595,7 @@ void process()
 								Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
 								if (UNCER_PROPA_ON)
 								{
-									normalToCov(laser_cloud_corner_split_cov[n].points[idx], cov_matrix);
+									extractCov(laser_cloud_corner_split_cov[n].points[idx], cov_matrix);
 								}
 								LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(p_data, coeff_ref, cov_matrix);
 								ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
@@ -608,7 +608,7 @@ void process()
 						{
 							std::vector<PointPlaneFeature> surf_map_features;
 							f_extract.matchSurfFromMap(kdtree_surf_from_map, *laser_cloud_surf_from_map,
-													   laser_cloud_surf_points, pose_local, surf_map_features, n_neigh, false);
+													   laser_cloud_surf_points, pose_wmap_curr, surf_map_features, n_neigh, false);
 							surf_num += surf_map_features.size();
 							CHECK_JACOBIAN = 0;
 							for (auto &feature: surf_map_features)
@@ -619,7 +619,7 @@ void process()
 								Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
 								if (UNCER_PROPA_ON)
 								{
-									normalToCov(laser_cloud_surf_split_cov[n].points[idx], cov_matrix);
+									extractCov(laser_cloud_surf_split_cov[n].points[idx], cov_matrix);
 								}
 								LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(p_data, coeff_ref, cov_matrix);
 								ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
@@ -634,6 +634,7 @@ void process()
 							}
 							// printf("surf num %d(%d)\n", laser_cloud_surf_stack_num, surf_num);
 						}
+						// printf("mapping data assosiation time %fms\n", t_data.toc());
 					}
 					printf("prepare ceres data %fms\n", t_prepare.toc());
 
@@ -670,21 +671,21 @@ void process()
 			TicToc t_add;
 			for (auto n = 0; n < NUM_OF_LASER; n++)
 			{
+				compoundPoseWithCov(pose_wmap_curr, cov_mapping, pose_ext[n], cov_ext[n], pose_compound[n], cov_compound[n], 1);
 				PointICovCloud &laser_cloud_corner_points_cov = laser_cloud_corner_split_cov[n];
 				PointICovCloud &laser_cloud_surf_points_cov = laser_cloud_surf_split_cov[n];
 				// move the corner points from the lastest frame to different cubes
-				for (int i = 0; i < laser_cloud_corner_points_cov.size(); i++)
+				for (PointIWithCov &point_ori : laser_cloud_corner_points_cov)
 				{
-					PointIWithCov point_cov;
-					pointAssociateToMap(laser_cloud_corner_points_cov.points[i], point_cov, pose_wmap_curr);
-					// PointIWithCov point_cov = laser_cloud_corner_points_cov.points[i];
-					// pointAssociateToMap(point_cov, point_cov, pose_wmap_curr);
-					// PointI point_ori, point_sel; 
-					// removeCov(laser_cloud_corner_points_cov.points[i], point_ori);
-					// pointAssociateToMap(point_ori, point_sel, pose_wmap_curr);
-					// evalPointUncertainty(point_sel, point_cov, cov_mapping);
+					// PointIWithCov point_sel;
+					// Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
+					// pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
+					// // evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
 					// if (cov_point.trace() > TRACE_THRESHOLD) continue;
-					// pointAssociateToMap(point_cov, point_cov, pose_wmap_curr);
+					PointIWithCov point_cov;
+					pointAssociateToMap(point_ori, point_cov, pose_wmap_curr);
+					// updateCov(point_cov, point_cov, cov_point);
+
 					int cube_i = int((point_cov.x + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_width;
 					int cube_j = int((point_cov.y + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_height;
 					int cube_k = int((point_cov.z + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_depth;
@@ -702,18 +703,17 @@ void process()
 				}
 
 				// move the surf points from the lastest frame to different cubes
-				for (int i = 0; i < laser_cloud_surf_points_cov.size(); i++)
+				for (PointIWithCov &point_ori : laser_cloud_surf_points_cov)
 				{
-					PointIWithCov point_cov;
-					pointAssociateToMap(laser_cloud_surf_points_cov.points[i], point_cov, pose_wmap_curr);
-					// PointIWithCov point_cov = laser_cloud_surf_points_cov.points[i];
-					// pointAssociateToMap(point_cov, point_cov, pose_wmap_curr);
-					// PointIWithCov point_ori = laser_cloud_surf_points_cov.points[i];
-					// compoundPose(T1, Sigma1, T2, Sigma2);
-					// evalPointUncertainty(laser_cloud_surf_points_cov.points[i], point_cov, cov_mapping);
+					// PointIWithCov point_sel;
+					// Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
+					// pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
+					// // evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
 					// if (cov_point.trace() > TRACE_THRESHOLD) continue;
-					// pointAssociateToMap(point_cov, point_cov, pose_wmap_curr);
-					// pointAssociateToMap(point_ori, point_cov, pose_wmap_curr);
+					PointIWithCov point_cov;
+					pointAssociateToMap(point_ori, point_cov, pose_wmap_curr);
+					// updateCov(point_cov, point_cov, cov_point);
+
 					int cube_i = int((point_cov.x + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_width;
 					int cube_j = int((point_cov.y + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_height;
 					int cube_k = int((point_cov.z + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_depth;
@@ -894,14 +894,13 @@ void process()
 void evalDegenracy(PoseLocalParameterization *local_parameterization, const ceres::CRSMatrix &jaco)
 {
 	// printf("jacob: %d constraints, %d parameters\n", jaco.num_rows, jaco.num_cols); // 2000+, 6
-	if (jaco.num_rows == 0)
-		return;
+	if (jaco.num_rows == 0) return;
 	TicToc t_eval_degenracy;
 	Eigen::MatrixXd mat_J;
 	CRSMatrix2EigenMatrix(jaco, mat_J);
 	Eigen::MatrixXd mat_Jt = mat_J.transpose(); // A^T
 	Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J;   // A^TA 48*48
-	Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(0, 0, 6, 6) / 400.0;
+	Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(0, 0, 6, 6) / 134;
 	Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6>> esolver(mat_H);
 	Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real();	// 6*1
 	Eigen::Matrix<double, 6, 6> mat_V_f = esolver.eigenvectors().real(); // 6*6, column is the corresponding eigenvector
@@ -910,7 +909,7 @@ void evalDegenracy(PoseLocalParameterization *local_parameterization, const cere
 	// covariance of sensor noise: A New Approach to 3D ICP Covariance Estimation/ Censi's approach
 	cov_mapping = mat_H.inverse();
 	// std::cout << "pose cov: " << std::endl << cov_pose << std::endl;
-	// std::cout << "trace: " << std::endl << cov_pose.trace() << std::endl;
+	std::cout << "[lidar_mapper] pose covariance trace: " << cov_mapping.trace() << std::endl;
 	// std::cout << "pose uncertain quantity: " << 1 / mat_E << std::endl;
 
 	for (auto j = 0; j < mat_E.cols(); j++)
@@ -1049,6 +1048,9 @@ int main(int argc, char **argv)
 
 	laser_cloud_corner_split_cov.resize(NUM_OF_LASER);
 	laser_cloud_surf_split_cov.resize(NUM_OF_LASER);
+
+	pose_compound.resize(NUM_OF_LASER);
+	cov_compound.resize(NUM_OF_LASER);
 
 	std::thread mapping_process{process};
 	ros::Rate loop_rate(100);

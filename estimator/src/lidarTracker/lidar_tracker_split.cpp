@@ -19,7 +19,6 @@ LidarTracker::LidarTracker()
     ROS_INFO("Tracker begin");
 }
 
-// TODO: may use closed-form ICP to do
 Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
                               const cloudFeature &cur_cloud_feature,
                               const Pose &pose_ini)

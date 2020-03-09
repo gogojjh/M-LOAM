@@ -29,7 +29,7 @@
 
     <group if="$(arg run_mloam)">
         <node pkg="mloam" type="mloam_node_sr" name="mloam_node_sr" 
-            args="$(arg config_file) $(arg mloam_result_save) $(arg output_path) $(arg mloam_odom_path) $(arg mloam_gt_path)" />
+            args="$(arg config_file) $(arg mloam_result_save) $(arg output_path) $(arg mloam_odom_path) $(arg mloam_gt_path)"/>
 
         <group if="$(arg run_mloam_map_up)">
             <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" 
