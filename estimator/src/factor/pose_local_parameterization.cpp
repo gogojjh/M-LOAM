@@ -26,8 +26,8 @@ bool PoseLocalParameterization::Plus(const double *x, const double *delta, doubl
     Eigen::Map<const Eigen::Matrix<double, 6, 1> > dx(delta); // dx = [dp, dq]
 
     Eigen::Matrix<double, 6, 1> dx_update = V_update_ * dx;
-    Eigen::Vector3d dp(dx_update.head(3));
-    Eigen::Quaterniond dq = Utility::deltaQ(dx_update.tail(3));
+    Eigen::Vector3d dp(dx_update.head<3>());
+    Eigen::Quaterniond dq = Utility::deltaQ(dx_update.tail<3>());
     // Eigen::Map<const Eigen::Vector3d> dp(delta);
     // Eigen::Quaterniond dq = Utility::deltaQ(Eigen::Map<const Eigen::Vector3d>(delta + 3)); // using theta to approximate q
 

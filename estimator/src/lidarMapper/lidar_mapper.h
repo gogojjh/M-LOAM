@@ -154,10 +154,12 @@ Eigen::Matrix3d covop2(const Eigen::Matrix3d &B, const Eigen::Matrix3d &C)
     return A;
 }
 
+// fixed: topLeftCorner<3, 3>()
+// dynamic: topLeftCorner(3, 3)
 void compoundPoseWithCov(const Pose &pose_1, const Eigen::Matrix<double, 6, 6> &cov_1,
                         const Pose &pose_2, const Eigen::Matrix<double, 6, 6> &cov_2,
                         Pose &pose_cp, Eigen::Matrix<double, 6, 6> &cov_cp, const int method = 1)
-{
+{  
     pose_cp = Pose(pose_1.T_ * pose_2.T_);
     Eigen::Matrix<double, 6, 6> AdT1 = adjointMatrix(pose_1.T_); // the adjoint matrix of T1
     Eigen::Matrix<double, 6, 6> cov_2_prime = AdT1 * cov_2 * AdT1.transpose();
@@ -203,8 +205,8 @@ void compoundPoseWithCov(const Pose &pose_1, const Eigen::Matrix<double, 6, 6> &
         printf("[compoundPoseWithCov] No %dth method !\n", method);
         cov_cp.setZero();
     }
-    cov_cp.setZero();
-}
+
+ }
 
 
 //
