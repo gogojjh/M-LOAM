@@ -126,8 +126,6 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
         cov_index = cov_fields[cov_index].offset;
         if (!downsample_all_data_) centroid_size += 7;
     }
-    // std::cout << cov_index << std::endl;
-    // std::cout << centroid_size << std::endl;
 
     std::vector<cloud_point_index_idx> index_vector;
     index_vector.reserve (indices_->size ());
@@ -265,7 +263,6 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
     index = 0;
     Eigen::VectorXf centroid = Eigen::VectorXf::Zero (centroid_size);
     Eigen::VectorXf temporary = Eigen::VectorXf::Zero (centroid_size);
-
     for (unsigned int cp = 0; cp < first_and_last_indices_vector.size (); ++cp)
     {
         // calculate centroid - sum values from all input points, that have the same idx value in index_vector array
@@ -274,27 +271,60 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
         unsigned int valid_cnt = last_index - first_index;
         centroid.setZero();
 
-        float weight_total = 0.0;
-        for (unsigned int i = first_index; i < last_index; ++i)
+        // TODO: calculation of mean and covariance of a Gaussian mixture model
+        // https://math.stackexchange.com/questions/195911/calculation-of-the-covariance-of-gaussian-mixtures
+        if (cov_index >= 0)
         {
-            pcl::for_each_type <FieldList> (NdCopyPointEigenFunctor <PointT> (input_->points[index_vector[i].cloud_point_index], temporary));
-
-            // --- select points with valid covariance
-            if (cov_index >= 0)
+            Eigen::VectorXf weight_vec(last_index - first_index);
+            weight_vec.setZero();
+            Eigen::Vector4f mu = Eigen::Vector4f::Zero();
+            for (unsigned int i = first_index; i < last_index; ++i)
             {
+                pcl::for_each_type<FieldList>(NdCopyPointEigenFunctor<PointT>(input_->points[index_vector[i].cloud_point_index], temporary));
                 if ((temporary[4] + temporary[7] + temporary[9]) >= 2) // filter the point with the trace of the covariance > 2
                 {
                     valid_cnt--;
                     continue;
                 }
-                float weight = 2 - (temporary[4] + temporary[7] + temporary[9]);
-                // float weight = 1.0f;
-                weight_total += weight;
-                // centroid.head(4) += weight * temporary.head(4);
-                // centroid.tail(7) += weight * temporary.tail(7);
-                centroid += weight * temporary;
-            } else
+                weight_vec[i - first_index] = 2 - (temporary[4] + temporary[7] + temporary[9]);
+                mu += weight_vec[i - first_index] * temporary.head(4);
+            }
+            if (valid_cnt == 0) valid_cnt = 1;
+
+            // index is centroid final position in resulting PointCloud
+            if (save_leaf_layout_) leaf_layout_[index_vector[first_index].idx] = index;
+
+            // compute the centroid
+            float weight_total = weight_vec.sum();
+            if (weight_total == 0) weight_total = 1.0;
+            mu /= static_cast<float>(weight_total);
+
+            Eigen::Matrix3f cov = Eigen::Matrix3f::Zero();
+            for (unsigned int i = first_index; i < last_index; ++i)
             {
+                pcl::for_each_type<FieldList>(NdCopyPointEigenFunctor<PointT>(input_->points[index_vector[i].cloud_point_index], temporary));
+                if ((temporary[4] + temporary[7] + temporary[9]) >= 2) continue;
+                Eigen::Matrix3f cov_tmp;
+                cov_tmp << temporary[4], temporary[5], temporary[6], 
+                           temporary[5], temporary[7], temporary[8], 
+                           temporary[6], temporary[8], temporary[9];
+                cov += weight_vec[i - first_index] * (cov_tmp + (temporary.head(3) - mu.head(3)) * (temporary.head(3) - mu.head(3)).transpose());
+            }
+            cov /= static_cast<float>(weight_total);
+
+            centroid.head(4) = mu;
+            centroid[4] = cov(0, 0);
+            centroid[5] = cov(0, 1);
+            centroid[6] = cov(0, 2);
+            centroid[7] = cov(1, 1);
+            centroid[8] = cov(1, 2);
+            centroid[9] = cov(2, 2);
+            centroid[10] = cov(0, 0) + cov(1, 1) + cov(2, 2);
+        } else
+        {
+            for (unsigned int i = first_index; i < last_index; ++i)
+            {
+                pcl::for_each_type <FieldList> (NdCopyPointEigenFunctor <PointT> (input_->points[index_vector[i].cloud_point_index], temporary));
                 if (!downsample_all_data_)
                 {
                     centroid[0] += input_->points[index_vector[i].cloud_point_index].x;
@@ -319,23 +349,12 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
                     }
                 }
             }
-        }
-        if (valid_cnt == 0) valid_cnt = 1;
+            if (valid_cnt == 0) valid_cnt = 1;
 
-        // index is centroid final position in resulting PointCloud
-        if (save_leaf_layout_) leaf_layout_[index_vector[first_index].idx] = index;
+            // index is centroid final position in resulting PointCloud
+            if (save_leaf_layout_) leaf_layout_[index_vector[first_index].idx] = index;
 
-        // compute the centroid
-        if (weight_total == 0) weight_total = 1.0;
-        if (cov_index >= 0)
-        {
-            // centroid.head(4) /= static_cast<float>(valid_cnt);
-            // centroid.tail(7) /= (static_cast<float>(valid_cnt) * static_cast<float>(valid_cnt));
-            centroid.head(4) /= static_cast<float>(weight_total);
-            centroid.segment(4, 6) /= (static_cast<float>(weight_total) * static_cast<float>(weight_total));
-            centroid[10] = centroid[4] + centroid[7] + centroid[9];
-        } else
-        {
+            // compute the centroid
             centroid /= static_cast<float>(valid_cnt);
         }
 

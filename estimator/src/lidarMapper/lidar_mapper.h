@@ -160,7 +160,8 @@ void compoundPoseWithCov(const Pose &pose_1, const Eigen::Matrix<double, 6, 6> &
                         const Pose &pose_2, const Eigen::Matrix<double, 6, 6> &cov_2,
                         Pose &pose_cp, Eigen::Matrix<double, 6, 6> &cov_cp, const int method = 1)
 {  
-    pose_cp = Pose(pose_1.T_ * pose_2.T_);
+    pose_cp.q_ = pose_1.q_ * pose_2.q_;
+    pose_cp.t_ = pose_1.q_ * pose_2.t_ + pose_1.t_;
     Eigen::Matrix<double, 6, 6> AdT1 = adjointMatrix(pose_1.T_); // the adjoint matrix of T1
     Eigen::Matrix<double, 6, 6> cov_2_prime = AdT1 * cov_2 * AdT1.transpose();
     if (method == 1)
@@ -205,7 +206,10 @@ void compoundPoseWithCov(const Pose &pose_1, const Eigen::Matrix<double, 6, 6> &
         printf("[compoundPoseWithCov] No %dth method !\n", method);
         cov_cp.setZero();
     }
-
+    // std::cout << pose_1 << std::endl << cov_1 << std::endl;
+    // std::cout << pose_2 << std::endl << cov_2 << std::endl;
+    // std::cout << pose_cp << std::endl << cov_cp << std::endl;
+    // exit(EXIT_FAILURE);
  }
 
 

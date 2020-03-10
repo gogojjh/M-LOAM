@@ -530,7 +530,7 @@ void process()
 			// step 3: perform scan-to-map optimization
 			printf("map prepare time %fms\n", t_shift.toc());
 			printf("map corner num:%d, surf num:%d\n", laser_cloud_corner_from_map_num, laser_cloud_surf_from_map_num);
-			if (laser_cloud_corner_from_map_num > 10 && laser_cloud_surf_from_map_num > 50)
+			if ((laser_cloud_corner_from_map_num > 10) && (laser_cloud_surf_from_map_num > 50))
 			{
 				TicToc t_opt;
 				TicToc t_tree;
@@ -671,20 +671,17 @@ void process()
 			TicToc t_add;
 			for (auto n = 0; n < NUM_OF_LASER; n++)
 			{
-				compoundPoseWithCov(pose_wmap_curr, cov_mapping, pose_ext[n], cov_ext[n], pose_compound[n], cov_compound[n], 1);
-				PointICovCloud &laser_cloud_corner_points_cov = laser_cloud_corner_split_cov[n];
-				PointICovCloud &laser_cloud_surf_points_cov = laser_cloud_surf_split_cov[n];
+				compoundPoseWithCov(pose_wmap_curr, cov_mapping, pose_ext[n], cov_ext[n], pose_compound[n], cov_compound[n], 2);
 				// move the corner points from the lastest frame to different cubes
-				for (PointIWithCov &point_ori : laser_cloud_corner_points_cov)
+				PointICovCloud &laser_cloud_corner_points_cov = laser_cloud_corner_split_cov[n];
+				for (const PointIWithCov &point_ori : laser_cloud_corner_points_cov)
 				{
-					// PointIWithCov point_sel;
-					// Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
+					PointIWithCov point_sel, point_cov;
+					Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
 					// pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
-					// // evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
-					// if (cov_point.trace() > TRACE_THRESHOLD) continue;
-					PointIWithCov point_cov;
+					// evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
 					pointAssociateToMap(point_ori, point_cov, pose_wmap_curr);
-					// updateCov(point_cov, point_cov, cov_point);
+					// updateCov(point_cov, cov_point);
 
 					int cube_i = int((point_cov.x + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_width;
 					int cube_j = int((point_cov.y + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_height;
@@ -701,18 +698,16 @@ void process()
 						laser_cloud_corner_array_cov[cur_cube_idx]->push_back(point_cov);
 					}
 				}
-
 				// move the surf points from the lastest frame to different cubes
-				for (PointIWithCov &point_ori : laser_cloud_surf_points_cov)
+				PointICovCloud &laser_cloud_surf_points_cov = laser_cloud_surf_split_cov[n];
+				for (const PointIWithCov &point_ori : laser_cloud_surf_points_cov)
 				{
-					// PointIWithCov point_sel;
-					// Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
-					// pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
-					// // evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
-					// if (cov_point.trace() > TRACE_THRESHOLD) continue;
-					PointIWithCov point_cov;
+					PointIWithCov point_sel, point_cov;
+					Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
+					pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
+					evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
 					pointAssociateToMap(point_ori, point_cov, pose_wmap_curr);
-					// updateCov(point_cov, point_cov, cov_point);
+					updateCov(point_cov, cov_point);
 
 					int cube_i = int((point_cov.x + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_width;
 					int cube_j = int((point_cov.y + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_height;
@@ -738,6 +733,7 @@ void process()
 			for (int i = 0; i < laser_cloud_valid_num; i++)
 			{
 				int ind = laser_cloud_valid_ind[i];
+
 				PointICovCloud::Ptr tmp_corner(new PointICovCloud());
 				down_size_filter_corner_map_cov.setInputCloud(laser_cloud_corner_array_cov[ind]);
 				down_size_filter_corner_map_cov.filter(*tmp_corner);
@@ -750,7 +746,7 @@ void process()
 			}
 			printf("filter time %fms \n", t_filter.toc());
 
-			//**************************************************************
+			// ************************************************************** publish feature and map data
 			// publish surround map (use for optimization) for every 5 frame
 			TicToc t_pub;
 			if ((pub_laser_cloud_surround.getNumSubscribers() != 0) && (frame_cnt % 5 ==0))
@@ -795,7 +791,6 @@ void process()
 			laser_cloud_full_res_msg.header.frame_id = "/world";
 			pub_laser_cloud_full_res.publish(laser_cloud_full_res_msg);
 
-			// **********************************************************************************
 			// uncomment if time is not important
 			laser_cloud_corner_last->clear();
 			for (auto n = 0; n < NUM_OF_LASER; n++)
@@ -824,11 +819,11 @@ void process()
 			laser_cloud_surf_last_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
 			laser_cloud_surf_last_msg.header.frame_id = "/world";
 			pub_laser_cloud_surf_last_res.publish(laser_cloud_surf_last_msg);
-			// **********************************************************************************
 
 			printf("mapping pub time %fms \n", t_pub.toc());
 			printf("whole mapping time %fms +++++\n", t_whole.toc());
 
+			// ************************************************************** publish odom
 			nav_msgs::Odometry odom_aft_mapped;
 			odom_aft_mapped.header.frame_id = "/world";
 			odom_aft_mapped.child_frame_id = "/aft_mapped";

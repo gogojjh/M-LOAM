@@ -175,6 +175,17 @@ namespace common
         po.cov_trace = cov_matrix(0, 0) + cov_matrix(1, 1) + cov_matrix(2, 2);
     }
 
+    void updateCov(pcl::PointXYZIWithCov &po, const Eigen::Matrix3d &cov_matrix)
+    {
+        po.cov_vec[0] = cov_matrix(0, 0);
+        po.cov_vec[1] = cov_matrix(0, 1);
+        po.cov_vec[2] = cov_matrix(0, 2);
+        po.cov_vec[3] = cov_matrix(1, 1);
+        po.cov_vec[4] = cov_matrix(1, 2);
+        po.cov_vec[5] = cov_matrix(2, 2);
+        po.cov_trace = cov_matrix(0, 0) + cov_matrix(1, 1) + cov_matrix(2, 2);
+    }
+
     void extractCov(const pcl::PointXYZIWithCov &p, Eigen::Matrix3d &cov_matrix)
     {
         cov_matrix.setZero();
