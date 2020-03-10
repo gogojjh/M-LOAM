@@ -39,7 +39,6 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
     double para_pose[SIZE_POSE] = {pose_ini.t_(0), pose_ini.t_(1), pose_ini.t_(2),
                                    pose_ini.q_.x(), pose_ini.q_.y(), pose_ini.q_.z(), pose_ini.q_.w()};
 
-    // TODO: implement lego-loam
     for (size_t iter_cnt = 0; iter_cnt < 2; iter_cnt++)
     {
         ceres::Problem problem;
@@ -132,7 +131,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         ceres::Solve(options, &problem, &summary);
         // std::cout << summary.BriefReport() << std::endl;
         // std::cout << summary.FullReport() << std::endl;
-        // printf("solver time %f ms \n", t_solver.toc());            
+        // printf("solver time %f ms \n", t_solver.toc());
     }
 
     Pose pose_prev_cur(Eigen::Quaterniond(para_pose[6], para_pose[3], para_pose[4], para_pose[5]), 

@@ -31,8 +31,8 @@
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200207/ri_room_with_loop.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/20190809/room1.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200228/ri_room_calib_filter.bag" /> -->
-        <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200228/ri_room_loop_filter.bag" />  -->
-        <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200228/ri_room_loop_test_vibration.bag" /> 
+        <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200228/ri_room_loop_filter.bag" /> 
+        <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200228/ri_room_loop_test_vibration.bag" />  -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200303/room_rect_filter.bag" />  -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200303/room_loop_front.bag" />  -->
         <!--<arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200303/room_loop_back.bag" /> -->

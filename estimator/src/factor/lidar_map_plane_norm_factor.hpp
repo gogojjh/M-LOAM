@@ -37,14 +37,15 @@ public:
 			{
 				Eigen::Map<Eigen::Matrix<double, 3, 7, Eigen::RowMajor> > jacobian_pose(jacobians[0]);
 				Eigen::Matrix<double, 3, 6> jaco; // [dy/dt, dy/dR, 1]
+				jaco.setZero();
 				jaco.leftCols<3>() = W;
 				jaco.rightCols<3>() = -W * R * Utility::skewSymmetric(point_);
 
 				jacobian_pose.setZero();
 				jacobian_pose.leftCols<6>() = sqrt_info_ * jaco;
-				jacobian_pose.rightCols<1>().setZero();
 			}
 		}
+		return true;
 	}
 
 	void check(double **param)

@@ -205,6 +205,7 @@ void process()
 {
 	while(1)
 	{
+		if (!ros::ok()) break;
 		while (!corner_last_buf.empty() && !surf_last_buf.empty() &&
 			!full_res_buf.empty() && !ext_buf.empty() && !odometry_buf.empty())
 		{
@@ -549,11 +550,11 @@ void process()
 
 					ceres::Solver::Options options;
 					options.linear_solver_type = ceres::DENSE_SCHUR;
-					options.max_num_iterations = 20;
+					options.max_num_iterations = 30;
 					// options.max_solver_time_in_seconds = 0.03;
 					options.minimizer_progress_to_stdout = false;
 					options.check_gradients = false;
-					options.gradient_check_relative_precision = 1e-4;
+					options.gradient_check_relative_precision = 1e-5;
 
 					vector2Double();
 
@@ -678,10 +679,10 @@ void process()
 				{
 					PointIWithCov point_sel, point_cov;
 					Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
-					// pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
-					// evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
+					pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
+					evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
 					pointAssociateToMap(point_ori, point_cov, pose_wmap_curr);
-					// updateCov(point_cov, cov_point);
+					updateCov(point_cov, cov_point);
 
 					int cube_i = int((point_cov.x + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_width;
 					int cube_j = int((point_cov.y + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_height;
