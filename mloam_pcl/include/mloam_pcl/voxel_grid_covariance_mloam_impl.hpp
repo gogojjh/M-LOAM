@@ -281,7 +281,7 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
             for (unsigned int i = first_index; i < last_index; ++i)
             {
                 pcl::for_each_type<FieldList>(NdCopyPointEigenFunctor<PointT>(input_->points[index_vector[i].cloud_point_index], temporary));
-                if ((temporary[4] + temporary[7] + temporary[9]) >= 2) // filter the point with the trace of the covariance > 2
+                if ((temporary[4] + temporary[7] + temporary[9]) >= 0.3) // filter the point with the trace of the covariance > 2
                 {
                     valid_cnt--;
                     continue;

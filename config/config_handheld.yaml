@@ -17,7 +17,7 @@ num_of_laser: 2
 n_scans: 16
 
 # segmmentation
-segment_cloud: 1
+segment_cloud: 0
 horizon_scan: 1800
 min_cluster_size: 20
 min_line_size: 10
@@ -104,7 +104,7 @@ n_calib: 10
 
 # mapping 
 map_corner_res: 0.2
-map_surf_res: 0.4
+map_surf_res: 0.2
 map_eig_thre: 200
 
 # uncertainty parameter
