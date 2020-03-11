@@ -22,9 +22,6 @@
 #include "../estimator/parameters.h"
 #include "../estimator/pose.h"
 
-// void TransformToStart(const common::PointI &pi, common::PointI &po, const Pose &pose, const bool &b_distortion);
-// void TransformToEnd(const common::PointI &pi, common::PointI &po, const Pose &pose, const bool &b_distortion);
-
 // project all distorted points on the last frame
 // a: last frame; c: frame for points capturing
 // p^a = T(s)*p^c

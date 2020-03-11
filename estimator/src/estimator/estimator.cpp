@@ -383,18 +383,21 @@ void Estimator::process()
     Qs_[cir_buf_cnt_] = pose_laser_cur_[IDX_REF].q_;
     Ts_[cir_buf_cnt_] = pose_laser_cur_[IDX_REF].t_;
     Header_[cir_buf_cnt_].stamp = ros::Time(cur_feature_.first);
+    pcl::VoxelGrid<PointI> down_size_filter_corner, down_size_filter_surf;
+    down_size_filter_corner.setLeafSize(0.2, 0.2, 0.2);
+    down_size_filter_surf.setLeafSize(0.4, 0.4, 0.4);
     PointICloud cloud_downsampled_;
     for (auto n = 0; n < NUM_OF_LASER; n++)
     {
         PointICloud &corner_points = cur_feature_.second[n]["corner_points_less_sharp"];
-        f_extract_.down_size_filter_corner_.setInputCloud(boost::make_shared<PointICloud>(corner_points));
-        f_extract_.down_size_filter_corner_.filter(cloud_downsampled_);
+        down_size_filter_corner.setInputCloud(boost::make_shared<PointICloud>(corner_points));
+        down_size_filter_corner.filter(cloud_downsampled_);
         corner_points_stack_[n][cir_buf_cnt_] = cloud_downsampled_;
         corner_points_stack_size_[n][cir_buf_cnt_] = cloud_downsampled_.size();
 
         PointICloud &surf_points = cur_feature_.second[n]["surf_points_less_flat"];
-        f_extract_.down_size_filter_surf_.setInputCloud(boost::make_shared<PointICloud>(surf_points));
-        f_extract_.down_size_filter_surf_.filter(cloud_downsampled_);
+        down_size_filter_surf.setInputCloud(boost::make_shared<PointICloud>(surf_points));
+        down_size_filter_surf.filter(cloud_downsampled_);
         surf_points_stack_[n][cir_buf_cnt_] = cloud_downsampled_;
         surf_points_stack_size_[n][cir_buf_cnt_] = cloud_downsampled_.size();
     }
