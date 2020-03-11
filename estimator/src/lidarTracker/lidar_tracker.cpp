@@ -85,11 +85,11 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
             const size_t &idx = feature.idx_;
             const Eigen::Vector3d &p_data = feature.point_;
             const Eigen::Vector4d &coeff = feature.coeffs_;
-            double s;
-            if (DISTORTION)
-                s = (corner_points_sharp->points[idx].intensity - int(corner_points_sharp->points[idx].intensity)) / SCAN_PERIOD;
-            else
-                s = 1.0;
+            double s = 1.0;
+            // if (DISTORTION)
+            //     s = (corner_points_sharp->points[idx].intensity - int(corner_points_sharp->points[idx].intensity)) / SCAN_PERIOD;
+            // else
+            //     s = 1.0;
             LidarScanPlaneNormFactor *f = new LidarScanPlaneNormFactor(p_data, coeff, s);
             ceres::ResidualBlockId res_id = problem.AddResidualBlock(f, loss_function, para_pose);
             res_ids_proj.push_back(res_id);
@@ -107,11 +107,11 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
             const size_t &idx = feature.idx_;
             const Eigen::Vector3d &p_data = feature.point_;
             const Eigen::Vector4d &coeff = feature.coeffs_;
-            double s;
-            if (DISTORTION)
-                s = (surf_points_flat->points[idx].intensity - int(surf_points_flat->points[idx].intensity)) / SCAN_PERIOD;
-            else
-                s = 1.0;            
+            double s = 1.0;
+            // if (DISTORTION)
+            //     s = (surf_points_flat->points[idx].intensity - int(surf_points_flat->points[idx].intensity)) / SCAN_PERIOD;
+            // else
+            //     s = 1.0;            
             LidarScanPlaneNormFactor *f = new LidarScanPlaneNormFactor(p_data, coeff, s);
             ceres::ResidualBlockId res_id = problem.AddResidualBlock(f, loss_function, para_pose);
             res_ids_proj.push_back(res_id);

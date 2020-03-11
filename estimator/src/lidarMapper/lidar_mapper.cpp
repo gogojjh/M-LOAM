@@ -207,7 +207,7 @@ void process()
 	{
 		if (!ros::ok()) break;
 		while (!corner_last_buf.empty() && !surf_last_buf.empty() &&
-			!full_res_buf.empty() && !ext_buf.empty() && !odometry_buf.empty())
+			   !full_res_buf.empty() && !ext_buf.empty() && !odometry_buf.empty())
 		{
 			//***************************************************************************
 			// step 1: pop up subscribed data

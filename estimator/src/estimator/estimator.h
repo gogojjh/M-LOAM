@@ -66,8 +66,10 @@ class Estimator
     void inputCloud(const double &t, const std::vector<common::PointCloud> &v_laser_cloud_in);
     void inputCloud(const double &t, const common::PointCloud &laser_cloud_in0);
 
+
     // process measurements
     void processMeasurements();
+    void undistortMeasurements();
     void process();
 
     // build global map (for online calibration) and local map (for local optimization)
@@ -154,7 +156,7 @@ class Estimator
     double prev_time_{}, cur_time_{};
     double td_{};
 
-    int input_cloud_cnt_{};
+    int frame_cnt_{};
 
     ImageSegmenter img_segment_;
     FeatureExtract f_extract_;

@@ -32,9 +32,13 @@ void Estimator::setParameter()
 {
     m_process_.lock();
 
-    pose_laser_cur_.resize(NUM_OF_LASER);
-    // pose_prev_cur_.resize(NUM_OF_LASER);
     pose_rlt_.resize(NUM_OF_LASER);
+    pose_laser_cur_.resize(NUM_OF_LASER);
+    for (auto i = 0; i < NUM_OF_LASER; i++)
+    {
+        pose_rlt_[i] = Pose();
+        pose_laser_cur_[i] = Pose();
+    }
 
     qbl_.resize(NUM_OF_LASER);
     tbl_.resize(NUM_OF_LASER);
@@ -117,15 +121,14 @@ void Estimator::clearState()
 
     prev_time_ = -1;
     cur_time_ = 0;
-    input_cloud_cnt_ = 0;
+    frame_cnt_ = 0;
 
     td_ = 0;
 
     solver_flag_ = INITIAL;
 
-    pose_laser_cur_.clear();
-    // pose_prev_cur_.clear();
     pose_rlt_.clear();
+    pose_laser_cur_.clear();
 
     qbl_.clear();
     tbl_.clear();
@@ -186,7 +189,6 @@ void Estimator::changeSensorType(int use_imu, int use_stereo)
 void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_laser_cloud_in)
 {
     assert(v_laser_cloud_in.size() == NUM_OF_LASER);
-    input_cloud_cnt_++;
 
     TicToc feature_ext_time;
     std::vector<cloudFeature> feature_frame;
@@ -213,8 +215,6 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
 
 void Estimator::inputCloud(const double &t, const PointCloud &laser_cloud_in)
 {
-    input_cloud_cnt_++;
-
     TicToc feature_ext_time;
     std::vector<cloudFeature> feature_frame;
     feature_frame.resize(1);
@@ -254,15 +254,56 @@ void Estimator::processMeasurements()
             process();
 
             printStatistics(*this, 0);
-            pubPointCloud(*this, cur_time_); // TODO: publish undistort point cloud
             pubOdometry(*this, cur_time_);
-            m_process_.unlock();
+            if (frame_cnt_ % SKIP_NUM_ODOM == 0) pubPointCloud(*this, cur_time_); 
 
-            ROS_WARN("frame: %d, processMea time: %fms", input_cloud_cnt_, t_process.toc());
+            frame_cnt_++;
+            ROS_WARN("frame: %d, processMea time: %fms", frame_cnt_, t_process.toc());
+            m_process_.unlock();
         }
         if (!MULTIPLE_THREAD) break;
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
+}
+
+void Estimator::undistortMeasurements()
+{
+    if (DISTORTION)
+    {
+        for (auto n = 0; n < NUM_OF_LASER; n++)
+        {
+            if (ESTIMATE_EXTRINSIC == 2) // initialization
+            {
+                // for (auto &point : cur_feature_.second[n]["corner_points_sharp"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
+                // for (auto &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
+                for (auto &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
+                for (auto &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
+                if (frame_cnt_ & SKIP_NUM_ODOM == 0) 
+                    for (auto &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
+            } else
+            if (ESTIMATE_EXTRINSIC == 1) // online calibration
+            {
+                if (n != IDX_REF) continue;
+                // for (auto &point : cur_feature_.second[n]["corner_points_sharp"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
+                // for (auto &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
+                for (auto &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
+                for (auto &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
+                if (frame_cnt_ & SKIP_NUM_ODOM == 0)
+                    for (auto &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
+            } else
+            if (ESTIMATE_EXTRINSIC == 0) // pure odometry
+            {
+                Pose pose_ext(qbl_[n], tbl_[n]);
+                Pose pose_local = pose_ext.inverse() * pose_rlt_[IDX_REF] * pose_ext;
+                // for (auto &point : cur_feature_.second[n]["corner_points_sharp"]) TransformToEnd(point, point, pose_local, DISTORTION);
+                // for (auto &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_local, DISTORTION);
+                for (auto &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_local, DISTORTION);
+                for (auto &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_local, DISTORTION);
+                if (frame_cnt_ & SKIP_NUM_ODOM == 0)
+                    for (auto &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_local, DISTORTION);
+            }
+        }
+    }    
 }
 
 void Estimator::process()
@@ -271,11 +312,6 @@ void Estimator::process()
     {
         b_system_inited_ = true;
         printf("System initialization finished \n");
-        for (auto i = 0; i < NUM_OF_LASER; i++)
-        {
-            pose_rlt_[i] = Pose();
-            pose_laser_cur_[i] = Pose();
-        }
     } else
     {
         TicToc t_mloam_tracker;
@@ -284,37 +320,37 @@ void Estimator::process()
         if (ESTIMATE_EXTRINSIC == 2)
         {
             // feature tracker: estimate the relative transformations of each lidar
-            for (auto i = 0; i < NUM_OF_LASER; i++)
+            for (auto n = 0; n < NUM_OF_LASER; n++)
             {
-                cloudFeature &cur_cloud_feature = cur_feature_.second[i];
-                cloudFeature &prev_cloud_feature = prev_feature_.second[i];
-                pose_rlt_[i] = lidar_tracker_.trackCloud(prev_cloud_feature, cur_cloud_feature, pose_rlt_[i]);
-                pose_laser_cur_[i] = pose_laser_cur_[i] * pose_rlt_[i];
-                std::cout << "LASER_" << i << ", pose_rlt: " << pose_rlt_[i] << std::endl;
+                cloudFeature &cur_cloud_feature = cur_feature_.second[n];
+                cloudFeature &prev_cloud_feature = prev_feature_.second[n];
+                pose_rlt_[n] = lidar_tracker_.trackCloud(prev_cloud_feature, cur_cloud_feature, pose_rlt_[n]);
+                pose_laser_cur_[n] = pose_laser_cur_[n] * pose_rlt_[n];
+                std::cout << "LASER_" << n << ", pose_rlt: " << pose_rlt_[n] << std::endl;
                 // std::cout << "LASER_" << i << ", pose_cur: " << pose_laser_cur_[i] << std::endl;
             }
-            printf("lidarTracker %fms (%d*%fms)\n", t_mloam_tracker.toc(), NUM_OF_LASER, t_mloam_tracker.toc() / NUM_OF_LASER);
+            printf("lidarTracker: %fms (%d*%fms)\n", t_mloam_tracker.toc(), NUM_OF_LASER, t_mloam_tracker.toc() / NUM_OF_LASER);
 
             // initialize extrinsics
             if (initial_extrinsics_.addPose(pose_rlt_) && (cir_buf_cnt_ == WINDOW_SIZE))
             {
                 TicToc t_calib_ext;
                 printf("calibrating extrinsic param, sufficient movement is needed\n");
-                for (auto i = 0; i < NUM_OF_LASER; i++)
+                for (auto n = 0; n < NUM_OF_LASER; n++)
                 {
-                    if (initial_extrinsics_.cov_rot_state_[i]) continue;
+                    if (initial_extrinsics_.cov_rot_state_[n]) continue;
                     Pose calib_result;
-                    if (initial_extrinsics_.calibExRotation(IDX_REF, i, calib_result))
+                    if (initial_extrinsics_.calibExRotation(IDX_REF, n, calib_result))
                     {
-                        if (initial_extrinsics_.calibExTranslation(IDX_REF, i, calib_result))
+                        if (initial_extrinsics_.calibExTranslation(IDX_REF, n, calib_result))
                         {
-                            std::cout << "Initial extrinsic of laser_" << i << ": " << calib_result << std::endl;
-                            qbl_[i] = calib_result.q_;
-                            tbl_[i] = calib_result.t_;
-                            // tdbl_[i] = calib_result.td_;
-                            QBL[i] = calib_result.q_;
-                            TBL[i] = calib_result.t_;
-                            // TDBL[i] = calib_result.td_;
+                            std::cout << "Initial extrinsic of laser_" << n << ": " << calib_result << std::endl;
+                            qbl_[n] = calib_result.q_;
+                            tbl_[n] = calib_result.t_;
+                            // tdbl_[n] = calib_result.td_;
+                            QBL[n] = calib_result.q_;
+                            TBL[n] = calib_result.t_;
+                            // TDBL[n] = calib_result.td_;
                         }
                     }
                 }
@@ -341,29 +377,7 @@ void Estimator::process()
             printf("lidarTracker %fms\n", t_mloam_tracker.toc());
         }
     }
-
-    if (DISTORTION)
-    {
-        for (auto n = 0; n < NUM_OF_LASER; n++)
-        {
-            if (ESTIMATE_EXTRINSIC == 2) 
-            {
-                PointICloud &corner_points = cur_feature_.second[n]["corner_points_less_sharp"];
-                PointICloud &surf_points = cur_feature_.second[n]["surf_points_less_flat"];
-                for (auto &point : corner_points) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
-                for (auto &point : surf_points) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
-            }
-            else 
-            {
-                Pose pose_ext(qbl_[n], tbl_[n]);
-                Pose pose_local = pose_ext.inverse() * pose_rlt_[IDX_REF] * pose_ext;
-                PointICloud &corner_points = cur_feature_.second[n]["corner_points_less_sharp"];
-                PointICloud &surf_points = cur_feature_.second[n]["surf_points_less_flat"];
-                for (auto &point : corner_points) TransformToEnd(point, point, pose_local, DISTORTION);
-                for (auto &point : surf_points) TransformToEnd(point, point, pose_local, DISTORTION);
-            }
-        }
-    }
+    undistortMeasurements(); // after tracking, undistort measurements using last frame odometry
 
     //----------------- update pose and point cloud
     Qs_[cir_buf_cnt_] = pose_laser_cur_[IDX_REF].q_;

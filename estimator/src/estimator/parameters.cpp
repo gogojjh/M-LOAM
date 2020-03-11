@@ -91,6 +91,8 @@ std::vector<Eigen::Matrix<double, 6, 6> > COV_EXT;
 Eigen::Matrix<double, 3, 3> COV_MEASUREMENT;
 double TRACE_THRESHOLD_BEFORE_MAPPING, TRACE_THRESHOLD_AFTER_MAPPING;
 
+int SKIP_NUM_ODOM;
+
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
 {
@@ -258,6 +260,9 @@ void readParameters(std::string config_file)
 
     TRACE_THRESHOLD_BEFORE_MAPPING = fsSettings["trace_threshold_before_mapping"];
     TRACE_THRESHOLD_AFTER_MAPPING = fsSettings["trace_threshold_after_mapping"];
+
+    SKIP_NUM_ODOM = fsSettings["skip_num_odom"];
+    if (SKIP_NUM_ODOM == 0) SKIP_NUM_ODOM = 1;
 
     fsSettings.release();
 }
