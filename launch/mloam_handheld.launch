@@ -23,19 +23,24 @@
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200201/ri_room_odometry_1_filter_filter.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200201/ri_room_odometry_2_filter.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200201/ri_room_odometry_3_wo_gt_filter.bag" /> -->
+
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200207/ri_room_calibration_circle.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200207/ri_room_calibration_eight_filter.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200207/ri_room_calibration_5_filter.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200207/ri_room_calibration_5_filter_filter.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200207/ri_room_with_loop.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200207/ri_room_with_loop.bag" /> -->
+
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/20190809/room1.bag" /> -->
+
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200228/ri_room_calib_filter.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200228/ri_room_loop_filter.bag" />  -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200228/ri_room_loop_test_vibration.bag" />  -->
+
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200303/room_rect_filter.bag" />  -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200303/room_loop_front.bag" />  -->
         <!--<arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200303/room_loop_back.bag" /> -->
+
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200310/ri_room_loop_2.bag" /> -->
         <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200310/ri_room_loop_2_filter.bag" />
         <node pkg="rosbag" type="play" name="rosbag" args="--clock --pause -r 1 $(arg bag_file)" />
@@ -43,18 +48,18 @@
 
     <group if="$(arg run_mloam)">
         <node pkg="mloam" type="mloam_node_rhd" name="mloam_node_rhd" 
-            args="$(arg config_file) $(arg mloam_result_save) $(arg output_path) $(arg mloam_odom_path) $(arg mloam_gt_path)">
+            args="$(arg config_file) $(arg mloam_result_save) $(arg output_path) $(arg mloam_odom_path) $(arg mloam_gt_path)" output="screen">
             <remap from="/base_pose_gt" to="/Robot_2/pose"/>
         </node>
 
-        <group if="$(arg run_mloam_map_with_up)">
+        <!-- <group if="$(arg run_mloam_map_with_up)">
             <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" 
                 args="$(arg config_file) $(arg mloam_result_save) $(arg output_path) $(arg mloam_map_path) 1" output="screen"/>
         </group>
         <group unless="$(arg run_mloam_map_with_up)">
             <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" 
                 args="$(arg config_file) $(arg mloam_result_save) $(arg output_path) $(arg mloam_map_wo_up_path) 0" output="screen"/>        
-        </group>
+        </group> -->
     </group>
 
     <!-- publish static tf -->

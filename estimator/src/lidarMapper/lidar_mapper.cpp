@@ -507,7 +507,7 @@ void process()
 				Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
 				pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
 				evalPointUncertainty(point_sel, cov_point, pose_ext[idx], cov_ext[idx]);
-				if (cov_point.trace() <= TRACE_THRESHOLD)
+				if (cov_point.trace() <= TRACE_THRESHOLD_BEFORE_MAPPING)
 				{
 					PointIWithCov point_cov(point_ori, cov_point.cast<float>());
 					laser_cloud_corner_split_cov[idx].push_back(point_cov);
@@ -520,7 +520,7 @@ void process()
 				Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
 				pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
 				evalPointUncertainty(point_sel, cov_point, pose_ext[idx], cov_ext[idx]);
-				if (cov_point.trace() <= TRACE_THRESHOLD)
+				if (cov_point.trace() <= TRACE_THRESHOLD_BEFORE_MAPPING)
 				{
 					PointIWithCov point_cov(point_ori, cov_point.cast<float>());
 					laser_cloud_surf_split_cov[idx].push_back(point_cov);
@@ -533,8 +533,7 @@ void process()
 			printf("map corner num:%d, surf num:%d\n", laser_cloud_corner_from_map_num, laser_cloud_surf_from_map_num);
 			if ((laser_cloud_corner_from_map_num > 10) && (laser_cloud_surf_from_map_num > 50))
 			{
-				TicToc t_opt;
-				TicToc t_tree;
+				TicToc t_opt, t_tree;
 				pcl::copyPointCloud(*laser_cloud_corner_from_map_cov, *laser_cloud_corner_from_map);
 				pcl::copyPointCloud(*laser_cloud_surf_from_map_cov, *laser_cloud_surf_from_map);
 				kdtree_corner_from_map->setInputCloud(laser_cloud_corner_from_map);
@@ -681,6 +680,7 @@ void process()
 					Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
 					pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
 					evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
+					if (cov_point.trace() > TRACE_THRESHOLD_AFTER_MAPPING) continue;
 					pointAssociateToMap(point_ori, point_cov, pose_wmap_curr);
 					updateCov(point_cov, cov_point);
 
@@ -707,6 +707,7 @@ void process()
 					Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
 					pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
 					evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
+					if (cov_point.trace() > TRACE_THRESHOLD_AFTER_MAPPING) continue;
 					pointAssociateToMap(point_ori, point_cov, pose_wmap_curr);
 					updateCov(point_cov, cov_point);
 

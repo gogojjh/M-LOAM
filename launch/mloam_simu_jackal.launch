@@ -19,8 +19,8 @@
 
     <!-- Ros Bag -->
     <group if="$(arg bag_file_use)">
-        <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_jackal_simu_rect_box/eight.bag" />
-        <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_jackal_simu_rect_box/circle.bag" /> -->
+        <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_jackal_simu_rect_box/eight.bag" /> -->
+        <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_jackal_simu_rect_box/eclipse.bag" />
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_jackal_simu_rect_box/random_walk_slow_1.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_jackal_simu_rect_box/random_walk_slow_2.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_jackal_simu_rect_box/random_walk_slow_3.bag" /> -->
@@ -29,16 +29,16 @@
 
     <group if="$(arg run_mloam)">
         <node pkg="mloam" type="mloam_node_sr" name="mloam_node_sr" 
-            args="$(arg config_file) $(arg mloam_result_save) $(arg output_path) $(arg mloam_odom_path) $(arg mloam_gt_path)"/>
+            args="$(arg config_file) $(arg mloam_result_save) $(arg output_path) $(arg mloam_odom_path) $(arg mloam_gt_path)" output="screen"/>
 
-        <group if="$(arg run_mloam_map_with_up)">
+        <!-- <group if="$(arg run_mloam_map_with_up)">
             <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" 
                 args="$(arg config_file) $(arg mloam_result_save) $(arg output_path) $(arg mloam_map_path) 1" output="screen"/>
         </group>
         <group unless="$(arg run_mloam_map_with_up)">
             <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" 
                 args="$(arg config_file) $(arg mloam_result_save) $(arg output_path) $(arg mloam_map_wo_up_path) 0" output="screen"/>        
-        </group>
+        </group> -->
     </group>
 
     <!-- publish static tf -->

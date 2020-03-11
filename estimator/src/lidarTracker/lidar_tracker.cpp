@@ -75,7 +75,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         // printf("iter:%d, use_corner:%d, use_surf:%d\n", iter_cnt, corner_num, surf_num);
         if ((corner_num + surf_num) < 10)
         {
-            printf("less correspondence! *************************************************\n");
+            printf("[lidar_tracker] less correspondence! *************************************************\n");
             continue;
         }
 
@@ -123,7 +123,6 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         e_option.parameter_blocks = para_ids;
         e_option.residual_blocks = res_ids_proj;
         problem.Evaluate(e_option, &cost, nullptr, nullptr, &jaco);
-        // std::cout << res_ids_proj.size() << std::endl;
         evalDegenracy(local_parameterization, jaco);
 
         // step 3: optimization
