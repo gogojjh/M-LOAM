@@ -311,11 +311,11 @@ void FeatureExtract::matchCornerFromMap(const typename pcl::KdTreeFLANN<PointTyp
     features.resize(cloud_size * 2);
     size_t cloud_cnt = 0;
     PointType point_ori, point_sel;
+    int num_neighbors = N_NEIGH;
     for (size_t i = 0; i < cloud_size; i++)
     {
         point_ori = cloud_data.points[i];
         pointAssociateToMap(point_ori, point_sel, pose_local);
-        int num_neighbors = N_NEIGH;
         kdtree_corner_from_map->nearestKSearch(point_sel, num_neighbors, point_search_idx, point_search_sq_dis);
         if (point_search_sq_dis[num_neighbors - 1] < MIN_MATCH_SQ_DIS)
         {
@@ -432,20 +432,31 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
     features.resize(cloud_size);
     size_t cloud_cnt = 0;
     PointType point_ori, point_sel;
+    int num_neighbors = N_NEIGH;
     for (size_t i = 0; i < cloud_size; i++)
     {
         point_ori = cloud_data.points[i];
         pointAssociateToMap(point_ori, point_sel, pose_local);
-        int num_neighbors = N_NEIGH;
         kdtree_surf_from_map->nearestKSearch(point_sel, num_neighbors, point_search_idx, point_search_sq_dis);
         if (point_search_sq_dis[num_neighbors - 1] < MIN_MATCH_SQ_DIS)
         {
-            // PCA eigen decomposition to fit a plane
+            // TODO: weighted least-square method to fit a plane
             for (int j = 0; j < num_neighbors; j++)
             {
                 mat_A(j, 0) = cloud_map.points[point_search_idx[j]].x;
                 mat_A(j, 1) = cloud_map.points[point_search_idx[j]].y;
                 mat_A(j, 2) = cloud_map.points[point_search_idx[j]].z;
+                size_t field_size = boost::mpl::size<typename pcl::traits::fieldList<PointType>::type>::value;
+                if (field_size == 11)
+                {
+                    Eigen::VectorXf temporary = Eigen::VectorXf::Zero(field_size);
+                    pcl::for_each_type<typename pcl::traits::fieldList<PointType>::type>(typename pcl::NdCopyPointEigenFunctor<PointType>(cloud_map.points[point_search_idx[j]], temporary));
+                    double w = 2 - temporary[10];
+                    mat_A(j, 0) *= w;
+                    mat_A(j, 1) *= w;
+                    mat_A(j, 2) *= w;
+                    mat_B(j) *= w;
+                }
             }
             Eigen::Vector3d norm = mat_A.colPivHouseholderQr().solve(mat_B);
             double negative_OA_dot_norm = 1 / norm.norm();
