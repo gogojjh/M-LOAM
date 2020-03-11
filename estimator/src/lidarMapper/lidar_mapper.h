@@ -88,7 +88,9 @@
 #include "../factor/lidar_plane_norm_factor.hpp"
 #include "../factor/pose_local_parameterization.h"
 
-void evalDegenracy(PoseLocalParameterization *local_parameterization, const ceres::CRSMatrix &jaco);
+void evalHessian(const ceres::CRSMatrix &jaco, Eigen::Matrix<double, 6, 6> &mat_H);
+
+void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameterization *local_parameterization);
 
 // ***************************************************************** Barfoot's method on associating uncertainty on SE3
 

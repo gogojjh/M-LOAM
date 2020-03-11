@@ -22,8 +22,54 @@
 #include "../estimator/parameters.h"
 #include "../estimator/pose.h"
 
-void TransformToStart(const common::PointI &pi, common::PointI &po, const Pose &pose, const bool &b_distortion);
-void TransformToEnd(const common::PointI &pi, common::PointI &po, const Pose &pose, const bool &b_distortion);
+// void TransformToStart(const common::PointI &pi, common::PointI &po, const Pose &pose, const bool &b_distortion);
+// void TransformToEnd(const common::PointI &pi, common::PointI &po, const Pose &pose, const bool &b_distortion);
+
+// project all distorted points on the last frame
+// a: last frame; c: frame for points capturing
+// p^a = T(s)*p^c
+template <typename PointType>
+void TransformToStart(const PointType &pi, PointType &po, const Pose &pose, const bool &b_distortion, const float &scan_period = 0.1)
+{
+    if (!pcl::traits::has_field<PointType, pcl::fields::intensity>::value)
+    {
+        std::cerr << "[TransformToStart] Point does not have intensity field!" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    float s = 1.0; //interpolation ratio
+    if (b_distortion) s = (pi.intensity - int(pi.intensity)) / scan_period;
+    // spherically interpolates between q1 and q2 by the interpolation coefficient t
+    po = pi;
+    Eigen::Quaterniond q_point_last = Eigen::Quaterniond::Identity().slerp(s, pose.q_);
+    Eigen::Vector3d t_point_last = s * pose.t_;
+    Eigen::Vector3d point(pi.x, pi.y, pi.z);
+    Eigen::Vector3d un_point = q_point_last * point + t_point_last;
+    po.x = un_point.x();
+    po.y = un_point.y();
+    po.z = un_point.z();
+    po.intensity = pi.intensity;
+}
+
+// project all distorted lidar points on the current frame
+// a: last frame; b: current frame; c: frame for points capturing
+// p^a = T(s)*p^c, p^b = T^(-1)*T(s)*p^c
+template <typename PointType>
+void TransformToEnd(const PointType &pi, PointType &po, const Pose &pose, const bool &b_distortion, const float &scan_period = 0.1)
+{
+    if (!pcl::traits::has_field<PointType, pcl::fields::intensity>::value)
+    {
+        std::cerr << "[TransformToEnd] Point does not have intensity field!" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    PointType un_point_tmp;
+    TransformToStart(pi, un_point_tmp, pose, b_distortion, scan_period);
+    Eigen::Vector3d un_point(un_point_tmp.x, un_point_tmp.y, un_point_tmp.z);
+    Eigen::Vector3d point_end = pose.q_.inverse() * (un_point - pose.t_);
+    po.x = point_end.x();
+    po.y = point_end.y();
+    po.z = point_end.z();
+    po.intensity = pi.intensity;
+}
 
 template<typename PointType>
 void pointAssociateToMap(const PointType &pi, PointType &po, const Pose &pose)

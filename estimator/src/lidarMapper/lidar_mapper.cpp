@@ -494,7 +494,7 @@ void process()
 			int laser_cloud_surf_stack_num = laser_cloud_surf_stack->points.size();
 
 			//**************************************************************
-			// noisy point filtering on input calibrated points
+			// TODO: noisy point filtering on input calibrated points
 			for (auto n = 0; n < NUM_OF_LASER; n++)
 			{
 				laser_cloud_corner_split_cov[n].clear();
@@ -531,13 +531,13 @@ void process()
 			// step 3: perform scan-to-map optimization
 			printf("map prepare time %fms\n", t_shift.toc());
 			printf("map corner num:%d, surf num:%d\n", laser_cloud_corner_from_map_num, laser_cloud_surf_from_map_num);
-			if ((laser_cloud_corner_from_map_num > 10) && (laser_cloud_surf_from_map_num > 50))
+			if ((laser_cloud_corner_from_map_num > 10) && (laser_cloud_surf_from_map_num > 100))
 			{
 				TicToc t_opt, t_tree;
 				pcl::copyPointCloud(*laser_cloud_corner_from_map_cov, *laser_cloud_corner_from_map);
 				pcl::copyPointCloud(*laser_cloud_surf_from_map_cov, *laser_cloud_surf_from_map);
-				kdtree_corner_from_map->setInputCloud(laser_cloud_corner_from_map);
-				kdtree_surf_from_map->setInputCloud(laser_cloud_surf_from_map);
+				if (POINT_EDGE_FACTOR) kdtree_corner_from_map->setInputCloud(laser_cloud_corner_from_map);
+				if (POINT_PLANE_FACTOR) kdtree_surf_from_map->setInputCloud(laser_cloud_surf_from_map);
 				printf("build tree time %fms\n", t_tree.toc());
 
 				printf("********************************\n");
@@ -556,18 +556,16 @@ void process()
 					options.gradient_check_relative_precision = 1e-5;
 
 					vector2Double();
-
-					PoseLocalParameterization *local_parameterization = new PoseLocalParameterization();
-					local_parameterization->setParameter();
-
+					
 					std::vector<double *> para_ids;
 					std::vector<ceres::internal::ResidualBlock *> res_ids_proj;
+					PoseLocalParameterization *local_parameterization = new PoseLocalParameterization();
+					local_parameterization->setParameter();
 					problem.AddParameterBlock(para_pose, SIZE_POSE, local_parameterization);
 					para_ids.push_back(para_pose);
 
 					// ******************************************************
-					int corner_num = 0;
-					int surf_num = 0;
+					int corner_num = 0, surf_num = 0;
 					TicToc t_prepare;
 					for (auto n = 0; n < NUM_OF_LASER; n++)
 					{
@@ -585,7 +583,7 @@ void process()
 						{
 							std::vector<PointPlaneFeature> corner_map_features;
 							f_extract.matchCornerFromMap(kdtree_corner_from_map, *laser_cloud_corner_from_map,
-														 laser_cloud_corner_points, pose_wmap_curr, corner_map_features, n_neigh, false);
+														 laser_cloud_corner_points, pose_wmap_curr, corner_map_features, n_neigh, true);
 							corner_num += corner_map_features.size() / 2;
 							for (auto &feature: corner_map_features)
 							{
@@ -608,7 +606,7 @@ void process()
 						{
 							std::vector<PointPlaneFeature> surf_map_features;
 							f_extract.matchSurfFromMap(kdtree_surf_from_map, *laser_cloud_surf_from_map,
-													   laser_cloud_surf_points, pose_wmap_curr, surf_map_features, n_neigh, false);
+													   laser_cloud_surf_points, pose_wmap_curr, surf_map_features, n_neigh, true);
 							surf_num += surf_map_features.size();
 							CHECK_JACOBIAN = 0;
 							for (auto &feature: surf_map_features)
@@ -644,7 +642,12 @@ void process()
 					e_option.parameter_blocks = para_ids;
 					e_option.residual_blocks = res_ids_proj;
 					problem.Evaluate(e_option, &cost, nullptr, nullptr, &jaco);
-					evalDegenracy(local_parameterization, jaco);
+
+					Eigen::Matrix<double, 6, 6> mat_H;
+					evalHessian(jaco, mat_H);
+					evalDegenracy(mat_H, local_parameterization);
+					cov_mapping = mat_H.inverse(); // covariance of sensor noise: A New Approach to 3D ICP Covariance Estimation/ Censi's approach
+					printf("[lidar_mapper] pose covariance trace: %f\n", cov_mapping.trace());
 
 					// ******************************************************
 					TicToc t_solver;
@@ -655,7 +658,7 @@ void process()
 
 					double2Vector();
 					std::cout << iter_cnt << "th result: " << pose_wmap_curr << std::endl;
-					if (iter_cnt != 1) printf("-------------------------------------\n");
+					if (iter_cnt == 0) printf("-------------------------------------\n");
 				}
 				printf("********************************\n");
 				printf("mapping optimization time %fms\n", t_opt.toc());
@@ -795,32 +798,32 @@ void process()
 
 			// uncomment if time is not important
 			laser_cloud_corner_last->clear();
-			for (auto n = 0; n < NUM_OF_LASER; n++)
-			{
-				PointICloud tmp_cloud;
-				pcl::copyPointCloud(laser_cloud_corner_split_cov[n], tmp_cloud);
-				for (auto &point: tmp_cloud) pointAssociateToMap(point, point, pose_wmap_curr);
-				*laser_cloud_corner_last += tmp_cloud;
-			}
-			sensor_msgs::PointCloud2 laser_cloud_corner_last_msg;
-			pcl::toROSMsg(*laser_cloud_corner_last, laser_cloud_corner_last_msg);
-			laser_cloud_corner_last_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
-			laser_cloud_corner_last_msg.header.frame_id = "/world";
-			pub_laser_cloud_corner_last_res.publish(laser_cloud_corner_last_msg);
+			// for (auto n = 0; n < NUM_OF_LASER; n++)
+			// {
+			// 	PointICloud tmp_cloud;
+			// 	pcl::copyPointCloud(laser_cloud_corner_split_cov[n], tmp_cloud);
+			// 	for (auto &point: tmp_cloud) pointAssociateToMap(point, point, pose_wmap_curr);
+			// 	*laser_cloud_corner_last += tmp_cloud;
+			// }
+			// sensor_msgs::PointCloud2 laser_cloud_corner_last_msg;
+			// pcl::toROSMsg(*laser_cloud_corner_last, laser_cloud_corner_last_msg);
+			// laser_cloud_corner_last_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
+			// laser_cloud_corner_last_msg.header.frame_id = "/world";
+			// pub_laser_cloud_corner_last_res.publish(laser_cloud_corner_last_msg);
 
 			laser_cloud_surf_last->clear();
-			for (auto n = 0; n < NUM_OF_LASER; n++)
-			{
-				PointICloud tmp_cloud;
-				pcl::copyPointCloud(laser_cloud_surf_split_cov[n], tmp_cloud);
-				for (auto &point: tmp_cloud) pointAssociateToMap(point, point, pose_wmap_curr);
-				*laser_cloud_surf_last += tmp_cloud;
-			}
-			sensor_msgs::PointCloud2 laser_cloud_surf_last_msg;
-			pcl::toROSMsg(*laser_cloud_surf_last, laser_cloud_surf_last_msg);
-			laser_cloud_surf_last_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
-			laser_cloud_surf_last_msg.header.frame_id = "/world";
-			pub_laser_cloud_surf_last_res.publish(laser_cloud_surf_last_msg);
+			// for (auto n = 0; n < NUM_OF_LASER; n++)
+			// {
+			// 	PointICloud tmp_cloud;
+			// 	pcl::copyPointCloud(laser_cloud_surf_split_cov[n], tmp_cloud);
+			// 	for (auto &point: tmp_cloud) pointAssociateToMap(point, point, pose_wmap_curr);
+			// 	*laser_cloud_surf_last += tmp_cloud;
+			// }
+			// sensor_msgs::PointCloud2 laser_cloud_surf_last_msg;
+			// pcl::toROSMsg(*laser_cloud_surf_last, laser_cloud_surf_last_msg);
+			// laser_cloud_surf_last_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
+			// laser_cloud_surf_last_msg.header.frame_id = "/world";
+			// pub_laser_cloud_surf_last_res.publish(laser_cloud_surf_last_msg);
 
 			printf("mapping pub time %fms \n", t_pub.toc());
 			printf("whole mapping time %fms +++++\n", t_whole.toc());
@@ -888,26 +891,23 @@ void process()
 	}
 }
 
-void evalDegenracy(PoseLocalParameterization *local_parameterization, const ceres::CRSMatrix &jaco)
+void evalHessian(const ceres::CRSMatrix &jaco, Eigen::Matrix<double, 6, 6> &mat_H)
 {
 	// printf("jacob: %d constraints, %d parameters\n", jaco.num_rows, jaco.num_cols); // 2000+, 6
 	if (jaco.num_rows == 0) return;
-	TicToc t_eval_degenracy;
 	Eigen::MatrixXd mat_J;
 	CRSMatrix2EigenMatrix(jaco, mat_J);
 	Eigen::MatrixXd mat_Jt = mat_J.transpose(); // A^T
 	Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J;   // A^TA 48*48
-	Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(0, 0, 6, 6) / 134;
-	Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6>> esolver(mat_H);
+	mat_H = mat_JtJ.block(0, 0, 6, 6) / 134;
+}
+
+void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameterization *local_parameterization)
+{
+	Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6> > esolver(mat_H);
 	Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real();	// 6*1
 	Eigen::Matrix<double, 6, 6> mat_V_f = esolver.eigenvectors().real(); // 6*6, column is the corresponding eigenvector
 	Eigen::Matrix<double, 6, 6> mat_V_p = mat_V_f;
-
-	// covariance of sensor noise: A New Approach to 3D ICP Covariance Estimation/ Censi's approach
-	cov_mapping = mat_H.inverse();
-	// std::cout << "pose cov: " << std::endl << cov_pose << std::endl;
-	std::cout << "[lidar_mapper] pose covariance trace: " << cov_mapping.trace() << std::endl;
-	// std::cout << "pose uncertain quantity: " << 1 / mat_E << std::endl;
 
 	for (auto j = 0; j < mat_E.cols(); j++)
 	{

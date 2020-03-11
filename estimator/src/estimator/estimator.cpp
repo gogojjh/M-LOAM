@@ -274,33 +274,33 @@ void Estimator::undistortMeasurements()
         {
             if (ESTIMATE_EXTRINSIC == 2) // initialization
             {
-                // for (auto &point : cur_feature_.second[n]["corner_points_sharp"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
-                // for (auto &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
-                for (auto &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
-                for (auto &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
+                // for (auto &point : cur_feature_.second[n]["corner_points_sharp"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
+                // for (auto &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
+                for (auto &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
+                for (auto &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
                 if (frame_cnt_ & SKIP_NUM_ODOM == 0) 
-                    for (auto &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
+                    for (auto &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
             } else
             if (ESTIMATE_EXTRINSIC == 1) // online calibration
             {
                 if (n != IDX_REF) continue;
-                // for (auto &point : cur_feature_.second[n]["corner_points_sharp"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
-                // for (auto &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
-                for (auto &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
-                for (auto &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
+                // for (auto &point : cur_feature_.second[n]["corner_points_sharp"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
+                // for (auto &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
+                for (auto &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
+                for (auto &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
                 if (frame_cnt_ & SKIP_NUM_ODOM == 0)
-                    for (auto &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION);
+                    for (auto &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
             } else
             if (ESTIMATE_EXTRINSIC == 0) // pure odometry
             {
                 Pose pose_ext(qbl_[n], tbl_[n]);
                 Pose pose_local = pose_ext.inverse() * pose_rlt_[IDX_REF] * pose_ext;
-                // for (auto &point : cur_feature_.second[n]["corner_points_sharp"]) TransformToEnd(point, point, pose_local, DISTORTION);
-                // for (auto &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_local, DISTORTION);
-                for (auto &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_local, DISTORTION);
-                for (auto &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_local, DISTORTION);
+                // for (auto &point : cur_feature_.second[n]["corner_points_sharp"]) TransformToEnd(point, point, pose_local, DISTORTION, SCAN_PERIOD);
+                // for (auto &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_local, DISTORTION, SCAN_PERIOD);
+                for (auto &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_local, DISTORTION, SCAN_PERIOD);
+                for (auto &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_local, DISTORTION, SCAN_PERIOD);
                 if (frame_cnt_ & SKIP_NUM_ODOM == 0)
-                    for (auto &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_local, DISTORTION);
+                    for (auto &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_local, DISTORTION, SCAN_PERIOD);
             }
         }
     }    
