@@ -48,8 +48,8 @@ PointICovCloud::Ptr laser_cloud_corner_array_cov[laser_cloud_num];
 PointICovCloud::Ptr laser_cloud_surf_array_cov[laser_cloud_num];
 
 //kd-tree
-pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_from_map(new pcl::KdTreeFLANN<PointI>());
-pcl::KdTreeFLANN<PointI>::Ptr kdtree_surf_from_map(new pcl::KdTreeFLANN<PointI>());
+pcl::KdTreeFLANN<PointIWithCov>::Ptr kdtree_corner_from_map(new pcl::KdTreeFLANN<PointIWithCov>());
+pcl::KdTreeFLANN<PointIWithCov>::Ptr kdtree_surf_from_map(new pcl::KdTreeFLANN<PointIWithCov>());
 
 // wmap_T_curr = wmap_T_odom * wodom_T_curr;
 // transformation between odom's world and map's world frame
@@ -534,10 +534,8 @@ void process()
 			if ((laser_cloud_corner_from_map_num > 10) && (laser_cloud_surf_from_map_num > 100))
 			{
 				TicToc t_opt, t_tree;
-				pcl::copyPointCloud(*laser_cloud_corner_from_map_cov, *laser_cloud_corner_from_map);
-				pcl::copyPointCloud(*laser_cloud_surf_from_map_cov, *laser_cloud_surf_from_map);
-				if (POINT_EDGE_FACTOR) kdtree_corner_from_map->setInputCloud(laser_cloud_corner_from_map);
-				if (POINT_PLANE_FACTOR) kdtree_surf_from_map->setInputCloud(laser_cloud_surf_from_map);
+				if (POINT_EDGE_FACTOR) kdtree_corner_from_map->setInputCloud(laser_cloud_corner_from_map_cov);
+				if (POINT_PLANE_FACTOR) kdtree_surf_from_map->setInputCloud(laser_cloud_surf_from_map_cov);
 				printf("build tree time %fms\n", t_tree.toc());
 
 				printf("********************************\n");
@@ -569,21 +567,20 @@ void process()
 					TicToc t_prepare;
 					for (auto n = 0; n < NUM_OF_LASER; n++)
 					{
-						// if ((n != IDX_REF) && (extrinsics.status)) continue;
 						PointICovCloud &laser_cloud_corner_points_cov = laser_cloud_corner_split_cov[n];
 						PointICovCloud &laser_cloud_surf_points_cov = laser_cloud_surf_split_cov[n];
-
-						PointICloud laser_cloud_corner_points, laser_cloud_surf_points;
-						pcl::copyPointCloud(laser_cloud_corner_points_cov, laser_cloud_corner_points);
-						pcl::copyPointCloud(laser_cloud_surf_points_cov, laser_cloud_surf_points);
-
 						TicToc t_data;
 						int n_neigh = 5;
 						if (POINT_EDGE_FACTOR)
 						{
 							std::vector<PointPlaneFeature> corner_map_features;
-							f_extract.matchCornerFromMap(kdtree_corner_from_map, *laser_cloud_corner_from_map,
-														 laser_cloud_corner_points, pose_wmap_curr, corner_map_features, n_neigh, true);
+							f_extract.matchCornerFromMap(kdtree_corner_from_map,
+														 *laser_cloud_corner_from_map_cov,
+														 laser_cloud_corner_points_cov,
+														 pose_wmap_curr,
+														 corner_map_features,
+														 n_neigh,
+														 true);
 							corner_num += corner_map_features.size() / 2;
 							for (auto &feature: corner_map_features)
 							{
@@ -605,8 +602,13 @@ void process()
 						if (POINT_PLANE_FACTOR)
 						{
 							std::vector<PointPlaneFeature> surf_map_features;
-							f_extract.matchSurfFromMap(kdtree_surf_from_map, *laser_cloud_surf_from_map,
-													   laser_cloud_surf_points, pose_wmap_curr, surf_map_features, n_neigh, true);
+							f_extract.matchSurfFromMap(kdtree_surf_from_map,
+													   *laser_cloud_surf_from_map_cov,
+													   laser_cloud_surf_points_cov,
+													   pose_wmap_curr,
+													   surf_map_features,
+													   n_neigh,
+													   true);
 							surf_num += surf_map_features.size();
 							CHECK_JACOBIAN = 0;
 							for (auto &feature: surf_map_features)
