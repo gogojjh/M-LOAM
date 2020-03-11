@@ -41,7 +41,7 @@ public:
                        common::PointCloud::ConstPtr cloud2,
                        std::vector<double> line_color = {0.0, 1.0, 0.0});
 
-    void UpdatePlanes(const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> &plane_coeffs);
+    void UpdatePlanes(const std::vector<Eigen::Vector4d> &plane_coeffs);
 
     boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer_;
     //  pcl::visualization::PCLVisualizer* viewer;

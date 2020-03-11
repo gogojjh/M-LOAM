@@ -52,7 +52,7 @@ float LASER_SYNC_THRESHOLD;
 double ROI_RANGE;
 double ROI_RANGE_MAPPING;
 
-std::vector<Eigen::Quaterniond, Eigen::aligned_allocator<Eigen::Quaterniond> > QBL;
+std::vector<Eigen::Quaterniond> QBL;
 std::vector<Eigen::Vector3d> TBL;
 std::vector<double> TDBL;
 

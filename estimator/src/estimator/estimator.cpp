@@ -296,15 +296,14 @@ void Estimator::process()
             printf("lidarTracker %fms (%d*%fms)\n", t_mloam_tracker.toc(), NUM_OF_LASER, t_mloam_tracker.toc() / NUM_OF_LASER);
 
             // initialize extrinsics
-            for (auto i = 0; i < NUM_OF_LASER; i++) initial_extrinsics_.addPose(pose_rlt_[i], i);
-            if (cir_buf_cnt_ == WINDOW_SIZE)
+            if (initial_extrinsics_.addPose(pose_rlt_) && (cir_buf_cnt_ == WINDOW_SIZE))
             {
                 TicToc t_calib_ext;
                 printf("calibrating extrinsic param, sufficient movement is needed\n");
                 for (auto i = 0; i < NUM_OF_LASER; i++)
                 {
-                    Pose calib_result;
                     if (initial_extrinsics_.cov_rot_state_[i]) continue;
+                    Pose calib_result;
                     if (initial_extrinsics_.calibExRotation(IDX_REF, i, calib_result))
                     {
                         if (initial_extrinsics_.calibExTranslation(IDX_REF, i, calib_result))
@@ -1229,7 +1228,7 @@ void Estimator::visualizePCL()
     //     plane_normal_vis_.UpdateCloud(point_world_xyz, "cloud_all");
     // }
     // int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
-    // std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d> > plane_coeffs;
+    // std::vector<Eigen::Vector4d> plane_coeffs;
     // PointCloud::Ptr tmp_cloud_sel(new PointCloud); // surf_points_stack_[n][i]
     // NormalCloud::Ptr tmp_normals_sel(new NormalCloud); // surf_points_local_map_filtered_[n]
     // printf("feature size: %u\n", surf_map_features_[1][WINDOW_SIZE].size());

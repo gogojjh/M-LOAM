@@ -113,8 +113,7 @@ void PlaneNormalVisualizer::UpdateLines(PointCloud::ConstPtr cloud1,
     m_vis_.unlock();
 }
 
-void PlaneNormalVisualizer::UpdatePlanes(const std::vector<Eigen::Vector4d,
-                                                           Eigen::aligned_allocator<Eigen::Vector4d>> &plane_coeffs)
+void PlaneNormalVisualizer::UpdatePlanes(const std::vector<Eigen::Vector4d> &plane_coeffs)
 {
     m_vis_.lock();
     // boost::mutex::scoped_lock lk(m_);

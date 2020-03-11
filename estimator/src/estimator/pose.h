@@ -55,6 +55,6 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW // TODO: the Eigen bugs in initializing the class
 };
 
-void computeMeanPose(const std::vector<std::pair<double, Pose>, Eigen::aligned_allocator<std::pair<double, Pose>>> &pose_array, Pose &pose_mean, Eigen::Matrix<double, 6, 6> &pose_cov);
+void computeMeanPose(const std::vector<std::pair<double, Pose> > &pose_array, Pose &pose_mean, Eigen::Matrix<double, 6, 6> &pose_cov);
 
 //

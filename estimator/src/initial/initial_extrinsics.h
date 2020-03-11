@@ -12,6 +12,9 @@
 #pragma once
 
 #include <vector>
+#include <queue>
+#include <map>
+#include <algorithm>
 
 #include <opencv2/opencv.hpp>
 #include <eigen3/Eigen/Dense>
@@ -24,6 +27,15 @@
 #include "../utility/tic_toc.h"
 #include "../utility/utility.h"
 
+// maintain a min_heap
+struct rotCmp
+{
+	bool operator()(const std::pair<size_t, std::vector<Pose> > &pose_pair_1, const std::pair<size_t, std::vector<Pose> > &pose_pair_2)
+	{
+		return (pose_pair_1.second[0].q_.w() < pose_pair_2.second[0].q_.w());
+	}
+};
+
 /* This class help you to calibrate extrinsic rotation between imu and camera when your totally don't konw the extrinsic parameter */
 class InitialExtrinsics
 {
@@ -32,7 +44,7 @@ public:
 	void clearState();
 	void setParameter();
 
-	void addPose(const Pose &pose, const size_t &idx);
+	bool addPose(const std::vector<Pose> &pose_laser);
 
 	bool calibExRotation(const size_t &idx_ref, const size_t &idx_data, Pose &calib_result);
 	bool calibExTranslation(const size_t &idx_ref, const size_t &idx_data, Pose &calib_result);
@@ -48,7 +60,7 @@ public:
 
 	void decomposeE(cv::Mat E, cv::Mat_<double> &R1, cv::Mat_<double> &R2, cv::Mat_<double> &t1, cv::Mat_<double> &t2);
 
-	std::vector<Pose, Eigen::aligned_allocator<Pose> > calib_ext_;
+	std::vector<Pose> calib_ext_;
 
 	std::vector<double> v_rd_;
 	std::vector<double> v_td_;
@@ -57,11 +69,22 @@ public:
 	std::vector<bool> cov_rot_state_, cov_pos_state_;
 	bool full_cov_rot_state_, full_cov_pos_state_;
 
-	std::vector<std::vector<Pose, Eigen::aligned_allocator<Pose> > > v_pose_;
+	// std::vector<std::vector<Pose> > v_pose_;
+	std::priority_queue<std::pair<size_t, std::vector<Pose> >, 
+					    std::vector<std::pair<size_t, std::vector<Pose> > >, 
+						rotCmp> pq_pose_;
+	std::vector<std::vector<Pose> > v_pose_;
+
+						
 	// v_pose_[idx_ref][indices_[idx_data][i]], v_pose_[idx_data][indices_[idx_data][i]] as the screw motion pair
 	std::vector<std::vector<int> > indices_;
 
 	size_t frame_cnt_, pose_cnt_;
+
+	std::vector<Eigen::MatrixXd> Q_;
+
+
+	std::pair<size_t, std::vector<Pose> > pose_laser_add_;
 
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };

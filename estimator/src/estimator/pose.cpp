@@ -116,7 +116,7 @@ Eigen::Matrix<double, 6, 1> Pose::se3() const
 // ceres: pose graph optimization: https://ceres-solver.googlesource.com/ceres-solver/+/master/examples/slam/pose_graph_3d
 // review of rotation averaging: Rotation Averaging IJCV
 // TODO: Solution 2: using pose graph optimization T_mean = argmin_{T} \sum||(T-T_mean)||^{2}
-void computeMeanPose(const std::vector<std::pair<double, Pose>, Eigen::aligned_allocator<std::pair<double, Pose>>> &pose_array, 
+void computeMeanPose(const std::vector<std::pair<double, Pose> > &pose_array, 
                      Pose &pose_mean, Eigen::Matrix<double, 6, 6> &pose_cov)
 {
     // Solution 1: approximation if the separate quaternions are relatively close to each other.

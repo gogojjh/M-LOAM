@@ -121,11 +121,11 @@ class Estimator
     bool b_system_inited_{};
 
     // pose from laser at k=0 to laser at k=K
-    std::vector<Pose, Eigen::aligned_allocator<Pose> > pose_laser_cur_;
+    std::vector<Pose> pose_laser_cur_;
     // pose from laser at k=K-1 to laser at k=K
-    std::vector<Pose, Eigen::aligned_allocator<Pose> > pose_rlt_;
+    std::vector<Pose> pose_rlt_;
 
-    std::vector<Eigen::Quaterniond, Eigen::aligned_allocator<Eigen::Quaterniond> > qbl_;
+    std::vector<Eigen::Quaterniond> qbl_;
     std::vector<Eigen::Vector3d> tbl_;
     std::vector<double> tdbl_;
     std::vector<Eigen::Matrix<double, 6, 6> > covbl_;
@@ -173,7 +173,7 @@ class Estimator
     std::vector<double> eig_thre_calib_;
     std::vector<double> d_factor_calib_;
     std::vector<double> cur_eig_calib_;
-    std::vector<std::vector<std::pair<double, Pose>, Eigen::aligned_allocator<std::pair<double, Pose> > > > pose_calib_;
+    std::vector<std::vector<std::pair<double, Pose> > > pose_calib_;
 
     // for marginalization
     MarginalizationInfo *last_marginalization_info_{};

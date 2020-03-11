@@ -76,7 +76,7 @@ ros::Publisher pub_odom_aft_mapped, pub_odom_aft_mapped_high_frec, pub_laser_aft
 mloam_msgs::Extrinsics extrinsics;
 std::vector<Eigen::Matrix3d> r_ext;
 std::vector<Eigen::Vector3d> t_ext;
-std::vector<Pose, Eigen::aligned_allocator<Pose> > pose_ext;
+std::vector<Pose> pose_ext;
 
 std::vector<PointICovCloud> laser_cloud_corner_split_cov;
 std::vector<PointICovCloud> laser_cloud_surf_split_cov;

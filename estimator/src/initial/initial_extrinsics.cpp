@@ -4,8 +4,9 @@
 
 using namespace Eigen;
 
-double EPSILON_R = 0.03;
-double EPSILON_T = 0.1;
+const double EPSILON_R = 0.03;
+const double EPSILON_T = 0.1;
+const size_t N_POSE = 300;
 
 InitialExtrinsics::InitialExtrinsics() {}
 
@@ -20,10 +21,11 @@ void InitialExtrinsics::clearState()
     v_pos_cov_.clear();
 
     v_pose_.clear();
-    indices_.clear();
 
     frame_cnt_ = 0;
     pose_cnt_ = 0;
+
+    Q_.clear();
 }
 
 void InitialExtrinsics::setParameter()
@@ -39,8 +41,8 @@ void InitialExtrinsics::setParameter()
     v_rot_cov_.resize(NUM_OF_LASER);
     v_pos_cov_.resize(NUM_OF_LASER);
 
-    v_pose_.resize(NUM_OF_LASER);
-    indices_.resize(NUM_OF_LASER);
+    Q_.resize(NUM_OF_LASER);
+    for (size_t i = 0; i < Q_.size(); i++) Q_[i] = Eigen::MatrixXd::Zero(N_POSE * 4, 4);
 }
 
 bool InitialExtrinsics::setCovRotation(const size_t &idx)
@@ -57,11 +59,29 @@ bool InitialExtrinsics::setCovTranslation(const size_t &idx)
     if (std::find(cov_pos_state_.begin(), cov_pos_state_.end(), false) == cov_pos_state_.end()) full_cov_pos_state_ = true;
 }
 
-void InitialExtrinsics::addPose(const Pose &pose, const size_t &idx)
+bool InitialExtrinsics::addPose(const std::vector<Pose> &pose_laser)
 {
-    assert(idx < NUM_OF_LASER);
-    if (idx == 0) frame_cnt_++;
-    v_pose_[idx].push_back(pose);
+    assert(pose_laser.size() == NUM_OF_LASER);
+    bool b_check = true;
+    for (size_t i = 0; i < pose_laser.size(); i++) b_check = (b_check && checkScrewMotion(pose_laser[IDX_REF], pose_laser[i]));
+    if (b_check)
+    {
+        if (pq_pose_.size() < N_POSE)
+        {
+            pose_laser_add_ = std::make_pair(pq_pose_.size(), pose_laser);
+            v_pose_.push_back(pose_laser_add_.second);
+            pq_pose_.push(pose_laser_add_);
+        } else
+        {
+            // maintain a min heap
+            pose_laser_add_ = std::make_pair(pq_pose_.top().first, pose_laser);
+            v_pose_[pose_laser_add_.first] = pose_laser_add_.second;
+            pq_pose_.pop();
+            pq_pose_.push(pose_laser_add_);
+        }        
+        // std::cout << pq_pose_.top().second[0].q_.w() << std::endl;
+    }
+    return b_check;
 }
 
 bool InitialExtrinsics::checkScrewMotion(const Pose &pose_ref, const Pose &pose_data)
@@ -72,42 +92,28 @@ bool InitialExtrinsics::checkScrewMotion(const Pose &pose_ref, const Pose &pose_
     double t_dis = abs(pose_ref.t_.dot(ang_axis_ref.axis()) - pose_data.t_.dot(ang_axis_data.axis()));
     // std::cout << "ref pose : " << pose_ref << std::endl;
     // std::cout << "data pose : " << pose_data << std::endl;
-//    printf("r_dis: %f, t_dis: %f \n", r_dis, t_dis);
-    v_rd_.push_back(r_dis);
-    v_td_.push_back(t_dis);
+    // printf("r_dis: %f, t_dis: %f \n", r_dis, t_dis);
+    // v_rd_.push_back(r_dis);
+    // v_td_.push_back(t_dis);
     return (r_dis < EPSILON_R) && (t_dis < EPSILON_T);
 }
 
 bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx_data, Pose &calib_result)
 {
-    // -------------------------------
-    // screw motion filter
     assert(idx_ref < NUM_OF_LASER);
     assert(idx_data < NUM_OF_LASER);
-    assert(frame_cnt_ == v_pose_[idx_ref].size());
-    if (!checkScrewMotion(*(v_pose_[idx_ref].end()-1), *(v_pose_[idx_data].end()-1)))
-    {
-        return false;
-    } else
-    {
-        indices_[idx_data].push_back(frame_cnt_-1);
-    }
 
-    // -------------------------------
-    // initial rotation
-    pose_cnt_ = indices_[idx_data].size();
-    // printf("********** pose_cnt %d\n", pose_cnt_);
-    Eigen::MatrixXd A(pose_cnt_ * 4, 4); // a cumulative Q matrix
-    A.setZero();
-    for (auto i = 0; i < pose_cnt_; i++)
+    // ------------------------------- initial rotation
+    if (pq_pose_.size() < WINDOW_SIZE) return false;
+    const size_t indice = pose_laser_add_.first;
+    const std::vector<Pose> &pose_laser = pose_laser_add_.second;
     {
-        Pose &pose_ref = v_pose_[idx_ref][indices_[idx_data][i]];
-        Pose &pose_data = v_pose_[idx_data][indices_[idx_data][i]];
+        const Pose &pose_ref = pose_laser[idx_ref];
+        const Pose &pose_data = pose_laser[idx_data];
 
         Eigen::Quaterniond r1 = pose_ref.q_;
         Eigen::Quaterniond r2 = calib_ext_[idx_data].q_ * pose_data.q_ * calib_ext_[idx_data].inverse().q_;
         double angular_distance = 180 / M_PI * r1.angularDistance(r2); // calculate delta_theta=|theta_1-theta_2|
-        // ROS_DEBUG("%d %f", i, angular_distance); 
         double huber = angular_distance > 5.0 ? 5.0 / angular_distance : 1.0;
 
         Eigen::Matrix4d L, R; // Q1 and Q2 to represent the quaternion representation
@@ -125,10 +131,9 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
         R.block<1, 3>(3, 0) = -q.transpose();
         R(3, 3) = w;
 
-        A.block<4, 4>(i * 4, 0) = huber * (L - R);
+        Q_[idx_data].block<4, 4>(indice * 4, 0) = huber * (L - R);
     }
-
-    Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeFullU | Eigen::ComputeFullV);
+    Eigen::JacobiSVD<Eigen::MatrixXd> svd(Q_[idx_data], Eigen::ComputeFullU | Eigen::ComputeFullV);
     //cout << svd.singularValues().transpose() << endl;
 
     if (PLANAR_MOVEMENT)
@@ -146,7 +151,7 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
             std::cout << "# ERROR: Quadratic equation cannot be solved due to negative determinant." << std::endl;
             return false;
         }
-        std::vector<Eigen::Quaterniond, Eigen::aligned_allocator<Eigen::Quaterniond> > q_yx;
+        std::vector<Eigen::Quaterniond> q_yx;
         q_yx.resize(2);
         double yaw[2];
         for (auto i = 0; i < 2; ++i)
@@ -171,8 +176,8 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
 
     Eigen::Vector3d rot_cov = svd.singularValues().tail<3>(); // singular value
     v_rot_cov_[idx_data].push_back(rot_cov(1));
-    printf("------------------- pose_cnt:%d, rot_cov:%f\n", pose_cnt_, rot_cov(1));
-    if (pose_cnt_ >= WINDOW_SIZE && rot_cov(1) > 0.25) // converage, the second smallest sigular value
+    printf("------------------- pose_cnt:%d, ref:%d, data:%d, rot_cov:%f\n", pq_pose_.size(), idx_ref, idx_data, rot_cov(1));
+    if (rot_cov(1) > 0.25) // converage, the second smallest sigular value
     {
         calib_result = calib_ext_[idx_data];
         setCovRotation(idx_data);
@@ -188,16 +193,6 @@ bool InitialExtrinsics::calibExTranslation(const size_t &idx_ref, const size_t &
 {
     assert(idx_ref < NUM_OF_LASER);
     assert(idx_data < NUM_OF_LASER);
-    assert(frame_cnt_ == v_pose_[idx_ref].size());
-    if (!checkScrewMotion(*(v_pose_[idx_ref].end()-1), *(v_pose_[idx_data].end()-1)))
-    {
-        return false;
-    } else
-    {
-        indices_[idx_data].push_back(frame_cnt_-1);
-    }
-    pose_cnt_ = indices_[idx_data].size();
-
     if (((PLANAR_MOVEMENT) && (calibExTranslationPlanar(idx_ref, idx_data))) ||
        ((!PLANAR_MOVEMENT) && (calibExTranslationNonPlanar(idx_ref, idx_data))))
     {
@@ -213,12 +208,12 @@ bool InitialExtrinsics::calibExTranslation(const size_t &idx_ref, const size_t &
 bool InitialExtrinsics::calibExTranslationNonPlanar(const size_t &idx_ref, const size_t &idx_data)
 {
     const Eigen::Quaterniond &q_zyx = calib_ext_[idx_data].q_;
-    Eigen::MatrixXd A = Eigen::MatrixXd::Zero(pose_cnt_ * 3, 3);
-    Eigen::MatrixXd b = Eigen::MatrixXd::Zero(pose_cnt_ * 3, 1);
-    for (size_t i = 0; i < pose_cnt_; i++)
+    Eigen::MatrixXd A = Eigen::MatrixXd::Zero(v_pose_.size() * 3, 3);
+    Eigen::MatrixXd b = Eigen::MatrixXd::Zero(v_pose_.size() * 3, 1);
+    for (size_t i = 0; i < v_pose_.size(); i++)
     {
-        Pose &pose_ref = v_pose_[idx_ref][indices_[idx_data][i]];
-        Pose &pose_data = v_pose_[idx_data][indices_[idx_data][i]];
+        const Pose &pose_ref = v_pose_[i][idx_ref];
+        const Pose &pose_data = v_pose_[i][idx_data];
         AngleAxisd ang_axis_ref(pose_ref.q_);
         AngleAxisd ang_axis_data(pose_data.q_);
         double t_dis = abs(pose_ref.t_.dot(ang_axis_ref.axis()) - pose_data.t_.dot(ang_axis_data.axis()));
@@ -235,12 +230,12 @@ bool InitialExtrinsics::calibExTranslationNonPlanar(const size_t &idx_ref, const
 bool InitialExtrinsics::calibExTranslationPlanar(const size_t &idx_ref, const size_t &idx_data)
 {
     const Eigen::Quaterniond &q_yx = calib_ext_[idx_data].q_;
-    Eigen::MatrixXd G = Eigen::MatrixXd::Zero(pose_cnt_ * 2, 4);
-    Eigen::MatrixXd w = Eigen::MatrixXd::Zero(pose_cnt_ * 2, 1);
-    for (auto i = 0; i < pose_cnt_; ++i)
+    Eigen::MatrixXd G = Eigen::MatrixXd::Zero(v_pose_.size() * 2, 4);
+    Eigen::MatrixXd w = Eigen::MatrixXd::Zero(v_pose_.size() * 2, 1);
+    for (size_t i = 0; i < v_pose_.size(); i++)
     {
-        Pose &pose_ref = v_pose_[idx_ref][indices_[idx_data][i]];
-        Pose &pose_data = v_pose_[idx_data][indices_[idx_data][i]];
+        const Pose &pose_ref = v_pose_[i][idx_ref];
+        const Pose &pose_data = v_pose_[i][idx_data];
         AngleAxisd ang_axis_ref(pose_ref.q_);
         AngleAxisd ang_axis_data(pose_data.q_);
         double t_dis = abs(pose_ref.t_.dot(ang_axis_ref.axis()) - pose_data.t_.dot(ang_axis_data.axis()));
@@ -250,9 +245,9 @@ bool InitialExtrinsics::calibExTranslationPlanar(const size_t &idx_ref, const si
         Eigen::Vector3d p = q_yx * (pose_data.t_ - pose_data.t_.dot(n) * n);
         Eigen::Matrix2d K;
         K << p(0), -p(1), p(1), p(0);
-        G.block<2,2>(i * 2, 0) = huber * J;
-        G.block<2,2>(i * 2, 2) = huber * K;
-        w.block<2,1>(i * 2, 0) = pose_ref.t_.block<2,1>(0,0);
+        G.block<2, 2>(i * 2, 0) = huber * J;
+        G.block<2, 2>(i * 2, 2) = huber * K;
+        w.block<2, 1>(i * 2, 0) = pose_ref.t_.block<2,1>(0,0);
     }
     Eigen::Vector4d m = G.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(w);
     Eigen::Vector3d x(-m(0), -m(1), 0);
@@ -289,40 +284,43 @@ void InitialExtrinsics::saveStatistics()
 {
     try
     {
-        ofstream fout(std::string(OUTPUT_FOLDER + "initialization.txt").c_str(), ios::out);
-        fout.setf(ios::fixed, ios::floatfield);
-        fout.precision(5);
-        // orientation
-        for (size_t i = 0; i < NUM_OF_LASER; i ++)
+        if (MLOAM_RESULT_SAVE)
         {
-            fout << 0 << ",";
-            for (auto iter = v_pose_[i].begin(); iter != v_pose_[i].end(); iter++)
+            ofstream fout(std::string(OUTPUT_FOLDER + "initialization.txt").c_str(), ios::out);
+            fout.setf(ios::fixed, ios::floatfield);
+            fout.precision(5);
+            // orientation
+            for (size_t i = 0; i < NUM_OF_LASER; i ++)
             {
-                fout << Eigen::AngleAxisd(iter->q_).angle() << ",";
-                if (iter == v_pose_[i].end() - 1) fout << std::endl;
+                fout << 0 << ",";
+                for (auto iter = v_pose_[i].begin(); iter != v_pose_[i].end(); iter++)
+                {
+                    fout << Eigen::AngleAxisd(iter->q_).angle() << ",";
+                    if (iter == v_pose_[i].end() - 1) fout << std::endl;
+                }
             }
-        }
-        // rot_cov
-        for (size_t i = 0; i < NUM_OF_LASER; i ++)
-        {
-            fout << 0 << ",";
-            for (auto iter = v_rot_cov_[i].begin(); iter != v_rot_cov_[i].end(); iter++)
+            // rot_cov
+            for (size_t i = 0; i < NUM_OF_LASER; i ++)
             {
-                fout << *iter << ",";
-                if (iter == v_rot_cov_[i].end() - 1) fout << std::endl;
+                fout << 0 << ",";
+                for (auto iter = v_rot_cov_[i].begin(); iter != v_rot_cov_[i].end(); iter++)
+                {
+                    fout << *iter << ",";
+                    if (iter == v_rot_cov_[i].end() - 1) fout << std::endl;
+                }
             }
-        }
-        // pos_cov
-        for (size_t i = 0; i < NUM_OF_LASER; i ++)
-        {
-            fout << 0 << ",";
-            for (auto iter = v_pos_cov_[i].begin(); iter != v_pos_cov_[i].end(); iter++)
+            // pos_cov
+            for (size_t i = 0; i < NUM_OF_LASER; i ++)
             {
-                fout << *iter << ",";
-                if (iter == v_pos_cov_[i].end() - 1) fout << std::endl;
+                fout << 0 << ",";
+                for (auto iter = v_pos_cov_[i].begin(); iter != v_pos_cov_[i].end(); iter++)
+                {
+                    fout << *iter << ",";
+                    if (iter == v_pos_cov_[i].end() - 1) fout << std::endl;
+                }
             }
+            fout.close();
         }
-        fout.close();
     }
     catch (const std::exception &ex)
     {
