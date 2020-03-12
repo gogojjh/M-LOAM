@@ -131,7 +131,7 @@ void FeatureExtract::matchCornerFromScan(const typename pcl::KdTreeFLANN<PointTy
             {
                 // if in the same scan line, continue
                 if (int(cloud_scan.points[j].intensity) >= closest_point_scan_id)
-                    continue; // TODO:
+                    continue; 
                 // if not in nearby scans, end the loop
                 if (int(cloud_scan.points[j].intensity) < (closest_point_scan_id - NEARBY_SCAN))
                     break;
@@ -427,12 +427,12 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
     std::vector<float> point_search_sq_dis(N_NEIGH, 0);
     Eigen::MatrixXd mat_A = Eigen::MatrixXd::Zero(N_NEIGH, 3);
     Eigen::MatrixXd mat_B = Eigen::MatrixXd::Constant(N_NEIGH, 1, -1);
+    const int num_neighbors = N_NEIGH;
 
     size_t cloud_size = cloud_data.points.size();
     features.resize(cloud_size);
     size_t cloud_cnt = 0;
     PointType point_ori, point_sel;
-    int num_neighbors = N_NEIGH;
     for (size_t i = 0; i < cloud_size; i++)
     {
         point_ori = cloud_data.points[i];
@@ -440,23 +440,35 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
         kdtree_surf_from_map->nearestKSearch(point_sel, num_neighbors, point_search_idx, point_search_sq_dis);
         if (point_search_sq_dis[num_neighbors - 1] < MIN_MATCH_SQ_DIS)
         {
-            // TODO: weighted least-square method to fit a plane
+            // TODO: may use uncertainty to extract features
+            std::vector<bool> point_select(num_neighbors, true);
+            // size_t field_size = boost::mpl::size<typename pcl::traits::fieldList<PointType>::type>::value;
+            // if (field_size == 11) 
+            // {
+            //     std::vector<double> v_trace(num_neighbors, 0);
+            //     for (int j = 0; j < num_neighbors; j++)
+            //     {
+            //         Eigen::VectorXf temporary = Eigen::VectorXf::Zero(field_size);
+            //         pcl::for_each_type<typename pcl::traits::fieldList<PointType>::type>(typename pcl::NdCopyPointEigenFunctor<PointType>(cloud_map.points[point_search_idx[j]], temporary));
+            //         v_trace[j] = temporary[10];
+            //     }
+            //     // sort idx according to trace: the before idx with smaller trace
+            //     for (size_t a = 0; a < num_neighbors - 1; a++)
+            //         for (size_t b = a + 1; b < num_neighbors; b++)
+            //             if (v_trace[a] > v_trace[b])
+            //             {
+            //                 std::swap(v_trace[a], v_trace[b]);
+            //                 std::swap(point_search_idx[a], point_search_idx[b]);
+            //             }
+            //     for (size_t j = floor(num_neighbors / 2); j < num_neighbors; j++) point_select[j] = false;
+            // }
+
             for (int j = 0; j < num_neighbors; j++)
             {
+                if (!point_select[j]) continue;
                 mat_A(j, 0) = cloud_map.points[point_search_idx[j]].x;
                 mat_A(j, 1) = cloud_map.points[point_search_idx[j]].y;
                 mat_A(j, 2) = cloud_map.points[point_search_idx[j]].z;
-                size_t field_size = boost::mpl::size<typename pcl::traits::fieldList<PointType>::type>::value;
-                if (field_size == 11)
-                {
-                    Eigen::VectorXf temporary = Eigen::VectorXf::Zero(field_size);
-                    pcl::for_each_type<typename pcl::traits::fieldList<PointType>::type>(typename pcl::NdCopyPointEigenFunctor<PointType>(cloud_map.points[point_search_idx[j]], temporary));
-                    double w = 2 - temporary[10];
-                    mat_A(j, 0) *= w;
-                    mat_A(j, 1) *= w;
-                    mat_A(j, 2) *= w;
-                    mat_B(j) *= w;
-                }
             }
             Eigen::Vector3d norm = mat_A.colPivHouseholderQr().solve(mat_B);
             double negative_OA_dot_norm = 1 / norm.norm();
@@ -466,6 +478,7 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
             bool plane_valid = true;
             for (int j = 0; j < num_neighbors; j++)
             {
+                if (!point_select[j]) continue;
                 if (fabs(norm(0) * cloud_map.points[point_search_idx[j]].x +
                          norm(1) * cloud_map.points[point_search_idx[j]].y +
                          norm(2) * cloud_map.points[point_search_idx[j]].z + negative_OA_dot_norm) > MIN_PLANE_DIS)
@@ -474,7 +487,7 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
                     break;
                 }
             }
-
+    
             if (plane_valid)
             {
                 // pd2 (distance) smaller, s larger
