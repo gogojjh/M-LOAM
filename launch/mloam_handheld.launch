@@ -9,7 +9,7 @@
     <arg name="run_mloam_map_with_up" default="true" /> <!-- uncertainty propagation -->    
     <arg name="mloam_result_save" default="0" />
     
-    <arg name="output_path" default="/home/jjiao/catkin_ws/src/localization/rpg_trajectory_evaluation/results/handheld/test/mloam_20200310/room_loop_filter_undistort/"/>
+    <arg name="output_path" default="/home/jjiao/catkin_ws/src/localization/rpg_trajectory_evaluation/results/handheld/test/mloam_20200310/room_loop_filter_undistort_odom/"/>
     <arg name="mloam_gt_path" default="stamped_groundtruth.txt" />    
     <arg name="mloam_odom_path" default="stamped_mloam_odom_estimate.txt" />
     <arg name="mloam_map_path" default="stamped_mloam_map_estimate.txt" /> 

@@ -507,6 +507,7 @@ void process()
 				Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
 				pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
 				evalPointUncertainty(point_sel, cov_point, pose_ext[idx], cov_ext[idx]);
+				if (!UNCER_PROPA_ON) cov_point = COV_MEASUREMENT;
 				if (cov_point.trace() <= TRACE_THRESHOLD_BEFORE_MAPPING)
 				{
 					PointIWithCov point_cov(point_ori, cov_point.cast<float>());
@@ -520,6 +521,7 @@ void process()
 				Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
 				pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
 				evalPointUncertainty(point_sel, cov_point, pose_ext[idx], cov_ext[idx]);
+				if (!UNCER_PROPA_ON) cov_point = COV_MEASUREMENT;
 				if (cov_point.trace() <= TRACE_THRESHOLD_BEFORE_MAPPING)
 				{
 					PointIWithCov point_cov(point_ori, cov_point.cast<float>());
@@ -588,10 +590,7 @@ void process()
 								const Eigen::Vector3d &p_data = feature.point_;
 								const Eigen::Vector4d &coeff_ref = feature.coeffs_;
 								Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
-								if (UNCER_PROPA_ON)
-								{
-									extractCov(laser_cloud_corner_split_cov[n].points[idx], cov_matrix);
-								}
+								extractCov(laser_cloud_corner_split_cov[n].points[idx], cov_matrix);
 								LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(p_data, coeff_ref, cov_matrix);
 								ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
 								res_ids_proj.push_back(res_id);
@@ -617,10 +616,7 @@ void process()
 								const Eigen::Vector3d &p_data = feature.point_;
 								const Eigen::Vector4d &coeff_ref = feature.coeffs_;
 								Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
-								if (UNCER_PROPA_ON)
-								{
-									extractCov(laser_cloud_surf_split_cov[n].points[idx], cov_matrix);
-								}
+								extractCov(laser_cloud_surf_split_cov[n].points[idx], cov_matrix);
 								LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(p_data, coeff_ref, cov_matrix);
 								ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
 								res_ids_proj.push_back(res_id);
@@ -685,6 +681,7 @@ void process()
 					Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
 					pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
 					evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
+					if (!UNCER_PROPA_ON) cov_point = COV_MEASUREMENT;
 					if (cov_point.trace() > TRACE_THRESHOLD_AFTER_MAPPING) continue;
 					pointAssociateToMap(point_ori, point_cov, pose_wmap_curr);
 					updateCov(point_cov, cov_point);
@@ -712,6 +709,7 @@ void process()
 					Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
 					pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
 					evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
+					if (!UNCER_PROPA_ON) cov_point = COV_MEASUREMENT;
 					if (cov_point.trace() > TRACE_THRESHOLD_AFTER_MAPPING) continue;
 					pointAssociateToMap(point_ori, point_cov, pose_wmap_curr);
 					updateCov(point_cov, cov_point);
@@ -1012,7 +1010,7 @@ int main(int argc, char **argv)
         std::remove(MLOAM_MAP_PATH.c_str());
     }	
 	UNCER_PROPA_ON = std::stoi(argv[5]);
-	printf("uncertainty propagation switch (0/1): %d\n", UNCER_PROPA_ON);
+	printf("uncertainty propagation on (0/1): %d\n", UNCER_PROPA_ON);
 
 	down_size_filter_corner.setLeafSize(MAP_CORNER_RES, MAP_CORNER_RES,MAP_CORNER_RES);
 	down_size_filter_surf.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
