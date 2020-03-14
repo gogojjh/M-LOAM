@@ -1,30 +1,36 @@
 <launch>
 
     <arg name="bag_file_use" default="true" />
-    <arg name="config_file" default="$(find mloam)/../config/config_gz_bay.yaml" />
+    <arg name="config_file" default="$(find mloam)/../config/config_realvehicle.yaml" />
+    <arg name="data_path" default="/Monster/dataset/UDI_dataset/xfl_20200301/short_test/" />
 
     <arg name="run_mloam" default="true" />
-    <arg name="run_aloam" default="true" />
+    <arg name="run_aloam" default="false" />
 
     <arg name="mloam_result_save" default="0"/>
-    <arg name="output_path" default="/home/jjiao/catkin_ws/src/localization/rpg_trajectory_evaluation/results/simu_jackal_mloam/test/mloam/SR02/"/>
+    <arg name="output_path" default="xxx"/>
     <arg name="mloam_odom_path" default="stamped_mloam_odom_estimate.txt"/>
     <arg name="mloam_map_path" default="stamped_mloam_map_estimate.txt"/>
     <arg name="mloam_gt_path" default="stamped_groundtruth.txt"    />
 
     <param name="use_sim_time" value="true" />
 
-    <!-- Ros Bag -->
-    <group if="$(arg bag_file_use)">
-        <arg name="bag_file" default="/Monster/dataset/lidar_calibration/guangzhou_bay_20191231/1226ori_lidar.bag" />
-        <node pkg="rosbag" type="play" name="rosbag" args="--clock --pause -r 1 $(arg bag_file)" />
-    </group>
-
     <group if="$(arg run_mloam)">
-        <node pkg="mloam" type="mloam_node_rt" name="mloam_node_rt" 
-            args="$(arg config_file) $(arg mloam_result_save) $(arg output_path) $(arg mloam_odom_path) $(arg mloam_gt_path)" />
-        <!-- <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" 
-            args="$(arg config_file) $(arg mloam_result_save) $(arg mloam_map_path)" output="screen"/> -->
+        <node pkg="mloam" type="mloam_node_rv" name="mloam_node_rv" 
+            args="$(arg config_file) $(arg data_path)
+                  $(arg mloam_result_save) $(arg output_path) 
+                  $(arg mloam_odom_path) $(arg mloam_gt_path)">
+            <remap from="/base_pose_gt" to="/Robot_2/pose"/>
+        </node>
+
+        <!-- <group if="$(arg run_mloam_map_with_up)">
+            <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" 
+                args="$(arg config_file) $(arg mloam_result_save) $(arg output_path) $(arg mloam_map_path) 1" output="screen"/>
+        </group>
+        <group unless="$(arg run_mloam_map_with_up)">
+            <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" 
+                args="$(arg config_file) $(arg mloam_result_save) $(arg output_path) $(arg mloam_map_wo_up_path) 0" output="screen"/>        
+        </group> -->
     </group>
 
     <!-- publish static tf -->

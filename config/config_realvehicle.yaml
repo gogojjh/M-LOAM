@@ -1,19 +1,11 @@
 %YAML:1.0
 
-###############################################
-#common parameters
-mloam_result_save: 1
-output_path: "/home/jjiao/catkin_ws/src/localization/rpg_trajectory_evaluation/results/gz_bay/test/mloam/test_mloam_gz_bay/"
-mloam_odom_path: "stamped_mloam_odom_estimate.txt"
-mloam_map_path: "stamped_mloam_map_estimate.txt"
-mloam_gt_path: "stamped_groundtruth.txt"
-
 #Multiple thread support
 multiple_thread: 0
 
 #optimization PARAMETERS
 max_solver_time: 0.07  # max solver itration time (s), to guarantee real time
-max_num_iterations: 10   # max solver itrations, to guarantee real time
+max_num_iterations: 15   # max solver itrations, to guarantee real time
 keyframe_parallax: 0 # keyframe selection threshold (pixel)
 
 evaluate_residual: 1
@@ -21,37 +13,38 @@ optimal_odometry: 1
 
 ###############################################
 # laser parameters
-num_of_laser: 2
+num_of_laser: 4
 n_scans: 16
 
-# segmentation parameters
+# segmmentation
 segment_cloud: 1
 horizon_scan: 1800
-min_cluster_size: 5
+min_cluster_size: 20
 min_line_size: 10
 segment_valid_point_num: 5
 segment_valid_line_num: 3
+segment_theta: 0.53
 
 # window sizes
-window_size: 10
-opt_window_size: 4
+window_size: 5
+opt_window_size: 3
 
 # Extrinsic parameter between IMU and Camera.
-estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+estimate_extrinsic: 2   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
 optimal_extrinsic: 0
 
 body_T_laser: !!opencv-matrix
-   rows: 2
+   rows: 4
    cols: 7
    dt: d
-   data: [0, 0, 0, 1, 0, 0, 0,
-          0.031, 0.028, 0.999, -0.021, -14.331, 0.227, 0.420] # qx qy qz qw px py pz
-   # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-   #        0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220] # gt
-
-# for full tf: /opt/ros/kinetic/share/unity-lans-gz/param/lidar.yaml
+# no prior
+# qx qy qz qw px py pz
+   data: [0, 0, 0, 1, 0, 0, 0, 
+          0, 0, 0, 1, 0, 0, 0,
+          0, 0, 0, 1, 0, 0, 0,
+          0, 0, 0, 1, 0, 0, 0] 
 
 #unsynchronization parameters
 estimate_td: 0                      # 0 have an accurate time offset among sensors
@@ -65,20 +58,24 @@ td: !!opencv-matrix                 # initial value of time offset. unit: s. rea
 
 idx_ref: 0
 
-cloud0_topic: "/velodyne_second/points_raw"
-cloud1_topic: "/velodyne_first/points_raw"
+cloud_topic: !!opencv-matrix
+   rows: 1
+   cols: 4
+   dt: d
+   data: ["/top/velodyne_points", "/front/velodyne_points", "/left/velodyne_points", "/right/velodyne_points"]
 
 laser_sync_threshold: 0.07
-roi_range: 0.5
+roi_range: 1
 roi_range_mapping: 15
 
 # odometry parameters
 scan_period: 0.1
 distance_sq_threshold: 25
 nearby_scan: 2.5
+distortion: 0
 
 # movement type
-planar_movement: 1
+planar_movement: 0
 
 # feature corresponding paprameters
 min_match_sq_dis: 1.0
@@ -87,9 +84,9 @@ min_plane_dis: 0.2
 # factor
 marginalization_factor: 1
 point_plane_factor: 1
-point_edge_factor: 1
+point_edge_factor: 0
 prior_factor: 0
-prior_factor_pos: 0.5
+prior_factor_pos: 5
 prior_factor_rot: 1
 check_jacobian: 0
 
@@ -98,17 +95,33 @@ pcl_viewer_normal_ratio: 10
 
 # calibration converage parameters
 n_cumu_feature: 10
-eig_initial: 200
-eig_thre_calib: 500
+eig_initial: 120
+eig_thre_calib: 400
 n_calib: 10
 
-# mapping uncertainty
-UCT_CALIB: !!opencv-matrix
-   rows: 1
-   cols: 9
+# mapping 
+map_corner_res: 0.2
+map_surf_res: 0.2
+map_eig_thre: 200
+
+# uncertainty parameter
+# translation, rotation, point (s, phi, zeta)
+uct_ext: !!opencv-matrix
+   rows: 4
+   cols: 6
    dt: d
-   data: [0.00, 0.00, 0.00, 0.000, 0.000, 0.000, 0.0025, 0.0025, 0.0025] # rotation, translation, point
+   data: [0, 0, 0, 0, 0, 0,
+          0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01,
+          0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01,
+          0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01] 
+
+uct_measurement: !!opencv-matrix
+   rows: 1
+   cols: 3
+   dt: d
+   data: [0.0025, 0.0025, 0.0025]
 
 trace_threshold_before_mapping: 1
 trace_threshold_after_mapping: 0.3
-#
+
+skip_num_odom: 1

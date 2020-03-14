@@ -29,7 +29,7 @@ find_package(catkin REQUIRED COMPONENTS
 #message(${catkin_INCLUDE_DIRS})
 
 find_package(OpenCV REQUIRED)
-find_package(PCL 1.8 REQUIRED)
+find_package(PCL REQUIRED)
 find_package(Ceres REQUIRED)
 find_package(Sophus REQUIRED)
 # find_package(glog REQUIRED)
@@ -85,8 +85,8 @@ target_link_libraries(mloam_node_sr mloam_lib_1 mloam_lib_2)
 add_executable(mloam_node_rhd src/rosNodeRHD.cpp)
 target_link_libraries(mloam_node_rhd mloam_lib_1 mloam_lib_2)
 
-add_executable(mloam_node_rt src/rosNodeRT.cpp)
-target_link_libraries(mloam_node_rt mloam_lib_1 mloam_lib_2)
+add_executable(mloam_node_rv src/rosNodeRV.cpp)
+target_link_libraries(mloam_node_rv mloam_lib_1 mloam_lib_2)
 
 add_executable(lidar_mapper src/lidarMapper/lidar_mapper.cpp)
 target_link_libraries(lidar_mapper mloam_lib_1 mloam_lib_2)
@@ -95,10 +95,12 @@ target_link_libraries(lidar_mapper mloam_lib_1 mloam_lib_2)
 #add_executable(test_ceres ../test/test_ceres.cpp)
 #target_link_libraries(test_ceres ${catkin_LIBRARIES} ${PCL_LIBS})
 
-add_executable(test_merge_pointcloud ../test/test_merge_pointcloud.cpp)
-target_link_libraries(test_merge_pointcloud ${catkin_LIBRARIES} ${PCL_LIBS})
+#add_executable(test_merge_pointcloud ../test/test_merge_pointcloud.cpp)
+#target_link_libraries(test_merge_pointcloud ${catkin_LIBRARIES} ${PCL_LIBS})
 
-add_executable(test_pointiwithcov ../test/test_pointiwithcov.cpp)
-target_link_libraries(test_pointiwithcov ${catkin_LIBRARIES} ${PCL_LIBS})
+#add_executable(test_pointiwithcov ../test/test_pointiwithcov.cpp)
+#target_link_libraries(test_pointiwithcov ${catkin_LIBRARIES} ${PCL_LIBS})
 
+add_executable(test_parse_bag ../test/test_parse_bag.cpp)
+target_link_libraries(test_parse_bag ${catkin_LIBRARIES} ${PCL_LIBS})
 #

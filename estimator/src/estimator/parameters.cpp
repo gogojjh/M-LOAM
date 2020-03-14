@@ -48,6 +48,8 @@ int SEGMENT_VALID_LINE_NUM;
 float SEGMENT_THETA;
 
 std::string CLOUD0_TOPIC, CLOUD1_TOPIC;
+std::vector<std::string> CLOUD_TOPIC;
+
 float LASER_SYNC_THRESHOLD;
 double ROI_RANGE;
 double ROI_RANGE_MAPPING;
@@ -126,9 +128,6 @@ void readParameters(std::string config_file)
         std::cerr << "ERROR: Wrong path to settings" << std::endl;
     }
 
-    fsSettings["cloud0_topic"] >> CLOUD0_TOPIC;
-    fsSettings["cloud1_topic"] >> CLOUD1_TOPIC;
-
     MULTIPLE_THREAD = fsSettings["multiple_thread"];
 
     SOLVER_TIME = fsSettings["max_solver_time"];
@@ -136,11 +135,11 @@ void readParameters(std::string config_file)
 
     NUM_OF_LASER = fsSettings["num_of_laser"];
     printf("laser number %d\n", NUM_OF_LASER);
-    if(NUM_OF_LASER != 1 && NUM_OF_LASER != 2)
-    {
-        printf("num_of_cam should be 1 or 2\n");
-        assert(0);
-    }
+
+    cv::Mat cv_cloud_topic;
+    fsSettings["cloud_topic"] >> cv_cloud_topic;
+    CLOUD_TOPIC.resize(NUM_OF_LASER);
+    for (int i = 0; i < NUM_OF_LASER; i++) CLOUD_TOPIC[i] = cv_cloud_topic.ptr<std::string>(0, i);
 
     WINDOW_SIZE = fsSettings["window_size"];
     OPT_WINDOW_SIZE = fsSettings["opt_window_size"];

@@ -213,9 +213,9 @@ void printStatistics(const Estimator &estimator, double t)
         {
             ofstream fout(MLOAM_GT_PATH.c_str(), ios::out);
             fout.setf(ios::fixed, ios::floatfield);
-            for (auto i = 0; i < estimator.laser_path_gt_.poses.size(); i++)
+            for (auto i = 0; i < estimator.laser_gt_path_.poses.size(); i++)
             {
-                geometry_msgs::PoseStamped laser_pose = estimator.laser_path_gt_.poses[i];
+                geometry_msgs::PoseStamped laser_pose = estimator.laser_gt_path_.poses[i];
                 fout.precision(15);
                 fout << laser_pose.header.stamp.toSec() << " ";
                 fout.precision(8);

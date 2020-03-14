@@ -74,6 +74,8 @@ extern int SEGMENT_VALID_LINE_NUM;
 extern float SEGMENT_THETA;
 
 extern std::string CLOUD0_TOPIC, CLOUD1_TOPIC;
+extern std::vector<std::string> CLOUD_TOPIC;
+
 extern float LASER_SYNC_THRESHOLD;
 extern double ROI_RANGE;
 extern double ROI_RANGE_MAPPING;

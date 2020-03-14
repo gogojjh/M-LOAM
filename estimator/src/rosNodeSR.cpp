@@ -99,7 +99,7 @@ void sync_process()
         if(NUM_OF_LASER == 2)
         {
             pcl::PointCloud<pcl::PointXYZ> laser_cloud0, laser_cloud1;
-            std::vector<pcl::PointCloud<pcl::PointXYZ> >v_laser_cloud;
+            std::vector<pcl::PointCloud<pcl::PointXYZ> > v_laser_cloud;
             std_msgs::Header header;
             double time = 0;
             m_buf.lock();
@@ -202,7 +202,7 @@ void odom_gt_callback(const nav_msgs::Odometry &odom_msg)
     laser_path.header = laser_pose.header;
     laser_path.poses.push_back(laser_pose);
     pub_laser_path.publish(laser_path);
-    estimator.laser_path_gt_ = laser_path;
+    estimator.laser_gt_path_ = laser_path;
 }
 
 int main(int argc, char **argv)
@@ -223,10 +223,9 @@ int main(int argc, char **argv)
     ros::NodeHandle n("~");
     ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
 
+    // 
     string config_file = argv[1];
     cout << "config_file: " << argv[1] << endl;
-    readParameters(config_file);
-    estimator.setParameter();
 
     MLOAM_RESULT_SAVE = std::stoi(argv[2]);
     OUTPUT_FOLDER = argv[3];
@@ -246,7 +245,20 @@ int main(int argc, char **argv)
     }
     ROS_WARN("waiting for cloud...");
 
+    if (NUM_OF_LASER > 2)
+    {
+        printf("not support > 2 cases");
+        ROS_BREAK();
+        return 0;
+    }
+
+    // ******************************************
+    readParameters(config_file);
+    estimator.setParameter();
     registerPub(n);
+
+    CLOUD0_TOPIC = CLOUD_TOPIC[0];
+    CLOUD1_TOPIC = CLOUD_TOPIC[1];
     ros::Subscriber sub_cloud0 = n.subscribe(CLOUD0_TOPIC, 100, cloud0_callback);
     ros::Subscriber sub_cloud1 = n.subscribe(CLOUD1_TOPIC, 100, cloud1_callback);
     ros::Subscriber sub_restart = n.subscribe("/mlod_restart", 100, restart_callback);

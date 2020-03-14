@@ -131,7 +131,7 @@ class Estimator
     std::vector<double> tdbl_;
     std::vector<Eigen::Matrix<double, 6, 6> > covbl_;
 
-    nav_msgs::Path laser_path_gt_;
+    nav_msgs::Path laser_gt_path_;
 
     // slide window
     // xx[cir_buf_cnt_] indicates the newest variables and measurements
