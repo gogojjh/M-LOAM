@@ -12,6 +12,7 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/common/transforms.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl/ros/conversions.h>
 
 #include <iostream>
 

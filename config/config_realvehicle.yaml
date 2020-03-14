@@ -52,17 +52,17 @@ estimate_td: 0                      # 0 have an accurate time offset among senso
 
 td: !!opencv-matrix                 # initial value of time offset. unit: s. readed image clock + td = real image clock (IMU clock)
    rows: 1
-   cols: 2
+   cols: 4
    dt: d
-   data: [0, 0]
+   data: [0, 0, 0, 0]
 
 idx_ref: 0
 
-cloud_topic: !!opencv-matrix
-   rows: 1
-   cols: 4
-   dt: d
-   data: ["/top/velodyne_points", "/front/velodyne_points", "/left/velodyne_points", "/right/velodyne_points"]
+cloud_topic:
+   - "/top/velodyne_points"
+   - "/front/velodyne_points"
+   - "/left/velodyne_points"
+   - "/right/velodyne_points"
 
 laser_sync_threshold: 0.07
 roi_range: 1

@@ -136,10 +136,15 @@ void readParameters(std::string config_file)
     NUM_OF_LASER = fsSettings["num_of_laser"];
     printf("laser number %d\n", NUM_OF_LASER);
 
-    cv::Mat cv_cloud_topic;
-    fsSettings["cloud_topic"] >> cv_cloud_topic;
+    cv::FileNode node_cloud_topic = fsSettings["cloud_topic"];
+    int cnt = 0;
     CLOUD_TOPIC.resize(NUM_OF_LASER);
-    for (int i = 0; i < NUM_OF_LASER; i++) CLOUD_TOPIC[i] = cv_cloud_topic.ptr<std::string>(0, i);
+    for (auto iter = node_cloud_topic.begin(); iter != node_cloud_topic.end(); iter++)
+    {
+        CLOUD_TOPIC[cnt] = (std::string)*iter;
+        printf("cloud_topic: %s\n", CLOUD_TOPIC[cnt].c_str());
+        cnt++;
+    }
 
     WINDOW_SIZE = fsSettings["window_size"];
     OPT_WINDOW_SIZE = fsSettings["opt_window_size"];
@@ -237,9 +242,9 @@ void readParameters(std::string config_file)
     // mapping parameter
     MAP_CORNER_RES = fsSettings["map_corner_res"];
     MAP_SURF_RES = fsSettings["map_surf_res"];
-    std::cout << "map corner resolution:" << MAP_CORNER_RES << ", surf resolutionl: " << MAP_SURF_RES << std::endl;
-
     MAP_EIG_THRE = fsSettings["map_eig_thre"];
+
+    printf("map corner resolution:%f, surf resolution:%f\n", MAP_CORNER_RES, MAP_SURF_RES);
 
     cv::Mat cv_uct;
     COV_EXT.resize(NUM_OF_LASER);
@@ -262,7 +267,7 @@ void readParameters(std::string config_file)
 
     SKIP_NUM_ODOM = fsSettings["skip_num_odom"];
     if (SKIP_NUM_ODOM == 0) SKIP_NUM_ODOM = 1;
-    std::cout << "Mapping " << SKIP_NUM_ODOM << "hz" << std::endl;
+    printf("Mapping as %d hz\n", SKIP_NUM_ODOM);
 
     fsSettings.release();
 }

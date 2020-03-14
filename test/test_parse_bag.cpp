@@ -16,15 +16,19 @@
 #include <pcl/common/transforms.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include <queue>
+#include <vector>
 #include <iostream>
 
 using namespace std;
 
 typedef sensor_msgs::PointCloud2 LidarMsgType;
-typedef message_filters::sync_policies::ApproximateTime<LidarMsgType, LidarMsgType> LidarSyncPolicy;
+typedef message_filters::sync_policies::ApproximateTime<LidarMsgType, LidarMsgType, LidarMsgType, LidarMsgType> LidarSyncPolicy;
 typedef message_filters::Subscriber<LidarMsgType> LidarSubType;
 
 std::vector<double> cloud_time_list;
+std::vector<double> gps_time_list;
+std::vector<double> gt_odom_time_list;
 string data_path;
 
 queue<nav_msgs::OdometryConstPtr> gt_odom_buf;
@@ -37,83 +41,93 @@ void process(const sensor_msgs::PointCloud2ConstPtr& pc2_top,
              const sensor_msgs::PointCloud2ConstPtr& pc2_right)             
 {
     pcl::PointCloud<pcl::PointXYZ> cloud;
-    double cloud_time = pc2_top->header.stamp.toSec;
+    double cloud_time = pc2_top->header.stamp.toSec();
     cloud_time_list.push_back(cloud_time);
+    printf("receive cloud at %F\n", cloud_time);
     size_t frame_cnt = cloud_time_list.size() - 1;
     {
         stringstream ss;
-        ss << data_path << "cloud_0/" << setfill('0') << setw(6) << frame_cnt << ".pcd";
+        ss << data_path << "cloud_0/data/" << setfill('0') << setw(6) << frame_cnt << ".pcd";
         pcl::fromROSMsg(*pc2_top, cloud);
         pcl::io::savePCDFileASCII(ss.str(), cloud);
     }
     {
         stringstream ss;
-        ss << data_path << "cloud_1/" << setfill('0') << setw(6) << frame_cnt << ".pcd";
+        ss << data_path << "cloud_1/data/" << setfill('0') << setw(6) << frame_cnt << ".pcd";
         pcl::fromROSMsg(*pc2_front, cloud);
         pcl::io::savePCDFileASCII(ss.str(), cloud);
     }    
     {
         stringstream ss;
-        ss << data_path << "cloud_2/" << setfill('0') << setw(6) << frame_cnt << ".pcd";
+        ss << data_path << "cloud_2/data/" << setfill('0') << setw(6) << frame_cnt << ".pcd";
         pcl::fromROSMsg(*pc2_left, cloud);
         pcl::io::savePCDFileASCII(ss.str(), cloud);
     }    
     {
         stringstream ss;
-        ss << data_path << "cloud_3/" << setfill('0') << setw(6) << frame_cnt << ".pcd";
+        ss << data_path << "cloud_3/data/" << setfill('0') << setw(6) << frame_cnt << ".pcd";
         pcl::fromROSMsg(*pc2_right, cloud);
         pcl::io::savePCDFileASCII(ss.str(), cloud);
     }
 
     {
-        while (!gps_buf.empty() && gps_buf.top()->header.stamp.toSec() < cloud_time)
+        while (!gps_buf.empty() && (gps_buf.front()->header.stamp.toSec() < cloud_time - 0.07))
         {
             gps_buf.pop();
         }
-        stringstream ss;
-        ss << data_path << "gps/" << setfill('0') << setw(6) << frame_cnt << ".txt";
-        ofstream gps_file(ss.str());
-        sensor_msgs::NavSatFix gps_position = gps_buf.top();
-        gps_file << gps_position->status.status << " "
-                 << gps_position->status.service << " "
-                 << gps_position->latitude << " "
-                 << gps_position->longitude << " "
-                 << gps_position->altitude << " "
-                 << gps_position->position_covariance[0] << " "
-                 << gps_position->position_covariance[4] << " "
-                 << gps_position->position_covariance[8] << std::endl;
-        gps_file.close();
-        gps_buf.pop();
+        if (!gps_buf.empty())
+        {
+            stringstream ss;
+            ss << data_path << "gps/data/" << setfill('0') << setw(6) << frame_cnt << ".txt";
+            ofstream gps_file(ss.str());
+            sensor_msgs::NavSatFixConstPtr gps_position = gps_buf.front();
+            // std::cout << int(gps_position->status.status) << std::endl;
+            gps_file << int(gps_position->status.status) << " "
+                    << int(gps_position->status.service) << " "
+                    << gps_position->latitude << " "
+                    << gps_position->longitude << " "
+                    << gps_position->altitude << " "
+                    << gps_position->position_covariance[0] << " "
+                    << gps_position->position_covariance[4] << " "
+                    << gps_position->position_covariance[8] << std::endl;
+            gps_time_list.push_back(gps_buf.front()->header.stamp.toSec());
+            gps_file.close();
+            gps_buf.pop();
+        }
     }    
 
 
     {
-        while (!gt_odom_buf.empty() && gt_odom_buf.top()->header.stamp.toSec() < cloud_time)
+        while (!gt_odom_buf.empty() && (gt_odom_buf.front()->header.stamp.toSec() < cloud_time - 0.07))
         {
             gt_odom_buf.pop();
         }
-        stringstream ss;
-        ss << data_path << "gt_odom/" << setfill('0') << setw(6) << frame_cnt << ".txt";
-        ofstream gt_odom_file(ss.str());
-        nav_msgs::Odometry gt_odom = gt_odom_buf.top();
-        gt_odom_file << gt_odom->pose.pose.position.x << " "
-                     << gt_odom->pose.pose.position.y << " "
-                     << gt_odom->pose.pose.position.z << " "
-                     << gt_odom->pose.pose.orientation.x << " "
-                     << gt_odom->pose.pose.orientation.y << " "
-                     << gt_odom->pose.pose.orientation.z << " "
-                     << gt_odom->pose.pose.orientation.w << std::endl;
-        gt_odom_file.close();
-        gt_odom_buf.pop();
+        if (!gt_odom_buf.empty())
+        {
+            stringstream ss;
+            ss << data_path << "gt_odom/data/" << setfill('0') << setw(6) << frame_cnt << ".txt";
+            ofstream gt_odom_file(ss.str());
+            nav_msgs::OdometryConstPtr gt_odom = gt_odom_buf.front();
+            gt_odom_file << gt_odom->pose.pose.position.x << " "
+                        << gt_odom->pose.pose.position.y << " "
+                        << gt_odom->pose.pose.position.z << " "
+                        << gt_odom->pose.pose.orientation.x << " "
+                        << gt_odom->pose.pose.orientation.y << " "
+                        << gt_odom->pose.pose.orientation.z << " "
+                        << gt_odom->pose.pose.orientation.w << std::endl;
+            gt_odom_time_list.push_back(gt_odom_buf.front()->header.stamp.toSec());
+            gt_odom_file.close();
+            gt_odom_buf.pop();
+        }
     }    
 }
 
-void gps_callback(sensor_msgs::NavSatFixConstPtr &gps_msg)
+void gps_callback(const sensor_msgs::NavSatFixConstPtr &gps_msg)
 {
     gps_buf.push(gps_msg);
 }
 
-void gt_odom_callback(nav_msgs::OdometryConstPtr &odom_msg)
+void gt_odom_callback(const nav_msgs::OdometryConstPtr &odom_msg)
 {
     gt_odom_buf.push(odom_msg);
 }
@@ -157,12 +171,30 @@ int main(int argc, char** argv)
 
     ofstream cloud_time_file(std::string(data_path + "cloud_0/timestamps.txt").c_str());
     cloud_time_file.setf(ios::fixed, ios::floatfield);
-    for (size_t i = 0; i < cloud_time_list; i++)
+    for (size_t i = 0; i < cloud_time_list.size(); i++)
     {
         cloud_time_file.precision(15);
         cloud_time_file << cloud_time_list[i] << std::endl;
     }
     cloud_time_file.close();
+
+    ofstream gps_time_file(std::string(data_path + "gps/timestamps.txt").c_str());
+    gps_time_file.setf(ios::fixed, ios::floatfield);
+    for (size_t i = 0; i < gps_time_list.size(); i++)
+    {
+        gps_time_file.precision(15);
+        gps_time_file << gps_time_list[i] << std::endl;
+    }
+    gps_time_file.close();
+
+    ofstream gt_odom_time_file(std::string(data_path + "gt_odom/timestamps.txt").c_str());
+    gt_odom_time_file.setf(ios::fixed, ios::floatfield);
+    for (size_t i = 0; i < gt_odom_time_list.size(); i++)
+    {
+        gt_odom_time_file.precision(15);
+        gt_odom_time_file << gt_odom_time_list[i] << std::endl;
+    }
+    gt_odom_time_file.close();
 
     return 0;
 }

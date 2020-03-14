@@ -22,7 +22,9 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
+#include <pcl/common/common.h> 
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl/ros/conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/filters/voxel_grid.h>
@@ -53,14 +55,15 @@ Estimator estimator;
 // laser path groundtruth
 nav_msgs::Path laser_gt_path;
 ros::Publisher pub_laser_gt_path;
-ros::Publisher pub_laser_gt_odom
+ros::Publisher pub_laser_gt_odom;
+ros::Publisher pub_gps;
 
 // laser cloud
 std::vector<ros::Publisher> pub_laser_cloud_list;
 
 Pose pose_world_ref_ini;
 
-void preprocessCloud(pcl::PointCloud<pcl::PointXYZ> &laser_cloud)
+void processCloud(pcl::PointCloud<pcl::PointXYZ> &laser_cloud)
 {
     std::vector<int> indices;
     pcl::removeNaNFromPointCloud(laser_cloud, laser_cloud, indices);
@@ -127,7 +130,9 @@ int main(int argc, char **argv)
         pub_laser_cloud_list[i] = n.advertise<sensor_msgs::PointCloud2>(std::string("/laser_cloud_") + std::to_string(i), 100);
     pub_laser_gt_odom = n.advertise<nav_msgs::Odometry>("/laser_gt_odom", 100);
     pub_laser_gt_path = n.advertise<nav_msgs::Path>("/laser_gt_path", 100);
+    pub_gps = n.advertise<sensor_msgs::NavSatFix>("/novatel718d/pos", 100);
 
+    std::thread cloud_visualizer_thread;
     if (PCL_VIEWER)
     {
         cloud_visualizer_thread = std::thread(&PlaneNormalVisualizer::Spin, &estimator.plane_normal_vis_);
@@ -138,7 +143,7 @@ int main(int argc, char **argv)
     FILE *file;
 
     // read cloud list
-    file = std::fopen((data_path + "cloud_00/timestamps.txt").c_str(), "r");
+    file = std::fopen((data_path + "cloud_0/timestamps.txt").c_str(), "r");
     if (!file)
     {
         printf("cannot find file: %stimes.txt\n", data_path.c_str());
@@ -170,10 +175,10 @@ int main(int argc, char **argv)
 	std::fclose(file);            
 
     // read GT list
-    file = std::fopen((data_path + "groundtruth/timestamps.txt").c_str(), "r");
+    file = std::fopen((data_path + "gt_odom/timestamps.txt").c_str(), "r");
     if (!file)
     {
-        printf("cannot find file: %sgroundtruth/timestamps.txt\n", data_path.c_str());
+        printf("cannot find file: %sgt_odom/timestamps.txt\n", data_path.c_str());
         ROS_BREAK();
         return 0;
     }
@@ -193,16 +198,17 @@ int main(int argc, char **argv)
 		if (ros::ok())
 		{
             double cloud_time = cloud_time_list[i];
-			printf("\nprocess cloud %d\n", (int)i);
-			stringstream ss;
-
+			printf("process cloud %d\n", (int)i);
+            stringstream ss;
+            ss << setfill('0') << setw(6) << i;
             // cloud
             for (size_t j = 0; j < NUM_OF_LASER; j++)
             {
-			    ss << "cloud_" << j << "/" << setfill('0') << setw(6) << i << ".pcd"; 
-                string cloud_path = data_path + ss.str();
+                stringstream ss_file;
+                ss_file << "cloud_" << j << "/data/" << ss.str() << ".pcd";
+                string cloud_path = data_path + ss_file.str();
                 //printf("%lu  %f \n", i, cloud_time_list[i]);
-                // printf("%s\n", cloud_path.c_str() );
+                // printf("%s\n", cloud_path.c_str());
                 if (pcl::io::loadPCDFile<pcl::PointXYZ>(cloud_path, laser_cloud_list[j]) == -1)
                 {
                     printf("Couldn't read file %s\n", cloud_path.c_str());
@@ -211,8 +217,8 @@ int main(int argc, char **argv)
                 }
                 processCloud(laser_cloud_list[j]);
                 sensor_msgs::PointCloud2 msg_cloud;
-                pcl::toRosMsg(laser_cloud_list[j], msg_cloud);
-                msg_cloud.header.framd_id = std::string("laser_") + std::to_string(i);
+                pcl::toROSMsg(laser_cloud_list[j], msg_cloud);
+                msg_cloud.header.frame_id = std::string("laser_") + std::to_string(i);
                 msg_cloud.header.stamp = ros::Time(cloud_time);
                 pub_laser_cloud_list[j].publish(msg_cloud);
             }
@@ -223,77 +229,82 @@ int main(int argc, char **argv)
 			gps_file = std::fopen(gps_file_path.c_str() , "r");
 			if(!gps_file)
             {
-			    printf("cannot find file: %s\n", gps_file_path.c_str());
-			    ROS_BREAK();
-			    return 0;          
-			}
-            double lat, lon, alt;
-            double posx_accuracy, posy_accuracy, posz_accuracy;
-            double navstat, numsats;
-            fscanf(gps_file, "%lf %lf %lf ", &lat, &lon, &alt);
-            fscanf(gps_file, "lf %lf %lf", &posx_accuracy, &posy_accuracy, &posz_accuracy);
-            fscanf(gps_file, "%lf %lf", &navstat, &numsats);
-            std::fclose(gps_file);
+			    // printf("cannot find file: %s\n", gps_file_path.c_str());
+			    // ROS_BREAK();
+			    // return 0;          
+			} else
+            {
+                double lat, lon, alt;
+                double posx_accuracy, posy_accuracy, posz_accuracy;
+                int navstat, numsats;
+                fscanf(gps_file, "%d %d ", &navstat, &numsats);
+                fscanf(gps_file, "%lf %lf %lf ", &lat, &lon, &alt);
+                fscanf(gps_file, "%lf %lf %lf ", &posx_accuracy, &posy_accuracy, &posz_accuracy);
+                std::fclose(gps_file);
 
-			sensor_msgs::NavSatFix gps_position;
-			gps_position.header.frame_id = "gps";
-			gps_position.header.stamp = ros::Time(cloud_time);
-			gps_position.status.status = navstat;
-			gps_position.status.service = numsats;
-			gps_position.latitude  = lat;
-			gps_position.longitude = lon;
-			gps_position.altitude  = alt;
-			gps_position.position_covariance[0] = posx_accuracy;
-            gps_position.position_covariance[4] = posy_accuracy;
-            gps_position.position_covariance[8] = posz_accuracy;
-            pubGPS(gps_position);
-
+                sensor_msgs::NavSatFix gps_position;
+                gps_position.header.frame_id = "gps";
+                gps_position.header.stamp = ros::Time(cloud_time);
+                gps_position.status.status = navstat;
+                gps_position.status.service = numsats;
+                gps_position.latitude = lat;
+                gps_position.longitude = lon;
+                gps_position.altitude = alt;
+                gps_position.position_covariance[0] = posx_accuracy;
+                gps_position.position_covariance[4] = posy_accuracy;
+                gps_position.position_covariance[8] = posz_accuracy;
+                pub_gps.publish(gps_position);
+            }
+            
             // odom
             FILE *gt_odom_file;
 			string gt_odom_file_path = data_path + "gt_odom/data/" + ss.str() + ".txt";
 			gt_odom_file = std::fopen(gt_odom_file_path.c_str() , "r");
 			if(!gt_odom_file)
             {
-			    printf("cannot find file: %s\n", gt_odom_file_path.c_str());
-			    ROS_BREAK();
-			    return 0;          
-			}
-            double posx, posy, posz;
-            double orix, oriy, oriz, oriw;
-            fscanf(gt_odom_file, "%lf %lf %lf ", &posx, &posy, &posz);
-            fscanf(gt_odom_file, "lf %lf %lf %lf ", &orix, &oriy, &oriz, &oriw);
-            std::fclose(gt_odom_file);            
+			    // printf("cannot find file: %s\n", gt_odom_file_path.c_str());
+			    // ROS_BREAK();
+			    // return 0;          
+			} else
+            {
+                double posx, posy, posz;
+                double orix, oriy, oriz, oriw;
+                fscanf(gt_odom_file, "%lf %lf %lf ", &posx, &posy, &posz);
+                fscanf(gt_odom_file, "%lf %lf %lf %lf ", &orix, &oriy, &oriz, &oriw);
+                std::fclose(gt_odom_file);
 
-            Eigen::Vector3d t_world_base(posx, posy, posz);
-            Eigen::Quaterniond q_world_base(oriw, orix, oriy, oriz);
-            Pose pose_world_base(q_world_base, t_world_base);
-            Pose pose_base_ref(Eigen::Quaterniond(1, 0, 0, 0), Eigen::Vector3d(0, 0, 0));
-            Pose pose_world_ref(pose_world_base * pose_base_ref);
-            if (laser_path.poses.size() == 0) pose_world_ref_ini = pose_world_ref;
-            Pose pose_ref_ini_cur(pose_world_ref_ini.inverse() * pose_world_ref);
+                Eigen::Vector3d t_world_base(posx, posy, posz);
+                Eigen::Quaterniond q_world_base(oriw, orix, oriy, oriz);
+                Pose pose_world_base(q_world_base, t_world_base);
+                Pose pose_base_ref(Eigen::Quaterniond(1, 0, 0, 0), Eigen::Vector3d(0, 0, 0));
+                Pose pose_world_ref(pose_world_base * pose_base_ref);
+                if (laser_gt_path.poses.size() == 0)
+                    pose_world_ref_ini = pose_world_ref;
+                Pose pose_ref_ini_cur(pose_world_ref_ini.inverse() * pose_world_ref);
 
-            nav_msgs::Odometry laser_gt_odom;
-            laser_gt_odom.header = odom_msg.header;
-            laser_gt_odom.header.frame_id = "/world";
-            laser_gt_odom.child_frame_id = "/gt";
-            laser_gt_odom.pose.pose.orientation.x = pose_ref_ini_cur.q_.x();
-            laser_gt_odom.pose.pose.orientation.y = pose_ref_ini_cur.q_.y();
-            laser_gt_odom.pose.pose.orientation.z = pose_ref_ini_cur.q_.z();
-            laser_gt_odom.pose.pose.orientation.w = pose_ref_ini_cur.q_.w();
-            laser_gt_odom.pose.pose.position.x = pose_ref_ini_cur.t_(0);
-            laser_gt_odom.pose.pose.position.y = pose_ref_ini_cur.t_(1);
-            laser_gt_odom.pose.pose.position.z = pose_ref_ini_cur.t_(2);
-            pub_laser_gt_odom.publish(laser_gt_odom);
-            publishTF(laser_gt_odom);
+                nav_msgs::Odometry laser_gt_odom;
+                laser_gt_odom.header.frame_id = "/world";
+                laser_gt_odom.child_frame_id = "/gt";
+                laser_gt_odom.header.stamp = ros::Time(cloud_time);
+                laser_gt_odom.pose.pose.orientation.x = pose_ref_ini_cur.q_.x();
+                laser_gt_odom.pose.pose.orientation.y = pose_ref_ini_cur.q_.y();
+                laser_gt_odom.pose.pose.orientation.z = pose_ref_ini_cur.q_.z();
+                laser_gt_odom.pose.pose.orientation.w = pose_ref_ini_cur.q_.w();
+                laser_gt_odom.pose.pose.position.x = pose_ref_ini_cur.t_(0);
+                laser_gt_odom.pose.pose.position.y = pose_ref_ini_cur.t_(1);
+                laser_gt_odom.pose.pose.position.z = pose_ref_ini_cur.t_(2);
+                pub_laser_gt_odom.publish(laser_gt_odom);
+                publishTF(laser_gt_odom);
 
-            geometry_msgs::PoseStamped laser_gt_pose;
-            laser_gt_pose.header = odom_msg.header;
-            laser_gt_pose.header.frame_id = "/world";
-            laser_gt_pose.pose = laser_gt_odom.pose.pose;
-            laser_gt_path.header = gt_pose.header;
-            laser_gt_path.poses.push_back(gt_pose);
-            pub_laser_gt_path.publish(laser_gt_path);
-            estimator.laser_gt_path_ = laser_gt_path;            
+                geometry_msgs::PoseStamped laser_gt_pose;
+                laser_gt_pose.header.frame_id = "/world";
+                laser_gt_pose.header.stamp = ros::Time(cloud_time);
+                laser_gt_pose.pose = laser_gt_odom.pose.pose;
+                laser_gt_path.header = laser_gt_pose.header;
+                laser_gt_path.poses.push_back(laser_gt_pose);
+                pub_laser_gt_path.publish(laser_gt_path);
+                estimator.laser_gt_path_ = laser_gt_path;
+            }          
 
             // estimator.inputCloud(cloud_time, laser_cloud_list);           
 		}

@@ -19,7 +19,7 @@
         <node pkg="mloam" type="mloam_node_rv" name="mloam_node_rv" 
             args="$(arg config_file) $(arg data_path)
                   $(arg mloam_result_save) $(arg output_path) 
-                  $(arg mloam_odom_path) $(arg mloam_gt_path)">
+                  $(arg mloam_odom_path) $(arg mloam_gt_path)" output="screen">
             <remap from="/base_pose_gt" to="/Robot_2/pose"/>
         </node>
 
