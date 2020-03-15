@@ -68,8 +68,9 @@ td: !!opencv-matrix                 # initial value of time offset. unit: s. rea
 
 idx_ref: 0
 
-cloud0_topic: "/left/velodyne_points"
-cloud1_topic: "/right/velodyne_points"
+cloud_topic: 
+   - "/left/velodyne_points"
+   - "/right/velodyne_points"
 
 laser_sync_threshold: 0.07
 roi_range: 0.5
