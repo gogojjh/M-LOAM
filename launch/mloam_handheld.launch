@@ -1,6 +1,6 @@
 <launch>
 
-    <arg name="bag_file_use" default="true" />
+    <arg name="bag_file_use" default="false" />
     <arg name="config_file" default="$(find mloam)/../config/config_handheld.yaml" />
 
     <arg name="run_mloam" default="true" />
@@ -10,7 +10,7 @@
     <arg name="run_mloam_map_with_up" default="true" /> <!-- uncertainty propagation -->    
     <arg name="mloam_result_save" default="1" />
     
-    <arg name="output_path" default="/home/jjiao/trajectory_results/handheld/test/mloam_20200303/RHD04campus/"/>
+    <arg name="output_path" default="/home/jjiao/trajectory_results/handheld/test/mloam_20200303/RHD04campus_3/"/>
     <arg name="mloam_gt_path" default="stamped_groundtruth.txt" />    
     <arg name="mloam_odom_path" default="stamped_mloam_odom_estimate.txt" />
     <arg name="mloam_map_path" default="stamped_mloam_map_estimate.txt" /> 
@@ -40,7 +40,8 @@
 
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200303/room_eight.bag" />  -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200303/room_rect.bag" />  -->
-        <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200303/room_loop_front.bag" /> 
+        <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200303/room_loop.bag" />         
+        <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200303/room_loop_front.bag" />  -->
         <!--<arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200303/room_loop_back.bag" /> -->
 
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/rhd_20200310/ri_room_loop_2.bag" /> -->

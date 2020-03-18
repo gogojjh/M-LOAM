@@ -52,7 +52,6 @@ Pose pose_wmap_curr, pose_wmap_wodom, pose_wodom_curr;
 
 // downsampling voxel grid
 pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_surf;
-
 pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_surf_map_cov;
 
 std::vector<int> point_search_ind;
@@ -186,7 +185,7 @@ void double2Vector()
 
 void process()
 {
-	while(1)
+	while (1)
 	{
 		if (!ros::ok()) break;
 		while (!surf_last_buf.empty() &&
@@ -489,10 +488,10 @@ void process()
 					ceres::Solver::Options options;
 					options.linear_solver_type = ceres::DENSE_SCHUR;
 					options.max_num_iterations = 30;
-					// options.max_solver_time_in_seconds = 0.03;
+					options.max_solver_time_in_seconds = 0.03;
 					options.minimizer_progress_to_stdout = false;
 					options.check_gradients = false;
-					options.gradient_check_relative_precision = 1e-5;
+					options.gradient_check_relative_precision = 1e-3;
 
 					vector2Double();
 					
@@ -504,7 +503,7 @@ void process()
 					para_ids.push_back(para_pose);
 
 					// ******************************************************
-					int corner_num = 0, surf_num = 0;
+					int surf_num = 0;
 					TicToc t_prepare;
 					for (auto n = 0; n < NUM_OF_LASER; n++)
 					{
@@ -625,12 +624,12 @@ void process()
 				down_size_filter_surf_map_cov.filter(*tmp_surf);
 				laser_cloud_surf_array_cov[ind] = tmp_surf;
 			}
-			printf("filter time %fms \n", t_filter.toc());
+			printf("filter time %fms\n", t_filter.toc());
 
 			// ************************************************************** publish feature and map data
 			// publish surround map (use for optimization) for every 5 frame
 			TicToc t_pub;
-			if ((pub_laser_cloud_surround.getNumSubscribers() != 0) && (frame_cnt % 5 ==0))
+			if ((pub_laser_cloud_surround.getNumSubscribers() != 0) && (frame_cnt % 10 ==0))
 			{
 				PointICovCloud laser_cloud_surrond;
 				for (int i = 0; i < laser_cloud_surround_num; i++)
@@ -876,19 +875,19 @@ int main(int argc, char **argv)
 	down_size_filter_surf.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
 	down_size_filter_surf_map_cov.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
 
-	ros::Subscriber sub_laser_cloud_full_res = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud", 100, laserCloudFullResHandler);
-	ros::Subscriber sub_laser_cloud_surf_last = nh.subscribe<sensor_msgs::PointCloud2>("/surf_points_less_flat", 100, laserCloudSurfLastHandler);
-	ros::Subscriber sub_laser_odometry = nh.subscribe<nav_msgs::Odometry>("/laser_odom_0", 100, laserOdometryHandler);
-	ros::Subscriber sub_extrinsic = nh.subscribe<mloam_msgs::Extrinsics>("/extrinsics", 100, extrinsicsHandler);
+	ros::Subscriber sub_laser_cloud_full_res = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud", 5, laserCloudFullResHandler);
+	ros::Subscriber sub_laser_cloud_surf_last = nh.subscribe<sensor_msgs::PointCloud2>("/surf_points_less_flat", 5, laserCloudSurfLastHandler);
+	ros::Subscriber sub_laser_odometry = nh.subscribe<nav_msgs::Odometry>("/laser_odom_0", 5, laserOdometryHandler);
+	ros::Subscriber sub_extrinsic = nh.subscribe<mloam_msgs::Extrinsics>("/extrinsics", 5, extrinsicsHandler);
 
-	pub_laser_cloud_surround = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surround", 100);
-	pub_laser_cloud_map = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_map", 100);
-	pub_laser_cloud_full_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_registered", 100);
-	pub_laser_cloud_surf_last_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surf_registered", 100);
+	pub_laser_cloud_surround = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surround", 5);
+	pub_laser_cloud_map = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_map", 5);
+	pub_laser_cloud_full_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_registered", 5);
+	pub_laser_cloud_surf_last_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surf_registered", 5);
 
-	pub_odom_aft_mapped = nh.advertise<nav_msgs::Odometry>("/laser_map", 100); // raw pose from odometry in the world
-	pub_odom_aft_mapped_high_frec = nh.advertise<nav_msgs::Odometry>("/laser_map_high_frec", 100); // optimized pose in the world
-	pub_laser_after_mapped_path = nh.advertise<nav_msgs::Path>("/laser_map_path", 100);
+	pub_odom_aft_mapped = nh.advertise<nav_msgs::Odometry>("/laser_map", 5); // raw pose from odometry in the world
+	pub_odom_aft_mapped_high_frec = nh.advertise<nav_msgs::Odometry>("/laser_map_high_frec", 5); // optimized pose in the world
+	pub_laser_after_mapped_path = nh.advertise<nav_msgs::Path>("/laser_map_path", 5);
 	for (int i = 0; i < laser_cloud_num; i++)
 	{
 		laser_cloud_surf_array_cov[i].reset(new PointICovCloud());

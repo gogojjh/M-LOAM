@@ -1,7 +1,7 @@
 %YAML:1.0
 
 #Multiple thread support
-multiple_thread: 0
+multiple_thread: 1
 
 #optimization PARAMETERS
 max_solver_time: 0.07  # max solver itration time (s), to guarantee real time
@@ -128,6 +128,6 @@ uct_measurement: !!opencv-matrix
    data: [0.0025, 0.0025, 0.0025]
 
 trace_threshold_before_mapping: 1
-trace_threshold_after_mapping: 0.3
+trace_threshold_after_mapping: 0.7
 
-skip_num_odom: 2
+skip_num_odom: 1

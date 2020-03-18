@@ -58,28 +58,28 @@ void clearPath()
 
 void registerPub(ros::NodeHandle &nh)
 {
-    pub_laser_cloud = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud", 100);
-    pub_laser_cloud_proj = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_proj", 100);
-    pub_corner_points_sharp = nh.advertise<sensor_msgs::PointCloud2>("/corner_points_sharp", 100);
-    pub_corner_points_less_sharp = nh.advertise<sensor_msgs::PointCloud2>("/corner_points_less_sharp", 100);
-    pub_surf_points_flat = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_flat", 100);
-    pub_surf_points_less_flat = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_less_flat", 100);
-    pub_extrinsics = nh.advertise<mloam_msgs::Extrinsics>("/extrinsics", 100);
+    pub_laser_cloud = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud", 10);
+    pub_laser_cloud_proj = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_proj", 10);
+    pub_corner_points_sharp = nh.advertise<sensor_msgs::PointCloud2>("/corner_points_sharp", 10);
+    pub_corner_points_less_sharp = nh.advertise<sensor_msgs::PointCloud2>("/corner_points_less_sharp", 10);
+    pub_surf_points_flat = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_flat", 10);
+    pub_surf_points_less_flat = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_less_flat", 10);
+    pub_extrinsics = nh.advertise<mloam_msgs::Extrinsics>("/extrinsics", 10);
     for (int i = 0; i < NUM_OF_LASER; i++)
     {
         std::string laser_odom_topic, laser_path_topic;
         laser_odom_topic = std::string("/laser_odom_") + std::to_string(i);
-        v_pub_laser_odom.push_back(nh.advertise<nav_msgs::Odometry>(laser_odom_topic, 100));
+        v_pub_laser_odom.push_back(nh.advertise<nav_msgs::Odometry>(laser_odom_topic, 10));
         laser_path_topic = std::string("/laser_odom_path_") + std::to_string(i);
-        v_pub_laser_path.push_back(nh.advertise<nav_msgs::Path>(laser_path_topic, 100));
+        v_pub_laser_path.push_back(nh.advertise<nav_msgs::Path>(laser_path_topic, 10));
 
-        v_pub_surf_points_local_map.push_back(nh.advertise<sensor_msgs::PointCloud2>(std::string("/surf_local_map_") + std::to_string(i), 100));
-        v_pub_surf_points_cur.push_back(nh.advertise<sensor_msgs::PointCloud2>(std::string("/surf_points_cur_") + std::to_string(i), 100));
+        v_pub_surf_points_local_map.push_back(nh.advertise<sensor_msgs::PointCloud2>(std::string("/surf_local_map_") + std::to_string(i), 10));
+        v_pub_surf_points_cur.push_back(nh.advertise<sensor_msgs::PointCloud2>(std::string("/surf_points_cur_") + std::to_string(i), 10));
 
-        v_pub_corner_points_local_map.push_back(nh.advertise<sensor_msgs::PointCloud2>(std::string("/corner_local_map_") + std::to_string(i), 100));
+        v_pub_corner_points_local_map.push_back(nh.advertise<sensor_msgs::PointCloud2>(std::string("/corner_local_map_") + std::to_string(i), 10));
     }
-    pub_surf_points_target_localmap = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_target_localmap", 100);
-    pub_surf_points_target = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_target", 100);
+    pub_surf_points_target_localmap = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_target_localmap", 10);
+    pub_surf_points_target = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_target", 10);
     v_laser_path.resize(NUM_OF_LASER);
 }
 

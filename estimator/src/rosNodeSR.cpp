@@ -259,12 +259,11 @@ int main(int argc, char **argv)
 
     CLOUD0_TOPIC = CLOUD_TOPIC[0];
     CLOUD1_TOPIC = CLOUD_TOPIC[1];
-    ros::Subscriber sub_cloud0 = n.subscribe(CLOUD0_TOPIC, 100, cloud0_callback);
-    ros::Subscriber sub_cloud1 = n.subscribe(CLOUD1_TOPIC, 100, cloud1_callback);
-    ros::Subscriber sub_restart = n.subscribe("/mlod_restart", 100, restart_callback);
-    ros::Subscriber sub_odom_gt = n.subscribe("/base_odom_gt", 100, odom_gt_callback);
-
-    pub_laser_path = n.advertise<nav_msgs::Path>("/laser_gt_path", 100);
+    ros::Subscriber sub_cloud0 = n.subscribe(CLOUD0_TOPIC, 10, cloud0_callback);
+    ros::Subscriber sub_cloud1 = n.subscribe(CLOUD1_TOPIC, 10, cloud1_callback);
+    ros::Subscriber sub_restart = n.subscribe("/mlod_restart", 10, restart_callback);
+    ros::Subscriber sub_odom_gt = n.subscribe("/base_odom_gt", 10, odom_gt_callback);
+    pub_laser_path = n.advertise<nav_msgs::Path>("/laser_gt_path", 10);
 
     std::thread sync_thread(sync_process);
     std::thread cloud_visualizer_thread;
