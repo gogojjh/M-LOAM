@@ -873,15 +873,18 @@ void process()
 				}
 				fout.close();
 
-				fout.open(std::string(OUTPUT_FOLDER + "mapping_factor.txt").c_str(), std::ios::out);
-				fout.precision(8);
-				for (size_t i = 0; i < d_factor_list.size(); i++) fout << d_factor_list[i] << std::endl;
-				fout.close();
+				if (UNCER_PROPA_ON)
+				{
+					fout.open(std::string(OUTPUT_FOLDER + "mapping_factor.txt").c_str(), std::ios::out);
+					fout.precision(8);
+					for (size_t i = 0; i < d_factor_list.size(); i++) fout << d_factor_list[i] << std::endl;
+					fout.close();
 
-				fout.open(std::string(OUTPUT_FOLDER + "mapping_d_eigvec.txt").c_str(), std::ios::out);
-				fout.precision(8);
-				for (size_t i = 0; i < d_eigvec_list.size(); i++) fout << d_eigvec_list[i] << std::endl;
-				fout.close();
+					fout.open(std::string(OUTPUT_FOLDER + "mapping_d_eigvec.txt").c_str(), std::ios::out);
+					fout.precision(8);
+					for (size_t i = 0; i < d_eigvec_list.size(); i++) fout << d_eigvec_list[i] << std::endl;
+					fout.close();
+				}
 			}
 			// std::cout << "pose_wmap_curr: " << pose_wmap_curr << std::endl;
 			printf("\n");

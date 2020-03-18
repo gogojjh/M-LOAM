@@ -6,7 +6,7 @@ imu: 0
 num_of_cam: 2
 
 imu_topic: ""
-output_path: "/home/jjiao/catkin_ws/src/localization/rpg_trajectory_evaluation/results/simulation_mloam/test/mloam/test_mloam_randomwalk/"
+output_path: "/home/jjiao/trajectory_results/simulation_mloam/test/mloam/test_mloam_randomwalk/"
 mloam_odom_path: "stamped_odom_estimate.txt"
 mloam_map_path: "stamped_map_estimate.txt"
 mloam_gt_path: "stamped_groundtruth.txt"

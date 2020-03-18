@@ -265,7 +265,7 @@ int main(int argc, char **argv)
     ros::Subscriber sub_cloud1 = n.subscribe(CLOUD1_TOPIC, 100, cloud1_callback);
     ros::Subscriber sub_restart = n.subscribe("/mlod_restart", 100, restart_callback);
     ros::Subscriber sub_pose_gt = n.subscribe("/base_pose_gt", 100, pose_gt_callback);
-    pub_laser_path = n.advertise<nav_msgs::Path>("/laser_odom_path_gt", 100);
+    pub_laser_path = n.advertise<nav_msgs::Path>("/laser_gt_path", 100);
 
     std::thread sync_thread(sync_process);
     std::thread cloud_visualizer_thread;

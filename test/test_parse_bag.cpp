@@ -19,6 +19,7 @@
 #include <queue>
 #include <vector>
 #include <iostream>
+#include <boost/filesystem.hpp>
 
 using namespace std;
 
@@ -162,6 +163,19 @@ int main(int argc, char** argv)
             LidarSyncPolicy(10), *sub_top, *sub_front, *sub_left, *sub_right);
     lidar_synchronizer->registerCallback(boost::bind(&process, _1, _2, _3, _4));
 
+    boost::filesystem::create_directory(std::string(data_path + "cloud_0").c_str());
+    boost::filesystem::create_directory(std::string(data_path + "cloud_0/data").c_str());
+    boost::filesystem::create_directory(std::string(data_path + "cloud_1").c_str());
+    boost::filesystem::create_directory(std::string(data_path + "cloud_1/data").c_str());
+    boost::filesystem::create_directory(std::string(data_path + "cloud_2").c_str());
+    boost::filesystem::create_directory(std::string(data_path + "cloud_2/data").c_str());
+    boost::filesystem::create_directory(std::string(data_path + "cloud_3").c_str());
+    boost::filesystem::create_directory(std::string(data_path + "cloud_3/data").c_str());
+    boost::filesystem::create_directory(std::string(data_path + "gps").c_str());
+    boost::filesystem::create_directory(std::string(data_path + "gps/data").c_str());
+    boost::filesystem::create_directory(std::string(data_path + "gt_odom").c_str());
+    boost::filesystem::create_directory(std::string(data_path + "gt_odom/data").c_str());
+
     ros::Rate fps(100);
     while (ros::ok())
 	{
@@ -169,7 +183,7 @@ int main(int argc, char** argv)
         fps.sleep();
     }
 
-    ofstream cloud_time_file(std::string(data_path + "cloud_0/timestamps.txt").c_str());
+    ofstream cloud_time_file(std::string(data_path + "cloud_0/timestamps.txt").c_str(), ios::out);
     cloud_time_file.setf(ios::fixed, ios::floatfield);
     for (size_t i = 0; i < cloud_time_list.size(); i++)
     {
@@ -178,7 +192,7 @@ int main(int argc, char** argv)
     }
     cloud_time_file.close();
 
-    ofstream gps_time_file(std::string(data_path + "gps/timestamps.txt").c_str());
+    ofstream gps_time_file(std::string(data_path + "gps/timestamps.txt").c_str(), ios::out);
     gps_time_file.setf(ios::fixed, ios::floatfield);
     for (size_t i = 0; i < gps_time_list.size(); i++)
     {
@@ -187,7 +201,7 @@ int main(int argc, char** argv)
     }
     gps_time_file.close();
 
-    ofstream gt_odom_time_file(std::string(data_path + "gt_odom/timestamps.txt").c_str());
+    ofstream gt_odom_time_file(std::string(data_path + "gt_odom/timestamps.txt").c_str(), ios::out);
     gt_odom_time_file.setf(ios::fixed, ios::floatfield);
     for (size_t i = 0; i < gt_odom_time_list.size(); i++)
     {

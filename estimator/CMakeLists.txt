@@ -95,11 +95,17 @@ target_link_libraries(lidar_mapper mloam_lib_1 mloam_lib_2)
 #add_executable(test_ceres ../test/test_ceres.cpp)
 #target_link_libraries(test_ceres ${catkin_LIBRARIES} ${PCL_LIBS})
 
-#add_executable(test_merge_pointcloud ../test/test_merge_pointcloud.cpp)
-#target_link_libraries(test_merge_pointcloud ${catkin_LIBRARIES} ${PCL_LIBS})
-
 #add_executable(test_pointiwithcov ../test/test_pointiwithcov.cpp)
 #target_link_libraries(test_pointiwithcov ${catkin_LIBRARIES} ${PCL_LIBS})
+
+add_executable(test_merge_pointcloud_sr ../test/test_merge_pointcloud_sr.cpp)
+target_link_libraries(test_merge_pointcloud_sr ${catkin_LIBRARIES} ${PCL_LIBS})
+
+add_executable(test_merge_pointcloud_rhd ../test/test_merge_pointcloud_rhd.cpp)
+target_link_libraries(test_merge_pointcloud_rhd ${catkin_LIBRARIES} ${PCL_LIBS})
+
+add_executable(test_merge_pointcloud_rv ../test/test_merge_pointcloud_rv.cpp)
+target_link_libraries(test_merge_pointcloud_rv ${catkin_LIBRARIES} ${PCL_LIBS})
 
 add_executable(test_parse_bag ../test/test_parse_bag.cpp)
 target_link_libraries(test_parse_bag ${catkin_LIBRARIES} ${PCL_LIBS})

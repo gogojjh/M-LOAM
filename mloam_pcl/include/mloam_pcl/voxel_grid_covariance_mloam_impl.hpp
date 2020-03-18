@@ -271,13 +271,14 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
         unsigned int valid_cnt = last_index - first_index;
         centroid.setZero();
 
-        // TODO: calculation of mean and covariance of a Gaussian mixture model
+        // TODO: calculation of mean and covariance of a Gaussian mixture model, speed up
         // https://math.stackexchange.com/questions/195911/calculation-of-the-covariance-of-gaussian-mixtures
         if (cov_index >= 0)
         {
             Eigen::VectorXf weight_vec(last_index - first_index);
             weight_vec.setZero();
             Eigen::Vector4f mu = Eigen::Vector4f::Zero();
+            float isty;
             for (unsigned int i = first_index; i < last_index; ++i)
             {
                 pcl::for_each_type<FieldList>(NdCopyPointEigenFunctor<PointT>(input_->points[index_vector[i].cloud_point_index], temporary));
@@ -288,6 +289,7 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
                 // }
                 weight_vec[i - first_index] = 2 - (temporary[4] + temporary[7] + temporary[9]);
                 mu += weight_vec[i - first_index] * temporary.head(4);
+                isty = temporary[3];
             }
             if (valid_cnt == 0) valid_cnt = 1;
 
@@ -297,7 +299,7 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
             // compute the centroid
             float weight_total = weight_vec.sum();
             if (weight_total == 0) weight_total = 1.0;
-            mu /= static_cast<float>(weight_total);
+            mu.head(3) /= static_cast<float>(weight_total);
 
             Eigen::Matrix3f cov = Eigen::Matrix3f::Zero();
             for (unsigned int i = first_index; i < last_index; ++i)
@@ -313,6 +315,7 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
             cov /= static_cast<float>(weight_total);
 
             centroid.head(4) = mu;
+            centroid[3] = isty;
             centroid[4] = cov(0, 0);
             centroid[5] = cov(0, 1);
             centroid[6] = cov(0, 2);

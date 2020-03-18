@@ -17,7 +17,7 @@ num_of_laser: 2
 n_scans: 16
 
 # segmmentation
-segment_cloud: 0
+segment_cloud: 1
 horizon_scan: 1800
 min_cluster_size: 20
 min_line_size: 10
@@ -39,6 +39,10 @@ body_T_laser: !!opencv-matrix
    rows: 2
    cols: 7
    dt: d
+# data for 20200201
+   # data: [0, 0, 0, 1, 0, 0, 0,
+   #        0.40093, 0.00536, -0.02534, 0.91574, -0.01571, -0.47446, -0.21247]
+# data for 20200303/ 20200310
 # no prior
    # data: [0, 0, 0, 1, 0, 0, 0,
    #        0, 0, 0, 1, 0, 0, 0] # qx qy qz qw px py pz
@@ -105,7 +109,7 @@ n_calib: 10
 
 # mapping 
 map_corner_res: 0.2
-map_surf_res: 0.2
+map_surf_res: 0.4
 map_eig_thre: 200
 
 # uncertainty parameter
