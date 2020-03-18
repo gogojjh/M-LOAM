@@ -91,6 +91,9 @@ target_link_libraries(mloam_node_rv mloam_lib_1 mloam_lib_2)
 add_executable(lidar_mapper src/lidarMapper/lidar_mapper.cpp)
 target_link_libraries(lidar_mapper mloam_lib_1 mloam_lib_2)
 
+add_executable(lidar_mapper_only_surf src/lidarMapper/lidar_mapper_only_surf.cpp)
+target_link_libraries(lidar_mapper_only_surf mloam_lib_1 mloam_lib_2)
+
 ######## --------------------- TEST --------------------- ########
 #add_executable(test_ceres ../test/test_ceres.cpp)
 #target_link_libraries(test_ceres ${catkin_LIBRARIES} ${PCL_LIBS})
