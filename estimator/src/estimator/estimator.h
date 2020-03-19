@@ -62,9 +62,8 @@ class Estimator
     void clearState();
     void setParameter();
 
-    void inputCloud(const double &t, const std::vector<common::PointCloud> &v_laser_cloud_in);
-    void inputCloud(const double &t, const common::PointCloud &laser_cloud_in0);
-
+    void inputCloud(const double &t, const std::vector<common::PointCloud> &v_laser_cloud_in, const int &mode = 0);
+    void inputCloud(const double &t, const common::PointCloud &laser_cloud_in, const int &mode = 0);
 
     // process measurements
     void processMeasurements();
@@ -171,7 +170,7 @@ class Estimator
     double **para_ex_pose_{};
     double *para_td_{};
 
-    std::vector<double> eig_thre_calib_;
+    std::vector<double> eig_thre_;
     std::vector<double> d_factor_calib_;
     std::vector<double> cur_eig_calib_;
     std::vector<std::vector<std::pair<double, Pose> > > pose_calib_;

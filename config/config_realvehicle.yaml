@@ -13,20 +13,20 @@ optimal_odometry: 1
 
 ###############################################
 # laser parameters
-num_of_laser: 2
+num_of_laser: 4
 n_scans: 16
 
 # segmmentation
 segment_cloud: 1
 horizon_scan: 1800
-min_cluster_size: 20
+min_cluster_size: 30
 min_line_size: 10
 segment_valid_point_num: 5
 segment_valid_line_num: 3
-segment_theta: 0.53
+segment_theta: 0.6 # Lego-loam: 1.0
 
 # window sizes
-window_size: 5
+window_size: 8
 opt_window_size: 3
 
 # Extrinsic parameter between IMU and Camera.
@@ -46,7 +46,7 @@ body_T_laser: !!opencv-matrix
    #        0, 0, 0, 1, 0, 0, 0,
    #        0, 0, 0, 1, 0, 0, 0] 
    data: [0, 0, 0, 1, 0, 0, 0, 
-          0, 0, 0, 1, 0, 0, 0,
+          -0.022141, 0.06658, 0.01914, 0.99735, 0, 0, 0,
           -0.12886, 0.21263, 0.67438, 0.69527, 0, 0, 0,
           0.080047, 0.16507, -0.68757, 0.70256, 0, 0, 0]           
 # manufactor
@@ -74,7 +74,7 @@ cloud_topic:
    - "/right/velodyne_points"
 
 laser_sync_threshold: 0.07
-roi_range: 100
+roi_range: 2
 roi_range_mapping: 15
 
 # odometry parameters
@@ -105,7 +105,7 @@ pcl_viewer_normal_ratio: 10
 # calibration converage parameters
 n_cumu_feature: 10
 eig_initial: 120
-eig_thre_calib: 400
+eig_thre_calib: 350
 n_calib: 10
 
 # mapping 

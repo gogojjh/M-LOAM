@@ -102,7 +102,8 @@ void Estimator::setParameter()
     }
     para_td_ = new double[NUM_OF_LASER];
 
-    eig_thre_calib_ = std::vector<double>(OPT_WINDOW_SIZE + NUM_OF_LASER + 1, 50);
+    eig_thre_ = std::vector<double>(OPT_WINDOW_SIZE + NUM_OF_LASER + 1, EIG_INITIAL);
+    for (auto i = 0; i < NUM_OF_LASER; i++) eig_thre_[OPT_WINDOW_SIZE + i + 1] = 0;
     d_factor_calib_ = std::vector<double>(NUM_OF_LASER, 0);
     cur_eig_calib_ = std::vector<double>(NUM_OF_LASER, 0);
     pose_calib_.resize(NUM_OF_LASER);
@@ -166,7 +167,7 @@ void Estimator::clearState()
 
     last_marginalization_info_ = nullptr;
 
-    eig_thre_calib_.clear();
+    eig_thre_.clear();
     d_factor_calib_.clear();
     cur_eig_calib_.clear();
     pose_calib_.clear();
@@ -186,7 +187,7 @@ void Estimator::changeSensorType(int use_imu, int use_stereo)
     }
 }
 
-void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_laser_cloud_in)
+void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_laser_cloud_in, const int &mode)
 {
     assert(v_laser_cloud_in.size() == NUM_OF_LASER);
 
@@ -196,10 +197,10 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
     for (auto i = 0; i < v_laser_cloud_in.size(); i++)
     {
         PointCloud laser_cloud_segment;
-        if ((SEGMENT_CLOUD) && (ESTIMATE_EXTRINSIC == 0))
+        if (((SEGMENT_CLOUD) && (ESTIMATE_EXTRINSIC == 0)) || (mode))
         {
             img_segment_.segmentCloud(v_laser_cloud_in[i], laser_cloud_segment);
-            printf("segment cloud_%d: %d\n", i, laser_cloud_segment.size());
+            // printf("segment cloud_%d: %d\n", i, laser_cloud_segment.size());
             f_extract_.extractCloud(t, laser_cloud_segment, feature_frame[i]);
         } else
         {
@@ -214,7 +215,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
     if (!MULTIPLE_THREAD) processMeasurements();
 }
 
-void Estimator::inputCloud(const double &t, const PointCloud &laser_cloud_in)
+void Estimator::inputCloud(const double &t, const PointCloud &laser_cloud_in, const int &mode)
 {
     TicToc feature_ext_time;
     std::vector<cloudFeature> feature_frame;
@@ -684,12 +685,7 @@ void Estimator::optimizeMap()
     std::cout << summary.BriefReport() << std::endl;
     // std::cout << summary.FullReport() << std::endl;
     printf("ceres solver costs: %fms\n", t_ceres_solver.toc());
-
-    // ROS_WARN("After optimization");
-    // if (EVALUATE_RESIDUAL) evalResidual(problem, local_param_ids, para_ids, res_ids_proj, last_marginalization_info_, res_ids_marg);
-
     double2Vector();
-    // printParameter();
 
     // ****************************************************
     // ceres: marginalization of current parameter block
@@ -938,13 +934,17 @@ void Estimator::buildCalibMap()
         {
             if (((n == IDX_REF) && (i == pivot_idx)) || ((n != IDX_REF) && (i != pivot_idx))) continue;
             int n_neigh = (n == IDX_REF ? 5:10);
-            std::vector<PointPlaneFeature> tmp_surf_map_features, tmp_corner_map_features;
             f_extract_.matchSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
-                surf_points_stack_[n][i], pose_local_[n][i], tmp_surf_map_features, n_neigh, true);
+                surf_points_stack_[n][i], pose_local_[n][i], surf_map_features_[n][i], n_neigh, true);
             f_extract_.matchCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
-                corner_points_stack_[n][i], pose_local_[n][i], tmp_corner_map_features, n_neigh, true);
-            std::copy(tmp_surf_map_features.begin(), tmp_surf_map_features.end(), std::back_inserter(surf_map_features_[n][i]));
-            std::copy(tmp_corner_map_features.begin(), tmp_corner_map_features.end(), std::back_inserter(corner_map_features_[n][i]));
+                corner_points_stack_[n][i], pose_local_[n][i], corner_map_features_[n][i], n_neigh, true);
+            // std::vector<PointPlaneFeature> tmp_surf_map_features, tmp_corner_map_features;
+            // f_extract_.matchSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
+            //     surf_points_stack_[n][i], pose_local_[n][i], tmp_surf_map_features, n_neigh, true);
+            // f_extract_.matchCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
+            //     corner_points_stack_[n][i], pose_local_[n][i], tmp_corner_map_features, n_neigh, true);
+            // std::copy(tmp_surf_map_features.begin(), tmp_surf_map_features.end(), std::back_inserter(surf_map_features_[n][i]));
+            // std::copy(tmp_corner_map_features.begin(), tmp_corner_map_features.end(), std::back_inserter(corner_map_features_[n][i]));
         }
 
     }
@@ -1005,12 +1005,14 @@ void Estimator::buildLocalMap()
         auto n_neigh = 5;
         for (auto i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
         {
-            std::vector<PointPlaneFeature> tmp_map_features;
             f_extract_.matchSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
-                surf_points_stack_[n][i], pose_local_[n][i], tmp_map_features, n_neigh, true);
+                surf_points_stack_[n][i], pose_local_[n][i], surf_map_features_[n][i], n_neigh, true);
+            // std::vector<PointPlaneFeature> tmp_map_features;
+            // f_extract_.matchSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
+            //     surf_points_stack_[n][i], pose_local_[n][i], tmp_map_features, n_neigh, true);
             // f_extract_.extractCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
                 //     corner_points_stack_[n][i], pose_local_[n][i], corner_map_features_[n][i], n_neigh, true);
-            std::copy(tmp_map_features.begin(), tmp_map_features.end(), std::back_inserter(surf_map_features_[n][i]));
+            // std::copy(tmp_map_features.begin(), tmp_map_features.end(), std::back_inserter(surf_map_features_[n][i]));
         }
     }
     printf("build map: %fms\n", t_build_map.toc());
@@ -1100,7 +1102,7 @@ void Estimator::evalResidual(ceres::Problem &problem,
 		e_option.parameter_blocks = para_ids;
 		e_option.residual_blocks = res_ids_proj;
         problem.Evaluate(e_option, &cost, nullptr, nullptr, &jaco);
-        printf("cost proj: %f\n", cost);
+        // printf("cost proj: %f\n", cost);
         if (b_eval_degenracy) evalDegenracy(local_param_ids, jaco);
 	}
 	if (MARGINALIZATION_FACTOR)
@@ -1153,7 +1155,7 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
         Eigen::Matrix<double, 6, 6> mat_V_p = mat_V_f;
         for (auto j = 0; j < mat_E.cols(); j++)
         {
-            if (mat_E(0, j) < eig_thre_calib_[i])
+            if (mat_E(0, j) < eig_thre_[i])
             {
                 mat_V_p.col(j) = Eigen::Matrix<double, 6, 1>::Zero();
                 local_param_ids[i]->is_degenerate_ = true;
@@ -1170,11 +1172,11 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
             cur_eig_calib_[i - OPT_WINDOW_SIZE - 1] = mat_E(0, 0);
             if (mat_E(0, 0) >= EIG_THRE_CALIB)
             {
-                eig_thre_calib_[i] = EIG_THRE_CALIB;
+                eig_thre_[i] = EIG_THRE_CALIB;
                 d_factor_calib_[i - OPT_WINDOW_SIZE - 1] = mat_E(0, 0);
             }
-            else if (mat_E(0, 0) > eig_thre_calib_[i])
-                eig_thre_calib_[i] = mat_E(0, 0);
+            else if (mat_E(0, 0) > eig_thre_[i])
+                eig_thre_[i] = mat_E(0, 0);
             else
                 mat_P.setZero(); // not update extrinsics
         }
@@ -1187,7 +1189,7 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
         }
     }
     std::cout << "eigen threshold :";
-    for (auto i = 0; i < eig_thre_calib_.size(); i++) std::cout << eig_thre_calib_[i] << " ";
+    for (auto i = 0; i < eig_thre_.size(); i++) std::cout << eig_thre_[i] << " ";
     std::cout << std::endl;
     // printf("evaluate degeneracy %fms\n", t_eval_degenracy.toc());
 }
@@ -1197,27 +1199,29 @@ void Estimator::evalCalib()
     if (solver_flag_ == NON_LINEAR)
     {
         for (auto n = 0; n < NUM_OF_LASER; n++)
+        {
             if (d_factor_calib_[n] != 0) // with high constraints
             {
                 double weight = pow(d_factor_calib_[n] / EIG_THRE_CALIB, 1.0);
                 Pose pose_ext = Pose(qbl_[n], tbl_[n]);
                 pose_calib_[n].push_back(make_pair(weight, pose_ext));
             }
+        }
 
+        // check if all lidars are coveraged
         bool is_converage = true;
         for (auto n = 0; n < NUM_OF_LASER; n++)
-            if ((n != IDX_REF) && (pose_calib_[n].size() < N_CALIB))
-            {
-                ROS_WARN("eligible calib size: %d", pose_calib_[n].size());
-                is_converage = false;
-                break;
-            }
-
+        {
+            if (n == IDX_REF) continue;
+            ROS_WARN("laser_%d, eligible calib size: %d", n, pose_calib_[n].size());
+            if (pose_calib_[n].size() < N_CALIB) is_converage = false;
+        }
         if (is_converage)
         {
             ROS_WARN("Finish nonlinear calibration !");
             ESTIMATE_EXTRINSIC = 0;
             for (auto n = 0; n < NUM_OF_LASER; n++)
+            {
                 if (n != IDX_REF)
                 {
                     Pose pose_mean;
@@ -1229,6 +1233,7 @@ void Estimator::evalCalib()
                     covbl_[n] = pose_cov.diagonal().asDiagonal();
                     // std::cout << "laser_" << n << ": " << pose_mean_calib << std::endl;
                 }
+            }
             // ini_fixed_local_map_ = false; // reconstruct new optimized map
             if (last_marginalization_info_ != nullptr) delete last_marginalization_info_;
             last_marginalization_info_ = nullptr; // meaning that the prior errors in online calibration are discarded

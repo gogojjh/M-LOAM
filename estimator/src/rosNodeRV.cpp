@@ -232,11 +232,12 @@ int main(int argc, char **argv)
 		{
             double cloud_time = cloud_time_list[i] - cloud_time_list[0] + base_time;
             // double cloud_time = ros::Time::now().toSec();
-            printf("process cloud %d\n", (int)i);
+            printf("process data: %d\n", i);
             stringstream ss;
             ss << setfill('0') << setw(6) << i;
 
             // load cloud
+            printf("size of finding cloud ");
             for (size_t j = 0; j < NUM_OF_LASER; j++)
             {
                 stringstream ss_file;
@@ -251,13 +252,14 @@ int main(int argc, char **argv)
                     return 0;
                 }
                 processCloud(laser_cloud_list[j]);
-                printf("size of finding laser_cloud%d: %d\n", j, laser_cloud_list[j].size());
-                // sensor_msgs::PointCloud2 msg_cloud;
-                // pcl::toROSMsg(laser_cloud_list[j], msg_cloud);
-                // msg_cloud.header.frame_id = std::string("laser_") + std::to_string(j);
-                // msg_cloud.header.stamp = ros::Time(cloud_time);
-                // pub_laser_cloud_list[j].publish(msg_cloud);
+                printf("%d ", laser_cloud_list[j].size());
+                sensor_msgs::PointCloud2 msg_cloud;
+                pcl::toROSMsg(laser_cloud_list[j], msg_cloud);
+                msg_cloud.header.frame_id = std::string("laser_") + std::to_string(j);
+                msg_cloud.header.stamp = ros::Time(cloud_time);
+                pub_laser_cloud_list[j].publish(msg_cloud);
             }
+            printf("\n");
 
             // load gps
             FILE *gps_file;
@@ -341,7 +343,7 @@ int main(int argc, char **argv)
                 estimator.laser_gt_path_ = laser_gt_path;
             }
 
-            estimator.inputCloud(cloud_time, laser_cloud_list);           
+            estimator.inputCloud(cloud_time, laser_cloud_list, 1);           
 
             ros::Duration duration(0.01);
             if (b_pause)

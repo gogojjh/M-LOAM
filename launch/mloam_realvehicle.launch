@@ -9,7 +9,7 @@
     <arg name="run_legoloam" default="false" />
 
     <arg name="mloam_result_save" default="1"/>
-    <arg name="mloam_start_idx" default="0"/>
+    <arg name="mloam_start_idx" default="1"/>
     <arg name="output_path" default="/home/jjiao/trajectory_results/real_vehicle/rv01_20200301/"/>
     <arg name="mloam_odom_path" default="stamped_mloam_odom_estimate.txt"/>
     <arg name="mloam_map_path" default="stamped_mloam_map_estimate.txt"/>
@@ -23,7 +23,7 @@
                   $(arg data_path)
                   $(arg mloam_result_save) 
                   $(arg output_path)
-                  ${arg mloam_start_idx}" output="screen">
+                  $(arg mloam_start_idx)" output="screen">
             <remap from="/base_pose_gt" to="/current_odom"/>
         </node>
 
