@@ -241,7 +241,7 @@ int main(int argc, char **argv)
         std::cout << "output path: " << OUTPUT_FOLDER << std::endl;
         std::remove(MLOAM_ODOM_PATH.c_str());
         std::remove(MLOAM_MAP_PATH.c_str());
-        std::remove(MLOAM_GT_PATH.c_str());
+        // std::remove(MLOAM_GT_PATH.c_str());
         std::remove(EX_CALIB_RESULT_PATH.c_str());
         std::remove(EX_CALIB_EIG_PATH.c_str());
     }

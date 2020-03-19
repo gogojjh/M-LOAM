@@ -144,6 +144,7 @@ void readParameters(std::string config_file)
         CLOUD_TOPIC[cnt] = (std::string)*iter;
         printf("cloud_topic: %s\n", CLOUD_TOPIC[cnt].c_str());
         cnt++;
+        if (cnt == NUM_OF_LASER) break;
     }
 
     WINDOW_SIZE = fsSettings["window_size"];
@@ -267,7 +268,7 @@ void readParameters(std::string config_file)
 
     SKIP_NUM_ODOM = fsSettings["skip_num_odom"];
     if (SKIP_NUM_ODOM == 0) SKIP_NUM_ODOM = 1;
-    printf("Mapping as %d hz\n", SKIP_NUM_ODOM);
+    printf("Mapping as %d hz\n", int(10 / (1.0 * SKIP_NUM_ODOM)));
 
     fsSettings.release();
 }

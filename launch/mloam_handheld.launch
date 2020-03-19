@@ -7,10 +7,10 @@
     <arg name="run_aloam" default="false" />
     <arg name="run_legoloam" default="false" />
 
-    <arg name="run_mloam_map_with_up" default="true" /> <!-- uncertainty propagation -->    
+    <arg name="run_mloam_map_with_up" default="false" /> <!-- uncertainty propagation -->    
     <arg name="mloam_result_save" default="1" />
     
-    <arg name="output_path" default="/home/jjiao/trajectory_results/handheld/test/mloam_20200303/RHD04campus_3/"/>
+    <arg name="output_path" default="/home/jjiao/trajectory_results/handheld/test/mloam_20200303/RHD04campus/"/>
     <arg name="mloam_gt_path" default="stamped_groundtruth.txt" />    
     <arg name="mloam_odom_path" default="stamped_mloam_odom_estimate.txt" />
     <arg name="mloam_map_path" default="stamped_mloam_map_estimate.txt" /> 
@@ -51,7 +51,11 @@
 
     <group if="$(arg run_mloam)">
         <node pkg="mloam" type="mloam_node_rhd" name="mloam_node_rhd" 
-            args="$(arg config_file) $(arg mloam_result_save) $(arg output_path) $(arg mloam_odom_path) $(arg mloam_gt_path)">
+            args="$(arg config_file) 
+                  $(arg mloam_result_save) 
+                  $(arg output_path)  
+                  $(arg mloam_odom_path) 
+                  $(arg mloam_gt_path)">
             <remap from="/base_pose_gt" to="/Robot_2/pose"/>
         </node>
 

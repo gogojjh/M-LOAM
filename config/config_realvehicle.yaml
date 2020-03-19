@@ -13,7 +13,7 @@ optimal_odometry: 1
 
 ###############################################
 # laser parameters
-num_of_laser: 4
+num_of_laser: 2
 n_scans: 16
 
 # segmmentation
@@ -30,7 +30,7 @@ window_size: 5
 opt_window_size: 3
 
 # Extrinsic parameter between IMU and Camera.
-estimate_extrinsic: 2   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+estimate_extrinsic: 1   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
 optimal_extrinsic: 0
@@ -41,10 +41,14 @@ body_T_laser: !!opencv-matrix
    dt: d
 # no prior
 # qx qy qz qw px py pz
+   # data: [0, 0, 0, 1, 0, 0, 0, 
+   #        0, 0, 0, 1, 0, 0, 0,
+   #        0, 0, 0, 1, 0, 0, 0,
+   #        0, 0, 0, 1, 0, 0, 0] 
    data: [0, 0, 0, 1, 0, 0, 0, 
           0, 0, 0, 1, 0, 0, 0,
-          0, 0, 0, 1, 0, 0, 0,
-          0, 0, 0, 1, 0, 0, 0] 
+          -0.12886, 0.21263, 0.67438, 0.69527, 0, 0, 0,
+          0.080047, 0.16507, -0.68757, 0.70256, 0, 0, 0]           
 # manufactor
    # data: [0, 0, 0, 1, 0, 0, 0,
    #       [-0.022141, 0.06658, 0.01914, 0.99735, 0.49015, -0.041563, -0.84056,
@@ -70,7 +74,7 @@ cloud_topic:
    - "/right/velodyne_points"
 
 laser_sync_threshold: 0.07
-roi_range: 1
+roi_range: 100
 roi_range_mapping: 15
 
 # odometry parameters
@@ -106,7 +110,7 @@ n_calib: 10
 
 # mapping 
 map_corner_res: 0.2
-map_surf_res: 0.2
+map_surf_res: 0.4
 map_eig_thre: 200
 
 # uncertainty parameter
@@ -126,7 +130,7 @@ uct_measurement: !!opencv-matrix
    dt: d
    data: [0.0025, 0.0025, 0.0025]
 
-trace_threshold_before_mapping: 1
-trace_threshold_after_mapping: 0.3
+trace_threshold_before_mapping: 7
+trace_threshold_after_mapping: 7
 
 skip_num_odom: 1

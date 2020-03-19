@@ -292,7 +292,7 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
                 //     continue;
                 // }
                 weight_vec[i - first_index] = 2 - (temporary[4] + temporary[7] + temporary[9]);
-                mu += weight_vec[i - first_index] * temporary.head(4);
+                mu.head(3) += weight_vec[i - first_index] * temporary.head(3);
                 mu[3] = temporary[3];
             }
             if (valid_cnt == 0) valid_cnt = 1;
@@ -309,7 +309,7 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
             for (unsigned int i = first_index; i < last_index; ++i)
             {
                 pcl::for_each_type<FieldList>(NdCopyPointEigenFunctor<PointT>(input_->points[index_vector[i].cloud_point_index], temporary));
-                if ((temporary[4] + temporary[7] + temporary[9]) >= 2) continue;
+                // if ((temporary[4] + temporary[7] + temporary[9]) >= 2) continue;
                 Eigen::Matrix3f cov_tmp;
                 cov_tmp << temporary[4], temporary[5], temporary[6], 
                            temporary[5], temporary[7], temporary[8], 

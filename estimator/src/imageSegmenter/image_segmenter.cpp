@@ -97,7 +97,7 @@ void ImageSegmenter::segmentCloud(const PointCloud &laser_cloud_in, PointCloud &
     // labelConnectLine();
 
     laser_cloud_out.clear();
-    for (size_t i = 0; i < N_SCANS; i++)
+    for (size_t i = 6; i < N_SCANS; i++)
     {
         for (size_t j = 0; j < horizon_scans_; j++)
         {

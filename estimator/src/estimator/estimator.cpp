@@ -195,10 +195,11 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
     feature_frame.resize(NUM_OF_LASER);
     for (auto i = 0; i < v_laser_cloud_in.size(); i++)
     {
+        PointCloud laser_cloud_segment;
         if ((SEGMENT_CLOUD) && (ESTIMATE_EXTRINSIC == 0))
         {
-            PointCloud laser_cloud_segment;
             img_segment_.segmentCloud(v_laser_cloud_in[i], laser_cloud_segment);
+            printf("segment cloud_%d: %d\n", i, laser_cloud_segment.size());
             f_extract_.extractCloud(t, laser_cloud_segment, feature_frame[i]);
         } else
         {
@@ -258,7 +259,7 @@ void Estimator::processMeasurements()
             if (frame_cnt_ % SKIP_NUM_ODOM == 0) pubPointCloud(*this, cur_time_); 
 
             frame_cnt_++;
-            ROS_WARN("frame: %d, processMea time: %fms", frame_cnt_, t_process.toc());
+            ROS_WARN("frame: %d, processMea time: %fms\n", frame_cnt_, t_process.toc());
             m_process_.unlock();
         }
         if (!MULTIPLE_THREAD) break;
