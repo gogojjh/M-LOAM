@@ -46,6 +46,7 @@
 #include "common/common.hpp"
 #include "estimator/estimator.h"
 #include "estimator/parameters.h"
+#include "utility/utility.h"
 #include "utility/visualization.h"
 #include "utility/cloud_visualizer.h"
 
@@ -225,25 +226,25 @@ int main(int argc, char **argv)
 
     // *************************************
     // read data
-    std::vector<pcl::PointCloud<pcl::PointXYZ> > laser_cloud_list(NUM_OF_LASER);
     for (size_t i = MLOAM_START_IDX; i < cloud_time_list.size(); i++)
     {	
 		if (ros::ok())
 		{
-            double cloud_time = cloud_time_list[i] - cloud_time_list[0] + base_time;
-            // double cloud_time = ros::Time::now().toSec();
+            // double cloud_time = cloud_time_list[i] - cloud_time_list[0] + base_time;
+            double cloud_time = ros::Time::now().toSec();
             printf("process data: %d\n", i);
             stringstream ss;
             ss << setfill('0') << setw(6) << i;
 
             // load cloud
             printf("size of finding cloud ");
+            std::vector<pcl::PointCloud<pcl::PointXYZ> > laser_cloud_list(NUM_OF_LASER);
             for (size_t j = 0; j < NUM_OF_LASER; j++)
             {
                 stringstream ss_file;
                 ss_file << "cloud_" << j << "/data/" << ss.str() << ".pcd";
                 string cloud_path = data_path + ss_file.str();
-                //printf("%lu  %f \n", i, cloud_time_list[i]);
+                //printf("%lu  %f \n", i, cloud_time);
                 // printf("%s\n", cloud_path.c_str());
                 if (pcl::io::loadPCDFile<pcl::PointXYZ>(cloud_path, laser_cloud_list[j]) == -1)
                 {
@@ -251,8 +252,8 @@ int main(int argc, char **argv)
                     ROS_BREAK();
                     return 0;
                 }
-                processCloud(laser_cloud_list[j]);
                 printf("%d ", laser_cloud_list[j].size());
+                processCloud(laser_cloud_list[j]);
                 sensor_msgs::PointCloud2 msg_cloud;
                 pcl::toROSMsg(laser_cloud_list[j], msg_cloud);
                 msg_cloud.header.frame_id = std::string("laser_") + std::to_string(j);
@@ -343,7 +344,7 @@ int main(int argc, char **argv)
                 estimator.laser_gt_path_ = laser_gt_path;
             }
 
-            estimator.inputCloud(cloud_time, laser_cloud_list, 1);           
+            estimator.inputCloud(cloud_time, laser_cloud_list);           
 
             ros::Duration duration(0.01);
             if (b_pause)
@@ -365,7 +366,7 @@ int main(int argc, char **argv)
 	}
 
     // save gt (only once)
-    saveGroundTruth();
+    // saveGroundTruth();
     return 0;
 }
 

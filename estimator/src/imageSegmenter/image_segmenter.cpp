@@ -112,7 +112,7 @@ void ImageSegmenter::segmentCloud(const PointCloud &laser_cloud_in, PointCloud &
 
 void ImageSegmenter::labelGroundPoints()
 {
-    for (size_t i = 0; i < 6; i++)
+    for (size_t i = 0; i < 8; i++)
         for (size_t j = 0; j < horizon_scans_; j++)
             if (label_mat_.at<int>(i, j) == 0) label_mat_.at<int>(i, j) = label_count_;
     label_count_++;

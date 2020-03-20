@@ -22,6 +22,21 @@
 #include "../estimator/parameters.h"
 #include "../estimator/pose.h"
 
+template <typename PointType>
+void processCloud(pcl::PointCloud<PointType> &laser_cloud)
+{
+    std::vector<int> indices;
+    pcl::removeNaNFromPointCloud(laser_cloud, laser_cloud, indices);
+    if (ROI_RANGE < 5)
+    {
+        common::removeROIPointCloud(laser_cloud, laser_cloud, ROI_RANGE, "inside");
+    }
+    else
+    {
+        common::removeROIPointCloud(laser_cloud, laser_cloud, ROI_RANGE, "outside");
+    }
+}
+
 // project all distorted points on the last frame
 // a: last frame; c: frame for points capturing
 // p^a = T(s)*p^c

@@ -174,6 +174,7 @@ class Estimator
     std::vector<double> d_factor_calib_;
     std::vector<double> cur_eig_calib_;
     std::vector<std::vector<std::pair<double, Pose> > > pose_calib_;
+    std::vector<bool> calib_converge_;
 
     // for marginalization
     MarginalizationInfo *last_marginalization_info_{};

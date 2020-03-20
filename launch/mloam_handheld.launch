@@ -1,13 +1,13 @@
 <launch>
 
-    <arg name="bag_file_use" default="false" />
+    <arg name="bag_file_use" default="true" />
     <arg name="config_file" default="$(find mloam)/../config/config_handheld.yaml" />
 
     <arg name="run_mloam" default="true" />
     <arg name="run_aloam" default="false" />
     <arg name="run_legoloam" default="false" />
 
-    <arg name="run_mloam_map_with_up" default="false" /> <!-- uncertainty propagation -->    
+    <arg name="run_mloam_map_with_up" default="true" /> <!-- uncertainty propagation -->    
     <arg name="mloam_result_save" default="1" />
     
     <arg name="output_path" default="/home/jjiao/trajectory_results/handheld/test/mloam_20200303/RHD04campus/"/>

@@ -4,7 +4,7 @@
 multiple_thread: 0
 
 #optimization PARAMETERS
-max_solver_time: 0.07  # max solver itration time (s), to guarantee real time
+max_solver_time: 0.05  # max solver itration time (s), to guarantee real time
 max_num_iterations: 15   # max solver itrations, to guarantee real time
 keyframe_parallax: 0 # keyframe selection threshold (pixel)
 
@@ -26,11 +26,11 @@ segment_valid_line_num: 3
 segment_theta: 0.6 # Lego-loam: 1.0
 
 # window sizes
-window_size: 8
-opt_window_size: 3
+window_size: 3
+opt_window_size: 1
 
 # Extrinsic parameter between IMU and Camera.
-estimate_extrinsic: 1   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
 optimal_extrinsic: 0
@@ -45,10 +45,11 @@ body_T_laser: !!opencv-matrix
    #        0, 0, 0, 1, 0, 0, 0,
    #        0, 0, 0, 1, 0, 0, 0,
    #        0, 0, 0, 1, 0, 0, 0] 
+# refinement
    data: [0, 0, 0, 1, 0, 0, 0, 
-          -0.022141, 0.06658, 0.01914, 0.99735, 0, 0, 0,
-          -0.12886, 0.21263, 0.67438, 0.69527, 0, 0, 0,
-          0.080047, 0.16507, -0.68757, 0.70256, 0, 0, 0]           
+          -0.0169, 0.0575, 0.0195, 0.998, 0.5355, 0.0393, -1.131,
+          -0.1118, 0.1894, 0.6845, 0.6951, 0.5116, 0.6440, -0.904,
+          0.0745, 0.1312, -0.7449, 0.6496, 0.4406, -0.628, -1.0295]
 # manufactor
    # data: [0, 0, 0, 1, 0, 0, 0,
    #       [-0.022141, 0.06658, 0.01914, 0.99735, 0.49015, -0.041563, -0.84056,
@@ -104,7 +105,7 @@ pcl_viewer_normal_ratio: 10
 
 # calibration converage parameters
 n_cumu_feature: 10
-eig_initial: 120
+eig_initial: 200
 eig_thre_calib: 350
 n_calib: 10
 
@@ -133,4 +134,4 @@ uct_measurement: !!opencv-matrix
 trace_threshold_before_mapping: 7
 trace_threshold_after_mapping: 7
 
-skip_num_odom: 1
+skip_num_odom: 2

@@ -90,6 +90,20 @@ std::vector<Eigen::Matrix<double, 6, 6> > d_eigvec_list;
 std::vector<Pose> pose_compound;
 std::vector<Eigen::Matrix<double, 6, 6> > cov_compound;
 
+void processCloud(pcl::PointCloud<pcl::PointXYZ> &laser_cloud)
+{
+	std::vector<int> indices;
+	pcl::removeNaNFromPointCloud(laser_cloud, laser_cloud, indices);
+	if (ROI_RANGE < 5)
+	{
+		common::removeROIPointCloud(laser_cloud, laser_cloud, ROI_RANGE, "inside");
+	}
+	else
+	{
+		common::removeROIPointCloud(laser_cloud, laser_cloud, ROI_RANGE, "outside");
+	}
+}
+
 int toCubeIndex(const int &i, const int &j, const int &k)
 {
 	return (i + laser_cloud_width * j + laser_cloud_width * laser_cloud_height * k);
@@ -236,6 +250,7 @@ void process()
 
 			laser_cloud_surf_last->clear();
 			pcl::fromROSMsg(*surf_last_buf.front(), *laser_cloud_surf_last);
+			processCloud(*laser_cloud_surf_last, *laser_cloud_surf_last);
 			surf_last_buf.pop();
 
 			laser_cloud_full_res->clear();
@@ -289,7 +304,6 @@ void process()
 			transformAssociateToMap();
 
 			// step 2: move current map to the managed cube area
-			// TODO: according to coordinate of different LiDAR with maximum points
 			TicToc t_shift;
 			int center_cub_i = int((pose_wmap_curr.t_.x() + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_width; // the cube id
 			int center_cub_j = int((pose_wmap_curr.t_.y() + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_height;
@@ -487,8 +501,8 @@ void process()
 
 					ceres::Solver::Options options;
 					options.linear_solver_type = ceres::DENSE_SCHUR;
-					options.max_num_iterations = 30;
-					options.max_solver_time_in_seconds = 0.03;
+					options.max_num_iterations = 20;
+					options.max_solver_time_in_seconds = SOLVER_TIME;
 					options.minimizer_progress_to_stdout = false;
 					options.check_gradients = false;
 					options.gradient_check_relative_precision = 1e-3;
@@ -520,11 +534,12 @@ void process()
 													true);
 						surf_num += surf_map_features.size();
 						CHECK_JACOBIAN = 0;
-						for (auto &feature: surf_map_features)
+						for (std::vector<PointPlaneFeature>::const_iterator iter = surf_map_features.begin();
+							 iter != surf_map_features.end(); iter++)
 						{
-							const size_t &idx = feature.idx_;
-							const Eigen::Vector3d &p_data = feature.point_;
-							const Eigen::Vector4d &coeff_ref = feature.coeffs_;
+							const size_t &idx = iter->idx_;
+							const Eigen::Vector3d &p_data = iter->point_;
+							const Eigen::Vector4d &coeff_ref = iter->coeffs_;						
 							Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
 							extractCov(laser_cloud_surf_split_cov[n].points[idx], cov_matrix);
 							LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(p_data, coeff_ref, cov_matrix);
