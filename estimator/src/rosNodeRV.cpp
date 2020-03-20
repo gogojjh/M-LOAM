@@ -95,20 +95,6 @@ void pauseCallback(std_msgs::StringConstPtr msg)
     b_pause = !b_pause;
 }
 
-void processCloud(pcl::PointCloud<pcl::PointXYZ> &laser_cloud)
-{
-    std::vector<int> indices;
-    pcl::removeNaNFromPointCloud(laser_cloud, laser_cloud, indices);
-    if (ROI_RANGE < 5)
-    {
-        common::removeROIPointCloud(laser_cloud, laser_cloud, ROI_RANGE, "inside");
-    }
-    else
-    {
-        common::removeROIPointCloud(laser_cloud, laser_cloud, ROI_RANGE, "outside");
-    }
-}
-
 int main(int argc, char **argv)
 {
     if(argc < 2)
