@@ -573,12 +573,12 @@ void process()
 			}
 			else
 			{
-				ROS_WARN("time Map corner and surf num are not enough");
+				ROS_WARN("Map surf num is not enough");
 			}
 			transformUpdate();
 
 			// *******************************************************************
-			// add newest corner and surf points to the map
+			// add newest surf points to the map
 			TicToc t_add;
 			for (auto n = 0; n < NUM_OF_LASER; n++)
 			{
