@@ -14,7 +14,7 @@ void PlaneNormalVisualizer::UpdateCloud(PointCloud::ConstPtr cloud,
     //  DLOG(INFO) << cloud->size();
     if (cloud->size() == 0)
     {
-        DLOG(INFO) << ">>>>>>> no points <<<<<<<";
+        // DLOG(INFO) << ">>>>>>> no points <<<<<<<";
         return;
     }
 
@@ -49,7 +49,7 @@ void PlaneNormalVisualizer::UpdateCloudAndNormals(PointCloud::ConstPtr cloud,
 
     if (cloud->size() == 0 || normals->size() == 0)
     {
-        DLOG(INFO) << ">>>>>>> no points <<<<<<<";
+        // DLOG(INFO) << ">>>>>>> no points <<<<<<<";
         return;
     }
 
@@ -85,8 +85,8 @@ void PlaneNormalVisualizer::UpdateLines(PointCloud::ConstPtr cloud1,
     int num_cloud2 = cloud2->size();
     if (num_cloud1 == 0 || num_cloud2 == 0 || num_cloud1 != num_cloud2)
     {
-        DLOG(INFO) << ">>>>>>> no points or sizes are not the same <<<<<<<";
-        LOG_IF(INFO, num_cloud1 != num_cloud2) << num_cloud1 << " != " << num_cloud2;
+        // DLOG(INFO) << ">>>>>>> no points or sizes are not the same <<<<<<<";
+        // LOG_IF(INFO, num_cloud1 != num_cloud2) << num_cloud1 << " != " << num_cloud2;
         return;
     }
 
@@ -121,7 +121,7 @@ void PlaneNormalVisualizer::UpdatePlanes(const std::vector<Eigen::Vector4d> &pla
     int size = plane_coeffs.size();
     if (size == 0)
     {
-        DLOG(INFO) << ">>>>>>> no planes <<<<<<<";
+        // DLOG(INFO) << ">>>>>>> no planes <<<<<<<";
         return;
     }
 
@@ -174,7 +174,7 @@ void PlaneNormalVisualizer::Spin()
     while (!viewer_->wasStopped())
     {
         // std::mutex::scoped_lock lk(m_);
-        DLOG(INFO) << ">>>>>>> spin <<<<<<<";
+        // DLOG(INFO) << ">>>>>>> spin <<<<<<<";
         // std::cout << ">>>>>>> spin <<<<<<<";
         m_vis_.lock();
         viewer_->spinOnce(100);

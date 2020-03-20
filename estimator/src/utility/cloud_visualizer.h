@@ -4,9 +4,6 @@
 #include <mutex>
 #include <chrono>
 
-#include <gflags/gflags.h>
-#include <glog/logging.h>
-
 #include <pcl/common/common_headers.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/io/pcd_io.h>

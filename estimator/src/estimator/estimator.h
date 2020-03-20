@@ -16,9 +16,6 @@
 
 #include <omp.h>
 
-#include <gflags/gflags.h>
-#include <glog/logging.h>
-
 #include <std_msgs/Header.h>
 #include <std_msgs/Float32.h>
 #include <nav_msgs/Path.h>

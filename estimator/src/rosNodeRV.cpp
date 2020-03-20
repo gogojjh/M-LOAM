@@ -19,9 +19,6 @@
 #include <mutex>
 #include <iomanip>
 
-#include <gflags/gflags.h>
-#include <glog/logging.h>
-
 #include <pcl/common/common.h> 
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/ros/conversions.h>
@@ -29,8 +26,6 @@
 #include <pcl/point_types.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/kdtree/kdtree_flann.h>
-
-#include <opencv2/opencv.hpp>
 
 #include <ros/ros.h>
 #include <std_msgs/Header.h>
@@ -107,9 +102,6 @@ int main(int argc, char **argv)
                 "1 /home/jjiao/trajectory_results/real_vehicle/rv01_20200301/\n");
         return 1;
     }
-    google::InitGoogleLogging(argv[0]);
-    google::ParseCommandLineFlags(&argc, &argv, true);
-
     ros::init(argc, argv, "mloam_node_rt");
     ros::NodeHandle n("~");
     ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);

@@ -19,16 +19,11 @@
 #include <mutex>
 #include <iomanip>
 
-#include <gflags/gflags.h>
-#include <glog/logging.h>
-
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/kdtree/kdtree_flann.h>
-
-#include <opencv2/opencv.hpp>
 
 #include <ros/ros.h>
 #include <std_msgs/Header.h>
@@ -207,10 +202,6 @@ int main(int argc, char **argv)
              << "~/catkin_ws/src/M-LOAM/config/config_handheld.yaml" << endl;
         return 1;
     }
-
-    google::InitGoogleLogging(argv[0]);
-    google::ParseCommandLineFlags(&argc, &argv, true);
-
     ros::init(argc, argv, "mloam_node_sr");
     ros::NodeHandle n("~");
     ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);

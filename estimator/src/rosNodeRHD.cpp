@@ -19,11 +19,6 @@
 #include <mutex>
 #include <iomanip>
 
-#include <gflags/gflags.h>
-#include <glog/logging.h>
-
-#include <opencv2/opencv.hpp>
-
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -209,9 +204,6 @@ int main(int argc, char **argv)
                 "/Monster xxx \n");
         return 1;
     }
-
-    google::InitGoogleLogging(argv[0]);
-    google::ParseCommandLineFlags(&argc, &argv, true);
 
     ros::init(argc, argv, "mloam_node_rhd");
     ros::NodeHandle n("~");

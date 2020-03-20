@@ -26,16 +26,13 @@ find_package(catkin REQUIRED COMPONENTS
     mloam_pcl
 )
 
-#message(${catkin_INCLUDE_DIRS})
-
 find_package(OpenCV REQUIRED)
 find_package(PCL REQUIRED)
 find_package(Ceres REQUIRED)
 find_package(Sophus REQUIRED)
-# find_package(glog REQUIRED)
 
-find_package(Eigen)
-#option(EIGEN_DONT_VECTORIZE "Disables explicit vectorization when defined." ON)
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+find_package(Eigen3)
 
 find_package(OpenMP REQUIRED)
 if (OPENMP_FOUND)
