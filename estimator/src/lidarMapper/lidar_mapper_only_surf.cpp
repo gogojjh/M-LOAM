@@ -555,7 +555,7 @@ void process()
 					evalHessian(jaco, mat_H);
 					evalDegenracy(mat_H, local_parameterization);
 					cov_mapping = mat_H.inverse(); // covariance of sensor noise: A New Approach to 3D ICP Covariance Estimation/ Censi's approach
-					printf("[lidar_mapper] pose covariance trace: %f\n", cov_mapping.trace());
+					printf("pose covariance trace: %f\n", cov_mapping.trace());
 
 					// ******************************************************
 					TicToc t_solver;
@@ -874,7 +874,9 @@ int main(int argc, char **argv)
 	printf("uncertainty propagation on (0/1): %d\n", UNCER_PROPA_ON);
 
 	down_size_filter_surf.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
+	down_size_filter_surf.trace_threshold_ = TRACE_THRESHOLD_AFTER_MAPPING;
 	down_size_filter_surf_map_cov.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
+	down_size_filter_surf_map_cov.trace_threshold_ = TRACE_THRESHOLD_AFTER_MAPPING;
 
 	ros::Subscriber sub_laser_cloud_full_res = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud", 5, laserCloudFullResHandler);
 	ros::Subscriber sub_laser_cloud_surf_last = nh.subscribe<sensor_msgs::PointCloud2>("/surf_points_less_flat", 5, laserCloudSurfLastHandler);

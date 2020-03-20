@@ -29,6 +29,10 @@ void roiCloudFilter(pcl::PointCloud<PointType> &laser_cloud, const double &roi_r
 {
     std::vector<int> indices;
     pcl::removeNaNFromPointCloud(laser_cloud, laser_cloud, indices);
+    if (roi_range <= 1e-5)
+    {
+        return;
+    } else
     if (roi_range < 5)
     {
         // pcl::PassThrough<PointType> pass_filter;
@@ -38,8 +42,7 @@ void roiCloudFilter(pcl::PointCloud<PointType> &laser_cloud, const double &roi_r
         // pass_filter.setFilterLimitsNegative(false);
         // pass_filter.filter(laser_cloud);
         common::removeROIPointCloud(laser_cloud, laser_cloud, roi_range, "inside");
-    }
-    else
+    } else
     {
         common::removeROIPointCloud(laser_cloud, laser_cloud, roi_range, "outside");
     }
