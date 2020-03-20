@@ -42,6 +42,7 @@
 #include "common/common.hpp"
 #include "estimator/estimator.h"
 #include "estimator/parameters.h"
+#include "utility/utility.h"
 #include "utility/visualization.h"
 #include "utility/cloud_visualizer.h"
 
@@ -77,16 +78,7 @@ pcl::PointCloud<pcl::PointXYZ> getCloudFromMsg(const sensor_msgs::PointCloud2Con
 {
     pcl::PointCloud<pcl::PointXYZ> laser_cloud;
     pcl::fromROSMsg(*cloud_msg, laser_cloud);
-    std::vector<int> indices;
-    pcl::removeNaNFromPointCloud(laser_cloud, laser_cloud, indices);
-    if (ROI_RANGE < 5)
-    {
-        common::removeROIPointCloud(laser_cloud, laser_cloud, ROI_RANGE, "inside");
-    }
-    else
-    {
-        common::removeROIPointCloud(laser_cloud, laser_cloud, ROI_RANGE, "outside");
-    }
+    roiCloudFilter(laser_cloud, ROI_RANGE);
     return laser_cloud;
 }
 

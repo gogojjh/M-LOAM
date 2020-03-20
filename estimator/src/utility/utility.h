@@ -23,12 +23,18 @@
 #include "../estimator/pose.h"
 
 template <typename PointType>
-void processCloud(pcl::PointCloud<PointType> &laser_cloud, const double &roi_range)
+void roiCloudFilter(pcl::PointCloud<PointType> &laser_cloud, const double &roi_range)
 {
     std::vector<int> indices;
     pcl::removeNaNFromPointCloud(laser_cloud, laser_cloud, indices);
     if (roi_range < 5)
     {
+        // pcl::PassThrough<PointType> pass_filter;
+        // pass_filter.setInputCloud(laser_cloud);
+        // pass_filter.setFilterFieldName("z");
+        // pass_filter.setFilterLimits(-roi_range, roi_range);
+        // pass_filter.setFilterLimitsNegative(false);
+        // pass_filter.filter(laser_cloud);
         common::removeROIPointCloud(laser_cloud, laser_cloud, roi_range, "inside");
     }
     else

@@ -239,7 +239,7 @@ int main(int argc, char **argv)
                     return 0;
                 }
                 printf("%d ", laser_cloud_list[j].size());
-                processCloud(laser_cloud_list[j]);
+                roiCloudFilter(laser_cloud_list[j], ROI_RANGE);
                 sensor_msgs::PointCloud2 msg_cloud;
                 pcl::toROSMsg(laser_cloud_list[j], msg_cloud);
                 msg_cloud.header.frame_id = std::string("laser_") + std::to_string(j);

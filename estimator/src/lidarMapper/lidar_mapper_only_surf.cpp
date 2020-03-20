@@ -90,20 +90,6 @@ std::vector<Eigen::Matrix<double, 6, 6> > d_eigvec_list;
 std::vector<Pose> pose_compound;
 std::vector<Eigen::Matrix<double, 6, 6> > cov_compound;
 
-void processCloud(pcl::PointCloud<pcl::PointXYZ> &laser_cloud)
-{
-	std::vector<int> indices;
-	pcl::removeNaNFromPointCloud(laser_cloud, laser_cloud, indices);
-	if (ROI_RANGE < 5)
-	{
-		common::removeROIPointCloud(laser_cloud, laser_cloud, ROI_RANGE, "inside");
-	}
-	else
-	{
-		common::removeROIPointCloud(laser_cloud, laser_cloud, ROI_RANGE, "outside");
-	}
-}
-
 int toCubeIndex(const int &i, const int &j, const int &k)
 {
 	return (i + laser_cloud_width * j + laser_cloud_width * laser_cloud_height * k);
@@ -250,7 +236,7 @@ void process()
 
 			laser_cloud_surf_last->clear();
 			pcl::fromROSMsg(*surf_last_buf.front(), *laser_cloud_surf_last);
-			processCloud(*laser_cloud_surf_last, *laser_cloud_surf_last);
+			roiCloudFilter(*laser_cloud_surf_last, ROI_RANGE_MAPPING);
 			surf_last_buf.pop();
 
 			laser_cloud_full_res->clear();
