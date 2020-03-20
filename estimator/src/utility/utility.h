@@ -17,10 +17,12 @@
 
 #include <eigen3/Eigen/Dense>
 
+#include "common/common.hpp"
 #include "common/types/type.h"
 
 #include "../estimator/parameters.h"
 #include "../estimator/pose.h"
+
 
 template <typename PointType>
 void roiCloudFilter(pcl::PointCloud<PointType> &laser_cloud, const double &roi_range)

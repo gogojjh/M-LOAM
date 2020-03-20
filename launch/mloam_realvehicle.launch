@@ -2,7 +2,7 @@
 
     <arg name="bag_file_use" default="false" />
     <arg name="config_file" default="$(find mloam)/../config/config_realvehicle.yaml" />
-    <arg name="data_path" default="/Monster/dataset/UDI_dataset/xfl_20200301/whole_travel/" />
+    <arg name="data_path" default="/Monster/dataset/UDI_dataset/xfl_20200301/short_test/" />
 
     <arg name="run_mloam" default="true" />
     <arg name="run_aloam" default="false" />
