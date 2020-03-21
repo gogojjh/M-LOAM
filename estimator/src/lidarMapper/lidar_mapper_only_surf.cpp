@@ -441,6 +441,7 @@ void process()
 				*laser_cloud_surf_from_map_cov += *laser_cloud_surf_array_cov[laser_cloud_valid_ind[i]];
 			}
 			int laser_cloud_surf_from_map_num = laser_cloud_surf_from_map_cov->points.size();
+			// printf("map prepare time %fms\n", t_shift.toc());
 
 			PointICloud::Ptr laser_cloud_surf_stack(new PointICloud());
 			down_size_filter_surf.setInputCloud(laser_cloud_surf_last);
@@ -448,7 +449,6 @@ void process()
 			int laser_cloud_surf_stack_num = laser_cloud_surf_stack->points.size();
 
 			//**************************************************************
-			// TODO: noisy point filtering on input calibrated points
 			for (auto n = 0; n < NUM_OF_LASER; n++)
 			{
 				laser_cloud_surf_split_cov[n].clear();
@@ -470,7 +470,6 @@ void process()
 
 			//***************************************************************************
 			// step 3: perform scan-to-map optimization
-			printf("map prepare time %fms\n", t_shift.toc());
 			printf("map surf num:%d\n", laser_cloud_surf_from_map_num);
 			if (laser_cloud_surf_from_map_num > 100)
 			{
@@ -487,8 +486,8 @@ void process()
 
 					ceres::Solver::Options options;
 					options.linear_solver_type = ceres::DENSE_SCHUR;
-					options.max_num_iterations = 20;
-					options.max_solver_time_in_seconds = SOLVER_TIME;
+					options.max_num_iterations = 30;
+					options.max_solver_time_in_seconds = 0.05;
 					options.minimizer_progress_to_stdout = false;
 					options.check_gradients = false;
 					options.gradient_check_relative_precision = 1e-3;
@@ -643,7 +642,7 @@ void process()
 				laser_cloud_surround_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
 				laser_cloud_surround_msg.header.frame_id = "/world";
 				pub_laser_cloud_surround.publish(laser_cloud_surround_msg);
-				printf("size of surround map: %d\n", laser_cloud_surrond.size());
+				// printf("size of surround map: %d\n", laser_cloud_surrond.size());
 			}
 
 			// publish complete map for every 20 frame
@@ -659,7 +658,7 @@ void process()
 				laser_cloud_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
 				laser_cloud_msg.header.frame_id = "/world";
 				pub_laser_cloud_map.publish(laser_cloud_msg);
-				printf("size of cloud map: %d\n", laser_cloud_map.size());
+				// printf("size of cloud map: %d\n", laser_cloud_map.size());
 			}
 
 			// publish registrated laser cloud
@@ -862,16 +861,19 @@ int main(int argc, char **argv)
 	readParameters(config_file);
 
     MLOAM_RESULT_SAVE = std::stoi(argv[2]);
-    OUTPUT_FOLDER = argv[3];
-    MLOAM_MAP_PATH = OUTPUT_FOLDER + std::string(argv[4]);
     printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
+    OUTPUT_FOLDER = argv[3];
+	UNCER_PROPA_ON = std::stoi(argv[4]);
+	printf("uncertainty propagation on (0/1): %d\n", UNCER_PROPA_ON);
+	if (UNCER_PROPA_ON)
+    	MLOAM_MAP_PATH = OUTPUT_FOLDER + "stamped_mloam_map_estimate.txt";
+	else
+		MLOAM_MAP_PATH = OUTPUT_FOLDER + "stamped_mloam_map_wo_up_estiamte.txt";
     if (MLOAM_RESULT_SAVE)
     {
 		std::cout << "output path: " << OUTPUT_FOLDER << std::endl;
         std::remove(MLOAM_MAP_PATH.c_str());
     }	
-	UNCER_PROPA_ON = std::stoi(argv[5]);
-	printf("uncertainty propagation on (0/1): %d\n", UNCER_PROPA_ON);
 
 	down_size_filter_surf.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
 	down_size_filter_surf.trace_threshold_ = TRACE_THRESHOLD_AFTER_MAPPING;

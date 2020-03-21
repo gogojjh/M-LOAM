@@ -196,7 +196,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
     TicToc feature_ext_time;
     std::vector<cloudFeature> feature_frame;
     feature_frame.resize(NUM_OF_LASER);
-    printf("size of segmenting cloud ");
+    printf("size of segmenting cloud: ");
     for (auto i = 0; i < v_laser_cloud_in.size(); i++)
     {
         PointCloud laser_cloud_segment;
@@ -831,12 +831,12 @@ void Estimator::optimizeMap()
         //! adjust the memory of H and b to implement the Schur complement
         TicToc t_pre_margin;
         marginalization_info->preMarginalize(); // add parameter block given residual info
-        printf("pre marginalization: %fms\n", t_pre_margin.toc());
+        // printf("pre marginalization: %fms\n", t_pre_margin.toc());
 
         TicToc t_margin;
         // marginalize some states and keep the remaining states with prior residuals
         marginalization_info->marginalize(); // compute linear residuals and jacobian
-        printf("marginalization: %fms\n", t_margin.toc());
+        // printf("marginalization: %fms\n", t_margin.toc());
 
         //! indicate shared memory of parameter blocks except for the dropped state
         std::unordered_map<long, double *> addr_shift;
@@ -1115,7 +1115,7 @@ void Estimator::evalResidual(ceres::Problem &problem,
 			e_option.parameter_blocks = para_ids;
 			e_option.residual_blocks = res_ids_marg;
             problem.Evaluate(e_option, &cost, nullptr, nullptr, &jaco);
-            printf("cost marg: %f\n", cost);
+            // printf("cost marg: %f\n", cost);
 		}
 	}
 }
@@ -1123,8 +1123,8 @@ void Estimator::evalResidual(ceres::Problem &problem,
 // A^TA is not only symmetric and invertiable: https://math.stackexchange.com/questions/2352684/when-is-a-symmetric-matrix-invertible
 void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_param_ids, const ceres::CRSMatrix &jaco)
 {
-    printf("jacob: %d constraints, %d parameters (%d pose_param, %d ext_param)\n",
-        jaco.num_rows, jaco.num_cols, 6*(OPT_WINDOW_SIZE + 1), 6*NUM_OF_LASER); // 58, feature_size(2700) x 50
+    // printf("jacob: %d constraints, %d parameters (%d pose_param, %d ext_param)\n",
+    //     jaco.num_rows, jaco.num_cols, 6*(OPT_WINDOW_SIZE + 1), 6*NUM_OF_LASER); // 58, feature_size(2700) x 50
     if (jaco.num_rows == 0) return;
     TicToc t_eval_degenracy;
     Eigen::MatrixXd mat_J;
@@ -1167,7 +1167,8 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
                 break;
             }
         }
-        std::cout << i << " D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose() << std::endl;
+        if (ESTIMATE_EXTRINSIC != 0)
+            std::cout << i << " D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose() << std::endl;
         Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
 
         if (i > OPT_WINDOW_SIZE)
@@ -1191,9 +1192,12 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
             // std::cout << mat_P << std::endl;
         }
     }
-    std::cout << "eigen threshold :";
-    for (auto i = 0; i < eig_thre_.size(); i++) std::cout << eig_thre_[i] << " ";
-    std::cout << std::endl;
+    if (ESTIMATE_EXTRINSIC != 0)
+    {
+        printf("eigen threshold :");
+        for (auto i = 0; i < eig_thre_.size(); i++) printf("%f ", eig_thre_[i]);
+        printf("\n");
+    }
     // printf("evaluate degeneracy %fms\n", t_eval_degenracy.toc());
 }
 

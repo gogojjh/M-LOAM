@@ -60,7 +60,7 @@ Pose pose_world_ref_ini;
 
 bool b_pause = false;
 
-int MLOAM_START_IDX;
+size_t MLOAM_START_IDX, MLOAM_END_IDX, MLOAM_DELTA_IDX;
 
 void saveGroundTruth()
 {
@@ -114,7 +114,7 @@ int main(int argc, char **argv)
     MLOAM_RESULT_SAVE = std::stoi(argv[3]);
     OUTPUT_FOLDER = argv[4];
     MLOAM_ODOM_PATH = OUTPUT_FOLDER + "stamped_mloam_odom_estimate.txt";
-    MLOAM_GT_PATH = OUTPUT_FOLDER + "stamped_mloam_gt_estimate.txt";
+    MLOAM_GT_PATH = OUTPUT_FOLDER + "stamped_groundtruth.txt";
     EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
     EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "calib_eig.txt";
     printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
@@ -127,6 +127,8 @@ int main(int argc, char **argv)
         std::remove(EX_CALIB_EIG_PATH.c_str());
     }
     MLOAM_START_IDX = std::stoi(argv[5]);
+    MLOAM_END_IDX = std::stoi(argv[6]);
+    MLOAM_DELTA_IDX = std::stoi(argv[7]);
     ROS_WARN("reading cloud ...");
 
     // *************************************
@@ -204,7 +206,7 @@ int main(int argc, char **argv)
 
     // *************************************
     // read data
-    for (size_t i = MLOAM_START_IDX; i < cloud_time_list.size(); i++)
+    for (size_t i = MLOAM_START_IDX; i < std::min(MLOAM_END_IDX, cloud_time_list.size()); i+=MLOAM_DELTA_IDX)
     {	
 		if (ros::ok())
 		{
@@ -215,7 +217,7 @@ int main(int argc, char **argv)
             ss << setfill('0') << setw(6) << i;
 
             // load cloud
-            printf("size of finding cloud ");
+            printf("size of finding cloud: ");
             std::vector<pcl::PointCloud<pcl::PointXYZ> > laser_cloud_list(NUM_OF_LASER);
             for (size_t j = 0; j < NUM_OF_LASER; j++)
             {
@@ -230,13 +232,13 @@ int main(int argc, char **argv)
                     ROS_BREAK();
                     return 0;
                 }
-                printf("%d ", laser_cloud_list[j].size());
                 roiCloudFilter(laser_cloud_list[j], ROI_RANGE);
-                sensor_msgs::PointCloud2 msg_cloud;
-                pcl::toROSMsg(laser_cloud_list[j], msg_cloud);
-                msg_cloud.header.frame_id = std::string("laser_") + std::to_string(j);
-                msg_cloud.header.stamp = ros::Time(cloud_time);
-                pub_laser_cloud_list[j].publish(msg_cloud);
+                printf("%d ", laser_cloud_list[j].size());
+                // sensor_msgs::PointCloud2 msg_cloud;
+                // pcl::toROSMsg(laser_cloud_list[j], msg_cloud);
+                // msg_cloud.header.frame_id = std::string("laser_") + std::to_string(j);
+                // msg_cloud.header.stamp = ros::Time(cloud_time);
+                // pub_laser_cloud_list[j].publish(msg_cloud);
             }
             printf("\n");
 
@@ -324,19 +326,19 @@ int main(int argc, char **argv)
 
             estimator.inputCloud(cloud_time, laser_cloud_list);           
 
-            ros::Duration duration(0.01);
+            ros::Rate loop_rate(100);
             if (b_pause)
             {
                 while (true)
                 {
                     ros::spinOnce();
                     if ((!b_pause) || (!ros::ok())) break;
-                    duration.sleep();
+                    loop_rate.sleep();
                 }
             } else
             {
                 ros::spinOnce();
-                duration.sleep();
+                loop_rate.sleep();
             }
 		}
 		else
@@ -344,7 +346,7 @@ int main(int argc, char **argv)
 	}
 
     // save gt (only once)
-    // saveGroundTruth();
+    saveGroundTruth();
     return 0;
 }
 
