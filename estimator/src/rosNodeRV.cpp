@@ -118,14 +118,14 @@ int main(int argc, char **argv)
     EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
     EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "calib_eig.txt";
     printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
-    if (MLOAM_RESULT_SAVE)
-    {
-        std::cout << "output path: " << OUTPUT_FOLDER << std::endl;
-        std::remove(MLOAM_ODOM_PATH.c_str());
-        std::remove(MLOAM_MAP_PATH.c_str());
-        std::remove(EX_CALIB_RESULT_PATH.c_str());
-        std::remove(EX_CALIB_EIG_PATH.c_str());
-    }
+    // if (MLOAM_RESULT_SAVE)
+    // {
+    //     std::cout << "output path: " << OUTPUT_FOLDER << std::endl;
+    //     std::remove(MLOAM_ODOM_PATH.c_str());
+    //     std::remove(MLOAM_MAP_PATH.c_str());
+    //     std::remove(EX_CALIB_RESULT_PATH.c_str());
+    //     std::remove(EX_CALIB_EIG_PATH.c_str());
+    // }
     MLOAM_START_IDX = std::stoi(argv[5]);
     MLOAM_END_IDX = std::stoi(argv[6]);
     MLOAM_DELTA_IDX = std::stoi(argv[7]);
@@ -154,7 +154,6 @@ int main(int argc, char **argv)
     // *************************************
     // read cloud list
     FILE *file;
-    double base_time = ros::Time::now().toSec();
     double cloud_time;
 	vector<double> cloud_time_list;
     {
@@ -210,8 +209,8 @@ int main(int argc, char **argv)
     {	
 		if (ros::ok())
 		{
-            // double cloud_time = cloud_time_list[i] - cloud_time_list[0] + base_time;
-            double cloud_time = ros::Time::now().toSec();
+            double cloud_time = cloud_time_list[i];
+            // double cloud_time = ros::Time::now().toSec();
             printf("process data: %d\n", i);
             stringstream ss;
             ss << setfill('0') << setw(6) << i;
@@ -326,7 +325,7 @@ int main(int argc, char **argv)
 
             estimator.inputCloud(cloud_time, laser_cloud_list);           
 
-            ros::Rate loop_rate(100);
+            ros::Rate loop_rate(10);
             if (b_pause)
             {
                 while (true)
@@ -346,7 +345,7 @@ int main(int argc, char **argv)
 	}
 
     // save gt (only once)
-    saveGroundTruth();
+    // saveGroundTruth();
     return 0;
 }
 

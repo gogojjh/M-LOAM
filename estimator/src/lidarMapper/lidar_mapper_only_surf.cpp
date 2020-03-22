@@ -869,11 +869,11 @@ int main(int argc, char **argv)
     	MLOAM_MAP_PATH = OUTPUT_FOLDER + "stamped_mloam_map_estimate.txt";
 	else
 		MLOAM_MAP_PATH = OUTPUT_FOLDER + "stamped_mloam_map_wo_up_estiamte.txt";
-    if (MLOAM_RESULT_SAVE)
-    {
-		std::cout << "output path: " << OUTPUT_FOLDER << std::endl;
-        std::remove(MLOAM_MAP_PATH.c_str());
-    }	
+    // if (MLOAM_RESULT_SAVE)
+    // {
+	// 	std::cout << "output path: " << OUTPUT_FOLDER << std::endl;
+    //     std::remove(MLOAM_MAP_PATH.c_str());
+    // }	
 
 	down_size_filter_surf.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
 	down_size_filter_surf.trace_threshold_ = TRACE_THRESHOLD_AFTER_MAPPING;
