@@ -351,7 +351,7 @@ int main(int argc, char** argv)
                     pub_laser_gt_path.publish(laser_gt_path);
                 }
 
-                ros::Duration loop_rate(0.1);
+                ros::Rate loop_rate(10);
                 if (b_pause)
                 {
                     while (true)
