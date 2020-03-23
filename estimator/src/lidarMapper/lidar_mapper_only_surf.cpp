@@ -868,7 +868,7 @@ int main(int argc, char **argv)
 	if (UNCER_PROPA_ON)
     	MLOAM_MAP_PATH = OUTPUT_FOLDER + "stamped_mloam_map_estimate.txt";
 	else
-		MLOAM_MAP_PATH = OUTPUT_FOLDER + "stamped_mloam_map_wo_up_estiamte.txt";
+		MLOAM_MAP_PATH = OUTPUT_FOLDER + "stamped_mloam_map_wo_up_estimate.txt";
     // if (MLOAM_RESULT_SAVE)
     // {
 	// 	std::cout << "output path: " << OUTPUT_FOLDER << std::endl;

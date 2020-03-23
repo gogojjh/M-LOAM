@@ -127,7 +127,7 @@ int main(int argc, char** argv)
 {
     ros::init(argc, argv, "test_merge_pointcloud");
     ros::NodeHandle nh("~");
-    cloud_fused_pub = nh.advertise<LidarMsgType>("/fused/velodyne_points", 1);
+    cloud_fused_pub = nh.advertise<LidarMsgType>("/fused/velodyne_points", 5);
 
     int data_choice = std::stoi(argv[1]);
 
@@ -351,7 +351,7 @@ int main(int argc, char** argv)
                     pub_laser_gt_path.publish(laser_gt_path);
                 }
 
-                ros::Duration loop_rate(10);
+                ros::Duration loop_rate(0.1);
                 if (b_pause)
                 {
                     while (true)
