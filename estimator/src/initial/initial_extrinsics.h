@@ -68,6 +68,7 @@ public:
 	std::vector<std::vector<double> > v_rot_cov_, v_pos_cov_;
 	std::vector<bool> cov_rot_state_, cov_pos_state_;
 	bool full_cov_rot_state_, full_cov_pos_state_;
+	double rot_cov_thre_;
 
 	// std::vector<std::vector<Pose> > v_pose_;
 	std::priority_queue<std::pair<size_t, std::vector<Pose> >, 
@@ -82,7 +83,6 @@ public:
 	size_t frame_cnt_, pose_cnt_;
 
 	std::vector<Eigen::MatrixXd> Q_;
-
 
 	std::pair<size_t, std::vector<Pose> > pose_laser_add_;
 

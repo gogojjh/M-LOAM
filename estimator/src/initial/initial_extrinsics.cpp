@@ -4,7 +4,7 @@
 
 using namespace Eigen;
 
-const double EPSILON_R = 0.03;
+const double EPSILON_R = 0.05;
 const double EPSILON_T = 0.1;
 const size_t N_POSE = 300;
 
@@ -33,13 +33,17 @@ void InitialExtrinsics::setParameter()
     for (size_t i = 0; i < NUM_OF_LASER; i++) calib_ext_.push_back(Pose(QBL[i], TBL[i], TDBL[i]));
 
     cov_rot_state_ = std::vector<bool>(NUM_OF_LASER, false);
+    cov_rot_state_[IDX_REF] = true;
     full_cov_rot_state_ = false;
 
     cov_pos_state_ = std::vector<bool>(NUM_OF_LASER, false);
+    cov_pos_state_[IDX_REF] = true;
     full_cov_pos_state_ = false;
 
     v_rot_cov_.resize(NUM_OF_LASER);
     v_pos_cov_.resize(NUM_OF_LASER);
+    rot_cov_thre_ = (PLANAR_MOVEMENT) ? 0.08 : 0.25;
+    printf("[InitialExtrinsics] rot cov thre: %d\n", rot_cov_thre_);
 
     Q_.resize(NUM_OF_LASER);
     for (size_t i = 0; i < Q_.size(); i++) Q_[i] = Eigen::MatrixXd::Zero(N_POSE * 4, 4);
@@ -177,7 +181,7 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
     Eigen::Vector3d rot_cov = svd.singularValues().tail<3>(); // singular value
     v_rot_cov_[idx_data].push_back(rot_cov(1));
     printf("------------------- pose_cnt:%d, ref:%d, data:%d, rot_cov:%f\n", pq_pose_.size(), idx_ref, idx_data, rot_cov(1));
-    if (rot_cov(1) > 0.25) // converage, the second smallest sigular value
+    if (rot_cov(1) > rot_cov_thre_) // converage, the second smallest sigular value
     {
         calib_result = calib_ext_[idx_data];
         setCovRotation(idx_data);

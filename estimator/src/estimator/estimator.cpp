@@ -189,7 +189,7 @@ void Estimator::changeSensorType(int use_imu, int use_stereo)
     }
 }
 
-void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_laser_cloud_in, const int &mode)
+void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_laser_cloud_in)
 {
     assert(v_laser_cloud_in.size() == NUM_OF_LASER);
 
@@ -200,7 +200,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
     for (auto i = 0; i < v_laser_cloud_in.size(); i++)
     {
         PointCloud laser_cloud_segment;
-        if (((SEGMENT_CLOUD) && (ESTIMATE_EXTRINSIC == 0)) || (mode))
+        if ((SEGMENT_CLOUD) && (ESTIMATE_EXTRINSIC == 0))
         {
             img_segment_.segmentCloud(v_laser_cloud_in[i], laser_cloud_segment);
             printf("%d ", laser_cloud_segment.size());
@@ -219,7 +219,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
     if (!MULTIPLE_THREAD) processMeasurements();
 }
 
-void Estimator::inputCloud(const double &t, const PointCloud &laser_cloud_in, const int &mode)
+void Estimator::inputCloud(const double &t, const PointCloud &laser_cloud_in)
 {
     TicToc feature_ext_time;
     std::vector<cloudFeature> feature_frame;

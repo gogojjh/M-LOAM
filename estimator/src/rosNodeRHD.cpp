@@ -51,9 +51,33 @@ queue<sensor_msgs::PointCloud2ConstPtr> cloud1_buf;
 std::mutex m_buf;
 
 // laser path groundtruth
-nav_msgs::Path laser_path;
-ros::Publisher pub_laser_path;
+nav_msgs::Path laser_gt_path;
+ros::Publisher pub_laser_gt_path;
 Pose pose_world_ref_ini;
+
+void saveGroundTruth()
+{
+    if (MLOAM_RESULT_SAVE)
+    {
+        if (laser_gt_path.poses.size() == 0) return;
+        std::ofstream fout(MLOAM_GT_PATH.c_str(), std::ios::out);
+        fout.setf(ios::fixed, ios::floatfield);
+        for (size_t i = 0; i < laser_gt_path.poses.size(); i++)
+        {
+            geometry_msgs::PoseStamped &laser_pose = laser_gt_path.poses[i];
+            fout.precision(15);
+            fout << laser_pose.header.stamp.toSec() << " ";
+            fout.precision(8);
+            fout << laser_pose.pose.position.x << " "
+                    << laser_pose.pose.position.y << " "
+                    << laser_pose.pose.position.z << " "
+                    << laser_pose.pose.orientation.x << " "
+                    << laser_pose.pose.orientation.y << " "
+                    << laser_pose.pose.orientation.z << " "
+                    << laser_pose.pose.orientation.w << std::endl;
+        }
+    }
+}
 
 void cloud0_callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg)
 {
@@ -166,7 +190,7 @@ void pose_gt_callback(const geometry_msgs::PoseStamped &pose_msg)
     Pose pose_world_base(pose_msg.pose);
     Pose pose_base_ref(Eigen::Quaterniond(1, 0, 0, 0), Eigen::Vector3d(0, 0, 0));
     Pose pose_world_ref(pose_world_base * pose_base_ref);
-    if (laser_path.poses.size() == 0)
+    if (laser_gt_path.poses.size() == 0)
         pose_world_ref_ini = pose_world_ref;
     Pose pose_ref_ini_cur(pose_world_ref_ini.inverse() * pose_world_ref);
 
@@ -187,10 +211,9 @@ void pose_gt_callback(const geometry_msgs::PoseStamped &pose_msg)
     laser_pose.header = pose_msg.header;
     laser_pose.header.frame_id = "/world";
     laser_pose.pose = laser_odom.pose.pose;
-    laser_path.header = laser_pose.header;
-    laser_path.poses.push_back(laser_pose);
-    pub_laser_path.publish(laser_path);
-    estimator.laser_gt_path_ = laser_path;
+    laser_gt_path.header = laser_pose.header;
+    laser_gt_path.poses.push_back(laser_pose);
+    pub_laser_gt_path.publish(laser_gt_path);
 }
 
 int main(int argc, char **argv)
@@ -214,21 +237,12 @@ int main(int argc, char **argv)
     cout << "config_file: " << argv[1] << endl;
 
     MLOAM_RESULT_SAVE = std::stoi(argv[2]);
+    printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
     OUTPUT_FOLDER = argv[3];
     MLOAM_ODOM_PATH = OUTPUT_FOLDER + std::string(argv[4]);
     MLOAM_GT_PATH = OUTPUT_FOLDER + argv[5];
     EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
     EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "calib_eig.txt";
-    printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
-    if (MLOAM_RESULT_SAVE)
-    {
-        std::cout << "output path: " << OUTPUT_FOLDER << std::endl;
-        std::remove(MLOAM_ODOM_PATH.c_str());
-        std::remove(MLOAM_MAP_PATH.c_str());
-        // std::remove(MLOAM_GT_PATH.c_str());
-        std::remove(EX_CALIB_RESULT_PATH.c_str());
-        std::remove(EX_CALIB_EIG_PATH.c_str());
-    }
     ROS_WARN("waiting for cloud...");
 
     if (NUM_OF_LASER > 2)
@@ -249,7 +263,7 @@ int main(int argc, char **argv)
     ros::Subscriber sub_cloud1 = n.subscribe(CLOUD1_TOPIC, 10, cloud1_callback);
     ros::Subscriber sub_restart = n.subscribe("/mlod_restart", 10, restart_callback);
     ros::Subscriber sub_pose_gt = n.subscribe("/base_pose_gt", 10, pose_gt_callback);
-    pub_laser_path = n.advertise<nav_msgs::Path>("/laser_gt_path", 10);
+    pub_laser_gt_path = n.advertise<nav_msgs::Path>("/laser_gt_path", 10);
 
     std::thread sync_thread(sync_process);
     std::thread cloud_visualizer_thread;
@@ -267,6 +281,7 @@ int main(int argc, char **argv)
     cloud_visualizer_thread.join();
     sync_thread.join();
 
+    saveGroundTruth();
     return 0;
 }
 

@@ -133,7 +133,6 @@ int main(int argc, char** argv)
 
     if (data_choice == 0)
     {
-
         //register fusion callback function
         LidarSubType *sub_top = new LidarSubType(nh, "/top/rslidar_points", 1);
         LidarSubType *sub_front = new LidarSubType(nh, "/front/rslidar_points", 1);

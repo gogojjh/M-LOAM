@@ -209,26 +209,6 @@ void printStatistics(const Estimator &estimator, double t)
             }
             fout.close();
         }
-
-        {
-            ofstream fout(MLOAM_GT_PATH.c_str(), ios::out);
-            fout.setf(ios::fixed, ios::floatfield);
-            for (auto i = 0; i < estimator.laser_gt_path_.poses.size(); i++)
-            {
-                geometry_msgs::PoseStamped laser_pose = estimator.laser_gt_path_.poses[i];
-                fout.precision(15);
-                fout << laser_pose.header.stamp.toSec() << " ";
-                fout.precision(8);
-                fout << laser_pose.pose.position.x << " "
-                    << laser_pose.pose.position.y << " "
-                    << laser_pose.pose.position.z << " "
-                    << laser_pose.pose.orientation.x << " "
-                    << laser_pose.pose.orientation.y << " "
-                    << laser_pose.pose.orientation.z << " "
-                    << laser_pose.pose.orientation.w << std::endl;
-            }
-            fout.close();
-        }
     }
 }
 

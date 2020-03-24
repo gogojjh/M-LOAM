@@ -59,8 +59,8 @@ class Estimator
     void clearState();
     void setParameter();
 
-    void inputCloud(const double &t, const std::vector<common::PointCloud> &v_laser_cloud_in, const int &mode = 0);
-    void inputCloud(const double &t, const common::PointCloud &laser_cloud_in, const int &mode = 0);
+    void inputCloud(const double &t, const std::vector<common::PointCloud> &v_laser_cloud_in);
+    void inputCloud(const double &t, const common::PointCloud &laser_cloud_in);
 
     // process measurements
     void processMeasurements();
@@ -126,8 +126,6 @@ class Estimator
     std::vector<Eigen::Vector3d> tbl_;
     std::vector<double> tdbl_;
     std::vector<Eigen::Matrix<double, 6, 6> > covbl_;
-
-    nav_msgs::Path laser_gt_path_;
 
     // slide window
     // xx[cir_buf_cnt_] indicates the newest variables and measurements
