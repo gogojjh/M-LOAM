@@ -26,8 +26,8 @@ segment_valid_line_num: 3
 segment_theta: 0.53 # Lego-loam: 1.0
 
 # window sizes
-window_size: 3
-opt_window_size: 2
+window_size: 4
+opt_window_size: 1
 
 # Extrinsic parameter between IMU and Camera.
 estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
@@ -116,8 +116,8 @@ n_calib: 10
 
 # mapping 
 map_corner_res: 0.2
-map_surf_res: 0.4
-map_eig_thre: 200
+map_surf_res: 0.3
+map_eig_thre: 50
 
 # uncertainty parameter
 # translation, rotation, point (s, phi, zeta)

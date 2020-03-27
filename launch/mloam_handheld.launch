@@ -47,6 +47,9 @@
     <!-- publish static tf -->
     <!-- x y z yaw pitch roll -->
     <!-- x y z qx qy qz qw -->
+    <include file="$(find rviz_car_model)/launch/default.launch" />
+    <node name="static_tf_base_sensor_into_base_link" pkg="tf" type="static_transform_publisher"
+        args="0 0 0 0 0 0 1 aft_mapped base_link 10"/>                
     <node name="static_tf_world_base_into_world_sensor" pkg="tf" type="static_transform_publisher"
         args="0 0 0 -0.233 0 0 0.972 world_base world 10"/>
     <node name="static_tf_world_sensor_into_base_sensor" pkg="tf" type="static_transform_publisher"
