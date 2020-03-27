@@ -84,11 +84,65 @@ int UNCER_PROPA_ON = 1;
 std::vector<Eigen::Matrix<double, 6, 6> > cov_ext;
 Eigen::Matrix<double, 6, 6> cov_mapping;
 
-std::vector<Eigen::Matrix<double, 1, 6>> d_factor_list;
+std::vector<Eigen::Matrix<double, 1, 6> > d_factor_list;
 std::vector<Eigen::Matrix<double, 6, 6> > d_eigvec_list;
 
 std::vector<Pose> pose_compound;
 std::vector<Eigen::Matrix<double, 6, 6> > cov_compound;
+
+double total_mapping = 0.0;;
+
+void saveStatistics()
+{
+	printf("Saving mapping statistics\n");
+	if (MLOAM_RESULT_SAVE)
+	{
+		std::ofstream fout(MLOAM_MAP_PATH.c_str(), std::ios::out);
+		for (size_t i = 0; i < laser_after_mapped_path.poses.size(); i++)
+		{
+			geometry_msgs::PoseStamped &laser_pose = laser_after_mapped_path.poses[i];
+			fout.precision(15);
+			fout << laser_pose.header.stamp.toSec() << " ";
+			fout.precision(8);
+			fout << laser_pose.pose.position.x << " "
+				<< laser_pose.pose.position.y << " "
+				<< laser_pose.pose.position.z << " "
+				<< laser_pose.pose.orientation.x << " "
+				<< laser_pose.pose.orientation.y << " "
+				<< laser_pose.pose.orientation.z << " "
+				<< laser_pose.pose.orientation.w << std::endl;
+		}
+		fout.close();
+
+		if (UNCER_PROPA_ON)
+		{
+			fout.open(std::string(OUTPUT_FOLDER + "mapping_factor.txt").c_str(), std::ios::out);
+			fout.precision(8);
+			for (size_t i = 0; i < d_factor_list.size(); i++) fout << d_factor_list[i] << std::endl;
+			fout.close();
+
+			fout.open(std::string(OUTPUT_FOLDER + "mapping_d_eigvec.txt").c_str(), std::ios::out);
+			fout.precision(8);
+			for (size_t i = 0; i < d_eigvec_list.size(); i++) fout << d_eigvec_list[i] << std::endl;
+			fout.close();
+		}
+
+		fout.open(std::string(OUTPUT_FOLDER + "time_mapping.txt").c_str(), std::ios::out);
+		fout.precision(15);
+		fout << "frame, total_mapping_time" << std::endl;
+		fout << frame_cnt << ", " << total_mapping << std::endl;
+		fout.close();
+		ROS_WARN("Frame: %d, mean mapping time: %f\n", frame_cnt, total_mapping / frame_cnt);
+	}		
+
+	printf("Saving laser_map cloud to /tmp/mloam_mapping_cloud.pcd\n");
+	PointICovCloud laser_cloud_map;
+	for (int i = 0; i < laser_cloud_num; i++)
+	{
+		laser_cloud_map += *laser_cloud_surf_array_cov[i];
+	}
+	pcl::io::savePCDFileASCII("/tmp/mloam_mapping_cloud.pcd", laser_cloud_map);	
+}
 
 int toCubeIndex(const int &i, const int &j, const int &k)
 {
@@ -257,7 +311,7 @@ void process()
 			ext_buf.pop();
 			if (!extrinsics.status)
 			{
-				ROS_INFO("Calibration is stable!");
+				printf("Calibration is stable!\n");
 				for (auto n = 0; n < NUM_OF_LASER; n++)
 				{
 					pose_ext[n].q_ = Eigen::Quaterniond(extrinsics.odoms[n].pose.pose.orientation.w,
@@ -284,9 +338,9 @@ void process()
 
 			//***************************************************************************
 			frame_cnt++;
-			ROS_WARN("frame: %d", frame_cnt);
+			// ROS_WARN("frame: %d", frame_cnt);
 
-			TicToc t_whole;
+			TicToc t_whole_mapping;
 			transformAssociateToMap();
 
 			// step 2: move current map to the managed cube area
@@ -685,7 +739,8 @@ void process()
 			// pub_laser_cloud_surf_last_res.publish(laser_cloud_surf_last_msg);
 
 			printf("mapping pub time %fms \n", t_pub.toc());
-			printf("whole mapping time %fms +++++\n", t_whole.toc());
+			ROS_WARN("frame: %d, whole mapping time %fms\n", frame_cnt, t_whole_mapping.toc());
+			total_mapping += t_whole_mapping.toc();
 
 			// ************************************************************** publish odom
 			nav_msgs::Odometry odom_aft_mapped;
@@ -713,37 +768,6 @@ void process()
 			pub_laser_after_mapped_path.publish(laser_after_mapped_path);
 			publishTF(odom_aft_mapped);
 
-			if (MLOAM_RESULT_SAVE)
-			{
-				std::ofstream fout(MLOAM_MAP_PATH.c_str(), std::ios::out);
-				for (size_t i = 0; i < laser_after_mapped_path.poses.size(); i++)
-				{
-					geometry_msgs::PoseStamped &laser_pose = laser_after_mapped_path.poses[i];
-					fout.precision(15);
-					fout << laser_pose.header.stamp.toSec() << " ";
-					fout.precision(8);
-					fout << laser_pose.pose.position.x << " "
-						<< laser_pose.pose.position.y << " "
-						<< laser_pose.pose.position.z << " "
-						<< laser_pose.pose.orientation.x << " "
-						<< laser_pose.pose.orientation.y << " "
-						<< laser_pose.pose.orientation.z << " "
-						<< laser_pose.pose.orientation.w << std::endl;
-				}
-				fout.close();
-				if (UNCER_PROPA_ON)
-				{
-					fout.open(std::string(OUTPUT_FOLDER + "mapping_factor.txt").c_str(), std::ios::out);
-					fout.precision(8);
-					for (size_t i = 0; i < d_factor_list.size(); i++) fout << d_factor_list[i] << std::endl;
-					fout.close();
-
-					fout.open(std::string(OUTPUT_FOLDER + "mapping_d_eigvec.txt").c_str(), std::ios::out);
-					fout.precision(8);
-					for (size_t i = 0; i < d_eigvec_list.size(); i++) fout << d_eigvec_list[i] << std::endl;
-					fout.close();
-				}
-			}
 			// std::cout << "pose_wmap_curr: " << pose_wmap_curr << std::endl;
 			printf("\n");
 		}
@@ -917,13 +941,6 @@ int main(int argc, char **argv)
 		loop_rate.sleep();
 	}
 
-	printf("Saving laser_map cloud to /tmp/mloam_mapping_cloud.pcd\n");
-	PointICovCloud laser_cloud_map;
-	for (int i = 0; i < laser_cloud_num; i++)
-	{
-		laser_cloud_map += *laser_cloud_surf_array_cov[i];
-	}
-	pcl::io::savePCDFileASCII("/tmp/mloam_mapping_cloud.pcd", laser_cloud_map);
-
+	saveStatistics();
 	return 0;
 }

@@ -78,6 +78,21 @@ void saveGroundTruth()
     }
 }
 
+void saveStatistics()
+{
+    if (MLOAM_RESULT_SAVE)
+    {
+	    printf("Saving odometry time statistics\n");
+		std::ofstream fout(std::string(OUTPUT_FOLDER + "time_odometry.txt").c_str(), std::ios::out);
+		fout.precision(15);
+        fout << "frame, total_mea_pre_time, total_opt_odom_time" << std::endl;
+		fout << estimator.frame_cnt_ << ", " << estimator.total_measurement_pre_time_ << ", " << estimator.total_opt_odom_time_ << std::endl;
+		fout.close();
+        ROS_WARN("Frame: %d, mean measurement preprocess time: %f, mean optimize odometry time: %f\n", estimator.frame_cnt_, 
+            estimator.total_measurement_pre_time_ / estimator.frame_cnt_, estimator.total_opt_odom_time_ / estimator.frame_cnt_);
+    }
+}
+
 void pauseCallback(std_msgs::StringConstPtr msg)
 {
     printf("%s\n", msg->data.c_str());
@@ -306,6 +321,7 @@ int main(int argc, char **argv)
         }
     }
     // saveGroundTruth();
+    saveStatistics();
     return 0;
 }
 

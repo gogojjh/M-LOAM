@@ -177,6 +177,7 @@ class Estimator
 
     PlaneNormalVisualizer plane_normal_vis_;
 
+    double total_measurement_pre_time_, total_opt_odom_time_;
 };
 
 

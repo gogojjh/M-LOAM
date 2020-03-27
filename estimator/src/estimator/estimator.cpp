@@ -174,6 +174,9 @@ void Estimator::clearState()
     pose_calib_.clear();
     calib_converge_.clear();
 
+    total_measurement_pre_time_ = 0.0;
+    total_opt_odom_time_ = 0.0;
+
     m_process_.unlock();
 }
 
@@ -193,7 +196,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
 {
     assert(v_laser_cloud_in.size() == NUM_OF_LASER);
 
-    TicToc feature_ext_time;
+    TicToc measurement_pre_time;
     std::vector<cloudFeature> feature_frame;
     feature_frame.resize(NUM_OF_LASER);
     printf("size of segmenting cloud: ");
@@ -211,7 +214,8 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
         }
     }
     printf("\n");
-    printf("featureExt time: %fms (%u*%fms)\n", feature_ext_time.toc(), v_laser_cloud_in.size(), feature_ext_time.toc() / v_laser_cloud_in.size());
+    printf("measurementPre time: %fms (%u*%fms)\n", measurement_pre_time.toc(), v_laser_cloud_in.size(), measurement_pre_time.toc() / v_laser_cloud_in.size());
+    total_measurement_pre_time_ += measurement_pre_time.toc();
 
     m_buf_.lock();
     feature_buf_.push(make_pair(t, feature_frame));
@@ -221,7 +225,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
 
 void Estimator::inputCloud(const double &t, const PointCloud &laser_cloud_in)
 {
-    TicToc feature_ext_time;
+    TicToc measurement_pre_time;
     std::vector<cloudFeature> feature_frame;
     feature_frame.resize(1);
     if ((SEGMENT_CLOUD) && (ESTIMATE_EXTRINSIC == 0))
@@ -233,7 +237,8 @@ void Estimator::inputCloud(const double &t, const PointCloud &laser_cloud_in)
     {
         f_extract_.extractCloud(t, laser_cloud_in, feature_frame[0]);
     }
-    printf("featureExt time: %fms\n", feature_ext_time.toc());
+    printf("measurementPre time: %fms\n", measurement_pre_time.toc());
+    total_measurement_pre_time_ += measurement_pre_time.toc();
 
     m_buf_.lock();
     feature_buf_.push(make_pair(t, feature_frame));
@@ -459,6 +464,7 @@ void Estimator::process()
 // TODO: optimize_direct_calib
 void Estimator::optimizeMap()
 {
+    TicToc t_opt_map;
     TicToc t_prep_solver;
     int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
 
@@ -686,6 +692,7 @@ void Estimator::optimizeMap()
     std::cout << summary.BriefReport() << std::endl;
     // std::cout << summary.FullReport() << std::endl;
     printf("ceres solver costs: %fms\n", t_ceres_solver.toc());
+
     double2Vector();
 
     // ****************************************************
@@ -861,6 +868,7 @@ void Estimator::optimizeMap()
         last_marginalization_parameter_blocks_ = parameter_blocks; // save parameter_blocks at the last optimization
         printf("whole marginalization costs: %fms\n", t_whole_marginalization.toc());
     }
+    total_opt_odom_time_ += t_opt_map.toc();
 }
 
 /****************************************************************************************/
