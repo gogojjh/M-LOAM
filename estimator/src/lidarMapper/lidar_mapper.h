@@ -118,8 +118,8 @@ void evalPointUncertainty(const PointType &pi, Eigen::Matrix3d &cov_point, const
     cov_input.bottomRightCorner<3, 3>() = COV_MEASUREMENT;
 
     Eigen::Vector4d point_curr(pi.x, pi.y, pi.z, 1);
-    Eigen::Matrix4d T = pose.T_;
-    // Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
+    // Eigen::Matrix4d T = pose.T_;
+    Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
     Eigen::Matrix<double, 4, 3> D;
     D << 1, 0, 0,
          0, 1, 0,
@@ -129,12 +129,12 @@ void evalPointUncertainty(const PointType &pi, Eigen::Matrix3d &cov_point, const
     G.block<4, 6>(0, 0) = pointToFS(T * point_curr);
     G.block<4, 3>(0, 6) = T * D;
     cov_point = Eigen::Matrix4d(G * cov_input * G.transpose()).topLeftCorner<3, 3>(); // 3x3
-//     std::cout << cov_input << std::endl;
-//     std::cout << G << std::endl;
-//     std::cout << "evalUncertainty:" << std::endl
-//               << point_curr.transpose() << std::endl
-//               << cov_point << std::endl;
-//     exit(EXIT_FAILURE);
+    // std::cout << cov_input << std::endl;
+    // std::cout << G << std::endl;
+    // std::cout << "evalUncertainty:" << std::endl
+    //           << point_curr.transpose() << std::endl
+    //           << cov_point << std::endl;
+    // exit(EXIT_FAILURE);
 }
 
 Eigen::Matrix<double, 6, 6> adjointMatrix(const Eigen::Matrix4d &T)

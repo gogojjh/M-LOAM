@@ -9,11 +9,11 @@
     <arg name="run_aloam" default="false" />
     <arg name="run_legoloam" default="false" />
 
-    <arg name="run_mloam_map_with_up" default="true" /> <!-- uncertainty propagation -->    
+    <arg name="run_mloam_map_with_up" default="false" /> <!-- uncertainty propagation -->    
     <arg name="mloam_result_save" default="1"/>
     <arg name="mloam_start_idx" default="2100"/>
     <arg name="mloam_end_idx" default="25229"/> <!-- 25229 -->
-    <arg name="mloam_delta_idx" default="1" />
+    <arg name="mloam_delta_idx" default="2" />
     <arg name="mloam_time_now" default="0" />
 
     <arg name="output_path" default="/home/jjiao/trajectory_results/real_vehicle/rv01_20200301_whole_travel_test_2100_25229/"/>

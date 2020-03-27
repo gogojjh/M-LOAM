@@ -291,7 +291,8 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
                     valid_cnt--;
                     continue;
                 }
-                weight_vec[i - first_index] = trace_threshold_ - (temporary[4] + temporary[7] + temporary[9]);
+                double w = trace_threshold_ - (temporary[4] + temporary[7] + temporary[9]);
+                weight_vec[i - first_index] = (w < trace_threshold_ / 2.0) ? w : trace_threshold_ / 2.0;
                 mu.head(3) += weight_vec[i - first_index] * temporary.head(3);
                 mu[3] = temporary[3];
             }

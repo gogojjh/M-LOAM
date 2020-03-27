@@ -229,19 +229,17 @@ int main(int argc, char **argv)
     ros::NodeHandle n("~");
     ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
 
-    // 
     string config_file = argv[1];
     cout << "config_file: " << argv[1] << endl;
 
     MLOAM_RESULT_SAVE = std::stoi(argv[2]);
     OUTPUT_FOLDER = argv[3];
-    MLOAM_ODOM_PATH = OUTPUT_FOLDER + std::string(argv[4]);
-    MLOAM_GT_PATH = OUTPUT_FOLDER + argv[5];
+    MLOAM_ODOM_PATH = OUTPUT_FOLDER + "stamped_mloam_odom_estimate.txt";
+    MLOAM_GT_PATH = OUTPUT_FOLDER + "stamped_groundtruth.txt";
     EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
     EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "calib_eig.txt";
     printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
     ROS_WARN("waiting for cloud...");
-
     if (NUM_OF_LASER > 2)
     {
         printf("not support > 2 cases");

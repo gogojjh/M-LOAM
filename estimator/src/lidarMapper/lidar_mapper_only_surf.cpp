@@ -460,7 +460,7 @@ void process()
 				Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
 				pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
 				evalPointUncertainty(point_sel, cov_point, pose_ext[idx], cov_ext[idx]);
-				if (!UNCER_PROPA_ON) cov_point = COV_MEASUREMENT;
+				if (!UNCER_PROPA_ON) cov_point = COV_MEASUREMENT; // add extrinsic perturbation
 				if (abs(cov_point.trace()) <= TRACE_THRESHOLD_BEFORE_MAPPING)
 				{
 					PointIWithCov point_cov(point_ori, cov_point.cast<float>());
@@ -488,9 +488,10 @@ void process()
 					options.linear_solver_type = ceres::DENSE_SCHUR;
 					options.max_num_iterations = 30;
 					options.max_solver_time_in_seconds = 0.05;
+					options.num_threads = 4;
 					options.minimizer_progress_to_stdout = false;
 					options.check_gradients = false;
-					options.gradient_check_relative_precision = 1e-3;
+					options.gradient_check_relative_precision = 1e-4;
 
 					vector2Double();
 					
@@ -590,7 +591,7 @@ void process()
 					Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
 					pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
 					evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
-					if (!UNCER_PROPA_ON) cov_point = COV_MEASUREMENT;
+					if (!UNCER_PROPA_ON) cov_point = COV_MEASUREMENT; // add pose and extrinsic perturbation 
 					if (abs(cov_point.trace()) > TRACE_THRESHOLD_AFTER_MAPPING) continue;
 					pointAssociateToMap(point_ori, point_cov, pose_wmap_curr);
 					updateCov(point_cov, cov_point);
@@ -627,9 +628,9 @@ void process()
 			printf("filter time %fms\n", t_filter.toc());
 
 			// ************************************************************** publish feature and map data
-			// publish surround map (use for optimization) for every 5 frame
+			// publish surround map (use for optimization) for every 20 frame
 			TicToc t_pub;
-			if ((pub_laser_cloud_surround.getNumSubscribers() != 0) && (frame_cnt % 10 ==0))
+			if ((pub_laser_cloud_surround.getNumSubscribers() != 0) && (frame_cnt % 20 ==0))
 			{
 				PointICovCloud laser_cloud_surrond;
 				for (int i = 0; i < laser_cloud_surround_num; i++)
@@ -645,8 +646,8 @@ void process()
 				// printf("size of surround map: %d\n", laser_cloud_surrond.size());
 			}
 
-			// publish complete map for every 20 frame
-			if ((pub_laser_cloud_map.getNumSubscribers() != 0) && (frame_cnt % 20 == 0))
+			// publish complete map for every 50 frame
+			if ((pub_laser_cloud_map.getNumSubscribers() != 0) && (frame_cnt % 50 == 0))
 			{
 				PointICovCloud laser_cloud_map;
 				for (int i = 0; i < laser_cloud_num; i++)
@@ -876,7 +877,7 @@ int main(int argc, char **argv)
     // }	
 
 	down_size_filter_surf.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
-	down_size_filter_surf.trace_threshold_ = TRACE_THRESHOLD_AFTER_MAPPING;
+	down_size_filter_surf.trace_threshold_ = TRACE_THRESHOLD_AFTER_MAPPING;	
 	down_size_filter_surf_map_cov.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
 	down_size_filter_surf_map_cov.trace_threshold_ = TRACE_THRESHOLD_AFTER_MAPPING;
 

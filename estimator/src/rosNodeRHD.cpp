@@ -239,8 +239,8 @@ int main(int argc, char **argv)
     MLOAM_RESULT_SAVE = std::stoi(argv[2]);
     printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
     OUTPUT_FOLDER = argv[3];
-    MLOAM_ODOM_PATH = OUTPUT_FOLDER + std::string(argv[4]);
-    MLOAM_GT_PATH = OUTPUT_FOLDER + argv[5];
+    MLOAM_ODOM_PATH = OUTPUT_FOLDER + "stamped_mloam_odom_estimate.txt";
+    MLOAM_GT_PATH = OUTPUT_FOLDER + "stamped_groundtruth.txt";
     EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
     EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "calib_eig.txt";
     ROS_WARN("waiting for cloud...");
