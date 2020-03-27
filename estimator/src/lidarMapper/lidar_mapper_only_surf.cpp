@@ -461,7 +461,7 @@ void process()
 				pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
 				evalPointUncertainty(point_sel, cov_point, pose_ext[idx], cov_ext[idx]);
 				if (!UNCER_PROPA_ON) cov_point = COV_MEASUREMENT; // add extrinsic perturbation
-				if (abs(cov_point.trace()) <= TRACE_THRESHOLD_BEFORE_MAPPING)
+				if (cov_point.trace() <= TRACE_THRESHOLD_BEFORE_MAPPING)
 				{
 					PointIWithCov point_cov(point_ori, cov_point.cast<float>());
 					laser_cloud_surf_split_cov[idx].push_back(point_cov);
@@ -488,7 +488,7 @@ void process()
 					options.linear_solver_type = ceres::DENSE_SCHUR;
 					options.max_num_iterations = 30;
 					options.max_solver_time_in_seconds = 0.05;
-					options.num_threads = 4;
+					options.num_threads = 3;
 					options.minimizer_progress_to_stdout = false;
 					options.check_gradients = false;
 					options.gradient_check_relative_precision = 1e-4;
@@ -592,7 +592,7 @@ void process()
 					pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
 					evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
 					if (!UNCER_PROPA_ON) cov_point = COV_MEASUREMENT; // add pose and extrinsic perturbation 
-					if (abs(cov_point.trace()) > TRACE_THRESHOLD_AFTER_MAPPING) continue;
+					if (cov_point.trace() > TRACE_THRESHOLD_AFTER_MAPPING) continue;
 					pointAssociateToMap(point_ori, point_cov, pose_wmap_curr);
 					updateCov(point_cov, cov_point);
 

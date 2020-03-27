@@ -508,7 +508,7 @@ void process()
 				pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
 				evalPointUncertainty(point_sel, cov_point, pose_ext[idx], cov_ext[idx]);
 				if (!UNCER_PROPA_ON) cov_point = COV_MEASUREMENT;
-				if (cov_point.trace() <= TRACE_THRESHOLD_BEFORE_MAPPING)
+				if (cov_point.norm() <= 0.82)
 				{
 					PointIWithCov point_cov(point_ori, cov_point.cast<float>());
 					laser_cloud_corner_split_cov[idx].push_back(point_cov);
@@ -522,7 +522,7 @@ void process()
 				pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
 				evalPointUncertainty(point_sel, cov_point, pose_ext[idx], cov_ext[idx]);
 				if (!UNCER_PROPA_ON) cov_point = COV_MEASUREMENT;
-				if (cov_point.trace() <= TRACE_THRESHOLD_BEFORE_MAPPING)
+				if (cov_point.norm() <= 0.82)
 				{
 					PointIWithCov point_cov(point_ori, cov_point.cast<float>());
 					laser_cloud_surf_split_cov[idx].push_back(point_cov);
@@ -569,18 +569,18 @@ void process()
 					TicToc t_prepare;
 					for (auto n = 0; n < NUM_OF_LASER; n++)
 					{
-						// PointICovCloud &laser_cloud_corner_points_cov = laser_cloud_corner_split_cov[n];
+						PointICovCloud &laser_cloud_corner_points_cov = laser_cloud_corner_split_cov[n];
 						PointICovCloud &laser_cloud_surf_points_cov = laser_cloud_surf_split_cov[n];
 						TicToc t_data;
 						int n_neigh = 5;
 						std::vector<PointPlaneFeature> corner_map_features;
 						f_extract.matchCornerFromMap(kdtree_corner_from_map,
-														*laser_cloud_corner_from_map_cov,
-														laser_cloud_corner_points_cov,
-														pose_wmap_curr,
-														corner_map_features,
-														n_neigh,
-														true);
+ 													*laser_cloud_corner_from_map_cov,
+ 													laser_cloud_corner_points_cov,
+ 													pose_wmap_curr,
+ 													corner_map_features,
+ 													n_neigh,
+ 													true);
 						corner_num += corner_map_features.size() / 2;
 						for (auto &feature: corner_map_features)
 						{
@@ -672,13 +672,13 @@ void process()
 				for (const PointIWithCov &point_ori : laser_cloud_corner_points_cov)
 				{
 					PointIWithCov point_sel, point_cov;
-					Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
-					pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
-					evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
-					if (!UNCER_PROPA_ON) cov_point = COV_MEASUREMENT;
-					if (cov_point.trace() > TRACE_THRESHOLD_AFTER_MAPPING) continue;
+					// Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
+					// pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
+					// evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
+					// if (!UNCER_PROPA_ON) cov_point = COV_MEASUREMENT;
+					// if (cov_point.trace() > TRACE_THRESHOLD_AFTER_MAPPING) continue;
 					pointAssociateToMap(point_ori, point_cov, pose_wmap_curr);
-					updateCov(point_cov, cov_point);
+					// updateCov(point_cov, cov_point);
 
 					int cube_i = int((point_cov.x + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_width;
 					int cube_j = int((point_cov.y + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_height;
@@ -700,13 +700,13 @@ void process()
 				for (const PointIWithCov &point_ori : laser_cloud_surf_points_cov)
 				{
 					PointIWithCov point_sel, point_cov;
-					Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
-					pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
-					evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
-					if (!UNCER_PROPA_ON) cov_point = COV_MEASUREMENT;
-					if (cov_point.trace() > TRACE_THRESHOLD_AFTER_MAPPING) continue;
+					// Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
+					// pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
+					// evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
+					// if (!UNCER_PROPA_ON) cov_point = COV_MEASUREMENT;
+					// if (cov_point.trace() > TRACE_THRESHOLD_AFTER_MAPPING) continue;
 					pointAssociateToMap(point_ori, point_cov, pose_wmap_curr);
-					updateCov(point_cov, cov_point);
+					// updateCov(point_cov, cov_point);
 
 					int cube_i = int((point_cov.x + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_width;
 					int cube_j = int((point_cov.y + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_height;
@@ -1000,7 +1000,7 @@ int main(int argc, char **argv)
     MLOAM_RESULT_SAVE = std::stoi(argv[2]);
     printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
     OUTPUT_FOLDER = argv[3];
-	UNCER_PROPA_ON = std::stoi(argv[5]);
+	UNCER_PROPA_ON = std::stoi(argv[4]);
 	printf("uncertainty propagation on (0/1): %d\n", UNCER_PROPA_ON);
 	if (UNCER_PROPA_ON)
     	MLOAM_MAP_PATH = OUTPUT_FOLDER + "stamped_mloam_map_estimate.txt";

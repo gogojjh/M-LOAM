@@ -118,8 +118,8 @@ void evalPointUncertainty(const PointType &pi, Eigen::Matrix3d &cov_point, const
     cov_input.bottomRightCorner<3, 3>() = COV_MEASUREMENT;
 
     Eigen::Vector4d point_curr(pi.x, pi.y, pi.z, 1);
-    // Eigen::Matrix4d T = pose.T_;
-    Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
+    Eigen::Matrix4d T = pose.T_;
+    // Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
     Eigen::Matrix<double, 4, 3> D;
     D << 1, 0, 0,
          0, 1, 0,

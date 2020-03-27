@@ -8,9 +8,9 @@
     <arg name="run_legoloam" default="false" />
 
     <arg name="run_mloam_map_with_up" default="true" /> <!-- uncertainty propagation -->    
-    <arg name="mloam_result_save" default="1" />
+    <arg name="mloam_result_save" default="0" />
     
-    <arg name="output_path" default="/home/jjiao/trajectory_results/simu_jackal_mloam/test/mloam/SR04/" />
+    <arg name="output_path" default="/home/jjiao/trajectory_results/simu_jackal_mloam/test/mloam/SR01/" />
     <arg name="mloam_gt_path" default="stamped_groundtruth.txt" />    
     <arg name="mloam_odom_path" default="stamped_mloam_odom_estimate.txt" />
     <arg name="mloam_map_path" default="stamped_mloam_map_estimate.txt" /> 
@@ -25,7 +25,7 @@
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/SR03.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/SR04.bag" />  -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/SR05.bag" /> -->
-        <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_file) --clock -r 1.3 --pause" />
+        <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_file) --clock -r 1.2 --pause" />
     </group>
 
     <group if="$(arg run_mloam)">
@@ -35,11 +35,11 @@
                   $(arg output_path)" />
 
         <group if="$(arg run_mloam_map_with_up)">
-            <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" 
+            <node pkg="mloam" type="lidar_mapper_only_surf" name="lidar_mapper_only_surf" 
                 args="$(arg config_file) $(arg mloam_result_save) $(arg output_path) 1" output="screen"/>
         </group>
         <group unless="$(arg run_mloam_map_with_up)">
-            <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" 
+            <node pkg="mloam" type="lidar_mapper_only_surf" name="lidar_mapper_only_surf" 
                 args="$(arg config_file) $(arg mloam_result_save) $(arg output_path) 0" output="screen"/>        
         </group>
     </group>
@@ -47,14 +47,14 @@
     <!-- publish static tf -->
     <!-- x y z yaw pitch roll -->
     <!-- x y z qx qy qz qw -->
-    <!-- world_base: the base_link of the robot; world_base->world, world->laser_0     -->
+    <!-- world_base: the init position of robot; world_base->world, world->laser_0, aft_mapped->base_link -->
     <include file="$(find rviz_car_model)/launch/default.launch" />
     <node name="static_tf_world_base_into_world_sensor" pkg="tf" type="static_transform_publisher"
         args="0 0.266 0.734 -0.216 0 0 0.976 world_base world 10"/>
     <node name="static_tf_world_sensor_into_base_sensor" pkg="tf" type="static_transform_publisher"
         args="0 0 0 0 0 0 1 world laser_0 10"/>
     <node name="static_tf_base_sensor_into_base_link" pkg="tf" type="static_transform_publisher"
-        args="0 0 0 0 0 0 1 laser_0 base_link 10"/>        
+        args="0 0 0 0 0 0 1 aft_mapped base_link 10"/>        
 
     <!-- merge cloud -->
     <group unless="$(arg run_mloam)">

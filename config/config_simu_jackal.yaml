@@ -26,8 +26,8 @@ segment_valid_line_num: 3
 segment_theta: 0.53
 
 # window sizes
-window_size: 8
-opt_window_size: 3
+window_size: 5
+opt_window_size: 2
 
 optimal_extrinsic: 0
 
@@ -111,8 +111,8 @@ n_calib: 15
 
 # mapping 
 map_corner_res: 0.2
-map_surf_res: 0.4
-map_eig_thre: 200
+map_surf_res: 0.3
+map_eig_thre: 50
 
 # uncertainty parameter
 # translation, rotation, point (rho, phi, zeta)
@@ -121,8 +121,9 @@ uct_ext: !!opencv-matrix
    cols: 6
    dt: d
    data: [0, 0, 0, 0, 0, 0,
-          0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01] 
-         #  0.001, 0.001, 0.001, 0.005, 0.005, 0.005] 
+         #  0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01] 
+          0.0009, 0.0009, 0.0009, 0.0001, 0.0001, 0.0001] 
+         #  0, 0, 0, 0, 0, 0]
 
 uct_measurement: !!opencv-matrix
    rows: 1
@@ -130,7 +131,7 @@ uct_measurement: !!opencv-matrix
    dt: d
    data: [0.0025, 0.0025, 0.0025]
 
-trace_threshold_before_mapping: 1
-trace_threshold_after_mapping: 1
+trace_threshold_before_mapping: 0.90
+trace_threshold_after_mapping: 0.90
 
 skip_num_odom: 1
