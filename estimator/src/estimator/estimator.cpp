@@ -177,6 +177,9 @@ void Estimator::clearState()
     total_measurement_pre_time_ = 0.0;
     total_opt_odom_time_ = 0.0;
 
+    total_corner_feature_ = 0;
+    total_surf_feature_ = 0;
+
     m_process_.unlock();
 }
 
@@ -212,6 +215,8 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
         {
             f_extract_.extractCloud(t, v_laser_cloud_in[i], feature_frame[i]);
         }
+        total_corner_feature_ += feature_frame[i]["corner_points_less_sharp"].size();
+        total_surf_feature_ += feature_frame[i]["surf_points_less_flat"].size();
     }
     printf("\n");
     printf("measurementPre time: %fms (%u*%fms)\n", measurement_pre_time.toc(), v_laser_cloud_in.size(), measurement_pre_time.toc() / v_laser_cloud_in.size());

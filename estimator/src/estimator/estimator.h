@@ -178,6 +178,7 @@ class Estimator
     PlaneNormalVisualizer plane_normal_vis_;
 
     double total_measurement_pre_time_, total_opt_odom_time_;
+    int total_corner_feature_, total_surf_feature_;
 };
 
 

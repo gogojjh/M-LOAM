@@ -85,11 +85,16 @@ void saveStatistics()
 	    printf("Saving odometry time statistics\n");
 		std::ofstream fout(std::string(OUTPUT_FOLDER + "time_odometry.txt").c_str(), std::ios::out);
 		fout.precision(15);
-        fout << "frame, total_mea_pre_time, total_opt_odom_time" << std::endl;
-		fout << estimator.frame_cnt_ << ", " << estimator.total_measurement_pre_time_ << ", " << estimator.total_opt_odom_time_ << std::endl;
+        fout << "frame, total_mea_pre_time, total_opt_odom_time, total_corner_feature, total_surf_feature" << std::endl;
+		fout << estimator.frame_cnt_ << ", " << estimator.total_measurement_pre_time_ 
+                                     << ", " << estimator.total_opt_odom_time_ 
+                                     << ", " << estimator.total_corner_feature_ 
+                                     << ", " << estimator.total_surf_feature_ << std::endl;
 		fout.close();
         ROS_WARN("Frame: %d, mean measurement preprocess time: %f, mean optimize odometry time: %f\n", estimator.frame_cnt_, 
             estimator.total_measurement_pre_time_ / estimator.frame_cnt_, estimator.total_opt_odom_time_ / estimator.frame_cnt_);
+        ROS_WARN("Frame: %d, mean corner feature: %f, mean surf feature: %f\n", estimator.frame_cnt_, 
+            estimator.total_corner_feature_ * 1.0 / estimator.frame_cnt_, estimator.total_surf_feature_ * 1.0 / estimator.frame_cnt_);
     }
 }
 
@@ -320,7 +325,7 @@ int main(int argc, char **argv)
                 break;
         }
     }
-    // saveGroundTruth();
+    saveGroundTruth();
     saveStatistics();
     return 0;
 }
