@@ -30,6 +30,7 @@ find_package(OpenCV REQUIRED)
 find_package(PCL REQUIRED)
 find_package(Ceres REQUIRED)
 find_package(Sophus REQUIRED)
+find_package(libpointmatcher REQUIRED)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 find_package(Eigen3)
@@ -45,7 +46,8 @@ endif()
 # add_definitions(${EIGEN3_DEFINITIONS})
 # set(EIGEN_MAX_STATIC_ALIGN_BYTES 0)
 
-include_directories(${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR} ${CERES_INCLUDE_DIRS} ${Sophus_INCLUDE_DIRS})
+include_directories(${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR} 
+                    ${CERES_INCLUDE_DIRS} ${Sophus_INCLUDE_DIRS} ${libpointmatcher_INCLUDE_DIRS})
 
 catkin_package(
 #  INCLUDE_DIRS include
@@ -109,4 +111,7 @@ target_link_libraries(test_merge_pointcloud_rv ${catkin_LIBRARIES} ${PCL_LIBS})
 
 add_executable(test_parse_bag ../test/test_parse_bag.cpp)
 target_link_libraries(test_parse_bag ${catkin_LIBRARIES} ${PCL_LIBS})
+
+add_executable(test_icp ../test/test_icp.cpp)
+target_link_libraries(test_icp ${libpointmatcher_LIBRARIES})
 #

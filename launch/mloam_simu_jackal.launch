@@ -10,7 +10,7 @@
     <arg name="run_mloam_map_with_up" default="true" /> <!-- uncertainty propagation -->    
     <arg name="mloam_result_save" default="1" />
     
-    <arg name="output_path" default="/home/jjiao/trajectory_results/simu_jackal_mloam/test/mloam/test/" />
+    <arg name="output_path" default="/home/jjiao/trajectory_results/simu_jackal_mloam/test/mloam/SR01/" />
     <arg name="mloam_gt_path" default="stamped_groundtruth.txt" />    
     <arg name="mloam_odom_path" default="stamped_mloam_odom_estimate.txt" />
     <arg name="mloam_map_path" default="stamped_mloam_map_estimate.txt" /> 

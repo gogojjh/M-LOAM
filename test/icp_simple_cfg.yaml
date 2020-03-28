@@ -1,0 +1,46 @@
+readingDataPointsFilters:
+  - RandomSamplingDataPointsFilter:
+      prob: 1
+  - BoundingBoxDataPointsFilter:
+      xMin: -3.0
+      xMax: 3.0
+      yMin: -3.0
+      yMax: 3.0      
+
+referenceDataPointsFilters:
+  - SamplingSurfaceNormalDataPointsFilter:
+      knn: 20
+  - BoundingBoxDataPointsFilter:
+      xMin: -3.0
+      xMax: 3.0
+      yMin: -3.0
+      yMax: 3.0      
+
+matcher:
+  KDTreeMatcher:
+    knn: 1
+
+outlierFilters:
+  - TrimmedDistOutlierFilter:
+      ratio: 0.7
+
+errorMinimizer:
+  PointToPlaneErrorMinimizer
+
+transformationCheckers:
+  - CounterTransformationChecker:
+      maxIterationCount: 500
+  - DifferentialTransformationChecker:
+      minDiffRotErr: 0.0001
+      minDiffTransErr: 0.001
+      smoothLength: 4 
+
+inspector:
+  VTKFileInspector:
+     baseFileName : vissteps
+     dumpDataLinks : 1
+     dumpReading : 1
+     dumpReference : 1
+
+logger:
+  FileLogger
