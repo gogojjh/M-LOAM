@@ -132,7 +132,7 @@ void saveStatistics()
 		fout << "frame, total_mapping_time" << std::endl;
 		fout << frame_cnt << ", " << total_mapping << std::endl;
 		fout.close();
-		ROS_WARN("Frame: %d, mean mapping time: %f", frame_cnt, total_mapping / frame_cnt);
+		ROS_WARN("Frame: %d, mean mapping time: %fms", frame_cnt, total_mapping / frame_cnt);
 	}		
 
 	printf("Saving laser_map cloud to /tmp/mloam_mapping_cloud.pcd\n");

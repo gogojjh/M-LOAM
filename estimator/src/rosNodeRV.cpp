@@ -91,7 +91,7 @@ void saveStatistics()
                                      << ", " << estimator.total_corner_feature_ 
                                      << ", " << estimator.total_surf_feature_ << std::endl;
 		fout.close();
-        ROS_WARN("Frame: %d, mean measurement preprocess time: %f, mean optimize odometry time: %f\n", estimator.frame_cnt_, 
+        ROS_WARN("Frame: %d, mean measurement preprocess time: %fms, mean optimize odometry time: %fms\n", estimator.frame_cnt_, 
             estimator.total_measurement_pre_time_ / estimator.frame_cnt_, estimator.total_opt_odom_time_ / estimator.frame_cnt_);
         ROS_WARN("Frame: %d, mean corner feature: %f, mean surf feature: %f\n", estimator.frame_cnt_, 
             estimator.total_corner_feature_ * 1.0 / estimator.frame_cnt_, estimator.total_surf_feature_ * 1.0 / estimator.frame_cnt_);
