@@ -272,10 +272,20 @@ int main(int argc, char **argv)
     estimator.setParameter();
     registerPub(n);
 
-    CLOUD0_TOPIC = CLOUD_TOPIC[0];
-    CLOUD1_TOPIC = CLOUD_TOPIC[1];
-    ros::Subscriber sub_cloud0 = n.subscribe(CLOUD0_TOPIC, 10, cloud0_callback);
-    ros::Subscriber sub_cloud1 = n.subscribe(CLOUD1_TOPIC, 10, cloud1_callback);
+    ros::Subscriber sub_cloud0, sub_cloud1;
+
+    if (NUM_OF_LASER == 1)
+    {
+        CLOUD0_TOPIC = CLOUD_TOPIC[0];
+        sub_cloud0 = n.subscribe(CLOUD0_TOPIC, 10, cloud0_callback);
+    } else
+    {
+        CLOUD0_TOPIC = CLOUD_TOPIC[0];
+        CLOUD1_TOPIC = CLOUD_TOPIC[1];
+        sub_cloud0 = n.subscribe(CLOUD0_TOPIC, 10, cloud0_callback);
+        sub_cloud1 = n.subscribe(CLOUD1_TOPIC, 10, cloud1_callback);       
+    }
+    
     ros::Subscriber sub_restart = n.subscribe("/mlod_restart", 10, restart_callback);
     ros::Subscriber sub_pose_gt = n.subscribe("/base_pose_gt", 10, pose_gt_callback);
     pub_laser_gt_path = n.advertise<nav_msgs::Path>("/laser_gt_path", 10);
