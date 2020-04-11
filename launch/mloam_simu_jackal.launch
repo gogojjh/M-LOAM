@@ -1,6 +1,6 @@
 <launch>
 
-    <arg name="bag_file_use" default="true" />
+    <arg name="bag_file_use" default="false" />
     <arg name="config_file" default="$(find mloam)/../config/config_simu_jackal.yaml" />
 
     <arg name="run_mloam" default="true" />
@@ -10,7 +10,7 @@
     <arg name="run_mloam_map_with_up" default="true" /> <!-- uncertainty propagation -->    
     <arg name="mloam_result_save" default="1" />
     
-    <arg name="output_path" default="/home/jjiao/trajectory_results/simu_jackal_mloam/test/mloam/SR01/" />
+    <arg name="output_path" default="/home/jjiao/trajectory_results/simu_jackal_mloam/test/mloam/SR05_test/" />
     <arg name="mloam_gt_path" default="stamped_groundtruth.txt" />    
     <arg name="mloam_odom_path" default="stamped_mloam_odom_estimate.txt" />
     <arg name="mloam_map_path" default="stamped_mloam_map_estimate.txt" /> 
@@ -25,7 +25,7 @@
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/SR03.bag" /> -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/SR04.bag" />  -->
         <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/SR05.bag" /> -->
-        <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_file) --clock -r 1.2 --pause" />
+        <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_file) --clock -r 1.4 --pause" />
     </group>
 
     <group if="$(arg run_mloam)">

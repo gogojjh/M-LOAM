@@ -684,7 +684,7 @@ void process()
 			// ************************************************************** publish feature and map data
 			// publish surround map (use for optimization) for every 20 frame
 			TicToc t_pub;
-			if ((pub_laser_cloud_surround.getNumSubscribers() != 0) && (frame_cnt % 5 ==0))
+			if ((pub_laser_cloud_surround.getNumSubscribers() != 0) && (frame_cnt % 50 ==0))
 			{
 				PointICovCloud laser_cloud_surrond;
 				for (int i = 0; i < laser_cloud_surround_num; i++)

@@ -184,13 +184,14 @@ int main(int argc, char **argv)
 
         // *************************************
         // read data
+        double base_time = ros::Time::now().toSec();
         for (size_t i = MLOAM_START_IDX; i < std::min(MLOAM_END_IDX, cloud_time_list.size()); i+=MLOAM_DELTA_IDX)
         {	
             if (ros::ok())
             {
                 double cloud_time;
                 if (MLOAM_TIME_NOW)
-                    cloud_time = ros::Time::now().toSec();
+                    cloud_time = base_time + cloud_time_list[i] - cloud_time_list[MLOAM_START_IDX];
                 else
                     cloud_time = cloud_time_list[i];
                 printf("process data: %d\n", i);

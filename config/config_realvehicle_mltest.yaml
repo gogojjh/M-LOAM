@@ -13,7 +13,7 @@ optimal_odometry: 1
 
 ###############################################
 # laser parameters
-num_of_laser: 1
+num_of_laser: 3
 n_scans: 16
 
 # segmmentation
