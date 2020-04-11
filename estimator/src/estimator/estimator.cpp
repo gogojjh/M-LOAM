@@ -202,14 +202,14 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
     TicToc measurement_pre_time;
     std::vector<cloudFeature> feature_frame;
     feature_frame.resize(NUM_OF_LASER);
-    printf("size of segmenting cloud: ");
+    // printf("size of segmenting cloud: ");
     for (auto i = 0; i < v_laser_cloud_in.size(); i++)
     {
         PointCloud laser_cloud_segment;
         if ((SEGMENT_CLOUD) && (ESTIMATE_EXTRINSIC == 0))
         {
             img_segment_.segmentCloud(v_laser_cloud_in[i], laser_cloud_segment);
-            printf("%d ", laser_cloud_segment.size());
+            // printf("%d ", laser_cloud_segment.size());
             f_extract_.extractCloud(t, laser_cloud_segment, feature_frame[i]);
         } else
         {
@@ -218,7 +218,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
         total_corner_feature_ += feature_frame[i]["corner_points_less_sharp"].size();
         total_surf_feature_ += feature_frame[i]["surf_points_less_flat"].size();
     }
-    printf("\n");
+    // printf("\n");
     printf("measurementPre time: %fms (%u*%fms)\n", measurement_pre_time.toc(), v_laser_cloud_in.size(), measurement_pre_time.toc() / v_laser_cloud_in.size());
     total_measurement_pre_time_ += measurement_pre_time.toc();
 
@@ -487,6 +487,7 @@ void Estimator::optimizeMap()
     options.num_threads = 4;
     // options.trust_region_strategy_type = ceres::DOGLEG;
     options.max_num_iterations = NUM_ITERATIONS;
+    // options.gradient_check_relative_precision = 1e-3;
     //options.use_explicit_schur_complement = true;
     //options.minimizer_progress_to_stdout = true;
     //options.use_nonmonotonic_steps = true;
@@ -948,21 +949,17 @@ void Estimator::buildCalibMap()
         if (calib_converge_[n]) continue;
         for (auto i = pivot_idx; i < WINDOW_SIZE + 1; i++)
         {
-            if (((n == IDX_REF) && (i == pivot_idx)) || ((n != IDX_REF) && (i != pivot_idx))) continue;
-            int n_neigh = (n == IDX_REF ? 5:10);
-            f_extract_.matchSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[IDX_REF],
-                surf_points_stack_[n][i], pose_local_[n][i], surf_map_features_[n][i], n_neigh, true);
-            f_extract_.matchCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[IDX_REF],
-                corner_points_stack_[n][i], pose_local_[n][i], corner_map_features_[n][i], n_neigh, true);
-            // std::vector<PointPlaneFeature> tmp_surf_map_features, tmp_corner_map_features;
-            // f_extract_.matchSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
-            //     surf_points_stack_[n][i], pose_local_[n][i], tmp_surf_map_features, n_neigh, true);
-            // f_extract_.matchCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
-            //     corner_points_stack_[n][i], pose_local_[n][i], tmp_corner_map_features, n_neigh, true);
-            // std::copy(tmp_surf_map_features.begin(), tmp_surf_map_features.end(), std::back_inserter(surf_map_features_[n][i]));
-            // std::copy(tmp_corner_map_features.begin(), tmp_corner_map_features.end(), std::back_inserter(corner_map_features_[n][i]));
+            if (((n == IDX_REF) && (i == pivot_idx)) || ((n != IDX_REF) && (i != pivot_idx)))
+                continue;
+            int n_neigh = (n == IDX_REF ? 5 : 10);
+            std::vector<PointPlaneFeature> tmp_surf_map_features, tmp_corner_map_features;
+            f_extract_.matchSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
+                                        surf_points_stack_[n][i], pose_local_[n][i], tmp_surf_map_features, n_neigh, true);
+            f_extract_.matchCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
+                                          corner_points_stack_[n][i], pose_local_[n][i], tmp_corner_map_features, n_neigh, true);
+            std::copy(tmp_surf_map_features.begin(), tmp_surf_map_features.end(), std::back_inserter(surf_map_features_[n][i]));
+            std::copy(tmp_corner_map_features.begin(), tmp_corner_map_features.end(), std::back_inserter(corner_map_features_[n][i]));
         }
-
     }
     printf("build map (extract map): %f (%f)ms\n", t_build_map.toc(), t_extract_map.toc());
     if (PCL_VIEWER) visualizePCL();
@@ -1021,14 +1018,12 @@ void Estimator::buildLocalMap()
         auto n_neigh = 5;
         for (auto i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
         {
+            std::vector<PointPlaneFeature> tmp_map_features;
             f_extract_.matchSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
-                surf_points_stack_[n][i], pose_local_[n][i], surf_map_features_[n][i], n_neigh, true);
-            // std::vector<PointPlaneFeature> tmp_map_features;
-            // f_extract_.matchSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
-            //     surf_points_stack_[n][i], pose_local_[n][i], tmp_map_features, n_neigh, true);
+                                        surf_points_stack_[n][i], pose_local_[n][i], tmp_map_features, n_neigh, true);
             // f_extract_.extractCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
-                //     corner_points_stack_[n][i], pose_local_[n][i], corner_map_features_[n][i], n_neigh, true);
-            // std::copy(tmp_map_features.begin(), tmp_map_features.end(), std::back_inserter(surf_map_features_[n][i]));
+            //     corner_points_stack_[n][i], pose_local_[n][i], corner_map_features_[n][i], n_neigh, true);
+            std::copy(tmp_map_features.begin(), tmp_map_features.end(), std::back_inserter(surf_map_features_[n][i]));
         }
     }
     printf("build map: %fms\n", t_build_map.toc());
