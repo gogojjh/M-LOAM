@@ -105,7 +105,7 @@ ostream & operator << (ostream &out, const Pose &pose)
 
 Eigen::Matrix<double, 6, 1> Pose::se3() const 
 {
-    Sophus::SE3 SE3_qt(q_, t_);
+    Sophus::SE3<double> SE3_qt(q_, t_);
     Eigen::Matrix<double, 6, 1> xi = SE3_qt.log();
     // Sophus::SE3::hat(xi)
     // Sophus::SE3::vee(Sophus::SE3::hat(xi)) == xi
@@ -137,7 +137,7 @@ void computeMeanPose(const std::vector<std::pair<double, Pose> > &pose_array,
         std::cout << iter->first << ", " << iter->second << std::endl;
     }
     Eigen::Matrix<double, 6, 1> xi_mean = xi_total / weight_total;
-    pose_mean = Pose(Sophus::SE3::exp(xi_mean).matrix());
+    pose_mean = Pose(Sophus::SE3<double>::exp(xi_mean).matrix());
 
     for (auto iter = pose_array.begin(); iter != pose_array.end(); iter++)
     {

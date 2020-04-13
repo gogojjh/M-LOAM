@@ -30,7 +30,7 @@ window_size: 5
 opt_window_size: 2
 
 # Extrinsic parameter between IMU and Camera.
-estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+estimate_extrinsic: 2   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
 optimal_extrinsic: 0
@@ -42,16 +42,17 @@ body_T_laser: !!opencv-matrix
 # data for 20200201
    # data: [0, 0, 0, 1, 0, 0, 0,
    #        0.40093, 0.00536, -0.02534, 0.91574, -0.01571, -0.47446, -0.21247]
+
 # data for 20200303/ 20200310
 # no prior
-   # data: [0, 0, 0, 1, 0, 0, 0,
-   #        0, 0, 0, 1, 0, 0, 0] # qx qy qz qw px py pz
+   data: [0, 0, 0, 1, 0, 0, 0,
+          0, 0, 0, 1, 0, 0, 0] # qx qy qz qw px py pz
 # initialization
    # data: [0, 0, 0, 1, 0, 0, 0,
    #        0.3113, -0.0103, -0.03334, 0.94956, 0.1130, -0.47195, -0.10341] # qx qy qz qw px py pz    
 # refinement
-   data: [0, 0, 0, 1, 0, 0, 0,
-          0.3345, -0.0037, 0.0050, 0.9424, 0.025, -0.4510, -0.1472] # qx qy qz qw px py pz                      
+   # data: [0, 0, 0, 1, 0, 0, 0,
+   #        0.3345, -0.0037, 0.0050, 0.9424, 0.025, -0.4510, -0.1472] # qx qy qz qw px py pz                      
 # iv data   
    # data: [0, 0, 0, 1, 0, 0, 0,
    #        0.34087, -0.0101817, 0.0147921, 0.945613, 0.0334837, -0.540249, -0.141798]
@@ -105,7 +106,7 @@ pcl_viewer_normal_ratio: 10
 n_cumu_feature: 10
 eig_initial: 120
 eig_thre_calib: 400
-n_calib: 10
+n_calib: 9
 
 # mapping 
 map_corner_res: 0.2

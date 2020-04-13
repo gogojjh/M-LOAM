@@ -916,7 +916,7 @@ void Estimator::buildCalibMap()
         pcl::VoxelGrid<PointI> down_size_filter;
         if (n == IDX_REF)
         {
-            down_size_filter.setLeafSize(0.4, 0.4, 0.4);
+            down_size_filter.setLeafSize(0.3, 0.3, 0.3);
             down_size_filter.setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_[IDX_REF]));
             down_size_filter.filter(surf_points_local_map_filtered_[IDX_REF]);
             down_size_filter.setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_[IDX_REF]));
@@ -949,13 +949,13 @@ void Estimator::buildCalibMap()
         if (calib_converge_[n]) continue;
         for (auto i = pivot_idx; i < WINDOW_SIZE + 1; i++)
         {
-            if (((n == IDX_REF) && (i == pivot_idx)) || ((n != IDX_REF) && (i != pivot_idx)))
-                continue;
-            int n_neigh = (n == IDX_REF ? 5 : 10);
+            if (((n == IDX_REF) && (i == pivot_idx)) || ((n != IDX_REF) && (i != pivot_idx))) continue;
+            // int n_neigh = (n == IDX_REF ? 5 : 10);
+            int n_neigh = 5;
             std::vector<PointPlaneFeature> tmp_surf_map_features, tmp_corner_map_features;
-            f_extract_.matchSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
+            f_extract_.matchSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[IDX_REF],
                                         surf_points_stack_[n][i], pose_local_[n][i], tmp_surf_map_features, n_neigh, true);
-            f_extract_.matchCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
+            f_extract_.matchCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[IDX_REF],
                                           corner_points_stack_[n][i], pose_local_[n][i], tmp_corner_map_features, n_neigh, true);
             std::copy(tmp_surf_map_features.begin(), tmp_surf_map_features.end(), std::back_inserter(surf_map_features_[n][i]));
             std::copy(tmp_corner_map_features.begin(), tmp_corner_map_features.end(), std::back_inserter(corner_map_features_[n][i]));
@@ -996,6 +996,7 @@ void Estimator::buildLocalMap()
             // for (auto &p: corner_points_trans.points) p.intensity = i;
             // corner_points_local_map_[n] += corner_points_trans;
         }
+        // TODO: reduce the downsampling resolution
         pcl::VoxelGrid<PointI> down_size_filter;
         down_size_filter.setLeafSize(0.4, 0.4, 0.4);
         down_size_filter.setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_[n]));

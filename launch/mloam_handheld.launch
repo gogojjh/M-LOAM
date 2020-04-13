@@ -1,7 +1,8 @@
 <launch>
 
-    <arg name="bag_file_use" default="false" />
-    <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD01corridor.bag" /> 
+    <arg name="bag_file_use" default="true" />
+    <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD00calib.bag" />     
+    <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD01corridor.bag" />  -->
     <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD02lab.bag" />  -->
     <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD03garden.bag" />  -->
     <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD04building.bag" />  -->
@@ -12,7 +13,7 @@
     <arg name="run_mloam_map_with_up" default="true" /> <!-- uncertainty propagation -->    
     
     <arg name="mloam_result_save" default="0" />
-    <arg name="output_path" default="/home/jjiao/trajectory_results/handheld/test/RHD03garden_test/"/>
+    <arg name="output_path" default="/home/jjiao/trajectory_results/handheld/test/RHD00calib/"/>
     <arg name="mloam_gt_path" default="stamped_groundtruth.txt" />    
     <arg name="mloam_odom_path" default="stamped_mloam_odom_estimate.txt" />
     <arg name="mloam_map_path" default="stamped_mloam_map_estimate.txt" /> 
