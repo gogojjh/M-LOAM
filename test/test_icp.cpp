@@ -70,6 +70,7 @@ void usage(const char *argv[]);
   *
   * This code is more complete than icp_simple. It can load parameter files and
   * has more options.
+  * example: rosrun mloam test_icp -v --config icp_simple_cfg.yaml --isTransfoSaved true --output icp_result/ ref.sapcd data.pcd
   */
 int main(int argc, const char *argv[])
 {
@@ -89,6 +90,10 @@ int main(int argc, const char *argv[])
 	const char *dataFile(argv[argc-1]);
 
 	// Load point clouds
+	std::cout << refFile << std::endl;
+	std::cout << dataFile << std::endl;
+	std::cout << configFile << std::endl;
+	
 	const DP ref(DP::load(refFile));
 	const DP data(DP::load(dataFile));
 
@@ -149,10 +154,14 @@ int main(int argc, const char *argv[])
 	DP data_out(initializedData);
 	icp.transformations.apply(data_out, T);
 
+	DP data_merge = ref;
+	data_merge.concatenate(data_out);
+
 	// Safe files to see the results
 	ref.save(outputBaseFile + "_ref.vtk");
 	data.save(outputBaseFile + "_data_in.vtk");
 	data_out.save(outputBaseFile + "_data_out.vtk");
+	data_merge.save(outputBaseFile + "_data_merge.vtk");
 	if(isTransfoSaved) 
 	{
 		ofstream transfoFile;
@@ -176,6 +185,7 @@ int main(int argc, const char *argv[])
 			cerr << "Unable to write the ICP transformation file\n" << endl;
 		}
 
+		cout << T*initTransfo << endl;
 		transfoFile.open(completeFileName.c_str());
 		if(transfoFile.is_open()) {
 			transfoFile << T*initTransfo << endl;
@@ -380,7 +390,7 @@ PM::TransformationParameters parseRotation(string &rotation,
 
 // Dump command-line help
 void usage(const char *argv[])
-{
+{ 
 	//TODO: add new options --isTransfoSaved, --initTranslation, --initRotation
 	cerr << endl << endl;
 	cerr << "* To list modules:" << endl;

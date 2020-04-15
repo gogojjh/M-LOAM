@@ -80,7 +80,7 @@ std::mutex m_buf;
 
 FeatureExtract f_extract;
 
-int UNCER_PROPA_ON = 1;
+int UNCER_AWARE_ON = 1;
 std::vector<Eigen::Matrix<double, 6, 6> > cov_ext;
 Eigen::Matrix<double, 6, 6> cov_mapping;
 
@@ -90,7 +90,9 @@ std::vector<Eigen::Matrix<double, 6, 6> > d_eigvec_list;
 std::vector<Pose> pose_compound;
 std::vector<Eigen::Matrix<double, 6, 6> > cov_compound;
 
-double total_mapping = 0.0;;
+std::vector<double> cov_mapping_list;
+
+double total_mapping = 0.0;
 
 void saveStatistics()
 {
@@ -114,7 +116,7 @@ void saveStatistics()
 		}
 		fout.close();
 
-		if (UNCER_PROPA_ON)
+		if (UNCER_AWARE_ON)
 		{
 			fout.open(std::string(OUTPUT_FOLDER + "mapping_factor.txt").c_str(), std::ios::out);
 			fout.precision(8);
@@ -126,6 +128,12 @@ void saveStatistics()
 			for (size_t i = 0; i < d_eigvec_list.size(); i++) fout << d_eigvec_list[i] << std::endl;
 			fout.close();
 		}
+
+		fout.open(std::string(OUTPUT_FOLDER + "mapping_pose_uncertainty.txt").c_str(), std::ios::out);
+		fout << "cov_mapping_uncertainty" << std::endl;
+		fout.precision(8);
+		for (size_t i = 0; i < cov_mapping_list.size(); i++) fout << cov_mapping_list[i] << std::endl;
+		fout.close();		
 
 		fout.open(std::string(OUTPUT_FOLDER + "time_mapping.txt").c_str(), std::ios::out);
 		fout.precision(15);
@@ -514,7 +522,7 @@ void process()
 				Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
 				pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
 				evalPointUncertainty(point_sel, cov_point, pose_ext[idx], cov_ext[idx]);
-				if (!UNCER_PROPA_ON) cov_point = COV_MEASUREMENT; // add extrinsic perturbation
+				if (!UNCER_AWARE_ON) cov_point = COV_MEASUREMENT; // add extrinsic perturbation
 				if (cov_point.trace() <= TRACE_THRESHOLD_BEFORE_MAPPING)
 				{
 					PointIWithCov point_cov(point_ori, cov_point.cast<float>());
@@ -610,6 +618,7 @@ void process()
 					evalDegenracy(mat_H, local_parameterization);
 					cov_mapping = mat_H.inverse(); // covariance of sensor noise: A New Approach to 3D ICP Covariance Estimation/ Censi's approach
 					printf("pose covariance trace: %f\n", cov_mapping.trace());
+					cov_mapping_list.push_back(cov_mapping.trace());
 
 					// ******************************************************
 					TicToc t_solver;
@@ -645,7 +654,8 @@ void process()
 					Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
 					pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
 					evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
-					if (!UNCER_PROPA_ON) cov_point = COV_MEASUREMENT; // add pose and extrinsic perturbation 
+					// 0.01 for RHD02lab
+					if (!UNCER_AWARE_ON || cov_mapping.trace() < 0.03) cov_point = COV_MEASUREMENT; // add pose and extrinsic perturbation 
 					if (cov_point.trace() > TRACE_THRESHOLD_AFTER_MAPPING) continue;
 					pointAssociateToMap(point_ori, point_cov, pose_wmap_curr);
 					updateCov(point_cov, cov_point);
@@ -888,12 +898,12 @@ int main(int argc, char **argv)
     MLOAM_RESULT_SAVE = std::stoi(argv[2]);
     printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
     OUTPUT_FOLDER = argv[3];
-	UNCER_PROPA_ON = std::stoi(argv[4]);
-	printf("uncertainty propagation on (0/1): %d\n", UNCER_PROPA_ON);
-	if (UNCER_PROPA_ON)
+	UNCER_AWARE_ON = std::stoi(argv[4]);
+	printf("uncertainty propagation on (0/1): %d\n", UNCER_AWARE_ON);
+	if (UNCER_AWARE_ON)
     	MLOAM_MAP_PATH = OUTPUT_FOLDER + "stamped_mloam_map_estimate.txt";
 	else
-		MLOAM_MAP_PATH = OUTPUT_FOLDER + "stamped_mloam_map_wo_up_estimate.txt";
+		MLOAM_MAP_PATH = OUTPUT_FOLDER + "stamped_mloam_map_wo_ua_estimate.txt";
     // if (MLOAM_RESULT_SAVE)
     // {
 	// 	std::cout << "output path: " << OUTPUT_FOLDER << std::endl;

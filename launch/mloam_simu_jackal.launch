@@ -14,7 +14,7 @@
     <arg name="mloam_gt_path" default="stamped_groundtruth.txt" />    
     <arg name="mloam_odom_path" default="stamped_mloam_odom_estimate.txt" />
     <arg name="mloam_map_path" default="stamped_mloam_map_estimate.txt" /> 
-    <arg name="mloam_map_wo_up_path" default="stamped_mloam_map_wo_up_estiamte.txt" /> 
+    <arg name="mloam_map_wo_ua_path" default="stamped_mloam_map_wo_ua_estimate.txt" /> 
 
     <param name="use_sim_time" value="true" />
 

@@ -1,24 +1,31 @@
 readingDataPointsFilters:
   - RandomSamplingDataPointsFilter:
       prob: 1
-  - BoundingBoxDataPointsFilter:
-      xMin: -3.0
-      xMax: 3.0
-      yMin: -3.0
-      yMax: 3.0      
+  # - BoundingBoxDataPointsFilter:
+  #     xMin: -2.0
+  #     xMax: 2.0
+  #     yMin: -2.0
+  #     yMax: 2.0     
+  #     zMin: -2.0
+  #     zMax: 2.0
+  #     removeInside: 1 
 
 referenceDataPointsFilters:
   - SamplingSurfaceNormalDataPointsFilter:
       knn: 20
-  - BoundingBoxDataPointsFilter:
-      xMin: -3.0
-      xMax: 3.0
-      yMin: -3.0
-      yMax: 3.0      
+  # - BoundingBoxDataPointsFilter:
+  #     xMin: -2.0
+  #     xMax: 2.0
+  #     yMin: -2.0
+  #     yMax: 2.0     
+  #     zMin: -2.0
+  #     zMax: 2.0      
+  #     removeInside: 1
 
 matcher:
   KDTreeMatcher:
     knn: 1
+    maxDist: 1.0
 
 outlierFilters:
   - TrimmedDistOutlierFilter:
@@ -29,7 +36,7 @@ errorMinimizer:
 
 transformationCheckers:
   - CounterTransformationChecker:
-      maxIterationCount: 500
+      maxIterationCount: 100
   - DifferentialTransformationChecker:
       minDiffRotErr: 0.0001
       minDiffTransErr: 0.001
