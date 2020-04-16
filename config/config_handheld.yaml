@@ -17,7 +17,8 @@ num_of_laser: 2
 n_scans: 16
 
 # segmmentation
-segment_cloud: 1
+segment_cloud: 0 # for indoor office
+# segment_cloud: 1 
 horizon_scan: 1800
 min_cluster_size: 20
 min_line_size: 5
@@ -27,7 +28,7 @@ segment_theta: 0.53
 
 # window sizes
 window_size: 5
-opt_window_size: 2
+opt_window_size: 3
 
 # Extrinsic parameter between IMU and Camera.
 estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
@@ -106,11 +107,11 @@ pcl_viewer_normal_ratio: 10
 n_cumu_feature: 10
 eig_initial: 120
 eig_thre_calib: 400
-n_calib: 9
+n_calib: 10
 
 # mapping 
 map_corner_res: 0.2
-map_surf_res: 0.3
+map_surf_res: 0.2
 map_eig_thre: 200
 
 # uncertainty parameter
@@ -129,7 +130,12 @@ uct_measurement: !!opencv-matrix
    dt: d
    data: [0.0025, 0.0025, 0.0025]
 
+# for indoor office
 trace_threshold_before_mapping: 1
-trace_threshold_after_mapping: 1
+trace_threshold_after_mapping: 0.3
+
+# for outdoor building
+# trace_threshold_before_mapping: 1
+# trace_threshold_after_mapping: 1
 
 skip_num_odom: 1

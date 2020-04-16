@@ -1,10 +1,10 @@
 <launch>
 
-    <arg name="bag_file_use" default="false" />
+    <arg name="bag_file_use" default="true" />
     <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD00calib.bag" />      -->
     <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD01corridor.bag" />  -->
-    <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD02lab.bag" />  -->
-    <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD03garden.bag" /> 
+    <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD02lab.bag" /> 
+    <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD03garden.bag" />  -->
     <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD04building.bag" />  -->
 
     <param name="use_sim_time" value="true" />
@@ -15,10 +15,10 @@
     <arg name="run_mloam" default="true" />
     <arg name="run_aloam" default="false" />
     <arg name="run_legoloam" default="false" />
-    <arg name="run_mloam_map_with_ua" default="true" /> <!-- uncertainty propagation -->    
+    <arg name="run_mloam_map_with_ua" default="false" /> <!-- uncertainty propagation -->    
     
     <arg name="mloam_result_save" default="1" />
-    <arg name="output_path" default="/home/jjiao/trajectory_results/handheld/test/RHD03garden_test/"/>
+    <arg name="output_path" default="/home/jjiao/trajectory_results/handheld/test/RHD02lab_test/"/>
     <arg name="mloam_gt_path" default="stamped_groundtruth.txt" />    
     <arg name="mloam_odom_path" default="stamped_mloam_odom_estimate.txt" />
     <arg name="mloam_map_path" default="stamped_mloam_map_estimate.txt" /> 
@@ -50,7 +50,7 @@
     <node name="static_tf_base_sensor_into_base_link" pkg="tf" type="static_transform_publisher"
         args="0 0 0 0 0 0 1 aft_mapped base_link 10"/>                
     <node name="static_tf_world_base_into_world_sensor" pkg="tf" type="static_transform_publisher"
-        args="0 0 0 -0.15643 0 0 0.98769 world_base world 10"/> 
+        args="0 0 0 -0.1131   -0.0433   -0.0049 0.9926 world_base world 10"/> 
     <node name="static_tf_world_sensor_into_base_sensor" pkg="tf" type="static_transform_publisher"
         args="0 0 0 0 0 0 1 world laser_0 10"/>
     <node name="static_tf_laser_into_laser_left" pkg="tf" type="static_transform_publisher"

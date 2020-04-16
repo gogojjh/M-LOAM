@@ -544,13 +544,13 @@ void process()
 				{
 					ceres::Problem problem;
 					ceres::Solver::Summary summary;
-					ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1);
+					ceres::LossFunction *loss_function = new ceres::HuberLoss(1);
 
 					ceres::Solver::Options options;
 					options.linear_solver_type = ceres::DENSE_SCHUR;
 					options.max_num_iterations = 30;
-					options.max_solver_time_in_seconds = 0.05;
-					options.num_threads = 3;
+					options.max_solver_time_in_seconds = 0.07;
+					options.num_threads = 4;
 					options.minimizer_progress_to_stdout = false;
 					options.check_gradients = false;
 					options.gradient_check_relative_precision = 1e-4;
@@ -655,7 +655,8 @@ void process()
 					pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
 					evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
 					// 0.01 for RHD02lab
-					if (!UNCER_AWARE_ON || cov_mapping.trace() < 0.03) cov_point = COV_MEASUREMENT; // add pose and extrinsic perturbation 
+					// if (!UNCER_AWARE_ON || cov_mapping.trace() < 0.03) cov_point = COV_MEASUREMENT; // add pose and extrinsic perturbation 
+					if (!UNCER_AWARE_ON) cov_point = COV_MEASUREMENT; // add pose and extrinsic perturbation 
 					if (cov_point.trace() > TRACE_THRESHOLD_AFTER_MAPPING) continue;
 					pointAssociateToMap(point_ori, point_cov, pose_wmap_curr);
 					updateCov(point_cov, cov_point);
