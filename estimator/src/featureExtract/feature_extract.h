@@ -40,8 +40,9 @@ class FeatureExtract
 public:
     FeatureExtract();
 
-    void extractCloud(const double &cur_time, const common::PointCloud &laser_cloud_in, cloudFeature &cloud_feature);
+    void FeatureExtract::findStartEndAngle(const common::PointCloud &laser_cloud_in);
     void cloudRearrange(const common::PointCloud &laser_cloud_in, std::vector<common::PointICloud> &laser_cloud_scans, int &cloud_size);
+    void extractCloud(const double &cur_time, const common::PointCloud &laser_cloud_in, cloudFeature &cloud_feature);
 
     template <typename PointType>
     void matchCornerFromScan(const typename pcl::KdTreeFLANN<PointType>::Ptr &kdtree_corner_from_scan,
@@ -75,7 +76,10 @@ public:
                           const int &N_NEIGH = 5, 
                           const bool &CHECK_FOV = true);
 
+
+private:
     bool half_passed_;
+    float start_ori_, end_ori_;
 };
 
 template <typename PointType>

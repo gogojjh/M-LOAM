@@ -27,22 +27,25 @@ FeatureExtract::FeatureExtract()
     half_passed_ = false;
 }
 
+void FeatureExtract::findStartEndAngle(const common::PointCloud &laser_cloud_in)
+{
+    int cloud_size = laser_cloud_in.points.size();
+    start_ori_ = -atan2(laser_cloud_in.points[0].y, laser_cloud_in.points[0].x);
+    end_ori_ = -atan2(laser_cloud_in.points[cloud_size - 1].y,
+                           laser_cloud_in.points[cloud_size - 1].x) + 2 * M_PI;
+    if (end_ori_ - start_ori_ > 3 * M_PI)
+    {
+        end_ori_ -= 2 * M_PI;
+    }
+    else if (end_ori_ - start_ori_ < M_PI)
+    {
+        end_ori_ += 2 * M_PI;
+    }
+    // std::cout << "end Ori " << end_ori_ << std::endl;
+}
+
 void FeatureExtract::cloudRearrange(const common::PointCloud &laser_cloud_in, std::vector<common::PointICloud> &laser_cloud_scans, int &cloud_size)
 {
-    cloud_size = laser_cloud_in.points.size();
-    float start_ori = -atan2(laser_cloud_in.points[0].y, laser_cloud_in.points[0].x);
-    float end_ori = -atan2(laser_cloud_in.points[cloud_size - 1].y,
-                            laser_cloud_in.points[cloud_size - 1].x) + 2 * M_PI;
-    if (end_ori - start_ori > 3 * M_PI)
-    {
-        end_ori -= 2 * M_PI;
-    }
-    else if (end_ori - start_ori < M_PI)
-    {
-        end_ori += 2 * M_PI;
-    }
-    // std::cout << "end Ori " << end_ori << std::endl;
-
     int count = cloud_size;
     PointI point;
     laser_cloud_scans.clear();
@@ -98,16 +101,16 @@ void FeatureExtract::cloudRearrange(const common::PointCloud &laser_cloud_in, st
         float ori = -atan2(point.y, point.x);
         if (!half_passed_)
         {
-            if (ori < start_ori - M_PI / 2)
+            if (ori < start_ori_ - M_PI / 2)
             {
                 ori += 2 * M_PI;
             }
-            else if (ori > start_ori + M_PI * 3 / 2)
+            else if (ori > start_ori_ + M_PI * 3 / 2)
             {
                 ori -= 2 * M_PI;
             }
 
-            if (ori - start_ori > M_PI)
+            if (ori - start_ori_ > M_PI)
             {
                 half_passed_ = true;
             }
@@ -115,17 +118,17 @@ void FeatureExtract::cloudRearrange(const common::PointCloud &laser_cloud_in, st
         else
         {
             ori += 2 * M_PI;
-            if (ori < end_ori - M_PI * 3 / 2)
+            if (ori < end_ori_ - M_PI * 3 / 2)
             {
                 ori += 2 * M_PI;
             }
-            else if (ori > end_ori + M_PI / 2)
+            else if (ori > end_ori_ + M_PI / 2)
             {
                 ori -= 2 * M_PI;
             }
         }
 
-        float relTime = (ori - start_ori) / (end_ori - start_ori);
+        float relTime = (ori - start_ori_) / (end_ori_ - start_ori_);
         point.intensity = scan_id + SCAN_PERIOD * relTime;
         laser_cloud_scans[scan_id].push_back(point);
     }
@@ -137,8 +140,8 @@ void FeatureExtract::cloudRearrange(const common::PointCloud &laser_cloud_in, st
 void FeatureExtract::extractCloud(const double &cur_time, const PointCloud &laser_cloud_in, cloudFeature &cloud_feature)
 {
     TicToc t_whole, t_prepare;
-    int cloud_size;
     std::vector<common::PointICloud> laser_cloud_scans;
+    int cloud_size = laser_cloud_in.size();
     cloudRearrange(laser_cloud_in, laser_cloud_scans, cloud_size);
 
     std::vector<int> scan_start_ind(N_SCANS);

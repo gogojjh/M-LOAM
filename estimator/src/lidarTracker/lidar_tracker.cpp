@@ -47,7 +47,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
 
         ceres::Solver::Options options;
         options.linear_solver_type = ceres::DENSE_SCHUR;
-        options.max_num_iterations = 4;
+        options.max_num_iterations = 6;
         options.max_solver_time_in_seconds = 0.005;
         options.minimizer_progress_to_stdout = false;
         options.check_gradients = false;

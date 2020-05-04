@@ -202,14 +202,13 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
     TicToc measurement_pre_time;
     std::vector<cloudFeature> feature_frame;
     feature_frame.resize(NUM_OF_LASER);
-    // printf("size of segmenting cloud: ");
     for (auto i = 0; i < v_laser_cloud_in.size(); i++)
     {
+        f_extract_.findStartEndAngle(v_laser_cloud_in[i])
         PointCloud laser_cloud_segment;
         if ((SEGMENT_CLOUD) && (ESTIMATE_EXTRINSIC == 0))
         {
             img_segment_.segmentCloud(v_laser_cloud_in[i], laser_cloud_segment);
-            // printf("%d ", laser_cloud_segment.size());
             f_extract_.extractCloud(t, laser_cloud_segment, feature_frame[i]);
         } else
         {
@@ -218,7 +217,6 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
         total_corner_feature_ += feature_frame[i]["corner_points_less_sharp"].size();
         total_surf_feature_ += feature_frame[i]["surf_points_less_flat"].size();
     }
-    // printf("\n");
     printf("measurementPre time: %fms (%u*%fms)\n", measurement_pre_time.toc(), v_laser_cloud_in.size(), measurement_pre_time.toc() / v_laser_cloud_in.size());
     total_measurement_pre_time_ += measurement_pre_time.toc();
 
@@ -233,6 +231,7 @@ void Estimator::inputCloud(const double &t, const PointCloud &laser_cloud_in)
     TicToc measurement_pre_time;
     std::vector<cloudFeature> feature_frame;
     feature_frame.resize(1);
+    f_extract_.findStartEndAngle(laser_cloud_in)
     if ((SEGMENT_CLOUD) && (ESTIMATE_EXTRINSIC == 0))
     {
         PointCloud laser_cloud_segment;
@@ -484,7 +483,7 @@ void Estimator::optimizeMap()
     ceres::Solver::Options options;
     options.linear_solver_type = ceres::DENSE_SCHUR;
     // options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
-    options.num_threads = 4;
+    options.num_threads = 2;
     // options.trust_region_strategy_type = ceres::DOGLEG;
     options.max_num_iterations = NUM_ITERATIONS;
     // options.gradient_check_relative_precision = 1e-3;

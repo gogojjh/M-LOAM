@@ -140,7 +140,7 @@ void saveStatistics()
 		fout << "frame, total_mapping_time" << std::endl;
 		fout << frame_cnt << ", " << total_mapping << std::endl;
 		fout.close();
-		ROS_WARN("Frame: %d, mean mapping time: %fms", frame_cnt, total_mapping / frame_cnt);
+		printf("******* Frame: %d, mean mapping time: %fms\n", frame_cnt, total_mapping / frame_cnt);
 	}		
 
 	printf("Saving laser_map cloud to /tmp/mloam_mapping_cloud.pcd\n");
@@ -549,7 +549,7 @@ void process()
 					ceres::Solver::Options options;
 					options.linear_solver_type = ceres::DENSE_SCHUR;
 					options.max_num_iterations = 30;
-					options.max_solver_time_in_seconds = 0.07;
+					options.max_solver_time_in_seconds = 0.04;
 					options.num_threads = 4;
 					options.minimizer_progress_to_stdout = false;
 					options.check_gradients = false;
