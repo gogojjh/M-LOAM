@@ -5,7 +5,13 @@ M-LOAM is a robust system for multi-LiDAR extrinsic calibration, real-time odome
 system can start with several extrinsic-uncalibrated LiDARs, automatically calibrate their extrinsics, and provide accurate
 poses as well as a globally consistent map.
 
-**Authors:** [Jianhao Jiao](http://gogojjh.github.io), [Haoyang Ye](https://github.com/xxx)
+**Authors:** 
+[Jianhao Jiao](http://gogojjh.github.io), 
+[Haoyang Ye](https://github.com/hyye),
+[Yilong Zhu](https://scholar.google.com/citations?user=x8n6v2oAAAAJ&hl=zh-CN),
+[Ming Liu](https://scholar.google.com/citations?user=CdV5LfQAAAAJ&hl=zh-CN)
+from [RAM-LAB](https://www.ramlab.com)
+
 
 
 ### 1. Prerequisites
@@ -54,6 +60,6 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 
 ### 7. Acknowledgements
 Thanks for 
-LOAM (J. Zhang and S. Singh. LOAM: Lidar Odometry and Mapping in Real-time) 
-[LIO-MAPPING](https://github.com/hyye/lio-mapping) (Haoyang Ye, Yuying Chen, and Ming Liu. Tightly Coupled 3D Lidar Inertial Odometry and Mapping)
-and [A-LOAM](https://github.com/HKUST-Aerial-Robotics/A-LOAM).
+
+* LOAM (J. Zhang and S. Singh. LOAM: Lidar Odometry and Mapping in Real-time) and its advanced version: [A-LOAM](https://github.com/HKUST-Aerial-Robotics/A-LOAM);
+* [LIO-MAPPING](https://github.com/hyye/lio-mapping) (Haoyang Ye, Yuying Chen, and Ming Liu. Tightly Coupled 3D Lidar Inertial Odometry and Mapping).
