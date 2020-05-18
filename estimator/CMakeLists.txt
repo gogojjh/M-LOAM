@@ -30,7 +30,7 @@ find_package(OpenCV REQUIRED)
 find_package(PCL REQUIRED)
 find_package(Ceres REQUIRED)
 find_package(Sophus REQUIRED)
-find_package(libpointmatcher REQUIRED)
+# find_package(libpointmatcher REQUIRED)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 find_package(Eigen3)

@@ -1,13 +1,11 @@
 # M-LOAM
 ### Multi-LiDAR Odometry and Mapping
 
-M-LOAM is xxx
+M-LOAM is a robust system for multi-LiDAR extrinsic calibration, real-time odometry, and mapping. Without manual intervention, our
+system can start with several extrinsic-uncalibrated LiDARs, automatically calibrate their extrinsics, and provide accurate
+poses as well as a globally consistent map.
 
-<!-- A-LOAM is an Advanced implementation of LOAM (J. Zhang and S. Singh. LOAM: Lidar Odometry and Mapping in Real-time), which uses Eigen and Ceres Solver to simplify code structure. This code is modified from LOAM and [LOAM_NOTED](https://github.com/cuitaixiang/LOAM_NOTED). This code is clean and simple without complicated mathematical derivation and redundant operations. It is a good learning material for SLAM beginners. -->
-
-<!-- <img src="https://github.com/HKUST-Aerial-Robotics/A-LOAM/blob/devel/picture/kitti.png" width = 55% height = 55%/> -->
-
-**Modifier:** [Jianhao Jiao](http://gogojjh.github.io), [Haoyang Ye](https://github.com/xxx)
+**Authors:** [Jianhao Jiao](http://gogojjh.github.io), [Haoyang Ye](https://github.com/xxx)
 
 
 ### 1. Prerequisites
@@ -55,4 +53,7 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 ### 6. Additional Features (have not fixed)
 
 ### 7. Acknowledgements
-Thanks for LOAM (J. Zhang and S. Singh. LOAM: Lidar Odometry and Mapping in Real-time) and [A-LOAM](https://github.com/HKUST-Aerial-Robotics/A-LOAM).
+Thanks for 
+LOAM (J. Zhang and S. Singh. LOAM: Lidar Odometry and Mapping in Real-time) 
+[LIO-MAPPING](https://github.com/hyye/lio-mapping) (Haoyang Ye, Yuying Chen, and Ming Liu. Tightly Coupled 3D Lidar Inertial Odometry and Mapping)
+and [A-LOAM](https://github.com/HKUST-Aerial-Robotics/A-LOAM).
