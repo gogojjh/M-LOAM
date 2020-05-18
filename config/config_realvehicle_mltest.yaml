@@ -120,7 +120,7 @@ map_surf_res: 0.3
 map_eig_thre: 50
 
 # uncertainty parameter
-# translation, rotation, point (s, phi, zeta)
+# translation, rotation (rho, phi)
 uct_ext: !!opencv-matrix
    rows: 4
    cols: 6
@@ -130,6 +130,7 @@ uct_ext: !!opencv-matrix
           0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01,
           0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01] 
 
+# point (zeta)
 uct_measurement: !!opencv-matrix
    rows: 1
    cols: 3

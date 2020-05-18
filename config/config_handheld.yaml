@@ -20,7 +20,7 @@ n_scans: 16
 segment_cloud: 0 # for indoor office
 # segment_cloud: 1 
 horizon_scan: 1800
-min_cluster_size: 20
+min_cluster_size: 30
 min_line_size: 5
 segment_valid_point_num: 5
 segment_valid_line_num: 3
@@ -136,6 +136,6 @@ trace_threshold_after_mapping: 0.3
 
 # for outdoor building
 # trace_threshold_before_mapping: 1
-# trace_threshold_after_mapping: 1
+# trace_threshold_after_mapping: 0.7
 
 skip_num_odom: 1

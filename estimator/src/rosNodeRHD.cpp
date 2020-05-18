@@ -43,6 +43,8 @@
 
 using namespace std;
 
+#define DEBUG 1
+
 Estimator estimator;
 
 // message buffer
@@ -157,6 +159,17 @@ void sync_process()
                     laser_cloud1 = getCloudFromMsg(cloud1_buf.front());
                     v_laser_cloud.push_back(laser_cloud1);
                     cloud1_buf.pop();
+
+                    // inject extrinsic perturbation on point clouds
+                    if (estimator.frame_cnt_ >= 0)
+                    {
+                        ROS_WARN("Inject extrinsic perturbation on point clouds !");
+                        Eigen::Quaterniond q_perturb(0.98929, 0.078924, 0.094058, 0.078924);
+                        Eigen::Vector3d t_perturb(0.1, 0.1, 0.1);
+                        Pose pose_perturb(q_perturb, t_perturb);
+                        pcl::transformPointCloud(v_laser_cloud[1], v_laser_cloud[1], pose_perturb.T_.cast<float>());
+                    }
+
                     printf("size of finding laser_cloud0: %d, laser_cloud1: %d\n", laser_cloud0.points.size(), laser_cloud1.points.size());
                 }
             }

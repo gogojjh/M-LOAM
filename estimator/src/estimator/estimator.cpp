@@ -204,7 +204,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
     feature_frame.resize(NUM_OF_LASER);
     for (auto i = 0; i < v_laser_cloud_in.size(); i++)
     {
-        f_extract_.findStartEndAngle(v_laser_cloud_in[i])
+        f_extract_.findStartEndAngle(v_laser_cloud_in[i]);
         PointCloud laser_cloud_segment;
         if ((SEGMENT_CLOUD) && (ESTIMATE_EXTRINSIC == 0))
         {
@@ -231,7 +231,7 @@ void Estimator::inputCloud(const double &t, const PointCloud &laser_cloud_in)
     TicToc measurement_pre_time;
     std::vector<cloudFeature> feature_frame;
     feature_frame.resize(1);
-    f_extract_.findStartEndAngle(laser_cloud_in)
+    f_extract_.findStartEndAngle(laser_cloud_in);
     if ((SEGMENT_CLOUD) && (ESTIMATE_EXTRINSIC == 0))
     {
         PointCloud laser_cloud_segment;
@@ -483,7 +483,7 @@ void Estimator::optimizeMap()
     ceres::Solver::Options options;
     options.linear_solver_type = ceres::DENSE_SCHUR;
     // options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
-    options.num_threads = 2;
+    options.num_threads = 4;
     // options.trust_region_strategy_type = ceres::DOGLEG;
     options.max_num_iterations = NUM_ITERATIONS;
     // options.gradient_check_relative_precision = 1e-3;
@@ -996,7 +996,7 @@ void Estimator::buildLocalMap()
             // corner_points_local_map_[n] += corner_points_trans;
         }
         // TODO: increase the downsampling resolution
-        float ratio = 0.4 * (NUM_OF_LASER * WINDOW_SIZE * 1.0 / 8);
+        float ratio = 0.4 * (NUM_OF_LASER * WINDOW_SIZE * 1.0 / 10);
         // float ratio = 0.4;
         pcl::VoxelGrid<PointI> down_size_filter;
         down_size_filter.setLeafSize(ratio, ratio, ratio);
