@@ -17,8 +17,8 @@ num_of_laser: 2
 n_scans: 16
 
 # segmmentation
-segment_cloud: 0 # for indoor office
-# segment_cloud: 1 
+# segment_cloud: 0 # for indoor office
+segment_cloud: 1 
 horizon_scan: 1800
 min_cluster_size: 30
 min_line_size: 5
@@ -131,11 +131,11 @@ uct_measurement: !!opencv-matrix
    data: [0.0025, 0.0025, 0.0025]
 
 # for indoor office
-trace_threshold_before_mapping: 1
-trace_threshold_after_mapping: 0.3
+# trace_threshold_before_mapping: 1
+# trace_threshold_after_mapping: 0.3
 
 # for outdoor building
-# trace_threshold_before_mapping: 1
-# trace_threshold_after_mapping: 0.7
+trace_threshold_before_mapping: 1
+trace_threshold_after_mapping: 0.7
 
 skip_num_odom: 1

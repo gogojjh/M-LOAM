@@ -42,10 +42,6 @@ if (OPENMP_FOUND)
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 
-# add_definitions(${PCL_DEFINITIONS}) # bugs in PCL_DEFINITIONS
-# add_definitions(${EIGEN3_DEFINITIONS})
-# set(EIGEN_MAX_STATIC_ALIGN_BYTES 0)
-
 include_directories(${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR} 
                     ${CERES_INCLUDE_DIRS} ${Sophus_INCLUDE_DIRS} ${libpointmatcher_INCLUDE_DIRS})
 
@@ -90,28 +86,25 @@ target_link_libraries(mloam_node_rv mloam_lib_1 mloam_lib_2)
 add_executable(lidar_mapper src/lidarMapper/lidar_mapper.cpp)
 target_link_libraries(lidar_mapper mloam_lib_1 mloam_lib_2)
 
-add_executable(lidar_mapper_only_surf src/lidarMapper/lidar_mapper_only_surf.cpp)
-target_link_libraries(lidar_mapper_only_surf mloam_lib_1 mloam_lib_2)
-
 ######## --------------------- TEST --------------------- ########
-#add_executable(test_ceres ../test/test_ceres.cpp)
-#target_link_libraries(test_ceres ${catkin_LIBRARIES} ${PCL_LIBS})
+# add_executable(test_ceres ../test/test_ceres.cpp)
+# target_link_libraries(test_ceres ${catkin_LIBRARIES} ${PCL_LIBS})
 
-#add_executable(test_pointiwithcov ../test/test_pointiwithcov.cpp)
-#target_link_libraries(test_pointiwithcov ${catkin_LIBRARIES} ${PCL_LIBS})
+# add_executable(test_pointiwithcov ../test/test_pointiwithcov.cpp)
+# target_link_libraries(test_pointiwithcov ${catkin_LIBRARIES} ${PCL_LIBS})
 
-add_executable(test_merge_pointcloud_sr ../test/test_merge_pointcloud_sr.cpp)
-target_link_libraries(test_merge_pointcloud_sr ${catkin_LIBRARIES} ${PCL_LIBS})
+# add_executable(test_merge_pointcloud_sr ../test/test_merge_pointcloud_sr.cpp)
+# target_link_libraries(test_merge_pointcloud_sr ${catkin_LIBRARIES} ${PCL_LIBS})
 
-add_executable(test_merge_pointcloud_rhd ../test/test_merge_pointcloud_rhd.cpp)
-target_link_libraries(test_merge_pointcloud_rhd ${catkin_LIBRARIES} ${PCL_LIBS})
+# add_executable(test_merge_pointcloud_rhd ../test/test_merge_pointcloud_rhd.cpp)
+# target_link_libraries(test_merge_pointcloud_rhd ${catkin_LIBRARIES} ${PCL_LIBS})
 
-add_executable(test_merge_pointcloud_rv ../test/test_merge_pointcloud_rv.cpp)
-target_link_libraries(test_merge_pointcloud_rv ${catkin_LIBRARIES} ${PCL_LIBS})
+# add_executable(test_merge_pointcloud_rv ../test/test_merge_pointcloud_rv.cpp)
+# target_link_libraries(test_merge_pointcloud_rv ${catkin_LIBRARIES} ${PCL_LIBS})
 
-add_executable(test_parse_bag ../test/test_parse_bag.cpp)
-target_link_libraries(test_parse_bag ${catkin_LIBRARIES} ${PCL_LIBS})
+# add_executable(test_parse_bag ../test/test_parse_bag.cpp)
+# target_link_libraries(test_parse_bag ${catkin_LIBRARIES} ${PCL_LIBS})
 
-add_executable(test_icp ../test/test_icp.cpp)
-target_link_libraries(test_icp ${libpointmatcher_LIBRARIES})
+# add_executable(test_icp ../test/test_icp.cpp)
+# target_link_libraries(test_icp ${libpointmatcher_LIBRARIES})
 #

@@ -34,11 +34,11 @@
         </node>
 
         <group if="$(arg run_mloam_map_with_up)">
-            <node pkg="mloam" type="lidar_mapper_only_surf" name="lidar_mapper_only_surf" 
+            <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" 
                 args="$(arg config_file) $(arg mloam_result_save) $(arg output_path) 1" output="screen"/>
         </group>
         <group unless="$(arg run_mloam_map_with_up)">
-            <node pkg="mloam" type="lidar_mapper_only_surf" name="lidar_mapper_only_surf" 
+            <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" 
                 args="$(arg config_file) $(arg mloam_result_save) $(arg output_path) 0" output="screen"/>        
         </group>
     </group>

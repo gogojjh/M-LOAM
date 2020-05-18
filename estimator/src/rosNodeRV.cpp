@@ -1,15 +1,14 @@
 /*******************************************************
- * Copyright (C) 2019, Aerial Robotics Group, Hong Kong University of Science and Technology
+ * Copyright (C) 2020, RAM-LAB, Hong Kong University of Science and Technology
  *
- * This file is part of VINS.
+ * This file is part of M-LOAM (https://ram-lab.com/file/jjiao/m-loam).
+ * If you use this code, please cite the respective publications as
+ * listed on the above websites.
  *
  * Licensed under the GNU General Public License v3.0;
  * you may not use this file except in compliance with the License.
  *
- * Author: Qin Tong (qintonguav@gmail.com)
- *
- * Reference:
- * Thread: http://www.runoob.com/w3cnote/cpp-std-thread.html
+ * Author: Jianhao JIAO (jiaojh1994@gmail.com)
  *******************************************************/
 
 #include <iostream>
@@ -127,10 +126,16 @@ int main(int argc, char **argv)
     registerPub(n);
 
     string data_source = argv[2];
+    // TODO: bag read multiple point clouds from vehicles
     if (!data_source.compare("bag"))
     {
-        // TODO:
-        // add bag subscriber
+        // MLOAM_RESULT_SAVE = std::stoi(argv[4]);
+        // OUTPUT_FOLDER = argv[5];
+        // MLOAM_ODOM_PATH = OUTPUT_FOLDER + "stamped_mloam_odom_estimate.txt";
+        // MLOAM_GT_PATH = OUTPUT_FOLDER + "stamped_groundtruth.txt";
+        // EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
+        // EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "calib_eig.txt";
+        // printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);       
     } else
     if (!data_source.compare("pcd"))
     {
@@ -216,11 +221,6 @@ int main(int argc, char **argv)
                     }
                     roiCloudFilter(laser_cloud_list[j], ROI_RANGE);
                     printf("%d ", laser_cloud_list[j].size());
-                    // sensor_msgs::PointCloud2 msg_cloud;
-                    // pcl::toROSMsg(laser_cloud_list[j], msg_cloud);
-                    // msg_cloud.header.frame_id = std::string("laser_") + std::to_string(j);
-                    // msg_cloud.header.stamp = ros::Time(cloud_time);
-                    // pub_laser_cloud_list[j].publish(msg_cloud);
                 }
                 printf("\n");
 

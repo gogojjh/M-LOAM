@@ -124,7 +124,7 @@ int main(int argc, const char *argv[])
 		cerr << "Invalid input point clouds dimension" << endl;
 		exit(1);
 	}
-
+`
 	PM::TransformationParameters translation =
 			parseTranslation(initTranslation, cloudDimension);
 	PM::TransformationParameters rotation =
@@ -158,10 +158,10 @@ int main(int argc, const char *argv[])
 	data_merge.concatenate(data_out);
 
 	// Safe files to see the results
-	ref.save(outputBaseFile + "_ref.vtk");
-	data.save(outputBaseFile + "_data_in.vtk");
-	data_out.save(outputBaseFile + "_data_out.vtk");
-	data_merge.save(outputBaseFile + "_data_merge.vtk");
+	ref.save(outputBaseFile + "_ref.pcd");
+	data.save(outputBaseFile + "_data_in.pcd");
+	data_out.save(outputBaseFile + "_data_out.pcd");
+	data_merge.save(outputBaseFile + "_data_merge.pcd");
 	if(isTransfoSaved) 
 	{
 		ofstream transfoFile;

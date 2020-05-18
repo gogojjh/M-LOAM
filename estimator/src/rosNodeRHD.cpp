@@ -1,15 +1,14 @@
 /*******************************************************
- * Copyright (C) 2019, Aerial Robotics Group, Hong Kong University of Science and Technology
+ * Copyright (C) 2020, RAM-LAB, Hong Kong University of Science and Technology
  *
- * This file is part of VINS.
+ * This file is part of M-LOAM (https://ram-lab.com/file/jjiao/m-loam).
+ * If you use this code, please cite the respective publications as
+ * listed on the above websites.
  *
  * Licensed under the GNU General Public License v3.0;
  * you may not use this file except in compliance with the License.
  *
- * Author: Qin Tong (qintonguav@gmail.com)
- *
- * Reference:
- * Thread: http://www.runoob.com/w3cnote/cpp-std-thread.html
+ * Author: Jianhao JIAO (jiaojh1994@gmail.com)
  *******************************************************/
 
 #include <iostream>
@@ -42,8 +41,6 @@
 #include "utility/cloud_visualizer.h"
 
 using namespace std;
-
-#define DEBUG 1
 
 Estimator estimator;
 
@@ -161,15 +158,14 @@ void sync_process()
                     cloud1_buf.pop();
 
                     // inject extrinsic perturbation on point clouds
-                    if (estimator.frame_cnt_ >= 0)
-                    {
-                        ROS_WARN("Inject extrinsic perturbation on point clouds !");
-                        Eigen::Quaterniond q_perturb(0.98929, 0.078924, 0.094058, 0.078924);
-                        Eigen::Vector3d t_perturb(0.1, 0.1, 0.1);
-                        Pose pose_perturb(q_perturb, t_perturb);
-                        pcl::transformPointCloud(v_laser_cloud[1], v_laser_cloud[1], pose_perturb.T_.cast<float>());
-                    }
-
+                    // if (estimator.frame_cnt_ >= 0)
+                    // {
+                    //     ROS_WARN("Inject extrinsic perturbation on point clouds !");
+                    //     Eigen::Quaterniond q_perturb(0.98929, 0.078924, 0.094058, 0.078924);
+                    //     Eigen::Vector3d t_perturb(0.1, 0.1, 0.1);
+                    //     Pose pose_perturb(q_perturb, t_perturb);
+                    //     pcl::transformPointCloud(v_laser_cloud[1], v_laser_cloud[1], pose_perturb.T_.cast<float>());
+                    // }
                     printf("size of finding laser_cloud0: %d, laser_cloud1: %d\n", laser_cloud0.points.size(), laser_cloud1.points.size());
                 }
             }

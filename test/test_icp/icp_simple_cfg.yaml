@@ -1,6 +1,6 @@
 readingDataPointsFilters:
   - RandomSamplingDataPointsFilter:
-      prob: 1
+      prob: 0.7
   # - BoundingBoxDataPointsFilter:
   #     xMin: -2.0
   #     xMax: 2.0
@@ -36,7 +36,7 @@ errorMinimizer:
 
 transformationCheckers:
   - CounterTransformationChecker:
-      maxIterationCount: 100
+      maxIterationCount: 30
   - DifferentialTransformationChecker:
       minDiffRotErr: 0.0001
       minDiffTransErr: 0.001

@@ -1,10 +1,14 @@
 /*******************************************************
- * Copyright (C) 2019, Aerial Robotics Group, Hong Kong University of Science and Technology
+ * Copyright (C) 2020, RAM-LAB, Hong Kong University of Science and Technology
  *
- * This file is part of VINS.
+ * This file is part of M-LOAM (https://ram-lab.com/file/jjiao/m-loam).
+ * If you use this code, please cite the respective publications as
+ * listed on the above websites.
  *
  * Licensed under the GNU General Public License v3.0;
  * you may not use this file except in compliance with the License.
+ *
+ * Author: Jianhao JIAO (jiaojh1994@gmail.com)
  *******************************************************/
 
 #pragma once
@@ -45,7 +49,6 @@
 #include "../utility/CircularBuffer.h"
 #include "../factor/lidar_pivot_plane_norm_factor.hpp"
 #include "../factor/lidar_pivot_target_plane_norm_factor.hpp"
-#include "../factor/lidar_map_plane_norm_factor.hpp"
 #include "../factor/pose_local_parameterization.h"
 #include "../factor/marginalization_factor.h"
 #include "../factor/prior_factor.hpp"
