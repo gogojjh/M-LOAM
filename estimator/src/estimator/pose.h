@@ -25,8 +25,8 @@
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/StdVector>
 
-#include <sophus/so3.hpp>
-#include <sophus/se3.hpp>
+#include "sophus/so3.hpp"
+#include "sophus/se3.hpp"
 
 #include "common/types/type.h"
 
