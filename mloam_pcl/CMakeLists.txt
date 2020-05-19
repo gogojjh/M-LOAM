@@ -12,9 +12,11 @@ catkin_package(
 )
 
 find_package(PCL REQUIRED)
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
 find_package(Eigen3 REQUIRED)
 
-add_definitions(${PCL_DEFINITIONS})
 
 set(srcs
     src/voxel_grid_covariance_mloam.cpp

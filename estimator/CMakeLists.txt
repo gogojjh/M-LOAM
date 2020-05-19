@@ -28,6 +28,9 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(OpenCV REQUIRED)
 find_package(PCL REQUIRED)
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
 find_package(Ceres REQUIRED)
 #find_package(Sophus REQUIRED)
 # find_package(libpointmatcher REQUIRED)
@@ -73,7 +76,7 @@ add_library(mloam_lib_2
     src/factor/marginalization_factor.cpp
     src/utility/cloud_visualizer.cpp
     )
-target_link_libraries(mloam_lib_2 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES})
+target_link_libraries(mloam_lib_2 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES} ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} ${PCL_LIBRARIES})
 
 ######## --------------------- EXECUTABLE --------------------- ########
 add_executable(mloam_node_sr src/rosNodeSR.cpp)
