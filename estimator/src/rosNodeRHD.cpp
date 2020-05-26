@@ -309,6 +309,7 @@ int main(int argc, char **argv)
         ros::spinOnce();
         loop_rate.sleep();
     }
+    
     if (MLOAM_RESULT_SAVE)
     {
         saveGroundTruth();

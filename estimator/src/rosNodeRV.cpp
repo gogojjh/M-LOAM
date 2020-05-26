@@ -10,6 +10,8 @@
  *
  * Author: Jianhao JIAO (jiaojh1994@gmail.com)
  *******************************************************/
+#include <glog/logging.h>
+#include <gflags/gflags.h>
 
 #include <iostream>
 #include <queue>
@@ -36,6 +38,8 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/NavSatFix.h>
+#include <message_filters/sync_policies/approximate_time.h>
+#include <message_filters/subscriber.h>
 
 #include "common/common.hpp"
 #include "estimator/estimator.h"
@@ -46,55 +50,125 @@
 
 using namespace std;
 
+DEFINE_bool(result_save, true, "save or not save the results");
+DEFINE_string(config_file, "config.yaml", "the yaml config file");
+DEFINE_string(data_source, "bag", "the data source: bag or bag");
+DEFINE_string(data_path, "", "the data path");
+DEFINE_string(output_path, "", "the path ouf saving results");
+DEFINE_int32(start_idx, 0, "the start idx of the data");
+DEFINE_int32(end_idx, 0, "the end idx of the data");
+DEFINE_int32(delta_idx, 1, "the delta idx of reading the data");
+DEFINE_bool(time_now, true, "use current time or data time");
+
 Estimator estimator;
+
+std::vector<std::queue<sensor_msgs::PointCloud2ConstPtr> > all_cloud_buf(5);
+std::mutex m_buf;
 
 // laser path groundtruth
 nav_msgs::Path laser_gt_path;
 Pose pose_world_ref_ini;
 bool b_pause = false;
 
+void data_process_callback(const sensor_msgs::PointCloud2ConstPtr &cloud0_msg,
+                           const sensor_msgs::PointCloud2ConstPtr &cloud1_msg,
+                           const sensor_msgs::PointCloud2ConstPtr &cloud2_msg,
+                           const sensor_msgs::PointCloud2ConstPtr &cloud3_msg,
+                           const sensor_msgs::PointCloud2ConstPtr &cloud4_msg)
+{
+    m_buf.lock();
+    all_cloud_buf[0].push(cloud0_msg);
+    all_cloud_buf[1].push(cloud1_msg);
+    all_cloud_buf[2].push(cloud2_msg);
+    all_cloud_buf[3].push(cloud3_msg);
+    all_cloud_buf[4].push(cloud4_msg);
+    printf("received point cloud \n");
+    m_buf.unlock();
+}
+
+pcl::PointCloud<pcl::PointXYZ> getCloudFromMsg(const sensor_msgs::PointCloud2ConstPtr &cloud_msg)
+{
+    pcl::PointCloud<pcl::PointXYZ> laser_cloud;
+    pcl::fromROSMsg(*cloud_msg, laser_cloud);
+    roiCloudFilter(laser_cloud, ROI_RANGE);
+    return laser_cloud;
+}
+
+void sync_process()
+{
+    while (1)
+    {
+        std::vector<pcl::PointCloud<pcl::PointXYZ> > v_laser_cloud(NUM_OF_LASER);
+        std_msgs::Header header;
+        double time = 0;
+        m_buf.lock();
+        if (!all_cloud_buf[0].empty() && !all_cloud_buf[1].empty() && !all_cloud_buf[2].empty() && !all_cloud_buf[3].empty() && !all_cloud_buf[4].empty())
+        {
+            time = all_cloud_buf[0].front()->header.stamp.toSec();
+            header = all_cloud_buf[0].front()->header;
+            stringstream ss;
+            for (size_t i = 0; i < NUM_OF_LASER; i++) 
+            {
+                v_laser_cloud[i] = getCloudFromMsg(all_cloud_buf[i].front());
+                ss << v_laser_cloud[i].size() << " ";
+            }
+            for (size_t i = 0; i < all_cloud_buf.size(); i++) all_cloud_buf[i].pop();
+            printf("size of finding laser_cloud %s\n", ss.str().c_str());
+        }
+        m_buf.unlock();
+
+        bool empty_check = false;
+        for (size_t i = 0; i < NUM_OF_LASER; i++)
+        {
+            if (v_laser_cloud[i].size() != 0)
+            {
+                empty_check = true;
+                break;
+            }
+        }
+        // if (!empty_check)
+        // {
+        //     estimator.inputCloud(time, v_laser_cloud);
+        // }
+    }
+}
+
 void saveGroundTruth()
 {
-    if (MLOAM_RESULT_SAVE)
+    if (laser_gt_path.poses.size() == 0) return;
+    std::ofstream fout(MLOAM_GT_PATH.c_str(), std::ios::out);
+    fout.setf(ios::fixed, ios::floatfield);
+    for (size_t i = 0; i < laser_gt_path.poses.size(); i++)
     {
-        if (laser_gt_path.poses.size() == 0) return;
-        std::ofstream fout(MLOAM_GT_PATH.c_str(), std::ios::out);
-        fout.setf(ios::fixed, ios::floatfield);
-        for (size_t i = 0; i < laser_gt_path.poses.size(); i++)
-        {
-            geometry_msgs::PoseStamped &laser_pose = laser_gt_path.poses[i];
-            fout.precision(15);
-            fout << laser_pose.header.stamp.toSec() << " ";
-            fout.precision(8);
-            fout << laser_pose.pose.position.x << " "
-                    << laser_pose.pose.position.y << " "
-                    << laser_pose.pose.position.z << " "
-                    << laser_pose.pose.orientation.x << " "
-                    << laser_pose.pose.orientation.y << " "
-                    << laser_pose.pose.orientation.z << " "
-                    << laser_pose.pose.orientation.w << std::endl;
-        }
+        geometry_msgs::PoseStamped &laser_pose = laser_gt_path.poses[i];
+        fout.precision(15);
+        fout << laser_pose.header.stamp.toSec() << " ";
+        fout.precision(8);
+        fout << laser_pose.pose.position.x << " "
+                << laser_pose.pose.position.y << " "
+                << laser_pose.pose.position.z << " "
+                << laser_pose.pose.orientation.x << " "
+                << laser_pose.pose.orientation.y << " "
+                << laser_pose.pose.orientation.z << " "
+                << laser_pose.pose.orientation.w << std::endl;
     }
 }
 
 void saveStatistics()
 {
-    if (MLOAM_RESULT_SAVE)
-    {
-	    printf("Saving odometry time statistics\n");
-		std::ofstream fout(std::string(OUTPUT_FOLDER + "time_odometry.txt").c_str(), std::ios::out);
-		fout.precision(15);
-        fout << "frame, total_mea_pre_time, total_opt_odom_time, total_corner_feature, total_surf_feature" << std::endl;
-		fout << estimator.frame_cnt_ << ", " << estimator.total_measurement_pre_time_ 
-                                     << ", " << estimator.total_opt_odom_time_ 
-                                     << ", " << estimator.total_corner_feature_ 
-                                     << ", " << estimator.total_surf_feature_ << std::endl;
-		fout.close();
-        printf("******* Frame: %d, mean measurement preprocess time: %fms, mean optimize odometry time: %fms\n", estimator.frame_cnt_,
-               estimator.total_measurement_pre_time_ / estimator.frame_cnt_, estimator.total_opt_odom_time_ / estimator.frame_cnt_);
-        printf("******* Frame: %d, mean corner feature: %f, mean surf feature: %f\n", estimator.frame_cnt_,
-               estimator.total_corner_feature_ * 1.0 / estimator.frame_cnt_, estimator.total_surf_feature_ * 1.0 / estimator.frame_cnt_);
-    }
+    printf("Saving odometry time statistics\n");
+    std::ofstream fout(std::string(OUTPUT_FOLDER + "time_odometry.txt").c_str(), std::ios::out);
+    fout.precision(15);
+    fout << "frame, total_mea_pre_time, total_opt_odom_time, total_corner_feature, total_surf_feature" << std::endl;
+    fout << estimator.frame_cnt_ << ", " << estimator.total_measurement_pre_time_ 
+                                    << ", " << estimator.total_opt_odom_time_ 
+                                    << ", " << estimator.total_corner_feature_ 
+                                    << ", " << estimator.total_surf_feature_ << std::endl;
+    fout.close();
+    printf("******* Frame: %d, mean measurement preprocess time: %fms, mean optimize odometry time: %fms\n", estimator.frame_cnt_,
+            estimator.total_measurement_pre_time_ / estimator.frame_cnt_, estimator.total_opt_odom_time_ / estimator.frame_cnt_);
+    printf("******* Frame: %d, mean corner feature: %f, mean surf feature: %f\n", estimator.frame_cnt_,
+            estimator.total_corner_feature_ * 1.0 / estimator.frame_cnt_, estimator.total_surf_feature_ * 1.0 / estimator.frame_cnt_);
 }
 
 void pauseCallback(std_msgs::StringConstPtr msg)
@@ -105,60 +179,72 @@ void pauseCallback(std_msgs::StringConstPtr msg)
 
 int main(int argc, char **argv)
 {
-    if(argc < 2)
+    if (argc < 5)
     {
-        printf("please intput: rosrun mlod mlod_node_rv [config file] \n"
-                "for example: "
-                "rosrun mloam mloam_node_rv "
-                "~/catkin_ws/src/M-LOAM/config/config_realvehicle.yaml" 
-                "/Monster/dataset/UDI_dataset/xfl_20200301/short_test/"
-                "1 /home/jjiao/trajectory_results/real_vehicle/rv01_20200301/\n");
+        printf("please intput: rosrun mloam mloam_node_rv -help\n");
         return 1;
     }
+    google::InitGoogleLogging(argv[0]);
+    google::ParseCommandLineFlags(&argc, &argv, true);
+
     ros::init(argc, argv, "mloam_node_rt");
-    ros::NodeHandle n("~");
+    ros::NodeHandle nh("~");
 
-    string config_file = argv[1];
-    printf("config_file: %s\n", argv[1]);
-    readParameters(config_file);
+    printf("config_file: %s\n", FLAGS_config_file.c_str());
+    readParameters(FLAGS_config_file);
     estimator.setParameter();
-    registerPub(n);
+    registerPub(nh);
 
-    string data_source = argv[2];
-    // TODO: bag read multiple point clouds from vehicles
+    MLOAM_RESULT_SAVE = FLAGS_result_save;
+    OUTPUT_FOLDER = FLAGS_output_path;
+    MLOAM_ODOM_PATH = OUTPUT_FOLDER + "stamped_mloam_odom_estimate.txt";
+    MLOAM_GT_PATH = OUTPUT_FOLDER + "stamped_groundtruth.txt";
+    EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
+    EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "calib_eig.txt";
+    printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
+    size_t START_IDX = FLAGS_start_idx;
+    size_t END_IDX = FLAGS_end_idx;
+    size_t DELTA_IDX = FLAGS_delta_idx;
+    bool TIME_NOW = FLAGS_time_now;
+    ROS_WARN("reading cloud ...");
+
+    string data_source = FLAGS_data_source;
+    ros::Subscriber sub_pause = nh.subscribe<std_msgs::String>("/mloam_pause", 5, pauseCallback);
     if (!data_source.compare("bag"))
     {
-        // MLOAM_RESULT_SAVE = std::stoi(argv[4]);
-        // OUTPUT_FOLDER = argv[5];
-        // MLOAM_ODOM_PATH = OUTPUT_FOLDER + "stamped_mloam_odom_estimate.txt";
-        // MLOAM_GT_PATH = OUTPUT_FOLDER + "stamped_groundtruth.txt";
-        // EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
-        // EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "calib_eig.txt";
-        // printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);       
+        typedef sensor_msgs::PointCloud2 LidarMsgType;
+        typedef message_filters::sync_policies::ApproximateTime<LidarMsgType, LidarMsgType, LidarMsgType, LidarMsgType, LidarMsgType> LidarSyncPolicy;
+        typedef message_filters::Subscriber<LidarMsgType> LidarSubType;
+
+        std::vector<LidarSubType *> sub_lidar(5);
+        NUM_OF_LASER = std::min(NUM_OF_LASER, 5);
+        for (size_t i = 0; i < NUM_OF_LASER; i++) sub_lidar[i] = new LidarSubType(nh, CLOUD_TOPIC[i], 1);
+        for (size_t i = NUM_OF_LASER; i < 5; i++) sub_lidar[i] = new LidarSubType(nh, CLOUD_TOPIC[i - NUM_OF_LASER], 1);
+        message_filters::Synchronizer<LidarSyncPolicy> *lidar_synchronizer =
+            new message_filters::Synchronizer<LidarSyncPolicy>(LidarSyncPolicy(10), 
+            *sub_lidar[0], *sub_lidar[1], *sub_lidar[2], *sub_lidar[3], *sub_lidar[4]);
+        lidar_synchronizer->registerCallback(boost::bind(&data_process_callback, _1, _2, _3, _4, _5));
+
+        std::thread sync_thread(sync_process);
+        ros::Rate loop_rate(100);
+        while (ros::ok())
+        {
+            ros::spinOnce();
+            loop_rate.sleep();
+        }
+
+        sync_thread.join();
     } else
     if (!data_source.compare("pcd"))
     {
-        string data_path = argv[3];
-        printf("read sequence: %s\n", argv[3]);
-        MLOAM_RESULT_SAVE = std::stoi(argv[4]);
-        OUTPUT_FOLDER = argv[5];
-        MLOAM_ODOM_PATH = OUTPUT_FOLDER + "stamped_mloam_odom_estimate.txt";
-        MLOAM_GT_PATH = OUTPUT_FOLDER + "stamped_groundtruth.txt";
-        EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
-        EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "calib_eig.txt";
-        printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
-        size_t MLOAM_START_IDX = std::stoi(argv[6]);
-        size_t MLOAM_END_IDX = std::stoi(argv[7]);
-        size_t MLOAM_DELTA_IDX = std::stoi(argv[8]);
-        size_t MLOAM_TIME_NOW = std::stoi(argv[9]);
-        ROS_WARN("reading cloud ...");
+        string data_path = FLAGS_data_path;
+        printf("read sequence from: %s\n", FLAGS_data_path);
 
-        ros::Subscriber sub_pause = n.subscribe<std_msgs::String>("/mloam_pause", 5, pauseCallback);
         std::vector<ros::Publisher> pub_laser_cloud_list(NUM_OF_LASER);
-        for (size_t i = 0; i < NUM_OF_LASER; i++) pub_laser_cloud_list[i] = n.advertise<sensor_msgs::PointCloud2>(CLOUD_TOPIC[i], 10);
-        ros::Publisher pub_laser_gt_odom = n.advertise<nav_msgs::Odometry>("/laser_gt_odom", 10);
-        ros::Publisher pub_laser_gt_path = n.advertise<nav_msgs::Path>("/laser_gt_path", 10);
-        ros::Publisher pub_gps = n.advertise<sensor_msgs::NavSatFix>("/novatel718d/pos", 10);
+        for (size_t i = 0; i < NUM_OF_LASER; i++) pub_laser_cloud_list[i] = nh.advertise<sensor_msgs::PointCloud2>(CLOUD_TOPIC[i], 10);
+        ros::Publisher pub_laser_gt_odom = nh.advertise<nav_msgs::Odometry>("/laser_gt_odom", 10);
+        ros::Publisher pub_laser_gt_path = nh.advertise<nav_msgs::Path>("/laser_gt_path", 10);
+        ros::Publisher pub_gps = nh.advertise<sensor_msgs::NavSatFix>("/novatel718d/pos", 10);
 
         std::thread cloud_visualizer_thread;
         if (PCL_VIEWER)
@@ -189,13 +275,13 @@ int main(int argc, char **argv)
         // *************************************
         // read data
         double base_time = ros::Time::now().toSec();
-        for (size_t i = MLOAM_START_IDX; i < std::min(MLOAM_END_IDX, cloud_time_list.size()); i+=MLOAM_DELTA_IDX)
+        for (size_t i = START_IDX; i < std::min(END_IDX, cloud_time_list.size()); i+=DELTA_IDX)
         {	
             if (ros::ok())
             {
                 double cloud_time;
-                if (MLOAM_TIME_NOW)
-                    cloud_time = base_time + cloud_time_list[i] - cloud_time_list[MLOAM_START_IDX];
+                if (TIME_NOW)
+                    cloud_time = base_time + cloud_time_list[i] - cloud_time_list[START_IDX];
                 else
                     cloud_time = cloud_time_list[i];
                 printf("process data: %d\n", i);
@@ -305,7 +391,6 @@ int main(int argc, char **argv)
                 }
 
                 estimator.inputCloud(cloud_time, laser_cloud_list);           
-
                 ros::Rate loop_rate(10);
                 if (b_pause)
                 {
@@ -320,13 +405,19 @@ int main(int argc, char **argv)
                     ros::spinOnce();
                     loop_rate.sleep();
                 }
-            }
-            else
+            } else
+            {
                 break;
+            }
         }
+        cloud_visualizer_thread.join();
     }
-    saveGroundTruth();
-    saveStatistics();
+
+    if (MLOAM_RESULT_SAVE)
+    {
+        saveGroundTruth();
+        saveStatistics();
+    }
     return 0;
 }
 

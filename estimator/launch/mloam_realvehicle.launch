@@ -1,46 +1,42 @@
 <launch>
-
     <arg name="bag_file_use" default="false" />
-    <arg name="config_file" default="$(find mloam)/config/config_realvehicle.yaml" />
-    <arg name="data_source" default="pcd" />
-    <arg name="data_path" default="/Monster/dataset/UDI_dataset/xfl_20200301/whole_travel/" />
+    <param name="use_sim_time" value="false" />
 
     <arg name="run_mloam" default="true" />
     <arg name="run_aloam" default="false" />
     <arg name="run_legoloam" default="false" />
 
-    <arg name="run_mloam_map_with_up" default="true" /> <!-- uncertainty propagation -->    
-    <arg name="mloam_result_save" default="1"/>
-    <arg name="mloam_start_idx" default="2100"/>
-    <arg name="mloam_end_idx" default="25229"/> <!-- 25229 -->
-    <arg name="mloam_delta_idx" default="2" />
-    <arg name="mloam_time_now" default="1" />
+    <arg name="data_path" default="/Monster/dataset/UDI_dataset/xfl_20200301/whole_travel/" />
+    <arg name="data_source" default="bag" />
+    <arg name="start_idx" default="2100"/>
+    <arg name="end_idx" default="25229"/> <!-- 25229 -->
+    <arg name="delta_idx" default="2" />
+    <arg name="time_now" default="true" />
 
+    <arg name="result_save" default="false"/>
     <arg name="output_path" default="/home/jjiao/trajectory_results/real_vehicle/rv05_2100_25229_test/"/>
-    <param name="use_sim_time" value="false" />
+    <arg name="with_ua" default="true" /> <!-- uncertainty propagation -->    
 
+    <arg name="config_file" default="$(find mloam)/config/config_realvehicle.yaml" />
     <group if="$(arg run_mloam)">
         <node pkg="mloam" type="mloam_node_rv" name="mloam_node_rv" 
-            args="$(arg config_file) 
-                  $(arg data_source)
-                  $(arg data_path)
-                  $(arg mloam_result_save) 
-                  $(arg output_path)
-                  $(arg mloam_start_idx)
-                  $(arg mloam_end_idx)
-                  $(arg mloam_delta_idx)
-                  $(arg mloam_time_now)" output="screen">
+            args="-config_file=$(arg config_file) 
+                  -data_source=$(arg data_source)
+                  -result_save=$(arg result_save) 
+                  -output_path=$(arg output_path)
+                  -data_path=$(arg data_path)
+                  -start_idx=$(arg start_idx)
+                  -end_idx=$(arg end_idx)
+                  -delta_idx=$(arg delta_idx)
+                  -time_now=$(arg time_now)" output="screen">
             <remap from="/base_pose_gt" to="/current_odom"/>
         </node>
 
-        <group if="$(arg run_mloam_map_with_up)">
-            <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" 
-                args="$(arg config_file) $(arg mloam_result_save) $(arg output_path) 1" output="screen"/>
-        </group>
-        <group unless="$(arg run_mloam_map_with_up)">
-            <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" 
-                args="$(arg config_file) $(arg mloam_result_save) $(arg output_path) 0" output="screen"/>        
-        </group>
+        <!-- <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" 
+            args="-config_file=$(arg config_file) 
+                  -result_save=$(arg result_save) 
+                  -output_path=$(arg output_path)
+                  -with_ua=$(arg with_ua)" output="screen"/> -->
     </group>
 
     <!-- publish static tf -->
