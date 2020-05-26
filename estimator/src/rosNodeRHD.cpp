@@ -157,7 +157,7 @@ void sync_process()
                     v_laser_cloud.push_back(laser_cloud1);
                     cloud1_buf.pop();
 
-                    // inject extrinsic perturbation on point clouds
+                    // TODO: inject extrinsic perturbation on point clouds
                     // if (estimator.frame_cnt_ >= 0)
                     // {
                     //     ROS_WARN("Inject extrinsic perturbation on point clouds !");
