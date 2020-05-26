@@ -5,3 +5,6 @@ estimator/cmake-build-debug
 
 *.vtk
 *.pcd
+
+.history
+.vscode

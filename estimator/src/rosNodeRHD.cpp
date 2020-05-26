@@ -254,7 +254,6 @@ int main(int argc, char **argv)
 
     ros::init(argc, argv, "mloam_node_rhd");
     ros::NodeHandle n("~");
-    ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
 
     // ******************************************
     string config_file = argv[1];

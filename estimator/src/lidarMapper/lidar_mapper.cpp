@@ -553,7 +553,7 @@ void process()
 				printf("build tree time %fms\n", t_tree.toc());
 
 				printf("********************************\n");
-				for (int iter_cnt = 0; iter_cnt < 2; iter_cnt++)
+				for (int iter_cnt = 0; iter_cnt < 1; iter_cnt++)
 				{
 					ceres::Problem problem;
 					ceres::Solver::Summary summary;

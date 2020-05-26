@@ -9,6 +9,7 @@ poses as well as a globally consistent map.
 [Jianhao Jiao](http://gogojjh.github.io), 
 [Haoyang Ye](https://github.com/hyye),
 [Yilong Zhu](https://scholar.google.com/citations?user=x8n6v2oAAAAJ&hl=zh-CN),
+[Linxin Jiang](),
 [Ming Liu](https://scholar.google.com/citations?user=CdV5LfQAAAAJ&hl=zh-CN)
 from [RAM-LAB](https://www.ramlab.com)
 
