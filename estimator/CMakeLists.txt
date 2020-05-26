@@ -26,17 +26,18 @@ find_package(catkin REQUIRED COMPONENTS
     mloam_pcl
 )
 
+find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(PCL REQUIRED)
+find_package(Ceres REQUIRED)
+# find_package(Sophus REQUIRED)
+# find_package(libpointmatcher REQUIRED)
+
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
-find_package(Ceres REQUIRED)
-#find_package(Sophus REQUIRED)
-# find_package(libpointmatcher REQUIRED)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
-find_package(Eigen3)
 
 find_package(OpenMP REQUIRED)
 if (OPENMP_FOUND)
@@ -48,7 +49,7 @@ endif()
 include_directories(
         3rdparty
         ${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR}
-                    ${CERES_INCLUDE_DIRS} ${Sophus_INCLUDE_DIRS} ${libpointmatcher_INCLUDE_DIRS})
+        ${CERES_INCLUDE_DIRS} ${Sophus_INCLUDE_DIRS} ${libpointmatcher_INCLUDE_DIRS})
 
 catkin_package(
 #  INCLUDE_DIRS include
