@@ -40,8 +40,8 @@
 
 using namespace std;
 
-extern std::string OUTPUT_FOLDER;
 extern int MLOAM_RESULT_SAVE;
+extern std::string OUTPUT_FOLDER;
 extern std::string MLOAM_ODOM_PATH;
 extern std::string MLOAM_MAP_PATH;
 extern std::string MLOAM_GT_PATH;

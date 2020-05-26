@@ -13,6 +13,9 @@
 
 #pragma once
 
+#include <glog/logging.h>
+#include <gflags/gflags.h>
+
 #include <math.h>
 #include <vector>
 #include <mutex>
@@ -28,19 +31,21 @@
 #include <algorithm>
 #include <utility>
 
-#include <nav_msgs/Odometry.h>
+#include <ros/ros.h>
+#include <sensor_msgs/Imu.h>
+#include <sensor_msgs/PointCloud2.h>
 #include <nav_msgs/Path.h>
+#include <nav_msgs/Odometry.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <tf/transform_datatypes.h>
+#include <tf/transform_broadcaster.h>
+
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/kdtree/kdtree_flann.h>
-#include <ros/ros.h>
-#include <sensor_msgs/Imu.h>
-#include <sensor_msgs/PointCloud2.h>
-#include <tf/transform_datatypes.h>
-#include <tf/transform_broadcaster.h>
+
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/StdVector>
 #include <opencv2/core/eigen.hpp>
@@ -64,6 +69,11 @@
 #include "../factor/lidar_map_plane_norm_factor.hpp"
 #include "../factor/lidar_plane_norm_factor.hpp"
 #include "../factor/pose_local_parameterization.h"
+
+DEFINE_bool(result_save, true, "save or not save the results");
+DEFINE_string(config_file, "config.yaml", "the yaml config file");
+DEFINE_string(output_path, "", "the path ouf saving results");
+DEFINE_bool(with_ua, true, "with or without the awareness of uncertainty");
 
 void evalHessian(const ceres::CRSMatrix &jaco, Eigen::Matrix<double, 6, 6> &mat_H);
 

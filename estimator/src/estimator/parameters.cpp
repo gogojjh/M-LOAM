@@ -272,7 +272,5 @@ void readParameters(std::string config_file)
 
     SKIP_NUM_ODOM = fsSettings["skip_num_odom"];
     if (SKIP_NUM_ODOM == 0) SKIP_NUM_ODOM = 1;
-    printf("Mapping as %d hz\n", int(10 / (1.0 * SKIP_NUM_ODOM)));
-
     fsSettings.release();
 }

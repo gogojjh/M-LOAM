@@ -1,7 +1,7 @@
 <launch>
 
     <arg name="bag_file_use" default="false" />
-    <arg name="config_file" default="$(find mloam)/../config/config_simu_jackal.yaml" />
+    <arg name="config_file" default="$(find mloam)/config/config_simu_jackal.yaml" />
 
     <arg name="run_mloam" default="true" />
     <arg name="run_aloam" default="false" />

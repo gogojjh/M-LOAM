@@ -10,6 +10,8 @@
  *
  * Author: Jianhao JIAO (jiaojh1994@gmail.com)
  *******************************************************/
+#include <glog/logging.h>
+#include <gflags/gflags.h>
 
 #include <iostream>
 #include <queue>
@@ -42,6 +44,10 @@
 
 using namespace std;
 
+DEFINE_bool(result_save, true, "save or not save the results");
+DEFINE_string(config_file, "config.yaml", "the yaml config file");
+DEFINE_string(output_path, "", "the path ouf saving results");
+
 Estimator estimator;
 
 // message buffer
@@ -56,41 +62,35 @@ Pose pose_world_ref_ini;
 
 void saveGroundTruth()
 {
-    if (MLOAM_RESULT_SAVE)
+    if (laser_gt_path.poses.size() == 0) return;
+    std::ofstream fout(MLOAM_GT_PATH.c_str(), std::ios::out);
+    fout.setf(ios::fixed, ios::floatfield);
+    for (size_t i = 0; i < laser_gt_path.poses.size(); i++)
     {
-        if (laser_gt_path.poses.size() == 0) return;
-        std::ofstream fout(MLOAM_GT_PATH.c_str(), std::ios::out);
-        fout.setf(ios::fixed, ios::floatfield);
-        for (size_t i = 0; i < laser_gt_path.poses.size(); i++)
-        {
-            geometry_msgs::PoseStamped &laser_pose = laser_gt_path.poses[i];
-            fout.precision(15);
-            fout << laser_pose.header.stamp.toSec() << " ";
-            fout.precision(8);
-            fout << laser_pose.pose.position.x << " "
-                    << laser_pose.pose.position.y << " "
-                    << laser_pose.pose.position.z << " "
-                    << laser_pose.pose.orientation.x << " "
-                    << laser_pose.pose.orientation.y << " "
-                    << laser_pose.pose.orientation.z << " "
-                    << laser_pose.pose.orientation.w << std::endl;
-        }
+        geometry_msgs::PoseStamped &laser_pose = laser_gt_path.poses[i];
+        fout.precision(15);
+        fout << laser_pose.header.stamp.toSec() << " ";
+        fout.precision(8);
+        fout << laser_pose.pose.position.x << " "
+                << laser_pose.pose.position.y << " "
+                << laser_pose.pose.position.z << " "
+                << laser_pose.pose.orientation.x << " "
+                << laser_pose.pose.orientation.y << " "
+                << laser_pose.pose.orientation.z << " "
+                << laser_pose.pose.orientation.w << std::endl;
     }
 }
 
 void saveStatistics()
 {
-    if (MLOAM_RESULT_SAVE)
-    {
-	    printf("Saving odometry time statistics\n");
-		std::ofstream fout(std::string(OUTPUT_FOLDER + "time_odometry.txt").c_str(), std::ios::out);
-		fout.precision(15);
-        fout << "frame, total_mea_pre_time, total_opt_odom_time" << std::endl;
-		fout << estimator.frame_cnt_ << ", " << estimator.total_measurement_pre_time_ << ", " << estimator.total_opt_odom_time_ << std::endl;
-		fout.close();
-        ROS_WARN("Frame: %d, mean measurement preprocess time: %f, mean optimize odometry time: %f\n", estimator.frame_cnt_, 
-            estimator.total_measurement_pre_time_ / estimator.frame_cnt_, estimator.total_opt_odom_time_ / estimator.frame_cnt_);        
-    }
+    printf("Saving odometry time statistics\n");
+    std::ofstream fout(std::string(OUTPUT_FOLDER + "time_odometry.txt").c_str(), std::ios::out);
+    fout.precision(15);
+    fout << "frame, total_mea_pre_time, total_opt_odom_time" << std::endl;
+    fout << estimator.frame_cnt_ << ", " << estimator.total_measurement_pre_time_ << ", " << estimator.total_opt_odom_time_ << std::endl;
+    fout.close();
+    ROS_WARN("Frame: %d, mean measurement preprocess time: %f, mean optimize odometry time: %f\n", estimator.frame_cnt_, 
+        estimator.total_measurement_pre_time_ / estimator.frame_cnt_, estimator.total_opt_odom_time_ / estimator.frame_cnt_);        
 }
 
 void cloud0_callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg)
@@ -242,32 +242,30 @@ void pose_gt_callback(const geometry_msgs::PoseStamped &pose_msg)
 
 int main(int argc, char **argv)
 {
-    if(argc < 2)
+    if (argc < 2)
     {
-        printf("please intput: rosrun mlod mlod_node_rhd [config file] \n"
-                "for example: "
-                "rosrun mloam mloam_node_rhd "
-                "~/catkin_ws/src/M-LOAM/config/config_handheld.yaml" 
-                "/Monster xxx \n");
+        printf("please intput: rosrun mloam mloam_node_rhd [config file] \n"
+               "for example: "
+               "rosrun mloam mloam_node_rhd "
+               "~/catkin_ws/src/M-LOAM/config/config_handheld.yaml"
+               "/Monster xxx \n");
         return 1;
     }
+    google::InitGoogleLogging(argv[0]);
+    google::ParseCommandLineFlags(&argc, &argv, true);
 
     ros::init(argc, argv, "mloam_node_rhd");
     ros::NodeHandle n("~");
 
-    // ******************************************
-    string config_file = argv[1];
-    cout << "config_file: " << argv[1] << endl;
-
-    MLOAM_RESULT_SAVE = std::stoi(argv[2]);
+    // ******************************************  
+    MLOAM_RESULT_SAVE = FLAGS_result_save;
     printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
-    OUTPUT_FOLDER = argv[3];
-    MLOAM_ODOM_PATH = OUTPUT_FOLDER + "stamped_mloam_odom_estimate.txt";
+    OUTPUT_FOLDER = FLAGS_output_path;
     MLOAM_GT_PATH = OUTPUT_FOLDER + "stamped_groundtruth.txt";
+    MLOAM_ODOM_PATH = OUTPUT_FOLDER + "stamped_mloam_odom_estimate.txt";
     EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
     EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "calib_eig.txt";
     ROS_WARN("waiting for cloud...");
-
     if (NUM_OF_LASER > 2)
     {
         printf("not support > 2 cases");
@@ -276,12 +274,13 @@ int main(int argc, char **argv)
     }
 
     // ******************************************
-    readParameters(config_file);
+    // string config_file = argv[1];
+    cout << "config_file: " << FLAGS_config_file << endl;
+    readParameters(FLAGS_config_file);
     estimator.setParameter();
     registerPub(n);
 
     ros::Subscriber sub_cloud0, sub_cloud1;
-
     if (NUM_OF_LASER == 1)
     {
         CLOUD0_TOPIC = CLOUD_TOPIC[0];
@@ -310,8 +309,11 @@ int main(int argc, char **argv)
         ros::spinOnce();
         loop_rate.sleep();
     }
-    // saveGroundTruth();
-    saveStatistics();
+    if (MLOAM_RESULT_SAVE)
+    {
+        saveGroundTruth();
+        saveStatistics();
+    }
 
     cloud_visualizer_thread.join();
     sync_thread.join();

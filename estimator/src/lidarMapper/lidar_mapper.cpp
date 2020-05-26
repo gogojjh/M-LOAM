@@ -902,22 +902,32 @@ void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameteri
 
 int main(int argc, char **argv)
 {
+	if (argc < 4)
+	{
+		printf("please intput: rosrun mloam lidar_mapper [args] \n"
+			   "for example: "
+			   "rosrun mloam lidar_mapper config_file 1 output_path 1 \n");
+		return 1;
+	}
+	google::InitGoogleLogging(argv[0]);
+	google::ParseCommandLineFlags(&argc, &argv, true);
+
 	ros::init(argc, argv, "lidar_mapper");
 	ros::NodeHandle nh;
-	ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
 
-	string config_file = argv[1];
-	readParameters(config_file);
-
-    MLOAM_RESULT_SAVE = std::stoi(argv[2]);
+    MLOAM_RESULT_SAVE = FLAGS_result_save;
     printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
-    OUTPUT_FOLDER = argv[3];
-	UNCER_AWARE_ON = std::stoi(argv[4]);
+    OUTPUT_FOLDER = FLAGS_output_path;
+	UNCER_AWARE_ON = FLAGS_with_ua;
 	printf("uncertainty propagation on (0/1): %d\n", UNCER_AWARE_ON);
 	if (UNCER_AWARE_ON)
     	MLOAM_MAP_PATH = OUTPUT_FOLDER + "stamped_mloam_map_estimate.txt";
 	else
 		MLOAM_MAP_PATH = OUTPUT_FOLDER + "stamped_mloam_map_wo_ua_estimate.txt";
+
+	std::cout << "config file: " << FLAGS_config_file << std::endl;
+	readParameters(FLAGS_config_file);
+	printf("Mapping as %dhz\n", int(10 / (1.0 * SKIP_NUM_ODOM)));
 
 	down_size_filter_surf.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
 	down_size_filter_surf.trace_threshold_ = TRACE_THRESHOLD_AFTER_MAPPING;	

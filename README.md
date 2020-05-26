@@ -34,6 +34,9 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 ```sudo apt install libeigen-dev```
 > NOTE: to prevent Eigen error: https://eigen.tuxfamily.org/dox/group__TopicUnalignedArrayAssert.html
 
+#### 1.6. **GLOG, GFLAGS, GTEST**
+> NOTE: https://juejin.im/post/5dca40b9f265da4d226e397e
+
 ### 2. Build M-LOAM
 ```catkin build mloam```
 

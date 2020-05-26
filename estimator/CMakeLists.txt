@@ -3,10 +3,8 @@ project(mloam)
 
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS "-std=c++17")
-#add_compile_options(-std=c++17)
-#-DEIGEN_USE_MKL_ALL")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall")
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 find_package(catkin REQUIRED COMPONENTS
     roscpp
@@ -32,12 +30,12 @@ find_package(PCL REQUIRED)
 find_package(Ceres REQUIRED)
 # find_package(Sophus REQUIRED)
 # find_package(libpointmatcher REQUIRED)
+find_package(Gflags REQUIRED)
+find_package(Glog REQUIRED)
 
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
-
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 find_package(OpenMP REQUIRED)
 if (OPENMP_FOUND)
@@ -49,10 +47,11 @@ endif()
 include_directories(
         3rdparty
         ${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR}
-        ${CERES_INCLUDE_DIRS} ${Sophus_INCLUDE_DIRS} ${libpointmatcher_INCLUDE_DIRS})
+        ${CERES_INCLUDE_DIRS} ${Sophus_INCLUDE_DIRS} ${libpointmatcher_INCLUDE_DIRS}
+        ${GFLAGS_INCLUDE_DIRS} ${GLOG_INCLUDE_DIRS})
 
 catkin_package(
-#  INCLUDE_DIRS include
+#   INCLUDE_DIRS include
   CATKIN_DEPENDS mloam_msgs mloam_pcl
   DEPENDS PCL
 )
@@ -65,7 +64,8 @@ add_library(mloam_lib_1
     src/utility/visualization.cpp
     src/utility/utility.cpp
     )
-target_link_libraries(mloam_lib_1 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES})
+target_link_libraries(mloam_lib_1 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES} 
+    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 ######################################################## fix libraries
 add_library(mloam_lib_2
@@ -77,7 +77,9 @@ add_library(mloam_lib_2
     src/factor/marginalization_factor.cpp
     src/utility/cloud_visualizer.cpp
     )
-target_link_libraries(mloam_lib_2 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES} ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(mloam_lib_2 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES} 
+    ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} ${PCL_LIBRARIES} 
+    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 ######## --------------------- EXECUTABLE --------------------- ########
 add_executable(mloam_node_sr src/rosNodeSR.cpp)

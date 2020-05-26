@@ -1,7 +1,7 @@
 <launch>
 
     <arg name="bag_file_use" default="false" />
-    <arg name="config_file" default="$(find mloam)/../config/config_realvehicle_mltest.yaml" />
+    <arg name="config_file" default="$(find mloam)/config/config_realvehicle.yaml" />
     <arg name="data_source" default="pcd" />
     <arg name="data_path" default="/Monster/dataset/UDI_dataset/xfl_20200301/whole_travel/" />
 
@@ -12,11 +12,11 @@
     <arg name="run_mloam_map_with_up" default="true" /> <!-- uncertainty propagation -->    
     <arg name="mloam_result_save" default="1"/>
     <arg name="mloam_start_idx" default="2100"/>
-    <arg name="mloam_end_idx" default="25229"/>
+    <arg name="mloam_end_idx" default="25229"/> <!-- 25229 -->
     <arg name="mloam_delta_idx" default="2" />
-    <arg name="mloam_time_now" default="0" />
+    <arg name="mloam_time_now" default="1" />
 
-    <arg name="output_path" default="/home/jjiao/trajectory_results/real_vehicle/rv08_2100_25229_test/rv08_mltest_top/" />
+    <arg name="output_path" default="/home/jjiao/trajectory_results/real_vehicle/rv05_2100_25229_test/"/>
     <param name="use_sim_time" value="false" />
 
     <group if="$(arg run_mloam)">
