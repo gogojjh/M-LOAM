@@ -1,6 +1,6 @@
 <launch>
     <arg name="bag_file_use" default="true" />
-    <arg name="bag_file" default="/Monster/dataset/UDI_dataset/xfl_20200301/jjiao_vehicle_sensor_travel_3_short_test.bag" /> 
+    <arg name="bag_file" default="/Monster/dataset/UDI_dataset/xfl_20200301/rv_short_test.bag" /> 
 
     <param name="use_sim_time" value="true" />
     <group if="$(arg bag_file_use)">

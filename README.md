@@ -41,11 +41,17 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 ```catkin build mloam```
 
 ### 3. Example
-```
+* Dataset 
+  * dataset 1: [Four LiDAR dataset for testing on pingshan](http://gofile.me/4jm56/NNFbLc5cn)
+  * dataset 2: [Simulation Robot](http://gofile.me/4jm56/HzMDz6cvK)
+  * dataset 3: [Real Handheld Robot](http://gofile.me/4jm56/wJRrdgBwM)
+
+* Run M-LOAM
+    ```
     rosbag play xxx.bag -l 
-    roslaunch mloam mloam_handheld.launch
+    roslaunch mloam mloam_realvehicle.launch
     rostopic echo /extrinsics/odoms[1]/pose
-```
+    ```
 
 ### 4. Compare with A-LOAM
 > mloam_handheld.launch set run_aloam:=true
@@ -54,10 +60,10 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 ### 5. Results
 **red**: odometry; **green**: mapping; **blue**: gt
 
-* Test in Simulation
+* Test in Simulation <br>
 ![](picture/simulation.png)
 
-* Test in HKUST
+* Test in HKUST <br>
 ![](picture/hkust.png)
     
 ### 6. Additional Features (have not fixed)

@@ -59,16 +59,21 @@ catkin_package(
 ######################################################## float libraries
 add_library(mloam_lib_1 STATIC
     src/estimator/estimator.cpp
+)
+target_link_libraries(mloam_lib_1 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES} 
+    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+
+add_library(mloam_lib_2 STATIC
     src/featureExtract/feature_extract.cpp
     src/lidarTracker/lidar_tracker.cpp
     src/utility/visualization.cpp
     src/utility/utility.cpp
-    )
-target_link_libraries(mloam_lib_1 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES} 
-    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+)
+target_link_libraries(mloam_lib_2 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES} 
+    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})    
 
 ######################################################## fix libraries
-add_library(mloam_lib_2 STATIC
+add_library(mloam_lib_3 STATIC
     src/estimator/parameters.cpp
     src/estimator/pose.cpp
     src/initial/initial_extrinsics.cpp
@@ -76,23 +81,23 @@ add_library(mloam_lib_2 STATIC
     src/factor/pose_local_parameterization.cpp
     src/factor/marginalization_factor.cpp
     src/utility/cloud_visualizer.cpp
-    )
-target_link_libraries(mloam_lib_2 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES} 
+)
+target_link_libraries(mloam_lib_3 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES} 
     ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} ${PCL_LIBRARIES} 
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 ######## --------------------- EXECUTABLE --------------------- ########
 add_executable(mloam_node_sr src/rosNodeSR.cpp)
-target_link_libraries(mloam_node_sr mloam_lib_1 mloam_lib_2)
+target_link_libraries(mloam_node_sr mloam_lib_1 mloam_lib_2 mloam_lib_3)
 
 add_executable(mloam_node_rhd src/rosNodeRHD.cpp)
-target_link_libraries(mloam_node_rhd mloam_lib_1 mloam_lib_2)
+target_link_libraries(mloam_node_rhd mloam_lib_1 mloam_lib_2 mloam_lib_3)
 
 add_executable(mloam_node_rv src/rosNodeRV.cpp)
-target_link_libraries(mloam_node_rv mloam_lib_1 mloam_lib_2)
+target_link_libraries(mloam_node_rv mloam_lib_1 mloam_lib_2 mloam_lib_3)
 
 add_executable(lidar_mapper src/lidarMapper/lidar_mapper.cpp)
-target_link_libraries(lidar_mapper mloam_lib_1 mloam_lib_2)
+target_link_libraries(lidar_mapper mloam_lib_2 mloam_lib_3)
 
 ######## --------------------- TEST --------------------- ########
 # add_executable(test_ceres test/test_ceres.cpp)
