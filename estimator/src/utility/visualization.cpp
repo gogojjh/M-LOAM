@@ -167,32 +167,32 @@ void printStatistics(const Estimator &estimator, double t)
     {
         // if (estimator.solver_flag_ != Estimator::SolverFlag::NON_LINEAR) return;
         // timestamp tx ty tz qx qy qz qw
-        {
-            ofstream fout(EX_CALIB_EIG_PATH.c_str(), ios::app);
-            fout.setf(ios::fixed, ios::floatfield);
-            fout.precision(3);
-            for (auto i = 0; i < NUM_OF_LASER; i++) fout << estimator.cur_eig_calib_[i] << ", ";
-            fout << std::endl;
-            fout.close();
-        }
+        // {
+        //     ofstream fout(EX_CALIB_EIG_PATH.c_str(), ios::app);
+        //     fout.setf(ios::fixed, ios::floatfield);
+        //     fout.precision(3);
+        //     for (auto i = 0; i < NUM_OF_LASER; i++) fout << estimator.cur_eig_calib_[i] << ", ";
+        //     fout << std::endl;
+        //     fout.close();
+        // }
 
-        {
-            ofstream fout(EX_CALIB_RESULT_PATH.c_str(), ios::app);
-            fout.setf(ios::fixed, ios::floatfield);
-            fout.precision(5);
-            for (auto i = 0; i < NUM_OF_LASER; i++)
-            {
-                fout << estimator.cur_time_ << ", "
-                    << estimator.tbl_[i](0) << ", "
-                    << estimator.tbl_[i](1) << ", "
-                    << estimator.tbl_[i](2) << ", "
-                    << estimator.qbl_[i].x() << ", "
-                    << estimator.qbl_[i].y() << ", "
-                    << estimator.qbl_[i].z() << ", "
-                    << estimator.qbl_[i].w() << std::endl;
-            }
-            fout.close();
-        }        
+        // {
+        //     ofstream fout(EX_CALIB_RESULT_PATH.c_str(), ios::app);
+        //     fout.setf(ios::fixed, ios::floatfield);
+        //     fout.precision(5);
+        //     for (auto i = 0; i < NUM_OF_LASER; i++)
+        //     {
+        //         fout << estimator.cur_time_ << ", "
+        //             << estimator.tbl_[i](0) << ", "
+        //             << estimator.tbl_[i](1) << ", "
+        //             << estimator.tbl_[i](2) << ", "
+        //             << estimator.qbl_[i].x() << ", "
+        //             << estimator.qbl_[i].y() << ", "
+        //             << estimator.qbl_[i].z() << ", "
+        //             << estimator.qbl_[i].w() << std::endl;
+        //     }
+        //     fout.close();
+        // }        
 
         {
             ofstream fout(MLOAM_ODOM_PATH.c_str(), ios::out);

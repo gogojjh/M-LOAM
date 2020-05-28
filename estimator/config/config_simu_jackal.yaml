@@ -133,4 +133,4 @@ uct_measurement: !!opencv-matrix
 trace_threshold_before_mapping: 0.90
 trace_threshold_after_mapping: 0.90
 
-skip_num_odom: 1
+skip_num_odom_pub: 1

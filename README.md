@@ -27,6 +27,9 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 
 #### 1.4. **OpenMP**
 ```sudo apt install libomp-dev```
+> NOTE: <br>
+> tutorial: https://bisqwit.iki.fi/story/howto/openmp/#IntroductionToOpenmpInC <br>
+> slide: https://www3.nd.edu/~zxu2/acms60212-40212-S12/Lec-11-01.pdf
 
 #### 1.5. **Eigen3**
 ```sudo apt install libeigen-dev```
@@ -47,11 +50,11 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
   * dataset 3: [Real Handheld Robot](http://gofile.me/4jm56/wJRrdgBwM)
 
 * Run M-LOAM
-    ```
-    rosbag play xxx.bag -l 
-    roslaunch mloam mloam_realvehicle.launch
-    rostopic echo /extrinsics/odoms[1]/pose
-    ```
+  ```
+  rosbag play xxx.bag -l 
+  roslaunch mloam mloam_realvehicle.launch
+  rostopic echo /extrinsics/odoms[1]/pose
+  ```
 
 ### 4. Compare with A-LOAM
 > mloam_handheld.launch set run_aloam:=true

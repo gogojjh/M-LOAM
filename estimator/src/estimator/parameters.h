@@ -123,7 +123,7 @@ extern std::vector<Eigen::Matrix<double, 6, 6> > COV_EXT;
 extern Eigen::Matrix<double, 3, 3> COV_MEASUREMENT;
 extern double TRACE_THRESHOLD_BEFORE_MAPPING, TRACE_THRESHOLD_AFTER_MAPPING;
 
-extern int SKIP_NUM_ODOM;
+extern int SKIP_NUM_ODOM_PUB;
 
 void readParameters(std::string config_file);
 

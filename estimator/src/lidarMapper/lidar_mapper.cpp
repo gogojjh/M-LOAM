@@ -553,7 +553,7 @@ void process()
 				printf("build tree time %fms\n", t_tree.toc());
 
 				printf("********************************\n");
-				for (int iter_cnt = 0; iter_cnt < 1; iter_cnt++)
+				for (int iter_cnt = 0; iter_cnt < 2; iter_cnt++)
 				{
 					ceres::Problem problem;
 					ceres::Solver::Summary summary;
@@ -561,12 +561,12 @@ void process()
 
 					ceres::Solver::Options options;
 					options.linear_solver_type = ceres::DENSE_SCHUR;
-					options.max_num_iterations = 30;
+					options.max_num_iterations = 15;
 					options.max_solver_time_in_seconds = 0.04;
-					options.num_threads = 4;
+					options.num_threads = 3;
 					options.minimizer_progress_to_stdout = false;
 					options.check_gradients = false;
-					options.gradient_check_relative_precision = 1e-4;
+					options.gradient_check_relative_precision = 1e-3;
 
 					vector2Double();
 					
@@ -927,7 +927,7 @@ int main(int argc, char **argv)
 
 	std::cout << "config file: " << FLAGS_config_file << std::endl;
 	readParameters(FLAGS_config_file);
-	printf("Mapping as %dhz\n", int(10 / (1.0 * SKIP_NUM_ODOM)));
+	printf("Mapping as %dhz\n", int(10 / (1.0 * SKIP_NUM_ODOM_PUB)));
 
 	down_size_filter_surf.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
 	down_size_filter_surf.trace_threshold_ = TRACE_THRESHOLD_AFTER_MAPPING;	

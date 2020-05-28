@@ -5,7 +5,7 @@ multiple_thread: 0
 
 #optimization PARAMETERS
 max_solver_time: 0.03  # max solver itration time (s), to guarantee real time
-max_num_iterations: 15   # max solver itrations, to guarantee real time
+max_num_iterations: 10   # max solver itrations, to guarantee real time
 keyframe_parallax: 0 # keyframe selection threshold (pixel)
 
 evaluate_residual: 1
@@ -13,7 +13,7 @@ optimal_odometry: 1
 
 ###############################################
 # laser parameters
-num_of_laser: 1
+num_of_laser: 4
 n_scans: 16
 
 # segmmentation
@@ -23,7 +23,7 @@ min_cluster_size: 30
 min_line_size: 10
 segment_valid_point_num: 5
 segment_valid_line_num: 3
-segment_theta: 0.53 # Lego-loam: 1.0
+segment_theta: 1.0 # Lego-loam: 1.0
 
 # window sizes
 window_size: 3
@@ -47,21 +47,16 @@ body_T_laser: !!opencv-matrix
    #        0, 0, 0, 1, 0, 0, 0]
 # initialization
    # data: [0, 0, 0, 1, 0, 0, 0, 
-   #        -0.0129, 0.0691, 0.0378, 0.9968, -0.1520, -0.9552, 0,
-   #        -0.1454, 0.1705, 0.7118, 0.6657, -0.7484, -0.2822, 0,
-   #        0.1149, 0.1064, -0.6298, 0.7608, -0.0866, -1.4654, 0]            
+   #        0, 0.043619, 0, 0.99905, 1.4864, 0.021811, -1.5022,
+   #        -0.054721, 0.054599, 0.52821, 0.84559, 1.1086, 0.69608, -1.3687,
+   #        0.03296, 0.06322, -0.59325, 0.80186, 1.05413, -0.70381, -1.22655]
 # refinement
    data: [0, 0, 0, 1, 0, 0, 0, 
-          -0.0169, 0.0575, 0.0195, 0.998, 0.5355, 0.0393, -1.131,
-          -0.1118, 0.1894, 0.6845, 0.6951, 0.5116, 0.6440, -0.904,
-          0.0745, 0.1312, -0.7449, 0.6496, 0.4406, -0.628, -1.0295]
-# manufactor
-   # data: [0, 0, 0, 1, 0, 0, 0,
-   #       [-0.0159, 0.0542, 0.0361, 0.9977, 0.6428, -0.0043, -1.1343,
-   #       [-0.1159, 0.1896, 0.6798, 0.6989, 0.4296,  0.6783, -0.9331,
-   #       [0.0728, 0.1364,-0.7416, 0.6528, 0.4746, -0.7274, -0.9638]
+          -0.007227, 0.04095, 0.002473, 0.99913, 1.47135431768, 0.0229206, -1.51391,
+          -0.055731000303, 0.0512792578732, 0.530155068923, 0.844511750192, 1.054404002, 0.714716690102, -1.34228441603,
+          0.0336021728869, 0.0603546831749, -0.594617607295, 0.801035646704, 1.0743960396, -0.702814942771, -1.28763872402]
 
-#unsynchronization parameters
+          #unsynchronization parameters
 estimate_td: 0                      # 0 have an accurate time offset among sensors
                                     # 1 online estimate time offset among sensors
 
@@ -74,10 +69,10 @@ td: !!opencv-matrix                 # initial value of time offset. unit: s. rea
 idx_ref: 0
 
 cloud_topic:
-   - "/top/velodyne_points"
-   - "/front/velodyne_points"
-   - "/left/velodyne_points"
-   - "/right/velodyne_points"
+   - "/top/rslidar_points"
+   - "/front/rslidar_points"
+   - "/left/rslidar_points"
+   - "/right/rslidar_points"
 
 laser_sync_threshold: 0.07
 roi_range: 2
@@ -111,8 +106,8 @@ pcl_viewer_normal_ratio: 10
 # calibration converage parameters
 n_cumu_feature: 10
 eig_initial: 200
-eig_thre_calib: 350
-n_calib: 10
+eig_thre_calib: 500
+n_calib: 20
 
 # mapping 
 map_corner_res: 0.2
@@ -120,7 +115,7 @@ map_surf_res: 0.3
 map_eig_thre: 50
 
 # uncertainty parameter
-# translation, rotation (rho, phi)
+# translation, rotation, point (s, phi, zeta)
 uct_ext: !!opencv-matrix
    rows: 4
    cols: 6
@@ -130,7 +125,6 @@ uct_ext: !!opencv-matrix
           0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01,
           0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01] 
 
-# point (zeta)
 uct_measurement: !!opencv-matrix
    rows: 1
    cols: 3

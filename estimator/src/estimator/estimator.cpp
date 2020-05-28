@@ -204,29 +204,22 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
     assert(v_laser_cloud_in.size() == NUM_OF_LASER);
 
     TicToc measurement_pre_time;
-    std::vector<cloudFeature *> feature_frame_ptr(NUM_OF_LASER);
+    std::vector<cloudFeature> feature_frame(NUM_OF_LASER);
 
-    #pragma omp parallel for num_threads(NUM_OF_LASER)
     for (size_t i = 0; i < v_laser_cloud_in.size(); i++)
     {
         float start_ori, end_ori;
         f_extract_.findStartEndAngle(v_laser_cloud_in[i], start_ori, end_ori);
-        cloudFeature *tmp_frame(new cloudFeature);
         if ((SEGMENT_CLOUD) && (ESTIMATE_EXTRINSIC == 0))
         {
             PointCloud laser_cloud_segment;
             img_segment_.segmentCloud(v_laser_cloud_in[i], laser_cloud_segment);
-            f_extract_.extractCloud(t, laser_cloud_segment, *tmp_frame, start_ori, end_ori);
+            f_extract_.extractCloud(t, laser_cloud_segment, feature_frame[i], start_ori, end_ori);
         } else
         {
-            f_extract_.extractCloud(t, v_laser_cloud_in[i], *tmp_frame, start_ori, end_ori);
+            f_extract_.extractCloud(t, v_laser_cloud_in[i], feature_frame[i], start_ori, end_ori);
         }
-        #pragma omp atomic write
-        feature_frame_ptr[i] = tmp_frame;
     }
-
-    std::vector<cloudFeature> feature_frame(NUM_OF_LASER);
-    for (size_t i = 0; i < NUM_OF_LASER; i++) feature_frame[i] = *feature_frame_ptr[i];
 
     stringstream ss;
     for (size_t i = 0; i < feature_frame.size(); i++)
@@ -236,13 +229,13 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
         total_surf_feature_ += feature_frame[i]["surf_points_less_flat"].size();
     }
     printf("size of after segmentation: %s\n", ss.str().c_str());
-    printf("openmp: meaPre time: %fms (%u*%fms)\n\n", measurement_pre_time.toc(), v_laser_cloud_in.size(), measurement_pre_time.toc() / v_laser_cloud_in.size());
+    printf("openmp: meaPre time: %fms (%u*%fms)\n", measurement_pre_time.toc(), v_laser_cloud_in.size(), measurement_pre_time.toc() / v_laser_cloud_in.size());
     total_measurement_pre_time_ += measurement_pre_time.toc();
 
-    // m_buf_.lock();
-    // feature_buf_.push(make_pair(t, feature_frame));
-    // m_buf_.unlock();
-    // if (!MULTIPLE_THREAD) processMeasurements();
+    m_buf_.lock();
+    feature_buf_.push(make_pair(t, feature_frame));
+    m_buf_.unlock();
+    if (!MULTIPLE_THREAD) processMeasurements();
 }
 
 void Estimator::inputCloud(const double &t, const PointCloud &laser_cloud_in)
@@ -294,7 +287,7 @@ void Estimator::processMeasurements()
 
             printStatistics(*this, 0);
             pubOdometry(*this, cur_time_);
-            if (frame_cnt_ % SKIP_NUM_ODOM == 0) pubPointCloud(*this, cur_time_); 
+            if (frame_cnt_ % SKIP_NUM_ODOM_PUB == 0) pubPointCloud(*this, cur_time_); 
 
             frame_cnt_++;
             std::cout << common::RED << "frame: " << frame_cnt_ 
@@ -302,7 +295,7 @@ void Estimator::processMeasurements()
             m_process_.unlock();
         }
         if (!MULTIPLE_THREAD) break;
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
 }
 
@@ -316,7 +309,7 @@ void Estimator::undistortMeasurements()
             // for (auto &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
             for (auto &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
             for (auto &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
-            if (frame_cnt_ & SKIP_NUM_ODOM == 0) 
+            if (frame_cnt_ & SKIP_NUM_ODOM_PUB == 0) 
                 for (auto &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
         } else
         if (ESTIMATE_EXTRINSIC == 1) // online calibration
@@ -326,7 +319,7 @@ void Estimator::undistortMeasurements()
             // for (auto &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
             for (auto &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
             for (auto &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
-            if (frame_cnt_ & SKIP_NUM_ODOM == 0)
+            if (frame_cnt_ & SKIP_NUM_ODOM_PUB == 0)
                 for (auto &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
         } else
         if (ESTIMATE_EXTRINSIC == 0) // pure odometry
@@ -337,7 +330,7 @@ void Estimator::undistortMeasurements()
             // for (auto &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_local, DISTORTION, SCAN_PERIOD);
             for (auto &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_local, DISTORTION, SCAN_PERIOD);
             for (auto &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_local, DISTORTION, SCAN_PERIOD);
-            if (frame_cnt_ & SKIP_NUM_ODOM == 0)
+            if (frame_cnt_ & SKIP_NUM_ODOM_PUB == 0)
                 for (auto &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_local, DISTORTION, SCAN_PERIOD);
         }
     }
@@ -504,7 +497,7 @@ void Estimator::optimizeMap()
     ceres::Solver::Options options;
     options.linear_solver_type = ceres::DENSE_SCHUR;
     // options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
-    options.num_threads = 2;
+    options.num_threads = 3;
     // options.trust_region_strategy_type = ceres::DOGLEG;
     options.max_num_iterations = NUM_ITERATIONS;
     // options.gradient_check_relative_precision = 1e-3;
@@ -968,8 +961,8 @@ void Estimator::buildCalibMap()
         for (auto i = pivot_idx; i < WINDOW_SIZE + 1; i++)
         {
             if (((n == IDX_REF) && (i == pivot_idx)) || ((n != IDX_REF) && (i != pivot_idx))) continue;
-            // int n_neigh = (n == IDX_REF ? 5 : 10);
-            int n_neigh = 5;
+            int n_neigh = (n == IDX_REF ? 5 : 10);
+            // int n_neigh = 5;
             std::vector<PointPlaneFeature> tmp_surf_map_features, tmp_corner_map_features;
             f_extract_.matchSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[IDX_REF],
                                         surf_points_stack_[n][i], pose_local_[n][i], tmp_surf_map_features, n_neigh, true);
@@ -1014,8 +1007,7 @@ void Estimator::buildLocalMap()
             // for (auto &p: corner_points_trans.points) p.intensity = i;
             // corner_points_local_map_[n] += corner_points_trans;
         }
-        // TODO: increase the downsampling resolution
-        float ratio = 0.4 * (NUM_OF_LASER * WINDOW_SIZE * 1.0 / 10);
+        float ratio = 0.4 * (NUM_OF_LASER * WINDOW_SIZE * 1.0 / 6);
         // float ratio = 0.4;
         pcl::VoxelGrid<PointI> down_size_filter;
         down_size_filter.setLeafSize(ratio, ratio, ratio);
