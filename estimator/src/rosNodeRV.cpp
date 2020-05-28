@@ -100,9 +100,9 @@ void sync_process()
         std::vector<pcl::PointCloud<pcl::PointXYZ> > v_laser_cloud(NUM_OF_LASER);
         std_msgs::Header header;
         double time = 0;
-        bool empty_check = false;
         m_buf.lock();
-        if (!all_cloud_buf[0].empty() && !all_cloud_buf[1].empty() && !all_cloud_buf[2].empty() && !all_cloud_buf[3].empty())
+        if (!all_cloud_buf[0].empty() && !all_cloud_buf[1].empty() && !all_cloud_buf[2].empty() 
+         && !all_cloud_buf[3].empty() && !all_cloud_buf[4].empty())
         {
             time = all_cloud_buf[0].front()->header.stamp.toSec();
             header = all_cloud_buf[0].front()->header;
@@ -111,16 +111,15 @@ void sync_process()
             {
                 v_laser_cloud[i] = getCloudFromMsg(all_cloud_buf[i].front());
                 ss << v_laser_cloud[i].size() << " ";
-                if (v_laser_cloud[i].size() == 0) empty_check = true;
             }
             for (size_t i = 0; i < all_cloud_buf.size(); i++) all_cloud_buf[i].pop();
             printf("size of finding laser_cloud: %s\n", ss.str().c_str());
         }
         m_buf.unlock();
-        // if (!empty_check)
-        // {
-        //     estimator.inputCloud(time, v_laser_cloud);
-        // }
+        bool empty_check = false;
+        for (size_t i = 0; i < NUM_OF_LASER; i++)
+            if (v_laser_cloud[i].size() == 0) empty_check = true;
+        if (!empty_check) estimator.inputCloud(time, v_laser_cloud);
     }
 }
 
@@ -207,7 +206,6 @@ int main(int argc, char **argv)
         typedef message_filters::sync_policies::ApproximateTime<LidarMsgType, LidarMsgType, LidarMsgType, LidarMsgType, LidarMsgType> LidarSyncPolicy;
         typedef message_filters::Subscriber<LidarMsgType> LidarSubType;
 
-        printf("construct topics\n");
         std::vector<LidarSubType *> sub_lidar(5);
         NUM_OF_LASER = std::min(NUM_OF_LASER, 5);
         for (size_t i = 0; i < NUM_OF_LASER; i++) sub_lidar[i] = new LidarSubType(nh, CLOUD_TOPIC[i], 1);

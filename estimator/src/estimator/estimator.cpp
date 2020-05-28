@@ -113,7 +113,7 @@ void Estimator::setParameter()
     pose_calib_.resize(NUM_OF_LASER);
     calib_converge_.resize(NUM_OF_LASER, false);
 
-    img_segment_.setScanParam(HORIZON_SCAN, MIN_CLUSTER_SIZE, MIN_LINE_SIZE, SEGMENT_VALID_POINT_NUM, SEGMENT_VALID_LINE_NUM);
+    img_segment_.setParameter(HORIZON_SCAN, MIN_CLUSTER_SIZE, MIN_LINE_SIZE, SEGMENT_VALID_POINT_NUM, SEGMENT_VALID_LINE_NUM);
 
     m_process_.unlock();
 }
@@ -192,7 +192,7 @@ void Estimator::changeSensorType(int use_imu, int use_stereo)
     bool restart = false;
     m_process_.lock();
     m_process_.unlock();
-    if(restart)
+    if (restart)
     {
         clearState();
         setParameter();
@@ -204,24 +204,33 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
     assert(v_laser_cloud_in.size() == NUM_OF_LASER);
 
     TicToc measurement_pre_time;
-    std::vector<cloudFeature> feature_frame;
-    feature_frame.resize(NUM_OF_LASER);
-    for (auto i = 0; i < v_laser_cloud_in.size(); i++)
+    std::vector<cloudFeature> feature_frame(NUM_OF_LASER);
+
+#pragma omp parallel for
+    for (size_t i = 0; i < v_laser_cloud_in.size(); i++)
     {
-        f_extract_.findStartEndAngle(v_laser_cloud_in[i]);
-        PointCloud laser_cloud_segment;
+        float start_ori, end_ori;
+        f_extract_.findStartEndAngle(v_laser_cloud_in[i], start_ori, end_ori);
         if ((SEGMENT_CLOUD) && (ESTIMATE_EXTRINSIC == 0))
         {
+            PointCloud laser_cloud_segment;
             img_segment_.segmentCloud(v_laser_cloud_in[i], laser_cloud_segment);
-            f_extract_.extractCloud(t, laser_cloud_segment, feature_frame[i]);
+            f_extract_.extractCloud(t, laser_cloud_segment, feature_frame[i], start_ori, end_ori);
         } else
         {
-            f_extract_.extractCloud(t, v_laser_cloud_in[i], feature_frame[i]);
+            f_extract_.extractCloud(t, v_laser_cloud_in[i], feature_frame[i], start_ori, end_ori);
         }
+    }
+
+    stringstream ss;
+    for (size_t i = 0; i < feature_frame.size(); i++) 
+    {   
+        ss << feature_frame[i]["laser_cloud"].size() << " ";
         total_corner_feature_ += feature_frame[i]["corner_points_less_sharp"].size();
         total_surf_feature_ += feature_frame[i]["surf_points_less_flat"].size();
     }
-    printf("measurementPre time: %fms (%u*%fms)\n", measurement_pre_time.toc(), v_laser_cloud_in.size(), measurement_pre_time.toc() / v_laser_cloud_in.size());
+    printf("size of after segmentation: %s\n", ss.str().c_str());
+    printf("meaPre time: %fms (%u*%fms)\n", measurement_pre_time.toc(), v_laser_cloud_in.size(), measurement_pre_time.toc() / v_laser_cloud_in.size());
     total_measurement_pre_time_ += measurement_pre_time.toc();
 
     m_buf_.lock();
@@ -233,19 +242,22 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
 void Estimator::inputCloud(const double &t, const PointCloud &laser_cloud_in)
 {
     TicToc measurement_pre_time;
-    std::vector<cloudFeature> feature_frame;
-    feature_frame.resize(1);
-    f_extract_.findStartEndAngle(laser_cloud_in);
+    std::vector<cloudFeature> feature_frame(1);
+
+    float start_ori, end_ori;
+    f_extract_.findStartEndAngle(laser_cloud_in, start_ori, end_ori);
     if ((SEGMENT_CLOUD) && (ESTIMATE_EXTRINSIC == 0))
     {
         PointCloud laser_cloud_segment;
         img_segment_.segmentCloud(laser_cloud_in, laser_cloud_segment);
-        f_extract_.extractCloud(t, laser_cloud_segment, feature_frame[0]);
+        f_extract_.extractCloud(t, laser_cloud_segment, feature_frame[0], start_ori, end_ori);
     } else
     {
-        f_extract_.extractCloud(t, laser_cloud_in, feature_frame[0]);
+        f_extract_.extractCloud(t, laser_cloud_in, feature_frame[0], start_ori, end_ori);
     }
-    printf("measurementPre time: %fms\n", measurement_pre_time.toc());
+
+    printf("size of after segmentation: %d\n", laser_cloud_in.size());    
+    printf("meaPre time: %fms\n", measurement_pre_time.toc());
     total_measurement_pre_time_ += measurement_pre_time.toc();
 
     m_buf_.lock();

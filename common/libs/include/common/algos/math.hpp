@@ -126,7 +126,6 @@ namespace common
         return m;
     }
 
-    // adapted from VINS-mono (Degree)
     inline Eigen::Vector3d R2ypr(const Eigen::Matrix3d &R)
     {
         Eigen::Vector3d n = R.col(0);

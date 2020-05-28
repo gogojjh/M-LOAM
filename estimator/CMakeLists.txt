@@ -5,6 +5,7 @@ set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS "-std=c++17")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 find_package(catkin REQUIRED COMPONENTS
     roscpp
@@ -32,7 +33,6 @@ find_package(Ceres REQUIRED)
 # find_package(libpointmatcher REQUIRED)
 find_package(Gflags REQUIRED)
 find_package(Glog REQUIRED)
-
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
@@ -57,7 +57,7 @@ catkin_package(
 )
 
 ######################################################## float libraries
-add_library(mloam_lib_1
+add_library(mloam_lib_1 STATIC
     src/estimator/estimator.cpp
     src/featureExtract/feature_extract.cpp
     src/lidarTracker/lidar_tracker.cpp
@@ -68,7 +68,7 @@ target_link_libraries(mloam_lib_1 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS}
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 ######################################################## fix libraries
-add_library(mloam_lib_2
+add_library(mloam_lib_2 STATIC
     src/estimator/parameters.cpp
     src/estimator/pose.cpp
     src/initial/initial_extrinsics.cpp

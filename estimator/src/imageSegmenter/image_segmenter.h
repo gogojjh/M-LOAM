@@ -44,39 +44,50 @@
 class ImageSegmenter
 {
 public:
-    ImageSegmenter();
+    ImageSegmenter()
+    {
+        // printf("%d, %d, %d, %d\n", min_cluster_size_, min_line_size_, segment_valid_point_num_, segment_valid_line_num_);
+        std::pair<int8_t, int8_t> neighbor;
+        neighbor.first = -1;
+        neighbor.second = 0;
+        neighbor_iterator_.push_back(neighbor);
+        neighbor.first = 0;
+        neighbor.second = 1;
+        neighbor_iterator_.push_back(neighbor);
+        neighbor.first = 0;
+        neighbor.second = -1;
+        neighbor_iterator_.push_back(neighbor);
+        neighbor.first = 1;
+        neighbor.second = 0;
+        neighbor_iterator_.push_back(neighbor);
+    }
 
-    void setScanParam(const int &horizon_scans, const int &min_cluster_size, const int &min_line_size, const int &segment_valid_point_num, const int &segment_valid_line_num);
-    void setParameter();
+    void setParameter(const int &horizon_scans,
+                      const int &min_cluster_size,
+                      const int &min_line_size,
+                      const int &segment_valid_point_num,
+                      const int &segment_valid_line_num) 
+    {
+        horizon_scans_ = horizon_scans;
+        min_cluster_size_ = min_cluster_size;
+        ang_res_x_ = 360.0 / horizon_scans_;
+        ang_res_y_ = 2.0; 
+        ang_bottom_ = 15.0 + 0.1;
+        segment_alphax_ = ang_res_x_ / 180.0 * M_PI;
+        segment_alphay_ = ang_res_y_ / 180.0 * M_PI;
+        min_line_size_ = min_line_size;
+        segment_valid_point_num_ = segment_valid_point_num;
+        segment_valid_line_num_ = segment_valid_line_num;
+    }
 
-    void projectCloud(const common::PointCloud &laser_cloud_in);
-    void segmentCloud(const common::PointCloud &laser_cloud_in, common::PointCloud &laser_cloud_out);
-    void labelGroundPoints();
-    void labelComponents(int row, int col);
-    void labelConnectLine();
+    void segmentCloud(const common::PointCloud &laser_cloud_in, common::PointCloud &laser_cloud_out) const;
 
 private:
     int horizon_scans_;
     int min_cluster_size_, min_line_size_, segment_valid_point_num_, segment_valid_line_num_;
     float ang_res_x_, ang_res_y_, ang_bottom_;
     float segment_alphax_, segment_alphay_;
-
-    common::PointCloud::Ptr cloud_matrix_;
-    cv::Mat range_mat_, label_mat_;
-    int label_count_;
-
     std::vector<pair<int8_t, int8_t> > neighbor_iterator_;
-
-    uint16_t *all_pushed_indx_;
-    uint16_t *all_pushed_indy_;
-
-    uint16_t *queue_indx_;
-    uint16_t *queue_indy_;
-
-    int *queue_indx_last_negi_;
-    int *queue_indy_last_negi_;
-
-    float *queue_last_dis_;
 };
 
 
