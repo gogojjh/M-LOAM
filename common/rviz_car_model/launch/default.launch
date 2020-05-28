@@ -12,7 +12,7 @@
         <param name="use_gui" value="$(arg gui)"/>
         <param name="robot_description" textfile="$(find rviz_car_model)/rviz/car_model/default.urdf"/>
         <node pkg="joint_state_publisher" type="joint_state_publisher" name="joint_state_publisher"/>
-        <node pkg="robot_state_publisher" type="state_publisher" name="robot_state_publisher"/>
+        <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher"/>
     </group>
 
     <!-- transform between user-defined base_frame to car's base_link -->

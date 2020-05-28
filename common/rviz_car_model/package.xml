@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>mloam_rviz_car_model</name>
+  <name>rviz_car_model</name>
   <version>0.0.0</version>
   <description>Robosense rviz RobotModel for Car.</description>
 

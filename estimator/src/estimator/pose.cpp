@@ -101,9 +101,9 @@ Pose Pose::operator * (const Pose &pose)
 ostream & operator << (ostream &out, const Pose &pose)
 {
     out << std::fixed << std::setprecision(3)
-        << "t: [" << pose.t_(0) << ", " << pose.t_(1) << ", " << pose.t_(2) 
-        << "], q: [" << pose.q_.x() << ", " << pose.q_.y() << ", " << pose.q_.z() << ", " << pose.q_.w()
-        << "], td: " << pose.td_;
+        << "t:[" << pose.t_(0) << "," << pose.t_(1) << "," << pose.t_(2) 
+        << "], q:[" << pose.q_.x() << "," << pose.q_.y() << "," << pose.q_.z() << "," << pose.q_.w()
+        << "], td:" << pose.td_;
     return out;
 }
 

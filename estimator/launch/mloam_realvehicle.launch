@@ -25,9 +25,9 @@
     <arg name="config_file" default="$(find mloam)/config/config_realvehicle.yaml" />
     <group if="$(arg run_mloam)">
         <node pkg="mloam" type="mloam_node_rv" name="mloam_node_rv" 
-            args="-config_file=$(arg config_file) 
+            args="-config_file=$(arg config_file)
                   -data_source=$(arg data_source)
-                  -result_save=$(arg result_save) 
+                  -result_save=$(arg result_save)
                   -output_path=$(arg output_path)
                   -data_path=$(arg data_path)
                   -start_idx=$(arg start_idx)
@@ -37,8 +37,8 @@
             <remap from="/base_pose_gt" to="/current_odom"/>
         </node>
 
-        <!-- <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" 
-            args="-config_file=$(arg config_file) 
+        <!-- <node pkg="mloam" type="lidar_mapper" name="lidar_mapper"
+            args="-config_file=$(arg config_file)
                   -result_save=$(arg result_save) 
                   -output_path=$(arg output_path)
                   -with_ua=$(arg with_ua)" output="screen"/> -->

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(mloam_rviz_car_model)
+project(rviz_car_model)
 
 #############
 ## Install ##

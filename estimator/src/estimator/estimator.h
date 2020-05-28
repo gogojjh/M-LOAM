@@ -39,6 +39,7 @@
 
 #include "parameters.h"
 #include "common/common.hpp"
+#include "common/color.hpp"
 #include "../imageSegmenter/image_segmenter.h"
 #include "../featureExtract/feature_extract.h"
 #include "../lidarTracker/lidar_tracker.h"
