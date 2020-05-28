@@ -1,6 +1,5 @@
 # M-LOAM
 ### Multi-LiDAR Odometry and Mapping
-
 M-LOAM is a robust system for multi-LiDAR extrinsic calibration, real-time odometry, and mapping. Without manual intervention, our
 system can start with several extrinsic-uncalibrated LiDARs, automatically calibrate their extrinsics, and provide accurate
 poses as well as a globally consistent map.
@@ -12,7 +11,6 @@ poses as well as a globally consistent map.
 [Linxin Jiang](),
 [Ming Liu](https://scholar.google.com/citations?user=CdV5LfQAAAAJ&hl=zh-CN)
 from [RAM-LAB](https://www.ramlab.com)
-
 
 
 ### 1. Prerequisites
@@ -32,10 +30,12 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 
 #### 1.5. **Eigen3**
 ```sudo apt install libeigen-dev```
-> NOTE: to prevent Eigen error: https://eigen.tuxfamily.org/dox/group__TopicUnalignedArrayAssert.html
+> NOTE: to prevent Eigen error: <br> 
+> https://eigen.tuxfamily.org/dox/group__TopicUnalignedArrayAssert.html
 
 #### 1.6. **GLOG, GFLAGS, GTEST**
-> NOTE: https://juejin.im/post/5dca40b9f265da4d226e397e
+> NOTE: installation <br>
+> https://juejin.im/post/5dca40b9f265da4d226e397e
 
 ### 2. Build M-LOAM
 ```catkin build mloam```
