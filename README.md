@@ -51,7 +51,7 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 
 * Run M-LOAM
   ```
-  rosbag play xxx.bag -l 
+  rosbag play xxx.bag -l --clock
   roslaunch mloam mloam_realvehicle.launch
   rostopic echo /extrinsics/odoms[1]/pose
   ```
