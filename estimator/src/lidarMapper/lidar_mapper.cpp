@@ -545,7 +545,7 @@ void process()
 
 			//***************************************************************************
 			// step 3: perform scan-to-map optimization
-			printf("map surf num:%d\n", laser_cloud_surf_from_map_num);
+			printf("map surf num: %d\n", laser_cloud_surf_from_map_num);
 			if (laser_cloud_surf_from_map_num > 100)
 			{
 				TicToc t_opt, t_tree;
