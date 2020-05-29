@@ -56,7 +56,7 @@ body_T_laser: !!opencv-matrix
           -0.055731000303, 0.0512792578732, 0.530155068923, 0.844511750192, 1.054404002, 0.714716690102, -1.34228441603,
           0.0336021728869, 0.0603546831749, -0.594617607295, 0.801035646704, 1.0743960396, -0.702814942771, -1.28763872402]
 
-          #unsynchronization parameters
+#unsynchronization parameters
 estimate_td: 0                      # 0 have an accurate time offset among sensors
                                     # 1 online estimate time offset among sensors
 
@@ -134,4 +134,4 @@ uct_measurement: !!opencv-matrix
 trace_threshold_before_mapping: 2
 trace_threshold_after_mapping: 2
 
-skip_num_odom_pub: 2
+skip_num_odom_pub: 1

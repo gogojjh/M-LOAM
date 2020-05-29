@@ -36,7 +36,6 @@ std::vector<ros::Publisher> v_pub_corner_points_local_map;
 // odometry
 std::vector<ros::Publisher> v_pub_laser_odom;
 std::vector<ros::Publisher> v_pub_laser_path;
-std::vector<nav_msgs::Path> v_laser_path;
 
 // extrinsics
 ros::Publisher pub_extrinsics;
@@ -84,7 +83,6 @@ void registerPub(ros::NodeHandle &nh)
     }
     // pub_surf_points_target_localmap = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_target_localmap", 5);
     // pub_surf_points_target = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_target", 5);
-    v_laser_path.resize(NUM_OF_LASER);
 }
 
 void pubPointCloud(const Estimator &estimator, const double &time)
@@ -194,29 +192,29 @@ void printStatistics(const Estimator &estimator, double t)
         //     fout.close();
         // }        
 
-        {
-            ofstream fout(MLOAM_ODOM_PATH.c_str(), ios::out);
-            fout.setf(ios::fixed, ios::floatfield);
-            for (auto i = 0; i < v_laser_path[IDX_REF].poses.size(); i++)
-            {
-                geometry_msgs::PoseStamped &laser_pose = v_laser_path[IDX_REF].poses[i];
-                fout.precision(15);
-                fout << laser_pose.header.stamp.toSec() << " ";
-                fout.precision(8);
-                fout << laser_pose.pose.position.x << " "
-                    << laser_pose.pose.position.y << " "
-                    << laser_pose.pose.position.z << " "
-                    << laser_pose.pose.orientation.x << " "
-                    << laser_pose.pose.orientation.y << " "
-                    << laser_pose.pose.orientation.z << " "
-                    << laser_pose.pose.orientation.w << std::endl;
-            }
-            fout.close();
-        }
+        // {
+        //     ofstream fout(MLOAM_ODOM_PATH.c_str(), ios::out);
+        //     fout.setf(ios::fixed, ios::floatfield);
+        //     for (auto i = 0; i < v_laser_path[IDX_REF].poses.size(); i++)
+        //     {
+        //         geometry_msgs::PoseStamped &laser_pose = v_laser_path[IDX_REF].poses[i];
+        //         fout.precision(15);
+        //         fout << laser_pose.header.stamp.toSec() << " ";
+        //         fout.precision(8);
+        //         fout << laser_pose.pose.position.x << " "
+        //             << laser_pose.pose.position.y << " "
+        //             << laser_pose.pose.position.z << " "
+        //             << laser_pose.pose.orientation.x << " "
+        //             << laser_pose.pose.orientation.y << " "
+        //             << laser_pose.pose.orientation.z << " "
+        //             << laser_pose.pose.orientation.w << std::endl;
+        //     }
+        //     fout.close();
+        // }
     }
 }
 
-void pubOdometry(const Estimator &estimator, const double &time)
+void pubOdometry(Estimator &estimator, const double &time)
 {
     if (ESTIMATE_EXTRINSIC == 2)
     {
@@ -240,9 +238,9 @@ void pubOdometry(const Estimator &estimator, const double &time)
             geometry_msgs::PoseStamped laser_pose;
             laser_pose.header = laser_odom.header;
             laser_pose.pose = laser_odom.pose.pose;
-            v_laser_path[n].header = laser_odom.header;
-            v_laser_path[n].poses.push_back(laser_pose);
-            v_pub_laser_path[n].publish(v_laser_path[n]);
+            estimator.v_laser_path_[n].header = laser_odom.header;
+            estimator.v_laser_path_[n].poses.push_back(laser_pose);
+            v_pub_laser_path[n].publish(estimator.v_laser_path_[n]);
         }
     } else
     {
@@ -271,9 +269,9 @@ void pubOdometry(const Estimator &estimator, const double &time)
         geometry_msgs::PoseStamped laser_pose;
         laser_pose.header = laser_odom.header;
         laser_pose.pose = laser_odom.pose.pose;
-        v_laser_path[IDX_REF].header = laser_odom.header;
-        v_laser_path[IDX_REF].poses.push_back(laser_pose);
-        v_pub_laser_path[IDX_REF].publish(v_laser_path[IDX_REF]);
+        estimator.v_laser_path_[IDX_REF].header = laser_odom.header;
+        estimator.v_laser_path_[IDX_REF].poses.push_back(laser_pose);
+        v_pub_laser_path[IDX_REF].publish(estimator.v_laser_path_[IDX_REF]);
     }
 
     // publish extrinsics

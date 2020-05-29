@@ -63,7 +63,7 @@ void registerPub(ros::NodeHandle &nh);
 
 void printStatistics(const Estimator &estimator, double t);
 
-void pubOdometry(const Estimator &estimator, const double &time);
+void pubOdometry(Estimator &estimator, const double &time);
 
 void pubPointCloud(const Estimator &estimator, const double &time);
 

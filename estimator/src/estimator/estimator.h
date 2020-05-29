@@ -183,6 +183,8 @@ class Estimator
 
     double total_measurement_pre_time_, total_opt_odom_time_;
     int total_corner_feature_, total_surf_feature_;
+
+    std::vector<nav_msgs::Path> v_laser_path_;
 };
 
 

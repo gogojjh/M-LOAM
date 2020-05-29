@@ -115,6 +115,8 @@ void Estimator::setParameter()
 
     img_segment_.setParameter(HORIZON_SCAN, MIN_CLUSTER_SIZE, MIN_LINE_SIZE, SEGMENT_VALID_POINT_NUM, SEGMENT_VALID_LINE_NUM);
 
+    v_laser_path_.resize(NUM_OF_LASER);
+
     m_process_.unlock();
 }
 
@@ -203,83 +205,43 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
 {
     assert(v_laser_cloud_in.size() == NUM_OF_LASER);
  
-    {
     TicToc measurement_pre_time;
     std::vector<cloudFeature *> feature_frame_ptr(NUM_OF_LASER);
-
     #pragma omp parallel for num_threads(NUM_OF_LASER)
     for (size_t i = 0; i < v_laser_cloud_in.size(); i++)
     {
         float start_ori, end_ori;
 		f_extract_.findStartEndAngle(v_laser_cloud_in[i], start_ori, end_ori);
-        cloudFeature *tmp_frame(new cloudFeature);
+        cloudFeature *tmp_feature_ptr(new cloudFeature);
         if ((SEGMENT_CLOUD) && (ESTIMATE_EXTRINSIC == 0))
         {
             PointCloud laser_cloud_segment;
 			img_segment_.segmentCloud(v_laser_cloud_in[i], laser_cloud_segment);
-			f_extract_.extractCloud(t, laser_cloud_segment, *tmp_frame, start_ori, end_ori);
+			f_extract_.extractCloud(t, laser_cloud_segment, *tmp_feature_ptr, start_ori, end_ori);
         } else
         {
-			f_extract_.extractCloud(t, v_laser_cloud_in[i], *tmp_frame, start_ori, end_ori);
+			f_extract_.extractCloud(t, v_laser_cloud_in[i], *tmp_feature_ptr, start_ori, end_ori);
         }
-		feature_frame_ptr[i] = tmp_frame;
+		feature_frame_ptr[i] = tmp_feature_ptr;
     }
-
-    std::vector<cloudFeature> feature_frame(NUM_OF_LASER);
-    for (size_t i = 0; i < NUM_OF_LASER; i++) feature_frame[i] = *feature_frame_ptr[i];
-
     stringstream ss;
-    for (size_t i = 0; i < feature_frame.size(); i++)
+    std::vector<cloudFeature> feature_frame(NUM_OF_LASER);
+    for (size_t i = 0; i < NUM_OF_LASER; i++) 
     {
+        cloudFeature &tmp_feature = *feature_frame_ptr[i]; 
+        feature_frame[i] = tmp_feature;
         ss << feature_frame[i]["laser_cloud"].size() << " ";
         total_corner_feature_ += feature_frame[i]["corner_points_less_sharp"].size();
         total_surf_feature_ += feature_frame[i]["surf_points_less_flat"].size();
     }
     printf("size of after segmentation: %s\n", ss.str().c_str());
-    printf("openmp: meaPre time: %fms (%u*%fms)\n", measurement_pre_time.toc(), v_laser_cloud_in.size(), measurement_pre_time.toc() / v_laser_cloud_in.size());
+    printf("meaPre time: %fms (%u*%fms)\n", measurement_pre_time.toc(), v_laser_cloud_in.size(), measurement_pre_time.toc() / v_laser_cloud_in.size());
     total_measurement_pre_time_ += measurement_pre_time.toc();
-    }
 
-    {
-    TicToc measurement_pre_time;
-    std::vector<cloudFeature *> feature_frame_ptr(NUM_OF_LASER);
-
-    for (size_t i = 0; i < v_laser_cloud_in.size(); i++)
-    {
-        float start_ori, end_ori;
-        f_extract_.findStartEndAngle(v_laser_cloud_in[i], start_ori, end_ori);
-        cloudFeature *tmp_frame(new cloudFeature);
-        if ((SEGMENT_CLOUD) && (ESTIMATE_EXTRINSIC == 0))
-        {
-            PointCloud laser_cloud_segment;
-            img_segment_.segmentCloud(v_laser_cloud_in[i], laser_cloud_segment);
-            f_extract_.extractCloud(t, laser_cloud_segment, *tmp_frame, start_ori, end_ori);
-        } else
-        {
-            f_extract_.extractCloud(t, v_laser_cloud_in[i], *tmp_frame, start_ori, end_ori);
-        }
-        feature_frame_ptr[i] = tmp_frame;
-    }
-
-    std::vector<cloudFeature> feature_frame(NUM_OF_LASER);
-    for (size_t i = 0; i < NUM_OF_LASER; i++) feature_frame[i] = *feature_frame_ptr[i];
-
-    stringstream ss;
-    for (size_t i = 0; i < feature_frame.size(); i++)
-    {
-        ss << feature_frame[i]["laser_cloud"].size() << " ";
-        total_corner_feature_ += feature_frame[i]["corner_points_less_sharp"].size();
-        total_surf_feature_ += feature_frame[i]["surf_points_less_flat"].size();
-    }
-    printf("size of after segmentation: %s\n", ss.str().c_str());
-    printf("meaPre time: %fms (%u*%fms)\n\n", measurement_pre_time.toc(), v_laser_cloud_in.size(), measurement_pre_time.toc() / v_laser_cloud_in.size());
-    total_measurement_pre_time_ += measurement_pre_time.toc();    
-	}
-
-    // m_buf_.lock();
-    // feature_buf_.push(make_pair(t, feature_frame));
-    // m_buf_.unlock();
-    // if (!MULTIPLE_THREAD) processMeasurements();
+    m_buf_.lock();
+    feature_buf_.push(make_pair(t, feature_frame));
+    m_buf_.unlock();
+    if (!MULTIPLE_THREAD) processMeasurements();
 }
 
 void Estimator::inputCloud(const double &t, const PointCloud &laser_cloud_in)
@@ -298,7 +260,6 @@ void Estimator::inputCloud(const double &t, const PointCloud &laser_cloud_in)
     {
         f_extract_.extractCloud(t, laser_cloud_in, feature_frame[0], start_ori, end_ori);
     }
-
     printf("size of after segmentation: %d\n", laser_cloud_in.size());    
     printf("meaPre time: %fms\n", measurement_pre_time.toc());
     total_measurement_pre_time_ += measurement_pre_time.toc();
@@ -329,7 +290,7 @@ void Estimator::processMeasurements()
             process();
             std::cout << "process time: " << t_main_process.toc() << "ms" << std::endl;
 
-            printStatistics(*this, 0);
+            // printStatistics(*this, 0);
             pubOdometry(*this, cur_time_);
             if (frame_cnt_ % SKIP_NUM_ODOM_PUB == 0) pubPointCloud(*this, cur_time_); 
 
@@ -364,7 +325,7 @@ void Estimator::undistortMeasurements()
             for (auto &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
 			for (auto &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
         } else
-        if (ESTIMATE_EXTRINSIC == 0) // pure odometry
+        if (ESTIMATE_EXTRINSIC == 0) // pure odometry with accurate extrinsics
         {
             Pose pose_ext(qbl_[n], tbl_[n]);
             Pose pose_local = pose_ext.inverse() * pose_rlt_[IDX_REF] * pose_ext;
@@ -391,24 +352,23 @@ void Estimator::process()
         if (ESTIMATE_EXTRINSIC == 2)
         {
             // feature tracker: estimate the relative transformations of each lidar
-            // #pragma omp parallel for
-            for (auto n = 0; n < NUM_OF_LASER; n++)
+            #pragma omp parallel for num_threads(NUM_OF_LASER)
+            for (size_t n = 0; n < NUM_OF_LASER; n++)
             {
                 cloudFeature &cur_cloud_feature = cur_feature_.second[n];
                 cloudFeature &prev_cloud_feature = prev_feature_.second[n];
                 pose_rlt_[n] = lidar_tracker_.trackCloud(prev_cloud_feature, cur_cloud_feature, pose_rlt_[n]);
                 pose_laser_cur_[n] = pose_laser_cur_[n] * pose_rlt_[n];
             }
-            for (auto n = 0; n < NUM_OF_LASER; n++) 
-                std::cout << "LASER_" << n << ", pose_rlt: " << pose_rlt_[n] << std::endl;
-
+            for (size_t n = 0; n < NUM_OF_LASER; n++) 
+                std::cout << "laser_" << n << ", pose_rlt: " << pose_rlt_[n] << std::endl;
             printf("lidarTracker: %fms (%d*%fms)\n", t_mloam_tracker.toc(), NUM_OF_LASER, t_mloam_tracker.toc() / NUM_OF_LASER);
 
             // initialize extrinsics
+            printf("calibrating extrinsic param, sufficient movement is needed\n");
             if (initial_extrinsics_.addPose(pose_rlt_) && (cir_buf_cnt_ == WINDOW_SIZE))
             {
                 TicToc t_calib_ext;
-                printf("calibrating extrinsic param, sufficient movement is needed\n");
                 for (auto n = 0; n < NUM_OF_LASER; n++)
                 {
                     if (initial_extrinsics_.cov_rot_state_[n]) continue;
@@ -417,7 +377,8 @@ void Estimator::process()
                     {
                         if (initial_extrinsics_.calibExTranslation(IDX_REF, n, calib_result))
                         {
-                            std::cout << "Initial extrinsic of laser_" << n << ": " << calib_result << std::endl;
+                            std::cout << common::YELLOW << "Initial extrinsic of laser_" << n << ": " << calib_result 
+                                      << common::RESET << std::endl;
                             qbl_[n] = calib_result.q_;
                             tbl_[n] = calib_result.t_;
                             // tdbl_[n] = calib_result.td_;

@@ -30,17 +30,16 @@
 
 #include <ros/ros.h>
 #include <std_msgs/Header.h>
-#include <std_msgs/Float32.h>
-#include <std_msgs/Bool.h>
 #include <std_msgs/String.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
+#include <sensor_msgs/NavSatFix.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/Imu.h>
-#include <sensor_msgs/NavSatFix.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/subscriber.h>
 
+#include "save_statistics.hpp"
 #include "common/common.hpp"
 #include "common/gps_tools.hpp"
 #include "estimator/estimator.h"
@@ -63,23 +62,25 @@ DEFINE_bool(time_now, true, "use current time or data time");
 
 Estimator estimator;
 
+SaveStatistics save_statistics;
+
 std::vector<std::queue<sensor_msgs::PointCloud2ConstPtr> > all_cloud_buf(5);
 std::mutex m_buf;
 
-// laser path groundtruth
 nav_msgs::Path laser_gt_path;
 Pose pose_world_ref_ini;
-bool b_pause = false;
 
 common::gpsTools gps_tools;
 nav_msgs::Path gps_path;
 ros::Publisher pub_gps_odom, pub_gps_path;
 
-void data_process_callback(const sensor_msgs::PointCloud2ConstPtr &cloud0_msg,
-                           const sensor_msgs::PointCloud2ConstPtr &cloud1_msg,
-                           const sensor_msgs::PointCloud2ConstPtr &cloud2_msg,
-                           const sensor_msgs::PointCloud2ConstPtr &cloud3_msg,
-                           const sensor_msgs::PointCloud2ConstPtr &cloud4_msg)
+bool b_pause = false;
+
+void dataProcessCallback(const sensor_msgs::PointCloud2ConstPtr &cloud0_msg,
+                         const sensor_msgs::PointCloud2ConstPtr &cloud1_msg,
+                         const sensor_msgs::PointCloud2ConstPtr &cloud2_msg,
+                         const sensor_msgs::PointCloud2ConstPtr &cloud3_msg,
+                         const sensor_msgs::PointCloud2ConstPtr &cloud4_msg)
 {
     m_buf.lock();
     all_cloud_buf[0].push(cloud0_msg);
@@ -90,7 +91,7 @@ void data_process_callback(const sensor_msgs::PointCloud2ConstPtr &cloud0_msg,
     m_buf.unlock();
 }
 
-void gps_callback(const sensor_msgs::NavSatFixConstPtr &gps_msgs)
+void gpsCallback(const sensor_msgs::NavSatFixConstPtr &gps_msgs)
 {
     gps_tools.updateGPSpose(*gps_msgs);
     
@@ -115,6 +116,12 @@ void gps_callback(const sensor_msgs::NavSatFixConstPtr &gps_msgs)
     gps_path.header = gps_pose.header;
     gps_path.poses.push_back(gps_pose);
     pub_gps_path.publish(gps_path);
+}
+
+void pauseCallback(std_msgs::StringConstPtr msg)
+{
+    printf("%s\n", msg->data.c_str());
+    b_pause = !b_pause;
 }
 
 pcl::PointCloud<pcl::PointXYZ> getCloudFromMsg(const sensor_msgs::PointCloud2ConstPtr &cloud_msg)
@@ -153,71 +160,6 @@ void sync_process()
             if (v_laser_cloud[i].size() == 0) empty_check = true;
         if (!empty_check) estimator.inputCloud(time, v_laser_cloud);
     }
-}
-
-void saveGroundTruth()
-{
-    if (laser_gt_path.poses.size() == 0) return;
-    std::ofstream fout(MLOAM_GT_PATH.c_str(), std::ios::out);
-    fout.setf(ios::fixed, ios::floatfield);
-    for (size_t i = 0; i < laser_gt_path.poses.size(); i++)
-    {
-        geometry_msgs::PoseStamped &laser_pose = laser_gt_path.poses[i];
-        fout.precision(15);
-        fout << laser_pose.header.stamp.toSec() << " ";
-        fout.precision(8);
-        fout << laser_pose.pose.position.x << " "
-                << laser_pose.pose.position.y << " "
-                << laser_pose.pose.position.z << " "
-                << laser_pose.pose.orientation.x << " "
-                << laser_pose.pose.orientation.y << " "
-                << laser_pose.pose.orientation.z << " "
-                << laser_pose.pose.orientation.w << std::endl;
-    }
-}
-
-void saveGPSPath()
-{
-    if (gps_path.poses.size() == 0) return;
-    std::ofstream fout(MLOAM_GPS_PATH.c_str(), std::ios::out);
-    fout.setf(ios::fixed, ios::floatfield);
-    for (size_t i = 0; i < gps_path.poses.size(); i++)
-    {
-        geometry_msgs::PoseStamped &gps_pose = gps_path.poses[i];
-        fout.precision(15);
-        fout << gps_pose.header.stamp.toSec() << " ";
-        fout.precision(8);
-        fout << gps_pose.pose.position.x << " "
-             << gps_pose.pose.position.y << " "
-             << gps_pose.pose.position.z << " "
-             << gps_pose.pose.orientation.x << " "
-             << gps_pose.pose.orientation.y << " "
-             << gps_pose.pose.orientation.z << " "
-             << gps_pose.pose.orientation.w << std::endl;
-    }
-}
-
-void saveStatistics()
-{
-    printf("Saving odometry time statistics\n");
-    std::ofstream fout(std::string(OUTPUT_FOLDER + "time_odometry.txt").c_str(), std::ios::out);
-    fout.precision(15);
-    fout << "frame, total_mea_pre_time, total_opt_odom_time, total_corner_feature, total_surf_feature" << std::endl;
-    fout << estimator.frame_cnt_ << ", " << estimator.total_measurement_pre_time_ 
-                                    << ", " << estimator.total_opt_odom_time_ 
-                                    << ", " << estimator.total_corner_feature_ 
-                                    << ", " << estimator.total_surf_feature_ << std::endl;
-    fout.close();
-    printf("******* Frame: %d, mean measurement preprocess time: %fms, mean optimize odometry time: %fms\n", estimator.frame_cnt_,
-            estimator.total_measurement_pre_time_ / estimator.frame_cnt_, estimator.total_opt_odom_time_ / estimator.frame_cnt_);
-    printf("******* Frame: %d, mean corner feature: %f, mean surf feature: %f\n", estimator.frame_cnt_,
-            estimator.total_corner_feature_ * 1.0 / estimator.frame_cnt_, estimator.total_surf_feature_ * 1.0 / estimator.frame_cnt_);
-}
-
-void pauseCallback(std_msgs::StringConstPtr msg)
-{
-    printf("%s\n", msg->data.c_str());
-    b_pause = !b_pause;
 }
 
 int main(int argc, char **argv)
@@ -269,9 +211,9 @@ int main(int argc, char **argv)
         message_filters::Synchronizer<LidarSyncPolicy> *lidar_synchronizer =
             new message_filters::Synchronizer<LidarSyncPolicy>(
                 LidarSyncPolicy(10), *sub_lidar[0], *sub_lidar[1], *sub_lidar[2], *sub_lidar[3], *sub_lidar[4]);
-        lidar_synchronizer->registerCallback(boost::bind(&data_process_callback, _1, _2, _3, _4, _5));
+        lidar_synchronizer->registerCallback(boost::bind(&dataProcessCallback, _1, _2, _3, _4, _5));
 
-        ros::Subscriber sub_gps = nh.subscribe<sensor_msgs::NavSatFix>("/novatel718d/pos", 1, gps_callback);
+        ros::Subscriber sub_gps = nh.subscribe<sensor_msgs::NavSatFix>("/novatel718d/pos", 1, gpsCallback);
         pub_gps_odom = nh.advertise<nav_msgs::Odometry>("/gps/odom", 10);
         pub_gps_path = nh.advertise<nav_msgs::Path>("/gps/path", 10);
 
@@ -283,7 +225,14 @@ int main(int argc, char **argv)
             loop_rate.sleep();
         }
 
-        saveGPSPath();
+        if (MLOAM_RESULT_SAVE)
+        {
+            std::cout << common::RED << "saving odometry results" << common::RESET << std::endl;
+            save_statistics.saveSensorPath(MLOAM_GT_PATH, laser_gt_path);
+            save_statistics.saveSensorPath(MLOAM_GPS_PATH, gps_path);
+            save_statistics.saveOdomStatistics(EX_CALIB_EIG_PATH, EX_CALIB_RESULT_PATH, MLOAM_ODOM_PATH, estimator);
+            save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time_odometry_txt", estimator);
+        }
         sync_thread.join();
     } else
     // use pcd as the data source
@@ -462,14 +411,17 @@ int main(int argc, char **argv)
                 break;
             }
         }
+
+        if (MLOAM_RESULT_SAVE)
+        {
+            std::cout << common::RED << "saving odometry results" << common::RESET << std::endl;
+            save_statistics.saveSensorPath(MLOAM_GT_PATH, laser_gt_path);
+            save_statistics.saveOdomStatistics(EX_CALIB_EIG_PATH, EX_CALIB_RESULT_PATH, MLOAM_ODOM_PATH, estimator);
+            save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time_odometry_txt", estimator);
+        }
         cloud_visualizer_thread.join();
     }
 
-    if (MLOAM_RESULT_SAVE)
-    {
-        saveGroundTruth();
-        saveStatistics();
-    }
     return 0;
 }
 
