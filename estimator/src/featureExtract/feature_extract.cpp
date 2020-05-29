@@ -17,12 +17,12 @@
 
 using namespace common;
 
-float cloud_curvature[400000];
-int cloud_sort_ind[400000];
-int cloud_neighbor_picked[400000];
-int cloud_label[400000];
-
-bool comp(int i,int j) { return (cloud_curvature[i] < cloud_curvature[j]); }
+class compObject
+{
+public:
+    float *cloud_curvature;
+    bool operator()(int i, int j) { return (cloud_curvature[i] < cloud_curvature[j]); }
+};
 
 FeatureExtract::FeatureExtract()
 {
@@ -165,6 +165,11 @@ void FeatureExtract::extractCloud(const double &cur_time,
     // printf("prepare time %fms\n", t_prepare.toc());
 
     // step 2: compute curvature of each point
+    float cloud_curvature[400000];
+    int cloud_sort_ind[400000];
+    int cloud_neighbor_picked[400000];
+    int cloud_label[400000];
+
     for (int i = 5; i < cloud_size - 5; i++)
     {
         float diff_x = laser_cloud->points[i - 5].x + laser_cloud->points[i - 4].x + laser_cloud->points[i - 3].x + laser_cloud->points[i - 2].x + laser_cloud->points[i - 1].x - 10 * laser_cloud->points[i].x + laser_cloud->points[i + 1].x + laser_cloud->points[i + 2].x + laser_cloud->points[i + 3].x + laser_cloud->points[i + 4].x + laser_cloud->points[i + 5].x;
@@ -185,6 +190,8 @@ void FeatureExtract::extractCloud(const double &cur_time,
     PointICloud corner_points_less_sharp;
     PointICloud surf_points_flat;
     PointICloud surf_points_less_flat;
+    compObject comp_object;
+    comp_object.cloud_curvature = cloud_curvature;
     float t_q_sort = 0;
     for (int i = 0; i < N_SCANS; i++)
     {
@@ -198,7 +205,7 @@ void FeatureExtract::extractCloud(const double &cur_time,
             int ep = scan_start_ind[i] + (scan_end_ind[i] - scan_start_ind[i]) * (j + 1) / 6 - 1;
 
             TicToc t_tmp;
-            std::sort (cloud_sort_ind + sp, cloud_sort_ind + ep + 1, comp);
+            std::sort(cloud_sort_ind + sp, cloud_sort_ind + ep + 1, comp_object);
             t_q_sort += t_tmp.toc();
 
             int largest_picked_num = 0;

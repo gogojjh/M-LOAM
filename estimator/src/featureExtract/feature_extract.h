@@ -20,6 +20,7 @@
 #include <csignal>
 #include <cmath>
 #include <map>
+#include <omp.h>
 
 #include <opencv2/opencv.hpp>
 
