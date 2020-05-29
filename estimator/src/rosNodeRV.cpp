@@ -151,7 +151,7 @@ void sync_process()
         bool empty_check = false;
         for (size_t i = 0; i < NUM_OF_LASER; i++)
             if (v_laser_cloud[i].size() == 0) empty_check = true;
-        // if (!empty_check) estimator.inputCloud(time, v_laser_cloud);
+        if (!empty_check) estimator.inputCloud(time, v_laser_cloud);
     }
 }
 

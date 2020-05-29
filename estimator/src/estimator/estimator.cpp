@@ -229,7 +229,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
         total_surf_feature_ += feature_frame[i]["surf_points_less_flat"].size();
     }
     printf("size of after segmentation: %s\n", ss.str().c_str());
-    printf("openmp: meaPre time: %fms (%u*%fms)\n", measurement_pre_time.toc(), v_laser_cloud_in.size(), measurement_pre_time.toc() / v_laser_cloud_in.size());
+    printf("meaPre time: %fms (%u*%fms)\n", measurement_pre_time.toc(), v_laser_cloud_in.size(), measurement_pre_time.toc() / v_laser_cloud_in.size());
     total_measurement_pre_time_ += measurement_pre_time.toc();
 
     m_buf_.lock();
