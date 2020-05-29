@@ -17,8 +17,8 @@ num_of_laser: 2
 n_scans: 16
 
 # segmmentation
-# segment_cloud: 0 # for indoor office
-segment_cloud: 1 
+segment_cloud: 0 # for indoor office
+# segment_cloud: 1 
 horizon_scan: 1800
 min_cluster_size: 30
 min_line_size: 5
@@ -71,8 +71,8 @@ td: !!opencv-matrix                 # initial value of time offset. unit: s. rea
 idx_ref: 0
 
 cloud_topic: 
-   - "/left/rslidar_points"
-   - "/right/rslidar_points"
+   - "/left/velodyne_points"
+   - "/right/velodyne_points"
 
 laser_sync_threshold: 0.07
 roi_range: 1
@@ -111,7 +111,7 @@ n_calib: 10
 
 # mapping 
 map_corner_res: 0.2
-map_surf_res: 0.3
+map_surf_res: 0.2
 map_eig_thre: 200
 
 # uncertainty parameter
@@ -138,4 +138,4 @@ uct_measurement: !!opencv-matrix
 trace_threshold_before_mapping: 1
 trace_threshold_after_mapping: 0.7
 
-skip_num_odom_pub: 1
+skip_num_odom_pub: 2

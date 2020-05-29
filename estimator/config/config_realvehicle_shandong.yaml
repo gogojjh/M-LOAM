@@ -82,7 +82,7 @@ roi_range_mapping: 0
 scan_period: 0.1
 distance_sq_threshold: 25
 nearby_scan: 2.5
-distortion: 0
+distortion: 1
 
 # movement type
 planar_movement: 1

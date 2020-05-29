@@ -407,8 +407,11 @@ void Estimator::process()
             printf("lidarTracker %fms\n", t_mloam_tracker.toc());
         }
     }
-
+    // if (frame_cnt_ % 10 == 0) 
+    //     pcl::io::savePCDFileASCII("/tmp/raw_pc.pcd", cur_feature_.second[IDX_REF]["laser_cloud"]);
     if (DISTORTION) undistortMeasurements(); // after tracking, undistort measurements using last frame odometry
+    // if (frame_cnt_ % 10 == 0)
+    //     pcl::io::savePCDFileASCII("/tmp/undistort_pc.pcd", cur_feature_.second[IDX_REF]["laser_cloud"]);
 
     //----------------- update pose and point cloud
     Qs_[cir_buf_cnt_] = pose_laser_cur_[IDX_REF].q_;
