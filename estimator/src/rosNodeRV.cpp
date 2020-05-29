@@ -241,7 +241,7 @@ int main(int argc, char **argv)
     MLOAM_RESULT_SAVE = FLAGS_result_save;
     OUTPUT_FOLDER = FLAGS_output_path;
     MLOAM_ODOM_PATH = OUTPUT_FOLDER + "stamped_mloam_odom_estimate.txt";
-    MLOAM_GPS_PATH = OUTPUT_FOLDER + "stamped_gps.txt"
+    MLOAM_GPS_PATH = OUTPUT_FOLDER + "stamped_gps.txt";
     MLOAM_GT_PATH = OUTPUT_FOLDER + "stamped_groundtruth.txt";
     EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
     EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "calib_eig.txt";
@@ -283,6 +283,7 @@ int main(int argc, char **argv)
             loop_rate.sleep();
         }
 
+        saveGPSPath();
         sync_thread.join();
     } else
     // use pcd as the data source
@@ -464,7 +465,6 @@ int main(int argc, char **argv)
         cloud_visualizer_thread.join();
     }
 
-    saveGPSPath();
     if (MLOAM_RESULT_SAVE)
     {
         saveGroundTruth();
