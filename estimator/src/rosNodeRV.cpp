@@ -42,6 +42,7 @@
 #include <message_filters/subscriber.h>
 
 #include "common/common.hpp"
+#include "common/gps_tools.hpp"
 #include "estimator/estimator.h"
 #include "estimator/parameters.h"
 #include "utility/utility.h"
@@ -70,6 +71,10 @@ nav_msgs::Path laser_gt_path;
 Pose pose_world_ref_ini;
 bool b_pause = false;
 
+common::gpsTools gps_tools;
+nav_msgs::Path gps_path;
+ros::Publisher pub_gps_odom, pub_gps_path;
+
 void data_process_callback(const sensor_msgs::PointCloud2ConstPtr &cloud0_msg,
                            const sensor_msgs::PointCloud2ConstPtr &cloud1_msg,
                            const sensor_msgs::PointCloud2ConstPtr &cloud2_msg,
@@ -83,6 +88,33 @@ void data_process_callback(const sensor_msgs::PointCloud2ConstPtr &cloud0_msg,
     all_cloud_buf[3].push(cloud3_msg);
     all_cloud_buf[4].push(cloud4_msg);
     m_buf.unlock();
+}
+
+void gps_callback(const sensor_msgs::NavSatFixConstPtr &gps_msgs)
+{
+    gps_tools.updateGPSpose(*gps_msgs);
+    
+    nav_msgs::Odometry gps_odom;
+    gps_odom.header.frame_id = "/world";
+    gps_odom.child_frame_id = "/gps";
+    gps_odom.header.stamp = gps_msgs->header.stamp;
+    gps_odom.pose.pose.orientation.x = 0;
+    gps_odom.pose.pose.orientation.y = 0;
+    gps_odom.pose.pose.orientation.z = 0;
+    gps_odom.pose.pose.orientation.w = 1;
+    gps_odom.pose.pose.position.x = gps_tools.gps_pos_.x();
+    gps_odom.pose.pose.position.y = gps_tools.gps_pos_.y();
+    gps_odom.pose.pose.position.z = gps_tools.gps_pos_.z();
+    for (size_t i = 0; i < 36; i++) gps_odom.pose.covariance[i] = gps_tools.gps_cur_cov_[i];
+    pub_gps_odom.publish(gps_odom);
+    publishTF(gps_odom);
+
+    geometry_msgs::PoseStamped gps_pose;
+    gps_pose.header = gps_odom.header;
+    gps_pose.pose = gps_odom.pose.pose;
+    gps_path.header = gps_pose.header;
+    gps_path.poses.push_back(gps_pose);
+    pub_gps_path.publish(gps_path);
 }
 
 pcl::PointCloud<pcl::PointXYZ> getCloudFromMsg(const sensor_msgs::PointCloud2ConstPtr &cloud_msg)
@@ -119,7 +151,7 @@ void sync_process()
         bool empty_check = false;
         for (size_t i = 0; i < NUM_OF_LASER; i++)
             if (v_laser_cloud[i].size() == 0) empty_check = true;
-        if (!empty_check) estimator.inputCloud(time, v_laser_cloud);
+        // if (!empty_check) estimator.inputCloud(time, v_laser_cloud);
     }
 }
 
@@ -141,6 +173,27 @@ void saveGroundTruth()
                 << laser_pose.pose.orientation.y << " "
                 << laser_pose.pose.orientation.z << " "
                 << laser_pose.pose.orientation.w << std::endl;
+    }
+}
+
+void saveGPSPath()
+{
+    if (gps_path.poses.size() == 0) return;
+    std::ofstream fout(MLOAM_GPS_PATH.c_str(), std::ios::out);
+    fout.setf(ios::fixed, ios::floatfield);
+    for (size_t i = 0; i < gps_path.poses.size(); i++)
+    {
+        geometry_msgs::PoseStamped &gps_pose = gps_path.poses[i];
+        fout.precision(15);
+        fout << gps_pose.header.stamp.toSec() << " ";
+        fout.precision(8);
+        fout << gps_pose.pose.position.x << " "
+             << gps_pose.pose.position.y << " "
+             << gps_pose.pose.position.z << " "
+             << gps_pose.pose.orientation.x << " "
+             << gps_pose.pose.orientation.y << " "
+             << gps_pose.pose.orientation.z << " "
+             << gps_pose.pose.orientation.w << std::endl;
     }
 }
 
@@ -188,6 +241,7 @@ int main(int argc, char **argv)
     MLOAM_RESULT_SAVE = FLAGS_result_save;
     OUTPUT_FOLDER = FLAGS_output_path;
     MLOAM_ODOM_PATH = OUTPUT_FOLDER + "stamped_mloam_odom_estimate.txt";
+    MLOAM_GPS_PATH = OUTPUT_FOLDER + "stamped_gps.txt"
     MLOAM_GT_PATH = OUTPUT_FOLDER + "stamped_groundtruth.txt";
     EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
     EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "calib_eig.txt";
@@ -200,6 +254,8 @@ int main(int argc, char **argv)
 
     string data_source = FLAGS_data_source;
     ros::Subscriber sub_pause = nh.subscribe<std_msgs::String>("/mloam_pause", 5, pauseCallback);
+
+    // use bag as the data source
     if (!data_source.compare("bag"))
     {
         typedef sensor_msgs::PointCloud2 LidarMsgType;
@@ -215,6 +271,10 @@ int main(int argc, char **argv)
                 LidarSyncPolicy(10), *sub_lidar[0], *sub_lidar[1], *sub_lidar[2], *sub_lidar[3], *sub_lidar[4]);
         lidar_synchronizer->registerCallback(boost::bind(&data_process_callback, _1, _2, _3, _4, _5));
 
+        ros::Subscriber sub_gps = nh.subscribe<sensor_msgs::NavSatFix>("/novatel718d/pos", 1, gps_callback);
+        pub_gps_odom = nh.advertise<nav_msgs::Odometry>("/gps/odom", 10);
+        pub_gps_path = nh.advertise<nav_msgs::Path>("/gps/path", 10);
+
         std::thread sync_thread(sync_process);
         ros::Rate loop_rate(100);
         while (ros::ok())
@@ -225,6 +285,7 @@ int main(int argc, char **argv)
 
         sync_thread.join();
     } else
+    // use pcd as the data source
     if (!data_source.compare("pcd"))
     {
         string data_path = FLAGS_data_path;
@@ -403,6 +464,7 @@ int main(int argc, char **argv)
         cloud_visualizer_thread.join();
     }
 
+    saveGPSPath();
     if (MLOAM_RESULT_SAVE)
     {
         saveGroundTruth();

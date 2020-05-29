@@ -44,6 +44,7 @@ extern int MLOAM_RESULT_SAVE;
 extern std::string OUTPUT_FOLDER;
 extern std::string MLOAM_ODOM_PATH;
 extern std::string MLOAM_MAP_PATH;
+extern std::string MLOAM_GPS_PATH;
 extern std::string MLOAM_GT_PATH;
 extern std::string EX_CALIB_RESULT_PATH;
 extern std::string EX_CALIB_EIG_PATH;
