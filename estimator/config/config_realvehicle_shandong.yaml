@@ -5,7 +5,7 @@ multiple_thread: 0
 
 #optimization PARAMETERS
 max_solver_time: 0.03  # max solver itration time (s), to guarantee real time
-max_num_iterations: 10   # max solver itrations, to guarantee real time
+max_num_iterations: 15   # max solver itrations, to guarantee real time
 keyframe_parallax: 0 # keyframe selection threshold (pixel)
 
 evaluate_residual: 1
@@ -23,11 +23,11 @@ min_cluster_size: 30
 min_line_size: 10
 segment_valid_point_num: 5
 segment_valid_line_num: 3
-segment_theta: 1.0 # Lego-loam: 1.0
+segment_theta: 0.6 # Lego-loam: 1.0
 
 # window sizes
-window_size: 3
-opt_window_size: 1
+window_size: 6
+opt_window_size: 3
 
 # Extrinsic parameter between IMU and Camera.
 estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.

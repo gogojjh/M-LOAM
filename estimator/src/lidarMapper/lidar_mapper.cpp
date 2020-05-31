@@ -17,6 +17,8 @@
 
 using namespace common;
 
+SaveStatistics save_statistics;
+
 const float CUBE_SIZE = 50.0;
 const float CUBE_HALF = CUBE_SIZE / 2;
 
@@ -106,64 +108,6 @@ std::vector<Eigen::Matrix<double, 6, 6> > cov_compound;
 std::vector<double> cov_mapping_list;
 
 double total_mapping = 0.0;
-
-void saveStatistics()
-{
-	printf("Saving mapping statistics\n");
-	if (MLOAM_RESULT_SAVE)
-	{
-		std::ofstream fout(MLOAM_MAP_PATH.c_str(), std::ios::out);
-		for (size_t i = 0; i < laser_after_mapped_path.poses.size(); i++)
-		{
-			geometry_msgs::PoseStamped &laser_pose = laser_after_mapped_path.poses[i];
-			fout.precision(15);
-			fout << laser_pose.header.stamp.toSec() << " ";
-			fout.precision(8);
-			fout << laser_pose.pose.position.x << " "
-				<< laser_pose.pose.position.y << " "
-				<< laser_pose.pose.position.z << " "
-				<< laser_pose.pose.orientation.x << " "
-				<< laser_pose.pose.orientation.y << " "
-				<< laser_pose.pose.orientation.z << " "
-				<< laser_pose.pose.orientation.w << std::endl;
-		}
-		fout.close();
-
-		if (UNCER_AWARE_ON)
-		{
-			fout.open(std::string(OUTPUT_FOLDER + "mapping_factor.txt").c_str(), std::ios::out);
-			fout.precision(8);
-			for (size_t i = 0; i < d_factor_list.size(); i++) fout << d_factor_list[i] << std::endl;
-			fout.close();
-
-			fout.open(std::string(OUTPUT_FOLDER + "mapping_d_eigvec.txt").c_str(), std::ios::out);
-			fout.precision(8);
-			for (size_t i = 0; i < d_eigvec_list.size(); i++) fout << d_eigvec_list[i] << std::endl;
-			fout.close();
-		}
-
-		fout.open(std::string(OUTPUT_FOLDER + "mapping_pose_uncertainty.txt").c_str(), std::ios::out);
-		fout << "cov_mapping_uncertainty" << std::endl;
-		fout.precision(8);
-		for (size_t i = 0; i < cov_mapping_list.size(); i++) fout << cov_mapping_list[i] << std::endl;
-		fout.close();		
-
-		fout.open(std::string(OUTPUT_FOLDER + "time_mapping.txt").c_str(), std::ios::out);
-		fout.precision(15);
-		fout << "frame, total_mapping_time" << std::endl;
-		fout << frame_cnt << ", " << total_mapping << std::endl;
-		fout.close();
-		printf("******* Frame: %d, mean mapping time: %fms\n", frame_cnt, total_mapping / frame_cnt);
-	}		
-
-	printf("Saving laser_map cloud to /tmp/mloam_mapping_cloud.pcd\n");
-	PointICovCloud laser_cloud_map;
-	for (int i = 0; i < laser_cloud_num; i++)
-	{
-		laser_cloud_map += *laser_cloud_surf_array_cov[i];
-	}
-	pcl::io::savePCDFileASCII("/tmp/mloam_mapping_cloud.pcd", laser_cloud_map);	
-}
 
 int toCubeIndex(const int &i, const int &j, const int &k)
 {
@@ -269,17 +213,17 @@ void process()
 			//***************************************************************************
 			// step 1: pop up subscribed data
 			m_buf.lock();
-			while (!odometry_buf.empty() && odometry_buf.front()->header.stamp.toSec() < surf_last_buf.front()->header.stamp.toSec())
-				odometry_buf.pop();
-			if (odometry_buf.empty())
+			while (!full_res_buf.empty() && full_res_buf.front()->header.stamp.toSec() < surf_last_buf.front()->header.stamp.toSec())
+				full_res_buf.pop();
+			if (full_res_buf.empty())
 			{
 				m_buf.unlock();
 				break;
 			}
 
-			while (!full_res_buf.empty() && full_res_buf.front()->header.stamp.toSec() < surf_last_buf.front()->header.stamp.toSec())
-				full_res_buf.pop();
-			if (full_res_buf.empty())
+			while (!odometry_buf.empty() && odometry_buf.front()->header.stamp.toSec() < surf_last_buf.front()->header.stamp.toSec())
+				odometry_buf.pop();
+			if (odometry_buf.empty())
 			{
 				m_buf.unlock();
 				break;
@@ -298,12 +242,12 @@ void process()
 			time_laser_odometry = odometry_buf.front()->header.stamp.toSec();
 			time_ext = ext_buf.front()->header.stamp.toSec();
 
-			if (time_laser_cloud_surf_last != time_laser_odometry ||
-				time_laser_cloud_full_res != time_laser_odometry ||
-				time_ext != time_laser_odometry)
+			if (time_laser_cloud_surf_last != time_laser_cloud_full_res ||
+				time_laser_cloud_surf_last != time_laser_odometry ||
+				time_laser_cloud_surf_last != time_ext)
 			{
-				printf("time surf: %f, full: %f, odom: %f\n",
-					time_laser_cloud_surf_last, time_laser_cloud_full_res, time_laser_odometry);
+				printf("time surf: %f, full: %f, odom: %f\n, ext: %f\n",
+					   time_laser_cloud_surf_last, time_laser_cloud_full_res, time_laser_odometry, time_ext);
 				printf("unsync messeage!");
 				m_buf.unlock();
 				break;
@@ -329,10 +273,9 @@ void process()
 			odometry_buf.pop();
 
 			extrinsics = *ext_buf.front();
-			ext_buf.pop();
 			if (!extrinsics.status)
 			{
-				printf("Calibration is stable!\n");
+				std::cout << common::YELLOW << "Calibration is stable!" << common::RESET << std::endl;
 				for (auto n = 0; n < NUM_OF_LASER; n++)
 				{
 					pose_ext[n].q_ = Eigen::Quaterniond(extrinsics.odoms[n].pose.pose.orientation.w,
@@ -347,11 +290,12 @@ void process()
 							cov_ext[n](i, j) = double(extrinsics.odoms[n].pose.covariance[i * 6 + j]);
 				}
 			}
+			ext_buf.pop();
 
 			while (!surf_last_buf.empty())
 			{
 				surf_last_buf.pop();
-				printf("drop lidar frame in mapping for real time performance \n");
+				std::cout << common::GREEN << "drop lidar frame in mapping for real time performance" << common::RESET << std::endl;
 			}
 			
 			if (extrinsics.status) continue;
@@ -359,8 +303,6 @@ void process()
 
 			//***************************************************************************
 			frame_cnt++;
-			// ROS_WARN("frame: %d", frame_cnt);
-
 			TicToc t_whole_mapping;
 			transformAssociateToMap();
 
@@ -486,7 +428,6 @@ void process()
 				laser_cloud_cen_depth--;
 			}
 
-			// TODO: check if in laser fov
 			// select the nearest 5*5*3=125 visiable cubes as the candidate cubes
 			int laser_cloud_valid_num = 0; // save the valid cube number
 			int laser_cloud_surround_num = 0; // save the surround cube number
@@ -528,6 +469,7 @@ void process()
 			{
 				laser_cloud_surf_split_cov[n].clear();
 			}
+			// propagate the extrinsic uncertainty on points
 			for (PointI &point_ori: *laser_cloud_surf_stack)
 			{
 				int idx = int(point_ori.intensity); // indicate the lidar id
@@ -561,12 +503,12 @@ void process()
 
 					ceres::Solver::Options options;
 					options.linear_solver_type = ceres::DENSE_SCHUR;
-					options.max_num_iterations = 15;
+					options.max_num_iterations = 20;
 					options.max_solver_time_in_seconds = 0.04;
 					options.num_threads = 3;
 					options.minimizer_progress_to_stdout = false;
 					options.check_gradients = false;
-					options.gradient_check_relative_precision = 1e-3;
+					options.gradient_check_relative_precision = 1e-4;
 
 					vector2Double();
 					
@@ -578,32 +520,31 @@ void process()
 					para_ids.push_back(para_pose);
 
 					// ******************************************************
-					int surf_num = 0;
-					TicToc t_prepare;
-					for (auto n = 0; n < NUM_OF_LASER; n++)
+					TicToc t_add_residuals;
+					std::vector<std::vector<PointPlaneFeature> > surf_map_features(NUM_OF_LASER);
+					#pragma omp parallel for num_threads(NUM_OF_LASER)
+					for (size_t n = 0; n < NUM_OF_LASER; n++)
 					{
 						PointICovCloud &laser_cloud_surf_points_cov = laser_cloud_surf_split_cov[n];
-						TicToc t_data;
 						int n_neigh = 5;
-						std::vector<PointPlaneFeature> surf_map_features;
 						f_extract.matchSurfFromMap(kdtree_surf_from_map,
 												   *laser_cloud_surf_from_map_cov,
 												   laser_cloud_surf_points_cov,
 												   pose_wmap_curr,
-												   surf_map_features,
+												   surf_map_features[n],
 												   n_neigh,
 												   true);
-						surf_num += surf_map_features.size();
+					}
+					int surf_num = 0;
+					for (size_t n = 0; n < NUM_OF_LASER; n++)
+					{
+						surf_num += surf_map_features[n].size();
 						CHECK_JACOBIAN = 0;
-						for (std::vector<PointPlaneFeature>::const_iterator iter = surf_map_features.begin();
-							 iter != surf_map_features.end(); iter++)
+						for (const PointPlaneFeature &feature : surf_map_features[n])
 						{
-							const size_t &idx = iter->idx_;
-							const Eigen::Vector3d &p_data = iter->point_;
-							const Eigen::Vector4d &coeff_ref = iter->coeffs_;						
 							Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
-							extractCov(laser_cloud_surf_split_cov[n].points[idx], cov_matrix);
-							LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(p_data, coeff_ref, cov_matrix);
+							extractCov(laser_cloud_surf_split_cov[n].points[feature.idx_], cov_matrix);
+							LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
 							ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
 							res_ids_proj.push_back(res_id);
 							if (CHECK_JACOBIAN)
@@ -615,9 +556,8 @@ void process()
 							}
 						}
 						// printf("surf num %d(%d)\n", laser_cloud_surf_stack_num, surf_num);
-						// printf("mapping data assosiation time %fms\n", t_data.toc());
 					}
-					printf("prepare ceres data %fms\n", t_prepare.toc());
+					printf("ceres add residuals %fms\n", t_add_residuals.toc());
 
 					double cost = 0.0;
 					ceres::CRSMatrix jaco;
@@ -626,12 +566,14 @@ void process()
 					e_option.residual_blocks = res_ids_proj;
 					problem.Evaluate(e_option, &cost, nullptr, nullptr, &jaco);
 
+					TicToc t_eval_H;
 					Eigen::Matrix<double, 6, 6> mat_H;
 					evalHessian(jaco, mat_H);
 					evalDegenracy(mat_H, local_parameterization);
 					cov_mapping = mat_H.inverse(); // covariance of sensor noise: A New Approach to 3D ICP Covariance Estimation/ Censi's approach
 					printf("pose covariance trace: %f\n", cov_mapping.trace());
 					cov_mapping_list.push_back(cov_mapping.trace());
+					printf("eval H time %fms\n", t_eval_H.toc());
 
 					// ******************************************************
 					TicToc t_solver;
@@ -763,7 +705,8 @@ void process()
 			// pub_laser_cloud_surf_last_res.publish(laser_cloud_surf_last_msg);
 
 			printf("mapping pub time %fms \n", t_pub.toc());
-			ROS_WARN("frame: %d, whole mapping time %fms\n", frame_cnt, t_whole_mapping.toc());
+			std::cout << common::RED << "frame: " << frame_cnt
+					  << ", whole mapping time " << t_whole_mapping.toc() << "ms" << common::RESET << std::endl;
 			total_mapping += t_whole_mapping.toc();
 
 			// ************************************************************** publish odom
@@ -970,6 +913,26 @@ int main(int argc, char **argv)
 		loop_rate.sleep();
 	}
 
-	saveStatistics();
+	if (MLOAM_RESULT_SAVE)
+	{
+		save_statistics.saveMapStatistics(MLOAM_MAP_PATH,
+										  OUTPUT_FOLDER + "mapping_factor.txt",
+										  OUTPUT_FOLDER + "mapping_d_eigvec.txt",
+										  OUTPUT_FOLDER + "mapping_pose_uncertainty",
+										  laser_after_mapped_path,
+										  d_factor_list,
+										  d_eigvec_list,
+										  cov_mapping_list);
+		save_statistics.saveMapTimeStatistics(OUTPUT_FOLDER + "time_mapping.txt", total_mapping, frame_cnt);
+	}
+
+	printf("Saving laser_map cloud to /tmp/mloam_mapping_cloud.pcd\n");
+	PointICovCloud laser_cloud_map;
+	for (int i = 0; i < laser_cloud_num; i++)
+	{
+		laser_cloud_map += *laser_cloud_surf_array_cov[i];
+	}
+	pcl::io::savePCDFileASCII("/tmp/mloam_mapping_cloud.pcd", laser_cloud_map);
+
 	return 0;
 }

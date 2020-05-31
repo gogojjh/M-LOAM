@@ -143,10 +143,10 @@ void LidarTracker::evalDegenracy(PoseLocalParameterization *local_parameterizati
 {
     // printf("jacob: %d constraints, %d parameters\n", jaco.num_rows, jaco.num_cols); // 2000+, 6
     if (jaco.num_rows == 0) return;
-	Eigen::MatrixXd mat_J;
-	CRSMatrix2EigenMatrix(jaco, mat_J);
-	Eigen::MatrixXd mat_Jt = mat_J.transpose(); // A^T
-	Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J; // A^TA 48*48
+    Eigen::SparseMatrix<double, Eigen::RowMajor> mat_J; // Jacobian is a diagonal matrix
+    CRSMatrix2EigenMatrix(jaco, mat_J);
+    Eigen::SparseMatrix<double, Eigen::RowMajor> mat_Jt = mat_J.transpose();
+    Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J;
     Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(0, 0, 6, 6);
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6> > esolver(mat_H);
     Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real(); // 6*1

@@ -33,15 +33,15 @@
                   -start_idx=$(arg start_idx)
                   -end_idx=$(arg end_idx)
                   -delta_idx=$(arg delta_idx)
-                  -time_now=$(arg time_now)" output="screen">
+                  -time_now=$(arg time_now)">
             <remap from="/base_pose_gt" to="/current_odom"/>
         </node>
 
-        <!-- <node pkg="mloam" type="lidar_mapper" name="lidar_mapper"
+        <node pkg="mloam" type="lidar_mapper" name="lidar_mapper"
             args="-config_file=$(arg config_file)
                   -result_save=$(arg result_save) 
                   -output_path=$(arg output_path)
-                  -with_ua=$(arg with_ua)" output="screen"/> -->
+                  -with_ua=$(arg with_ua)" output="screen"/>
     </group>
 
     <!-- publish static tf -->

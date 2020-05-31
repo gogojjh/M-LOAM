@@ -504,7 +504,7 @@ void Estimator::optimizeMap()
     options.num_threads = 3;
     // options.trust_region_strategy_type = ceres::DOGLEG;
     options.max_num_iterations = NUM_ITERATIONS;
-    // options.gradient_check_relative_precision = 1e-3;
+    options.gradient_check_relative_precision = 1e-3;
     //options.use_explicit_schur_complement = true;
     //options.minimizer_progress_to_stdout = true;
     //options.use_nonmonotonic_steps = true;
@@ -585,12 +585,9 @@ void Estimator::optimizeMap()
             {
                 std::vector<PointPlaneFeature> &features_frame = surf_map_features_[IDX_REF][i];
                 // printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size());
-                for (std::vector<PointPlaneFeature>::const_iterator iter = features_frame.begin();
-                     iter != features_frame.end(); iter++)
+                for (const PointPlaneFeature &feature : features_frame)
                 {
-                    const Eigen::Vector3d &p_data = iter->point_;
-                    const Eigen::Vector4d &coeff_ref = iter->coeffs_;
-                    LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, 1.0);
+                    LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
                     ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
                         para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[IDX_REF]);
                     res_ids_proj.push_back(res_id);
@@ -615,12 +612,9 @@ void Estimator::optimizeMap()
                     if (n == IDX_REF) continue;
                     for (auto &features_frame: cumu_surf_map_features_[n])
                     {
-                        for (std::vector<PointPlaneFeature>::const_iterator iter = features_frame.begin();
-                             iter != features_frame.end(); iter++)
+                        for (const PointPlaneFeature &feature : features_frame)
                         {
-                            const Eigen::Vector3d &p_data = iter->point_;
-                            const Eigen::Vector4d &coeff_ref = iter->coeffs_;
-                            LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref);
+                            LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(feature.point_, feature.coeffs_);
                             ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_ex_pose_[n]);
                             res_ids_proj.push_back(res_id);
                         }
@@ -640,12 +634,9 @@ void Estimator::optimizeMap()
             {
                 std::vector<PointPlaneFeature> &features_frame = corner_map_features_[IDX_REF][i];
                 // printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size());
-                for (std::vector<PointPlaneFeature>::const_iterator iter = features_frame.begin();
-                     iter != features_frame.end(); iter++)
+                for (const PointPlaneFeature &feature : features_frame)
                 {
-                    const Eigen::Vector3d &p_data = iter->point_;
-                    const Eigen::Vector4d &coeff_ref = iter->coeffs_;
-                    LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(p_data, coeff_ref, 1.0);
+                    LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
                     ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
                         para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[IDX_REF]);
                     res_ids_proj.push_back(res_id);
@@ -660,12 +651,9 @@ void Estimator::optimizeMap()
                     if (n == IDX_REF) continue;
                     for (auto &features_frame: cumu_corner_map_features_[n])
                     {
-                        for (std::vector<PointPlaneFeature>::const_iterator iter = features_frame.begin();
-                             iter != features_frame.end(); iter++)
+                        for (const PointPlaneFeature &feature : features_frame)
                         {
-                            const Eigen::Vector3d &p_data = iter->point_;
-                            const Eigen::Vector4d &coeff_ref = iter->coeffs_;
-                            LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(p_data, coeff_ref);
+                            LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(feature.point_, feature.coeffs_);
                             ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_ex_pose_[n]);
                             res_ids_proj.push_back(res_id);
                         }
@@ -705,6 +693,7 @@ void Estimator::optimizeMap()
         }
         printf("add ceres residuals %fms\n", t_add_residuals.toc()); // cost time
     }
+    
     // *******************************
     evalResidual(problem, local_param_ids, para_ids, res_ids_proj, last_marginalization_info_, res_ids_marg, true);
 
@@ -1007,7 +996,7 @@ void Estimator::buildLocalMap()
             for (auto &p: surf_points_trans.points) p.intensity = i;
             surf_points_local_map_[n] += surf_points_trans;
         }
-        float ratio = 0.4 * std::max(1.0, NUM_OF_LASER * WINDOW_SIZE * 1.0 / 8));
+        float ratio = 0.4 * std::max(1.0, NUM_OF_LASER * WINDOW_SIZE * 1.0 / 10);
         // float ratio = 0.4;
         pcl::VoxelGrid<PointI> down_size_filter;
         down_size_filter.setLeafSize(ratio, ratio, ratio);

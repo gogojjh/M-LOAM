@@ -25,11 +25,22 @@ class SaveStatistics
 {
 public:
     void saveSensorPath(const std::string &filename, const nav_msgs::Path &sensor_path);
+
     void saveOdomStatistics(const string &calib_eig_filename, 
                             const string &calib_result_filename, 
                             const string &odom_filename,
                             const Estimator &estimator);
     void saveOdomTimeStatistics(const string &filename, const Estimator &estimator);
+
+    void saveMapStatistics(const string &map_filename,
+                                           const string &map_factor_filename,
+                                           const string &map_eig_filename,
+                                           const string &map_pose_uct_filename,
+                                           const nav_msgs::Path &laser_aft_mapped_path,
+                                           const std::vector<Eigen::Matrix<double, 1, 6>> &d_factor_list,
+                                           const std::vector<Eigen::Matrix<double, 6, 6>> &d_eigvec_list,
+                                           const std::vector<double> &cov_mapping_list); 
+    void saveMapTimeStatistics(const string &filename, const double &total_time, const int &frame_cnt);
 };
 
 void SaveStatistics::saveSensorPath(const string &filename, const nav_msgs::Path &sensor_path)
@@ -117,4 +128,61 @@ void SaveStatistics::saveOdomTimeStatistics(const string &filename, const Estima
            estimator.total_measurement_pre_time_ / estimator.frame_cnt_, estimator.total_opt_odom_time_ / estimator.frame_cnt_);
     printf("******* Frame: %d, mean corner feature: %f, mean surf feature: %f\n", estimator.frame_cnt_,
            estimator.total_corner_feature_ * 1.0 / estimator.frame_cnt_, estimator.total_surf_feature_ * 1.0 / estimator.frame_cnt_);
+}
+
+void SaveStatistics::saveMapStatistics(const string &map_filename,
+                                       const string &map_factor_filename,
+                                       const string &map_eig_filename,
+                                       const string &map_pose_uct_filename,
+                                       const nav_msgs::Path &laser_aft_mapped_path,
+                                       const std::vector<Eigen::Matrix<double, 1, 6>> &d_factor_list,
+                                       const std::vector<Eigen::Matrix<double, 6, 6>> &d_eigvec_list,
+                                       const std::vector<double> &cov_mapping_list)
+{
+    printf("Saving mapping statistics\n");
+    std::ofstream fout(map_filename.c_str(), std::ios::out);
+    for (size_t i = 0; i < laser_aft_mapped_path.poses.size(); i++)
+    {
+        const geometry_msgs::PoseStamped &laser_pose = laser_aft_mapped_path.poses[i];
+        fout.precision(15);
+        fout << laser_pose.header.stamp.toSec() << " ";
+        fout.precision(8);
+        fout << laser_pose.pose.position.x << " "
+                << laser_pose.pose.position.y << " "
+                << laser_pose.pose.position.z << " "
+                << laser_pose.pose.orientation.x << " "
+                << laser_pose.pose.orientation.y << " "
+                << laser_pose.pose.orientation.z << " "
+                << laser_pose.pose.orientation.w << std::endl;
+    }
+    fout.close();
+
+    fout.open(map_factor_filename.c_str(), std::ios::out);
+    fout.precision(8);
+    for (size_t i = 0; i < d_factor_list.size(); i++)
+        fout << d_factor_list[i] << std::endl;
+    fout.close();
+
+    fout.open(map_eig_filename.c_str(), std::ios::out);
+    fout.precision(8);
+    for (size_t i = 0; i < d_eigvec_list.size(); i++)
+        fout << d_eigvec_list[i] << std::endl;
+    fout.close();
+
+    fout.open(map_pose_uct_filename.c_str(), std::ios::out);
+    fout << "cov_mapping_uncertainty" << std::endl;
+    fout.precision(8);
+    for (size_t i = 0; i < cov_mapping_list.size(); i++)
+        fout << cov_mapping_list[i] << std::endl;
+    fout.close();
+}
+
+void SaveStatistics::saveMapTimeStatistics(const string &filename, const double &total_time, const int &frame_cnt)
+{
+    std::ofstream fout(filename.c_str(), std::ios::out);
+    fout.precision(15);
+    fout << "frame, total_mapping_time, average_mapping_time" << std::endl;
+    fout << frame_cnt << ", " << total_time << ", " << total_time / frame_cnt << std::endl;
+    fout.close();
+    printf("******* Frame: %d, mean mapping time: %fms\n", frame_cnt, total_time / frame_cnt);    
 }
