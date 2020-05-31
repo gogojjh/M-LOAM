@@ -41,7 +41,9 @@
             args="-config_file=$(arg config_file)
                   -result_save=$(arg result_save) 
                   -output_path=$(arg output_path)
-                  -with_ua=$(arg with_ua)" output="screen"/>
+                  -with_ua=$(arg with_ua)" output="screen">
+            <remap from="/laser_odom" to="/laser_odom_0"/>
+        </node>
     </group>
 
     <!-- publish static tf -->

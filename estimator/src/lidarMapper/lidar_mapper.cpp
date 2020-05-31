@@ -493,7 +493,6 @@ void process()
 				TicToc t_opt, t_tree;
 				kdtree_surf_from_map->setInputCloud(laser_cloud_surf_from_map_cov);
 				printf("build tree time %fms\n", t_tree.toc());
-
 				printf("********************************\n");
 				for (int iter_cnt = 0; iter_cnt < 2; iter_cnt++)
 				{
@@ -521,26 +520,22 @@ void process()
 
 					// ******************************************************
 					TicToc t_add_residuals;
-					std::vector<std::vector<PointPlaneFeature> > surf_map_features(NUM_OF_LASER);
-					#pragma omp parallel for num_threads(NUM_OF_LASER)
+					int surf_num = 0;
 					for (size_t n = 0; n < NUM_OF_LASER; n++)
 					{
 						PointICovCloud &laser_cloud_surf_points_cov = laser_cloud_surf_split_cov[n];
 						int n_neigh = 5;
+						std::vector<PointPlaneFeature> surf_map_features;
 						f_extract.matchSurfFromMap(kdtree_surf_from_map,
 												   *laser_cloud_surf_from_map_cov,
 												   laser_cloud_surf_points_cov,
 												   pose_wmap_curr,
-												   surf_map_features[n],
+												   surf_map_features,
 												   n_neigh,
 												   true);
-					}
-					int surf_num = 0;
-					for (size_t n = 0; n < NUM_OF_LASER; n++)
-					{
-						surf_num += surf_map_features[n].size();
+						surf_num += surf_map_features.size();
 						CHECK_JACOBIAN = 0;
-						for (const PointPlaneFeature &feature : surf_map_features[n])
+						for (const PointPlaneFeature &feature : surf_map_features)
 						{
 							Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
 							extractCov(laser_cloud_surf_split_cov[n].points[feature.idx_], cov_matrix);
@@ -555,8 +550,8 @@ void process()
 								CHECK_JACOBIAN = 0;
 							}
 						}
-						// printf("surf num %d(%d)\n", laser_cloud_surf_stack_num, surf_num);
 					}
+					printf("surf num: %d\n", surf_num);
 					printf("ceres add residuals %fms\n", t_add_residuals.toc());
 
 					double cost = 0.0;
@@ -566,14 +561,12 @@ void process()
 					e_option.residual_blocks = res_ids_proj;
 					problem.Evaluate(e_option, &cost, nullptr, nullptr, &jaco);
 
-					TicToc t_eval_H;
 					Eigen::Matrix<double, 6, 6> mat_H;
 					evalHessian(jaco, mat_H);
 					evalDegenracy(mat_H, local_parameterization);
 					cov_mapping = mat_H.inverse(); // covariance of sensor noise: A New Approach to 3D ICP Covariance Estimation/ Censi's approach
 					printf("pose covariance trace: %f\n", cov_mapping.trace());
 					cov_mapping_list.push_back(cov_mapping.trace());
-					printf("eval H time %fms\n", t_eval_H.toc());
 
 					// ******************************************************
 					TicToc t_solver;
@@ -879,7 +872,7 @@ int main(int argc, char **argv)
 
 	ros::Subscriber sub_laser_cloud_full_res = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud", 5, laserCloudFullResHandler);
 	ros::Subscriber sub_laser_cloud_surf_last = nh.subscribe<sensor_msgs::PointCloud2>("/surf_points_less_flat", 5, laserCloudSurfLastHandler);
-	ros::Subscriber sub_laser_odometry = nh.subscribe<nav_msgs::Odometry>("/laser_odom_0", 5, laserOdometryHandler);
+	ros::Subscriber sub_laser_odometry = nh.subscribe<nav_msgs::Odometry>("/laser_odom", 5, laserOdometryHandler);
 	ros::Subscriber sub_extrinsic = nh.subscribe<mloam_msgs::Extrinsics>("/extrinsics", 5, extrinsicsHandler);
 
 	pub_laser_cloud_surround = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surround", 5);
