@@ -28,6 +28,7 @@
 #include <ceres/ceres.h>
 
 #include <opencv2/core/eigen.hpp>
+#include <eigen3/Eigen/Sparse>
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/Geometry>
 

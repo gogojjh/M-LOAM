@@ -45,8 +45,8 @@ public:
 		Eigen::Vector3d t_ext_pi = Q_pi * t_ext + t_pi;
 
 		Eigen::Vector3d w(coeff_(0), coeff_(1), coeff_(2));
-		double d = coeff_(3);
-		double r = w.dot(Q_ext_pi * point_ + t_ext_pi) + d;
+		const double d = coeff_(3);
+		const double r = w.dot(Q_ext_pi * point_ + t_ext_pi) + d;
 		residuals[0] = sqrt_info_ * r;
 
 		// jacobians: 3x7

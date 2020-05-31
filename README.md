@@ -23,7 +23,9 @@ Follow [Ceres Installation](http://ceres-solver.org/installation.html).
 
 #### 1.3. **PCL**
 Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
-> NOTE: Starting with PCL-1.7 you need to define PCL_NO_PRECOMPILE before you include any PCL headers to include the templated algorithms as well.
+> NOTE: <br>
+> Starting with PCL-1.7 you need to define PCL_NO_PRECOMPILE before you include any PCL headers to include the templated algorithms as well.
+> Choose the right linear solver: http://ceres-solver.org/solving_faqs.html
 
 #### 1.4. **OpenMP**
 ```sudo apt install libomp-dev```

@@ -587,12 +587,12 @@ void process()
 						int n_neigh = 5;
 						std::vector<PointPlaneFeature> surf_map_features;
 						f_extract.matchSurfFromMap(kdtree_surf_from_map,
-													*laser_cloud_surf_from_map_cov,
-													laser_cloud_surf_points_cov,
-													pose_wmap_curr,
-													surf_map_features,
-													n_neigh,
-													true);
+												   *laser_cloud_surf_from_map_cov,
+												   laser_cloud_surf_points_cov,
+												   pose_wmap_curr,
+												   surf_map_features,
+												   n_neigh,
+												   true);
 						surf_num += surf_map_features.size();
 						CHECK_JACOBIAN = 0;
 						for (std::vector<PointPlaneFeature>::const_iterator iter = surf_map_features.begin();
@@ -804,10 +804,10 @@ void evalHessian(const ceres::CRSMatrix &jaco, Eigen::Matrix<double, 6, 6> &mat_
 {
 	// printf("jacob: %d constraints, %d parameters\n", jaco.num_rows, jaco.num_cols); // 2000+, 6
 	if (jaco.num_rows == 0) return;
-	Eigen::MatrixXd mat_J;
+	Eigen::SparseMatrix<double, Eigen::RowMajor> mat_J; // Jacobian is a diagonal matrix
 	CRSMatrix2EigenMatrix(jaco, mat_J);
-	Eigen::MatrixXd mat_Jt = mat_J.transpose(); // A^T
-	Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J;   // A^TA 48*48
+	Eigen::SparseMatrix<double, Eigen::RowMajor> mat_Jt = mat_J.transpose();
+	Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J;
 	mat_H = mat_JtJ.block(0, 0, 6, 6) / 134;
 }
 

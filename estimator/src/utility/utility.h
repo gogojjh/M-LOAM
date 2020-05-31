@@ -20,6 +20,7 @@
 #include <ceres/ceres.h>
 
 #include <eigen3/Eigen/Dense>
+#include <eigen3/Eigen/Sparse>
 
 #include "common/common.hpp"
 #include "common/types/type.h"
@@ -144,6 +145,22 @@ void CRSMatrix2EigenMatrix(const ceres::CRSMatrix &crs_matrix, Eigen::Matrix<T, 
         {
             int col = crs_matrix.cols[i];
             eigen_matrix(row, col) = T(crs_matrix.values[i]);
+        }
+    }
+}
+
+template <typename T>
+void CRSMatrix2EigenMatrix(const ceres::CRSMatrix &crs_matrix, Eigen::SparseMatrix<T, Eigen::RowMajor> &eigen_matrix)
+{
+    eigen_matrix.resize(crs_matrix.num_rows, crs_matrix.num_cols);
+    for (auto row = 0; row < crs_matrix.num_rows; row++)
+    {
+        int start = crs_matrix.rows[row];
+        int end = crs_matrix.rows[row + 1] - 1;
+        for (auto i = start; i <= end; i++)
+        {
+            int col = crs_matrix.cols[i];
+            eigen_matrix.coeffRef(row, col) = T(crs_matrix.values[i]);
         }
     }
 }

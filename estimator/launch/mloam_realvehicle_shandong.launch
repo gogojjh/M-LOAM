@@ -18,7 +18,7 @@
     <arg name="delta_idx" default="2" />
     <arg name="time_now" default="true" />
 
-    <arg name="result_save" default="true"/>
+    <arg name="result_save" default="false"/>
     <arg name="output_path" default="/home/jjiao/trajectory_results/real_vehicle/shandong/test/"/>
     <arg name="with_ua" default="true" /> <!-- uncertainty propagation -->    
 
