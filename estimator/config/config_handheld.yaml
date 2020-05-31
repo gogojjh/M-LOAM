@@ -111,7 +111,10 @@ n_calib: 10
 
 # mapping 
 map_corner_res: 0.2
-map_surf_res: 0.2
+# for indoor office
+# map_surf_res: 0.2
+# for outdoot building
+map_surf_res: 0.3
 map_eig_thre: 200
 
 # uncertainty parameter
