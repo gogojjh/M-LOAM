@@ -121,14 +121,23 @@ map_eig_thre: 50
 
 # uncertainty parameter
 # translation, rotation, point (s, phi, zeta)
+# uct_ext: !!opencv-matrix
+#    rows: 4
+#    cols: 6
+#    dt: d
+#    data: [0, 0, 0, 0, 0, 0,
+#           0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01,
+#           0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01,
+#           0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01] 
+
 uct_ext: !!opencv-matrix
    rows: 4
    cols: 6
    dt: d
    data: [0, 0, 0, 0, 0, 0,
-          0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01,
-          0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01,
-          0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01] 
+          0.0025, 0.0025, 0.0025, 0.0009, 0.0009, 0.0009,
+          0.0025, 0.0025, 0.0025, 0.0009, 0.0009, 0.0009,
+          0.0025, 0.0025, 0.0025, 0.0009, 0.0009, 0.0009]           
 
 uct_measurement: !!opencv-matrix
    rows: 1
@@ -137,6 +146,6 @@ uct_measurement: !!opencv-matrix
    data: [0.0025, 0.0025, 0.0025]
 
 trace_threshold_before_mapping: 2
-trace_threshold_after_mapping: 2
+trace_threshold_after_mapping: 1.7
 
 skip_num_odom_pub: 2

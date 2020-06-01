@@ -47,19 +47,19 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 
 ### 3. Example
 * Dataset 
-  * dataset 1: [Four LiDAR dataset for testing on pingshan](http://gofile.me/4jm56/NNFbLc5cn)
-  * dataset 2: [Simulation Robot](http://gofile.me/4jm56/HzMDz6cvK)
-  * dataset 3: [Real Handheld Robot](http://gofile.me/4jm56/wJRrdgBwM)
+  1. dataset 1: [Four LiDAR dataset for testing on pingshan, ShenZhen](http://gofile.me/4jm56/NNFbLc5cn)
+  2. dataset 2: [Simulation Robot](http://gofile.me/4jm56/HzMDz6cvK)
+  3. dataset 3: [Real Handheld Robot](http://gofile.me/4jm56/wJRrdgBwM)
 
 * Run M-LOAM
   ```
-  rosbag play xxx.bag -l --clock
+  rosbag play xxx.bag --clock
   roslaunch mloam mloam_realvehicle.launch
   rostopic echo /extrinsics/odoms[1]/pose
   ```
 
 ### 4. Compare with A-LOAM
-> mloam_handheld.launch set run_aloam:=true
+> mloam_handheld.launch set run_aloam:=true <br>
 ```roslaunch mloam mloam_handheld.launch```
 
 ### 5. Results
@@ -72,6 +72,16 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 ![](picture/hkust.png)
     
 ### 6. Additional Features (have not fixed)
+* Problems which shoould be fixed 
+  1. xxx
+
+* Future research
+  1. Add a loop closure
+  2. Object-centric SLAM
+  3. Use more representative features
+  4. Integrated with high-frequency sensors
+  5. cross-domain, cross-modal dataset (simulator) for autonomous driving
+
 
 ### 7. Acknowledgements
 Thanks for 

@@ -102,7 +102,7 @@ Eigen::Matrix<double, 4, 6> pointToFS(const Eigen::Vector4d &point)
 template<typename PointType>
 void evalPointUncertainty(const PointType &pi, Eigen::Matrix3d &cov_point, const Pose &pose, const Eigen::Matrix<double, 6, 6> &cov_pose)
 {
-    //THETA: diag(P, Phi, Z) includes the translation, rotation, measurement uncertainty
+    // THETA: diag(P, Phi, Z) includes the translation, rotation, measurement uncertainty
     Eigen::Matrix<double, 9, 9> cov_input = Eigen::Matrix<double, 9, 9>::Zero();
     cov_input.topLeftCorner<6, 6>() = cov_pose;
     cov_input.bottomRightCorner<3, 3>() = COV_MEASUREMENT;

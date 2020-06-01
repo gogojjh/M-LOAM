@@ -997,7 +997,6 @@ void Estimator::buildLocalMap()
             surf_points_local_map_[n] += surf_points_trans;
         }
         float ratio = 0.4 * std::max(1.0, NUM_OF_LASER * WINDOW_SIZE * 1.0 / 10);
-        // float ratio = 0.4;
         pcl::VoxelGrid<PointI> down_size_filter;
         down_size_filter.setLeafSize(ratio, ratio, ratio);
         down_size_filter.setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_[n]));

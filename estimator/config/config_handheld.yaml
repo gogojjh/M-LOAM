@@ -110,12 +110,12 @@ eig_thre_calib: 400
 n_calib: 10
 
 # mapping 
+map_eig_thre: 200
 map_corner_res: 0.2
 # for indoor office
-# map_surf_res: 0.2
+map_surf_res: 0.2
 # for outdoot building
-map_surf_res: 0.3
-map_eig_thre: 200
+# map_surf_res: 0.3
 
 # uncertainty parameter
 # translation, rotation, point (rho, phi, zeta)
@@ -134,11 +134,11 @@ uct_measurement: !!opencv-matrix
    data: [0.0025, 0.0025, 0.0025]
 
 # for indoor office
-# trace_threshold_before_mapping: 1
-# trace_threshold_after_mapping: 0.3
+trace_threshold_before_mapping: 1
+trace_threshold_after_mapping: 0.3
 
 # for outdoor building
-trace_threshold_before_mapping: 1
-trace_threshold_after_mapping: 0.7
+# trace_threshold_before_mapping: 1
+# trace_threshold_after_mapping: 0.7
 
-skip_num_odom_pub: 2
+skip_num_odom_pub: 1
