@@ -175,6 +175,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "mloam_node_rt");
     ros::NodeHandle nh("~");
 
+    // ******************************************
     printf("config_file: %s\n", FLAGS_config_file.c_str());
     readParameters(FLAGS_config_file);
     estimator.setParameter();
@@ -192,11 +193,12 @@ int main(int argc, char **argv)
     size_t END_IDX = FLAGS_end_idx;
     size_t DELTA_IDX = FLAGS_delta_idx;
     bool TIME_NOW = FLAGS_time_now;
-    ROS_WARN("reading cloud ...");
+    ROS_WARN("waiting for cloud...");
 
     string data_source = FLAGS_data_source;
     ros::Subscriber sub_pause = nh.subscribe<std_msgs::String>("/mloam_pause", 5, pauseCallback);
 
+    // ******************************************
     // use bag as the data source
     if (!data_source.compare("bag"))
     {

@@ -61,7 +61,7 @@ catkin_package(
 add_library(mloam_lib_1 STATIC
     src/estimator/estimator.cpp
 )
-target_link_libraries(mloam_lib_1 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES} 
+target_link_libraries(mloam_lib_1 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 add_library(mloam_lib_2 STATIC
@@ -70,7 +70,7 @@ add_library(mloam_lib_2 STATIC
     src/utility/visualization.cpp
     src/utility/utility.cpp
 )
-target_link_libraries(mloam_lib_2 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES} 
+target_link_libraries(mloam_lib_2 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})    
 
 ######################################################## fix libraries
@@ -83,16 +83,16 @@ add_library(mloam_lib_3 STATIC
     src/factor/marginalization_factor.cpp
     src/utility/cloud_visualizer.cpp
 )
-target_link_libraries(mloam_lib_3 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBS} ${CERES_LIBRARIES} 
+target_link_libraries(mloam_lib_3 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
     ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} ${PCL_LIBRARIES} 
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 ######## --------------------- EXECUTABLE --------------------- ########
-#add_executable(mloam_node_sr src/rosNodeSR.cpp)
-#target_link_libraries(mloam_node_sr mloam_lib_1 mloam_lib_2 mloam_lib_3)
+add_executable(mloam_node_sr src/rosNodeSR.cpp)
+target_link_libraries(mloam_node_sr mloam_lib_1 mloam_lib_2 mloam_lib_3)
 
-#add_executable(mloam_node_rhd src/rosNodeRHD.cpp)
-#target_link_libraries(mloam_node_rhd mloam_lib_1 mloam_lib_2 mloam_lib_3)
+add_executable(mloam_node_rhd src/rosNodeRHD.cpp)
+target_link_libraries(mloam_node_rhd mloam_lib_1 mloam_lib_2 mloam_lib_3)
 
 add_executable(mloam_node_rv src/rosNodeRV.cpp)
 target_link_libraries(mloam_node_rv mloam_lib_1 mloam_lib_2 mloam_lib_3)
@@ -100,25 +100,7 @@ target_link_libraries(mloam_node_rv mloam_lib_1 mloam_lib_2 mloam_lib_3)
 add_executable(lidar_mapper src/lidarMapper/lidar_mapper.cpp)
 target_link_libraries(lidar_mapper mloam_lib_2 mloam_lib_3)
 
-######## --------------------- TEST --------------------- ########
-# add_executable(test_ceres ../test/test_ceres.cpp)
-# target_link_libraries(test_ceres ${catkin_LIBRARIES} ${PCL_LIBS})
 
-# add_executable(test_pointiwithcov ../test/test_pointiwithcov.cpp)
-# target_link_libraries(test_pointiwithcov ${catkin_LIBRARIES} ${PCL_LIBS})
 
-# add_executable(test_merge_pointcloud_sr ../test/test_merge_pointcloud_sr.cpp)
-# target_link_libraries(test_merge_pointcloud_sr ${catkin_LIBRARIES} ${PCL_LIBS})
 
-# add_executable(test_merge_pointcloud_rhd ../test/test_merge_pointcloud_rhd.cpp)
-# target_link_libraries(test_merge_pointcloud_rhd ${catkin_LIBRARIES} ${PCL_LIBS})
 
-# add_executable(test_merge_pointcloud_rv ../test/test_merge_pointcloud_rv.cpp)
-# target_link_libraries(test_merge_pointcloud_rv ${catkin_LIBRARIES} ${PCL_LIBS})
-
-# add_executable(test_parse_bag ../test/test_parse_bag.cpp)
-# target_link_libraries(test_parse_bag ${catkin_LIBRARIES} ${PCL_LIBS})
-
-# add_executable(test_icp ../test/test_icp.cpp)
-# target_link_libraries(test_icp ${libpointmatcher_LIBRARIES})
-#

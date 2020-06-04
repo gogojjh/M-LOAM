@@ -519,8 +519,9 @@ void process()
 					para_ids.push_back(para_pose);
 
 					// ******************************************************
-					TicToc t_add_residuals;
+					TicToc t_add_constraints;
 					int surf_num = 0;
+					int sub_su
 					for (size_t n = 0; n < NUM_OF_LASER; n++)
 					{
 						PointICovCloud &laser_cloud_surf_points_cov = laser_cloud_surf_split_cov[n];
@@ -533,6 +534,7 @@ void process()
 												   surf_map_features,
 												   n_neigh,
 												   true);
+
 						surf_num += surf_map_features.size();
 						CHECK_JACOBIAN = 0;
 						for (const PointPlaneFeature &feature : surf_map_features)
@@ -550,9 +552,15 @@ void process()
 								CHECK_JACOBIAN = 0;
 							}
 						}
+
+						// TODO: good features selection
+						// TicToc t_active_feat_selection;
+						// Eigen::Matrix<double, 6, 6> curr_mat_H = Eigen::Matrix<double, 6, 6>::Zero();
+
+						// printf("active feature selection time %fms\n", t_active_feat_selection.toc());
 					}
 					printf("surf num: %d\n", surf_num);
-					printf("ceres add residuals %fms\n", t_add_residuals.toc());
+					printf("ceres add constraints %fms\n", t_add_constraints.toc());
 
 					double cost = 0.0;
 					ceres::CRSMatrix jaco;
@@ -566,9 +574,9 @@ void process()
 					evalDegenracy(mat_H, local_parameterization);
 					cov_mapping = mat_H.inverse(); // covariance of sensor noise: A New Approach to 3D ICP Covariance Estimation/ Censi's approach
 					printf("pose covariance trace: %f\n", cov_mapping.trace());
-					cov_mapping_list.push_back(cov_mapping.trace());
+					cov_mapping_list.push_back(cov_mapping.trace());				
 
-					// ******************************************************
+					// *********************************************************
 					TicToc t_solver;
 					ceres::Solve(options, &problem, &summary);
 					std::cout << summary.BriefReport() << std::endl;

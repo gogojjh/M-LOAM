@@ -10,6 +10,8 @@
  *
  * Author: Jianhao JIAO (jiaojh1994@gmail.com)
  *******************************************************/
+#include <glog/logging.h>
+#include <gflags/gflags.h>
 
 #include <iostream>
 #include <queue>
@@ -33,6 +35,7 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/Imu.h>
 
+#include "save_statistics.hpp"
 #include "common/common.hpp"
 #include "estimator/estimator.h"
 #include "estimator/parameters.h"
@@ -42,7 +45,13 @@
 
 using namespace std;
 
+DEFINE_bool(result_save, true, "save or not save the results");
+DEFINE_string(config_file, "config.yaml", "the yaml config file");
+DEFINE_string(output_path, "", "the path ouf saving results");
+
 Estimator estimator;
+
+SaveStatistics save_statistics;
 
 // message buffer
 queue<sensor_msgs::PointCloud2ConstPtr> cloud0_buf;
@@ -53,45 +62,6 @@ std::mutex m_buf;
 nav_msgs::Path laser_gt_path;
 ros::Publisher pub_laser_gt_path;
 Pose pose_world_ref_ini;
-
-void saveGroundTruth()
-{
-    if (MLOAM_RESULT_SAVE)
-    {
-        if (laser_gt_path.poses.size() == 0) return;
-        std::ofstream fout(MLOAM_GT_PATH.c_str(), std::ios::out);
-        fout.setf(ios::fixed, ios::floatfield);
-        for (size_t i = 0; i < laser_gt_path.poses.size(); i++)
-        {
-            geometry_msgs::PoseStamped &laser_pose = laser_gt_path.poses[i];
-            fout.precision(15);
-            fout << laser_pose.header.stamp.toSec() << " ";
-            fout.precision(8);
-            fout << laser_pose.pose.position.x << " "
-                    << laser_pose.pose.position.y << " "
-                    << laser_pose.pose.position.z << " "
-                    << laser_pose.pose.orientation.x << " "
-                    << laser_pose.pose.orientation.y << " "
-                    << laser_pose.pose.orientation.z << " "
-                    << laser_pose.pose.orientation.w << std::endl;
-        }
-    }
-}
-
-void saveStatistics()
-{
-    if (MLOAM_RESULT_SAVE)
-    {
-	    printf("Saving odometry time statistics\n");
-		std::ofstream fout(std::string(OUTPUT_FOLDER + "time_odometry.txt").c_str(), std::ios::out);
-		fout.precision(15);
-        fout << "frame, total_mea_pre_time, total_opt_odom_time" << std::endl;
-		fout << estimator.frame_cnt_ << ", " << estimator.total_measurement_pre_time_ << ", " << estimator.total_opt_odom_time_ << std::endl;
-		fout.close();
-        ROS_WARN("Frame: %d, mean measurement preprocess time: %f, mean optimize odometry time: %f\n", estimator.frame_cnt_, 
-            estimator.total_measurement_pre_time_ / estimator.frame_cnt_, estimator.total_opt_odom_time_ / estimator.frame_cnt_);        
-    }
-}
 
 void cloud0_callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg)
 {
@@ -115,8 +85,6 @@ pcl::PointCloud<pcl::PointXYZ> getCloudFromMsg(const sensor_msgs::PointCloud2Con
     return laser_cloud;
 }
 
-// extract images with same timestamp from two topics
-// independent from ros::spin()
 void sync_process()
 {
     while(1)
@@ -233,26 +201,30 @@ int main(int argc, char **argv)
 {
     if(argc < 2)
     {
-        cout << "please intput: rosrun mlod mlod_node [config file] " << endl
-             << "for example: "
-             << "rosrun mloam mloam_node_sr "
-             << "~/catkin_ws/src/M-LOAM/config/config_handheld.yaml" << endl;
+        printf("please intput: rosrun mloam mloam_node_sr -help\n");
         return 1;
     }
+    google::InitGoogleLogging(argv[0]);
+    google::ParseCommandLineFlags(&argc, &argv, true);
+
     ros::init(argc, argv, "mloam_node_sr");
-    ros::NodeHandle n("~");
+    ros::NodeHandle nh("~");
 
-    string config_file = argv[1];
-    cout << "config_file: " << argv[1] << endl;
-
-    MLOAM_RESULT_SAVE = std::stoi(argv[2]);
-    OUTPUT_FOLDER = argv[3];
+    // ******************************************
+    printf("config_file: %s\n", FLAGS_config_file.c_str());
+    readParameters(FLAGS_config_file);
+    estimator.setParameter();
+    registerPub(nh);
+    
+    MLOAM_RESULT_SAVE = FLAGS_result_save;
+    printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
+    OUTPUT_FOLDER = FLAGS_output_path;
     MLOAM_ODOM_PATH = OUTPUT_FOLDER + "stamped_mloam_odom_estimate.txt";
     MLOAM_GT_PATH = OUTPUT_FOLDER + "stamped_groundtruth.txt";
     EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
     EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "calib_eig.txt";
-    printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
     ROS_WARN("waiting for cloud...");
+
     if (NUM_OF_LASER > 2)
     {
         printf("not support > 2 cases");
@@ -261,17 +233,23 @@ int main(int argc, char **argv)
     }
 
     // ******************************************
-    readParameters(config_file);
-    estimator.setParameter();
-    registerPub(n);
+    ros::Subscriber sub_cloud0, sub_cloud1;
+    if (NUM_OF_LASER == 1)
+    {
+        CLOUD0_TOPIC = CLOUD_TOPIC[0];
+        sub_cloud0 = nh.subscribe(CLOUD0_TOPIC, 5, cloud0_callback);
+    }
+    else
+    {
+        CLOUD0_TOPIC = CLOUD_TOPIC[0];
+        CLOUD1_TOPIC = CLOUD_TOPIC[1];
+        sub_cloud0 = nh.subscribe(CLOUD0_TOPIC, 5, cloud0_callback);
+        sub_cloud1 = nh.subscribe(CLOUD1_TOPIC, 5, cloud1_callback);
+    }
 
-    CLOUD0_TOPIC = CLOUD_TOPIC[0];
-    CLOUD1_TOPIC = CLOUD_TOPIC[1];
-    ros::Subscriber sub_cloud0 = n.subscribe(CLOUD0_TOPIC, 10, cloud0_callback);
-    ros::Subscriber sub_cloud1 = n.subscribe(CLOUD1_TOPIC, 10, cloud1_callback);
-    ros::Subscriber sub_restart = n.subscribe("/mlod_restart", 10, restart_callback);
-    ros::Subscriber sub_odom_gt = n.subscribe("/base_odom_gt", 10, odom_gt_callback);
-    pub_laser_gt_path = n.advertise<nav_msgs::Path>("/laser_gt_path", 10);
+    ros::Subscriber sub_restart = nh.subscribe("/mlod_restart", 10, restart_callback);
+    ros::Subscriber sub_odom_gt = nh.subscribe("/base_odom_gt", 10, odom_gt_callback);
+    pub_laser_gt_path = nh.advertise<nav_msgs::Path>("/laser_gt_path", 10);
 
     std::thread sync_thread(sync_process);
     std::thread cloud_visualizer_thread;
@@ -285,8 +263,14 @@ int main(int argc, char **argv)
         ros::spinOnce();
         loop_rate.sleep();
     }
-    // saveGroundTruth();
-    saveStatistics();
+
+    if (MLOAM_RESULT_SAVE)
+    {
+        std::cout << common::RED << "saving odometry results" << common::RESET << std::endl;
+        save_statistics.saveSensorPath(MLOAM_GT_PATH, laser_gt_path);
+        save_statistics.saveOdomStatistics(EX_CALIB_EIG_PATH, EX_CALIB_RESULT_PATH, MLOAM_ODOM_PATH, estimator);
+        save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time_odometry_txt", estimator);
+    }
 
     cloud_visualizer_thread.join();
     sync_thread.join();

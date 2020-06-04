@@ -35,6 +35,7 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/Imu.h>
 
+#include "save_statistics.hpp"
 #include "common/common.hpp"
 #include "estimator/estimator.h"
 #include "estimator/parameters.h"
@@ -49,6 +50,8 @@ DEFINE_string(config_file, "config.yaml", "the yaml config file");
 DEFINE_string(output_path, "", "the path ouf saving results");
 
 Estimator estimator;
+
+SaveStatistics save_statistics;
 
 // message buffer
 queue<sensor_msgs::PointCloud2ConstPtr> cloud0_buf;
@@ -255,9 +258,14 @@ int main(int argc, char **argv)
     google::ParseCommandLineFlags(&argc, &argv, true);
 
     ros::init(argc, argv, "mloam_node_rhd");
-    ros::NodeHandle n("~");
+    ros::NodeHandle nh("~");
 
-    // ******************************************  
+    // ******************************************
+    cout << "config_file: " << FLAGS_config_file << endl;
+    readParameters(FLAGS_config_file);
+    estimator.setParameter();
+    registerPub(nh);
+
     MLOAM_RESULT_SAVE = FLAGS_result_save;
     printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
     OUTPUT_FOLDER = FLAGS_output_path;
@@ -274,28 +282,22 @@ int main(int argc, char **argv)
     }
 
     // ******************************************
-    // string config_file = argv[1];
-    cout << "config_file: " << FLAGS_config_file << endl;
-    readParameters(FLAGS_config_file);
-    estimator.setParameter();
-    registerPub(n);
-
     ros::Subscriber sub_cloud0, sub_cloud1;
     if (NUM_OF_LASER == 1)
     {
         CLOUD0_TOPIC = CLOUD_TOPIC[0];
-        sub_cloud0 = n.subscribe(CLOUD0_TOPIC, 5, cloud0_callback);
+        sub_cloud0 = nh.subscribe(CLOUD0_TOPIC, 5, cloud0_callback);
     } else
     {
         CLOUD0_TOPIC = CLOUD_TOPIC[0];
         CLOUD1_TOPIC = CLOUD_TOPIC[1];
-        sub_cloud0 = n.subscribe(CLOUD0_TOPIC, 5, cloud0_callback);
-        sub_cloud1 = n.subscribe(CLOUD1_TOPIC, 5, cloud1_callback);       
+        sub_cloud0 = nh.subscribe(CLOUD0_TOPIC, 5, cloud0_callback);
+        sub_cloud1 = nh.subscribe(CLOUD1_TOPIC, 5, cloud1_callback);       
     }
     
-    ros::Subscriber sub_restart = n.subscribe("/mlod_restart", 5, restart_callback);
-    ros::Subscriber sub_pose_gt = n.subscribe("/base_pose_gt", 5, pose_gt_callback);
-    pub_laser_gt_path = n.advertise<nav_msgs::Path>("/laser_gt_path", 5);
+    ros::Subscriber sub_restart = nh.subscribe("/mlod_restart", 5, restart_callback);
+    ros::Subscriber sub_pose_gt = nh.subscribe("/base_pose_gt", 5, pose_gt_callback);
+    pub_laser_gt_path = nh.advertise<nav_msgs::Path>("/laser_gt_path", 5);
 
     std::thread sync_thread(sync_process);
     std::thread cloud_visualizer_thread;
@@ -309,11 +311,13 @@ int main(int argc, char **argv)
         ros::spinOnce();
         loop_rate.sleep();
     }
-    
+
     if (MLOAM_RESULT_SAVE)
     {
-        saveGroundTruth();
-        saveStatistics();
+        std::cout << common::RED << "saving odometry results" << common::RESET << std::endl;
+        save_statistics.saveSensorPath(MLOAM_GT_PATH, laser_gt_path);
+        save_statistics.saveOdomStatistics(EX_CALIB_EIG_PATH, EX_CALIB_RESULT_PATH, MLOAM_ODOM_PATH, estimator);
+        save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time_odometry_txt", estimator);
     }
 
     cloud_visualizer_thread.join();

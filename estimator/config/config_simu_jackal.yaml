@@ -4,7 +4,7 @@
 multiple_thread: 1
 
 #optimization PARAMETERS
-max_solver_time: 0.07  # max solver itration time (s), to guarantee real time
+max_solver_time: 0.05  # max solver itration time (s), to guarantee real time
 max_num_iterations: 10   # max solver itrations, to guarantee real time
 keyframe_parallax: 0 # keyframe selection threshold (pixel)
 
@@ -27,7 +27,7 @@ segment_theta: 0.53
 
 # window sizes
 window_size: 5
-opt_window_size: 2
+opt_window_size: 3
 
 optimal_extrinsic: 0
 
