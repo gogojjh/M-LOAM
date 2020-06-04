@@ -169,6 +169,38 @@ namespace common
 
         return Rz * Ry * Rx;
     }
+
+    template <typename MatrixType>
+    inline typename MatrixType::Scalar logDet(const MatrixType &M, bool use_cholesky = false)
+    {
+        using namespace Eigen;
+        typedef typename MatrixType::Scalar Scalar;
+        
+        Scalar ld = 0;
+        if (use_cholesky)
+        {
+            LLT<Matrix<Scalar, Dynamic, Dynamic>> chol(M);
+            auto &U = chol.matrixL();
+            for (unsigned i = 0; i < M.rows(); ++i)
+                ld += std::log(U(i, i)); // or ld+= std::log(prod(U.diagonal()))
+            ld *= 2;
+        }
+        else
+        {
+            PartialPivLU<Matrix<Scalar, Dynamic, Dynamic> > lu(M);
+            auto &LU = lu.matrixLU();
+            Scalar c = lu.permutationP().determinant(); // -1 or 1
+            for (unsigned i = 0; i < LU.rows(); ++i)
+            {
+                const auto &lii = LU(i, i);
+                if (lii < Scalar(0))
+                    c *= -1;
+                ld += std::log(abs(lii));
+            }
+            ld += std::log(c);
+        }
+        return ld;
+    }
 }
 
 #endif

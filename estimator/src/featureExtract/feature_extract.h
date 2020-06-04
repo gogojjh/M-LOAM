@@ -81,14 +81,15 @@ public:
                             std::vector<PointPlaneFeature> &features, 
                             const int &N_NEIGH = 5, 
                             const bool &CHECK_FOV = true);
-    
+
     template <typename PointType>
     void matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>::Ptr &kdtree_surf_from_map,
-                          const typename pcl::PointCloud<PointType> &cloud_map, 
+                          const typename pcl::PointCloud<PointType> &cloud_map,
                           const typename pcl::PointCloud<PointType> &cloud_data,
-                          const Pose &pose_local, 
-                          std::vector<PointPlaneFeature> &features, 
-                          const int &N_NEIGH = 5, 
+                          const Pose &pose_local,
+                          std::vector<PointPlaneFeature> &features,
+                          const size_t &laser_idx = 0,
+                          const int &N_NEIGH = 5,
                           const bool &CHECK_FOV = true);
 };
 
@@ -428,6 +429,7 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
                                       const typename pcl::PointCloud<PointType> &cloud_data,
                                       const Pose &pose_local,
                                       std::vector<PointPlaneFeature> &features,
+                                      const size_t &laser_idx,
                                       const int &N_NEIGH,
                                       const bool &CHECK_FOV)
 {
@@ -540,6 +542,7 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
                     feature.idx_ = i;
                     feature.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
                     feature.coeffs_ = coeff;
+                    feature.laser_idx_ = laser_idx;
                     features[cloud_cnt] = feature;
                     cloud_cnt++;
                 }

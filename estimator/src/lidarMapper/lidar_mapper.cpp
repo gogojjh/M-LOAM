@@ -519,48 +519,52 @@ void process()
 					para_ids.push_back(para_pose);
 
 					// ******************************************************
-					TicToc t_add_constraints;
-					int surf_num = 0;
-					int sub_su
+					TicToc t_match_features;
+					std::vector<PointPlaneFeature> surf_map_features;
 					for (size_t n = 0; n < NUM_OF_LASER; n++)
 					{
+						std::vector<PointPlaneFeature> feature_frame;
 						PointICovCloud &laser_cloud_surf_points_cov = laser_cloud_surf_split_cov[n];
 						int n_neigh = 5;
-						std::vector<PointPlaneFeature> surf_map_features;
 						f_extract.matchSurfFromMap(kdtree_surf_from_map,
 												   *laser_cloud_surf_from_map_cov,
 												   laser_cloud_surf_points_cov,
 												   pose_wmap_curr,
-												   surf_map_features,
+												   feature_frame,
+												   n,
 												   n_neigh,
 												   true);
-
-						surf_num += surf_map_features.size();
-						CHECK_JACOBIAN = 0;
-						for (const PointPlaneFeature &feature : surf_map_features)
-						{
-							Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
-							extractCov(laser_cloud_surf_split_cov[n].points[feature.idx_], cov_matrix);
-							LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
-							ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
-							res_ids_proj.push_back(res_id);
-							if (CHECK_JACOBIAN)
-							{
-								double **tmp_param = new double *[1];
-								tmp_param[0] = para_pose;
-								f->check(tmp_param);
-								CHECK_JACOBIAN = 0;
-							}
-						}
-
-						// TODO: good features selection
-						// TicToc t_active_feat_selection;
-						// Eigen::Matrix<double, 6, 6> curr_mat_H = Eigen::Matrix<double, 6, 6>::Zero();
-
-						// printf("active feature selection time %fms\n", t_active_feat_selection.toc());
+						surf_map_features.insert(surf_map_features.end(), feature_frame.begin(), feature_frame.end());
 					}
-					printf("surf num: %d\n", surf_num);
-					printf("ceres add constraints %fms\n", t_add_constraints.toc());
+					size_t surf_num = surf_map_features.size();
+					// printf("surf num: %d\n", surf_num);
+					printf("matching features time %fms\n", t_match_features.toc());
+
+					std::vector<size_t> sel_feature_idx;
+					goodFeatureSelect(para_pose, laser_cloud_surf_split_cov, 
+									  surf_map_features, surf_num, sel_feature_idx);
+					printf("number of selected features %lu\n", sel_feature_idx.size());
+
+					TicToc t_add_constraints;
+					CHECK_JACOBIAN = 0;
+					for (size_t fid : sel_feature_idx)
+					{
+						const PointPlaneFeature &feature = surf_map_features[fid];
+						Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
+						extractCov(laser_cloud_surf_split_cov[feature.laser_idx_].points[feature.idx_], cov_matrix);
+						LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
+						ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
+						res_ids_proj.push_back(res_id);
+						if (CHECK_JACOBIAN)
+						{
+							const double **tmp_param = new const double *[1];
+							tmp_param[0] = para_pose;
+							f->check(tmp_param);
+							CHECK_JACOBIAN = 0;
+						}
+					}
+					printf("add constraints %fms\n", t_add_constraints.toc());
+					// ******************************************************
 
 					double cost = 0.0;
 					ceres::CRSMatrix jaco;

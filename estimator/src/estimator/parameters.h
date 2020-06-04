@@ -158,8 +158,25 @@ class PointPlaneFeature
 {
 public:
     size_t idx_;
+    size_t laser_idx_;
     Eigen::Vector3d point_;
     Eigen::Vector4d coeffs_;
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+};
+
+class FeatureWithScore
+{
+public:
+    FeatureWithScore(const int &idx, const double &score, const Eigen::MatrixXd &jaco) 
+        : idx_(idx), score_(score), jaco_(jaco) {}
+
+    bool operator < (const FeatureWithScore &fws) const
+    {
+        return this->score_ < fws.score_;
+    }
+
+    size_t idx_;
+    double score_;
+    Eigen::MatrixXd jaco_;
 };

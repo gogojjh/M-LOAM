@@ -73,6 +73,9 @@
 #include "../factor/lidar_plane_norm_factor.hpp"
 #include "../factor/pose_local_parameterization.h"
 
+#define MAX_FEATURE_SELECT_TIME 10 // 10ms
+#define MAX_RANDOM_QUEUE_TIME 20
+
 DEFINE_bool(result_save, true, "save or not save the results");
 DEFINE_string(config_file, "config.yaml", "the yaml config file");
 DEFINE_string(output_path, "", "the path ouf saving results");
@@ -204,7 +207,109 @@ void compoundPoseWithCov(const Pose &pose_1, const Eigen::Matrix<double, 6, 6> &
     // std::cout << pose_2 << std::endl << cov_2 << std::endl;
     // std::cout << pose_cp << std::endl << cov_cp << std::endl;
     // exit(EXIT_FAILURE);
- }
+}
+
+void evaluateFeatJacobian(const double *para_pose,
+                          const PointPlaneFeature &feature,
+                          const Eigen::Matrix3d &cov_matrix,
+                          Eigen::MatrixXd &mat_jaco)
+{
+    LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
+    const double **param = new const double *[1];
+    param[0] = para_pose;
+    double *res = new double[1];
+    double **jaco = new double *[1];
+    jaco[0] = new double[3 * 7];
+    f->Evaluate(param, res, jaco);
+    Eigen::Map<Eigen::Matrix<double, 3, 7, Eigen::RowMajor> > mat_jacobian(jaco[0]);
+    mat_jaco = mat_jacobian.topLeftCorner<3, 6>();
+}
+
+void goodFeatureSelect(const double *para_pose,
+                       const std::vector<PointICovCloud> laser_cloud_cov,
+                       const std::vector<PointPlaneFeature> &all_features,
+                       const size_t &num_all_features,
+                       std::vector<size_t> &sel_feature_idx)
+{
+    size_t num_use_features = static_cast<size_t>(num_all_features * 0.2);
+    
+    // create a query of the index of the valid features
+    std::vector<size_t> all_feature_idx(num_all_features);
+    std::vector<int> feature_visited(num_all_features, -1);
+    std::iota(all_feature_idx.begin(), all_feature_idx.end(), 0);
+    
+    sel_feature_idx = all_feature_idx;
+    return;
+
+    size_t num_sel_features = 0;
+
+    // size of the random subset
+    size_t size_rnd_subset = static_cast<size_t>(float(num_all_features) / float(num_use_features) * 1.0);
+    // size_t size_rnd_subset = static_cast<size_t>(float(num_all_features) / float(num_use_features) * 2.3);
+
+    // the most informative Hessian matrix
+    Eigen::Matrix<double, 6, 6> cur_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
+    TicToc t_sel_feature;
+    while (true)
+    {
+        if ((num_sel_features >= num_use_features) ||
+            (all_feature_idx.size() == 0) ||
+            (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
+            break;
+        size_t num_rnd_que;
+        std::priority_queue<FeatureWithScore> heap_subset;
+        while (heap_subset.size() < size_rnd_subset)
+        {
+            num_rnd_que = 0;
+            size_t j;
+            while (num_rnd_que < MAX_RANDOM_QUEUE_TIME)
+            {
+                j = (std::rand() % all_feature_idx.size());
+                if (feature_visited[j] < num_sel_features)
+                {
+                    feature_visited[j] = num_sel_features;
+                    break;
+                }
+                num_rnd_que++;
+            }
+            if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
+                break;
+            size_t que_idx = all_feature_idx[j];
+
+            const PointPlaneFeature &feature = all_features[que_idx];
+            Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
+            extractCov(laser_cloud_cov[feature.laser_idx_].points[feature.idx_], cov_matrix);
+            Eigen::MatrixXd jaco;
+            evaluateFeatJacobian(para_pose, feature, cov_matrix, jaco);
+
+            double cur_det = common::logDet(cur_mat_H + jaco.transpose() * jaco);
+            heap_subset.push(FeatureWithScore(que_idx, cur_det, jaco));
+            if (heap_subset.size() == size_rnd_subset)
+            {
+                const FeatureWithScore &fws = heap_subset.top();
+                const Eigen::MatrixXd &jaco = fws.jaco_;
+                cur_mat_H += jaco.transpose() * jaco;
+
+                std::vector<size_t>::iterator iter = std::find(all_feature_idx.begin(), all_feature_idx.end(), fws.idx_);
+                if (iter != all_feature_idx.end())
+                {
+                    size_t position = iter - all_feature_idx.begin();
+                    all_feature_idx.erase(all_feature_idx.begin() + position);
+                    feature_visited.erase(feature_visited.begin() + position);
+                }
+                sel_feature_idx.push_back(fws.idx_);
+                num_sel_features++;
+                break;
+            }
+        }
+        if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || heap_subset.size() == 0)
+        {
+            std::cout << "func active feature selection: early termination!" << std::endl;
+            break;
+        }
+    }
+    printf("active feature selection time %fms\n", t_sel_feature.toc());
+}
 
 
 //
