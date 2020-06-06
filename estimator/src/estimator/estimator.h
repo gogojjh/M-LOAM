@@ -164,7 +164,8 @@ class Estimator
     std::queue<std::pair<double, std::vector<cloudFeature> > > feature_buf_;
     pair<double, std::vector<cloudFeature> > prev_feature_, cur_feature_;
     std::vector<std::vector<std::vector<PointPlaneFeature> > > surf_map_features_, corner_map_features_;
-    std::vector<std::vector<std::vector<PointPlaneFeature> > > cumu_surf_map_features_, cumu_corner_map_features_;
+    std::vector<std::vector<PointPlaneFeature> > cumu_surf_map_features_, cumu_corner_map_features_;
+    size_t cumu_surf_feature_cnt_, cumu_corner_feature_cnt_;
 
     double **para_pose_{};
     double **para_ex_pose_{};
@@ -186,6 +187,8 @@ class Estimator
     int total_corner_feature_, total_surf_feature_;
 
     std::vector<nav_msgs::Path> v_laser_path_;
+
+    pcl::PCDWriter pcd_writer_;
 };
 
 
