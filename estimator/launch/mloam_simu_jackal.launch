@@ -1,7 +1,7 @@
 <launch>
     <arg name="bag_file_use" default="true" />
-    <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/SR01.bag" /> -->
-    <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/SR02.bag" />
+    <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/SR01.bag" />
+    <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/SR02.bag" /> -->
     <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/SR03.bag" /> -->
     <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/SR04.bag" />  -->
     <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/SR05.bag" /> -->

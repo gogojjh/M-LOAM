@@ -219,12 +219,11 @@ int main(int argc, char **argv)
     MLOAM_RESULT_SAVE = FLAGS_result_save;
     printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
     OUTPUT_FOLDER = FLAGS_output_path;
-    MLOAM_ODOM_PATH = OUTPUT_FOLDER + "stamped_mloam_odom_estimate.txt";
     MLOAM_GT_PATH = OUTPUT_FOLDER + "stamped_groundtruth.txt";
+    MLOAM_ODOM_PATH = OUTPUT_FOLDER + "stamped_mloam_odom_estimate.txt";
     EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
     EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "calib_eig.txt";
     ROS_WARN("waiting for cloud...");
-
     if (NUM_OF_LASER > 2)
     {
         printf("not support > 2 cases");
@@ -238,8 +237,7 @@ int main(int argc, char **argv)
     {
         CLOUD0_TOPIC = CLOUD_TOPIC[0];
         sub_cloud0 = nh.subscribe(CLOUD0_TOPIC, 5, cloud0_callback);
-    }
-    else
+    } else
     {
         CLOUD0_TOPIC = CLOUD_TOPIC[0];
         CLOUD1_TOPIC = CLOUD_TOPIC[1];
@@ -247,9 +245,9 @@ int main(int argc, char **argv)
         sub_cloud1 = nh.subscribe(CLOUD1_TOPIC, 5, cloud1_callback);
     }
 
-    ros::Subscriber sub_restart = nh.subscribe("/mlod_restart", 10, restart_callback);
-    ros::Subscriber sub_odom_gt = nh.subscribe("/base_odom_gt", 10, odom_gt_callback);
-    pub_laser_gt_path = nh.advertise<nav_msgs::Path>("/laser_gt_path", 10);
+    ros::Subscriber sub_restart = nh.subscribe("/mlod_restart", 5, restart_callback);
+    ros::Subscriber sub_odom_gt = nh.subscribe("/base_odom_gt", 5, odom_gt_callback);
+    pub_laser_gt_path = nh.advertise<nav_msgs::Path>("/laser_gt_path", 5);
 
     std::thread sync_thread(sync_process);
     std::thread cloud_visualizer_thread;

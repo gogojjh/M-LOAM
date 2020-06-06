@@ -63,39 +63,6 @@ nav_msgs::Path laser_gt_path;
 ros::Publisher pub_laser_gt_path;
 Pose pose_world_ref_ini;
 
-void saveGroundTruth()
-{
-    if (laser_gt_path.poses.size() == 0) return;
-    std::ofstream fout(MLOAM_GT_PATH.c_str(), std::ios::out);
-    fout.setf(ios::fixed, ios::floatfield);
-    for (size_t i = 0; i < laser_gt_path.poses.size(); i++)
-    {
-        geometry_msgs::PoseStamped &laser_pose = laser_gt_path.poses[i];
-        fout.precision(15);
-        fout << laser_pose.header.stamp.toSec() << " ";
-        fout.precision(8);
-        fout << laser_pose.pose.position.x << " "
-                << laser_pose.pose.position.y << " "
-                << laser_pose.pose.position.z << " "
-                << laser_pose.pose.orientation.x << " "
-                << laser_pose.pose.orientation.y << " "
-                << laser_pose.pose.orientation.z << " "
-                << laser_pose.pose.orientation.w << std::endl;
-    }
-}
-
-void saveStatistics()
-{
-    printf("Saving odometry time statistics\n");
-    std::ofstream fout(std::string(OUTPUT_FOLDER + "time_odometry.txt").c_str(), std::ios::out);
-    fout.precision(15);
-    fout << "frame, total_mea_pre_time, total_opt_odom_time" << std::endl;
-    fout << estimator.frame_cnt_ << ", " << estimator.total_measurement_pre_time_ << ", " << estimator.total_opt_odom_time_ << std::endl;
-    fout.close();
-    ROS_WARN("Frame: %d, mean measurement preprocess time: %f, mean optimize odometry time: %f\n", estimator.frame_cnt_, 
-        estimator.total_measurement_pre_time_ / estimator.frame_cnt_, estimator.total_opt_odom_time_ / estimator.frame_cnt_);        
-}
-
 void cloud0_callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg)
 {
     m_buf.lock();
@@ -261,7 +228,7 @@ int main(int argc, char **argv)
     ros::NodeHandle nh("~");
 
     // ******************************************
-    cout << "config_file: " << FLAGS_config_file << endl;
+    printf("config_file: %s\n", FLAGS_config_file.c_str());
     readParameters(FLAGS_config_file);
     estimator.setParameter();
     registerPub(nh);

@@ -161,8 +161,8 @@ void pubPointCloud(const Estimator &estimator, const double &time)
 
 void printStatistics(const Estimator &estimator, double t)
 {
-    if (MLOAM_RESULT_SAVE)
-    {
+    // if (MLOAM_RESULT_SAVE)
+    // {
         // if (estimator.solver_flag_ != Estimator::SolverFlag::NON_LINEAR) return;
         // timestamp tx ty tz qx qy qz qw
         // {
@@ -211,7 +211,7 @@ void printStatistics(const Estimator &estimator, double t)
         //     }
         //     fout.close();
         // }
-    }
+    // }
 }
 
 void pubOdometry(Estimator &estimator, const double &time)
