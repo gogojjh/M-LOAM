@@ -15,9 +15,10 @@
     <arg name="run_aloam" default="false" />
     <arg name="run_legoloam" default="false" />
 
-    <arg name="result_save" default="false" />
-    <arg name="output_path" default="/home/jjiao/trajectory_results/handheld/test/test/"/>
+    <arg name="result_save" default="true" />
+    <arg name="output_path" default="/home/jjiao/trajectory_results/handheld/test/RHD02lab_test/"/>
     <arg name="with_ua" default="true" /> <!-- uncertainty propagation -->    
+    <arg name="gf_ratio" default="1.0" />
 
     <arg name="config_file" default="$(find mloam)/config/config_handheld.yaml" />
     <group if="$(arg run_mloam)">
@@ -27,12 +28,12 @@
                   -output_path=$(arg output_path)">
             <remap from="/base_pose_gt" to="/Robot_2/pose"/>
         </node>
-
         <node pkg="mloam" type="lidar_mapper" name="lidar_mapper" 
             args="-config_file=$(arg config_file) 
                   -result_save=$(arg result_save) 
                   -output_path=$(arg output_path)
-                  -with_ua=$(arg with_ua)" output="screen">
+                  -with_ua=$(arg with_ua)
+                  -gf_ratio=$(arg gf_ratio)" output="screen">
             <remap from="/laser_odom" to="/laser_odom_0"/>
         </node>
     </group>

@@ -109,6 +109,8 @@ std::vector<double> cov_mapping_list;
 
 double total_mapping = 0.0;
 
+pcl::PCDWriter pcd_writer;
+
 int toCubeIndex(const int &i, const int &j, const int &k)
 {
 	return (i + laser_cloud_width * j + laser_cloud_width * laser_cloud_height * k);
@@ -457,7 +459,7 @@ void process()
 				*laser_cloud_surf_from_map_cov += *laser_cloud_surf_array_cov[laser_cloud_valid_ind[i]];
 			}
 			int laser_cloud_surf_from_map_num = laser_cloud_surf_from_map_cov->points.size();
-			// printf("map prepare time %fms\n", t_shift.toc());
+			// printf("map prepare time: %fms\n", t_shift.toc());
 
 			PointICloud::Ptr laser_cloud_surf_stack(new PointICloud());
 			down_size_filter_surf.setInputCloud(laser_cloud_surf_last);
@@ -524,7 +526,7 @@ void process()
 					for (size_t n = 0; n < NUM_OF_LASER; n++)
 					{
 						std::vector<PointPlaneFeature> feature_frame;
-						PointICovCloud &laser_cloud_surf_points_cov = laser_cloud_surf_split_cov[n];
+						const PointICovCloud &laser_cloud_surf_points_cov = laser_cloud_surf_split_cov[n];
 						int n_neigh = 5;
 						f_extract.matchSurfFromMap(kdtree_surf_from_map,
 												   *laser_cloud_surf_from_map_cov,
@@ -537,13 +539,17 @@ void process()
 						surf_map_features.insert(surf_map_features.end(), feature_frame.begin(), feature_frame.end());
 					}
 					size_t surf_num = surf_map_features.size();
-					// printf("surf num: %d\n", surf_num);
-					printf("matching features time %fms\n", t_match_features.toc());
+					printf("matching features time: %fms\n", t_match_features.toc());
+					// printf("original features num: %lu\n", surf_num);
 
 					std::vector<size_t> sel_feature_idx;
-					goodFeatureSelect(para_pose, laser_cloud_surf_split_cov, 
-									  surf_map_features, surf_num, sel_feature_idx);
-					printf("number of selected features %lu\n", sel_feature_idx.size());
+					goodFeatureSelect(para_pose, laser_cloud_surf_split_cov,
+									  surf_map_features, surf_map_features.size(), 
+									  sel_feature_idx, FLAGS_gf_ratio);
+					printf("selected features num: %lu(%lu)\n", sel_feature_idx.size(), surf_num);
+
+					if (frame_cnt % 20 == 0)
+						writeFeature(sel_feature_idx, surf_map_features);
 
 					TicToc t_add_constraints;
 					CHECK_JACOBIAN = 0;
@@ -563,7 +569,7 @@ void process()
 							CHECK_JACOBIAN = 0;
 						}
 					}
-					printf("add constraints %fms\n", t_add_constraints.toc());
+					printf("add constraints: %fms\n", t_add_constraints.toc());
 					// ******************************************************
 
 					double cost = 0.0;
@@ -577,6 +583,7 @@ void process()
 					evalHessian(jaco, mat_H);
 					evalDegenracy(mat_H, local_parameterization);
 					cov_mapping = mat_H.inverse(); // covariance of sensor noise: A New Approach to 3D ICP Covariance Estimation/ Censi's approach
+					printf("logdet of ceres H: %f\n", common::logDet(mat_H * 134, true));
 					printf("pose covariance trace: %f\n", cov_mapping.trace());
 					cov_mapping_list.push_back(cov_mapping.trace());				
 
@@ -585,14 +592,14 @@ void process()
 					ceres::Solve(options, &problem, &summary);
 					std::cout << summary.BriefReport() << std::endl;
 					// std::cout << summary.FullReport() << std::endl;
-					printf("mapping solver time %fms\n", t_solver.toc());		
+					printf("mapping solver time: %fms\n", t_solver.toc());		
 
 					double2Vector();
 					std::cout << iter_cnt << "th result: " << pose_wmap_curr << std::endl;
 					if (iter_cnt == 0) printf("-------------------------------------\n");
 				}
 				printf("********************************\n");
-				printf("mapping optimization time %fms\n", t_opt.toc());
+				printf("mapping optimization time: %fms\n", t_opt.toc());
 			}
 			else
 			{
@@ -607,7 +614,7 @@ void process()
 			{
 				compoundPoseWithCov(pose_wmap_curr, cov_mapping, pose_ext[n], cov_ext[n], pose_compound[n], cov_compound[n], 2);
 				// move the surf points from the lastest frame to different cubes
-				PointICovCloud &laser_cloud_surf_points_cov = laser_cloud_surf_split_cov[n];
+				const PointICovCloud &laser_cloud_surf_points_cov = laser_cloud_surf_split_cov[n];
 				for (const PointIWithCov &point_ori : laser_cloud_surf_points_cov)
 				{
 					PointIWithCov point_sel, point_cov;
@@ -638,7 +645,7 @@ void process()
 					}
 				}
 			}
-			printf("add points time %fms\n", t_add.toc());
+			printf("add points time: %fms\n", t_add.toc());
 
 			// downsample the map (all map points including optimization or not optimization)
 			TicToc t_filter;
@@ -650,7 +657,7 @@ void process()
 				down_size_filter_surf_map_cov.filter(*tmp_surf);
 				laser_cloud_surf_array_cov[ind] = tmp_surf;
 			}
-			printf("filter time %fms\n", t_filter.toc());
+			printf("filter time: %fms\n", t_filter.toc());
 
 			// ************************************************************** publish feature and map data
 			// publish surround map (use for optimization) for every 20 frame
@@ -709,7 +716,7 @@ void process()
 			// laser_cloud_surf_last_msg.header.frame_id = "/world";
 			// pub_laser_cloud_surf_last_res.publish(laser_cloud_surf_last_msg);
 
-			printf("mapping pub time %fms \n", t_pub.toc());
+			printf("mapping pub time: %fms \n", t_pub.toc());
 			std::cout << common::RED << "frame: " << frame_cnt
 					  << ", whole mapping time " << t_whole_mapping.toc() << "ms" << common::RESET << std::endl;
 			total_mapping += t_whole_mapping.toc();
@@ -829,7 +836,7 @@ void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameteri
 	// 	std::cout << "mat_P: " << std::endl << matP << std::endl;
 	// }
 
-	// printf("evaluate degeneracy %fms\n", t_eval_degenracy.toc());
+	// printf("evaluate degeneracy: %fms\n", t_eval_degenracy.toc());
 
 	// // TODO: estimation pose covariance
 	// Eigen::Matrix<double, 6, 1> vec_ini;
@@ -850,7 +857,7 @@ void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameteri
 
 int main(int argc, char **argv)
 {
-	if (argc < 4)
+	if (argc < 5)
 	{
 		printf("please intput: rosrun mloam lidar_mapper [args] \n"
 			   "for example: "

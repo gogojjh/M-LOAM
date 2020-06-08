@@ -579,7 +579,7 @@ void Estimator::optimizeMap()
         TicToc t_add_residuals;
         if (POINT_PLANE_FACTOR)
         {
-            // CHECK_JACOBIAN = 0;
+            CHECK_JACOBIAN = 0;
             for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
             {
                 std::vector<PointPlaneFeature> &features_frame = surf_map_features_[IDX_REF][i];
@@ -878,7 +878,6 @@ void Estimator::optimizeMap()
 }
 
 /****************************************************************************************/
-// TODO: the calibration refinement should be use to refine with pivot map
 void Estimator::buildCalibMap()
 {
     TicToc t_build_map;
@@ -967,6 +966,7 @@ void Estimator::buildCalibMap()
     if (PCL_VIEWER) visualizePCL();
 }
 
+/****************************************************************************************/
 void Estimator::buildLocalMap()
 {
     TicToc t_build_map;
@@ -1178,9 +1178,9 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
         if (i > OPT_WINDOW_SIZE)
         {
             cur_eig_calib_[i - OPT_WINDOW_SIZE - 1] = mat_E(0, 0);
-            if (mat_E(0, 0) >= EIG_THRE_CALIB)
+            if (mat_E(0, 0) >= EIG_THRE_CALIB * WINDOW_SIZE)
             {
-                eig_thre_[i] = EIG_THRE_CALIB;
+                eig_thre_[i] = EIG_THRE_CALIB * WINDOW_SIZE;
                 d_factor_calib_[i - OPT_WINDOW_SIZE - 1] = mat_E(0, 0);
             }
             else if (mat_E(0, 0) > eig_thre_[i])

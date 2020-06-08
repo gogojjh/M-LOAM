@@ -80,6 +80,7 @@ DEFINE_bool(result_save, true, "save or not save the results");
 DEFINE_string(config_file, "config.yaml", "the yaml config file");
 DEFINE_string(output_path, "", "the path ouf saving results");
 DEFINE_bool(with_ua, true, "with or without the awareness of uncertainty");
+DEFINE_double(gf_ratio, 0.2, "with or without the good features selection");
 
 void evalHessian(const ceres::CRSMatrix &jaco, Eigen::Matrix<double, 6, 6> &mat_H);
 
@@ -229,26 +230,39 @@ void goodFeatureSelect(const double *para_pose,
                        const std::vector<PointICovCloud> laser_cloud_cov,
                        const std::vector<PointPlaneFeature> &all_features,
                        const size_t &num_all_features,
-                       std::vector<size_t> &sel_feature_idx)
+                       std::vector<size_t> &sel_feature_idx,
+                       const float &gf_ratio = 0.2)
 {
-    size_t num_use_features = static_cast<size_t>(num_all_features * 0.2);
-    
     // create a query of the index of the valid features
     std::vector<size_t> all_feature_idx(num_all_features);
     std::vector<int> feature_visited(num_all_features, -1);
     std::iota(all_feature_idx.begin(), all_feature_idx.end(), 0);
-    
-    sel_feature_idx = all_feature_idx;
-    return;
-
-    size_t num_sel_features = 0;
+  
+    size_t num_use_features;
+    if (gf_ratio >= 1.0)
+    {
+        sel_feature_idx = all_feature_idx;
+        printf("use all features: %lu!\n", sel_feature_idx.size());
+        return;
+    } 
+    else if (gf_ratio <= 0.0)
+    {
+        num_use_features = 100;
+    }
+    else
+    {
+        num_use_features = static_cast<size_t>(num_all_features * gf_ratio);
+    }
+    // printf("size of good features: %lu\n", num_use_features);
 
     // size of the random subset
     size_t size_rnd_subset = static_cast<size_t>(float(num_all_features) / float(num_use_features) * 1.0);
     // size_t size_rnd_subset = static_cast<size_t>(float(num_all_features) / float(num_use_features) * 2.3);
+    printf("size of matrix subset: %lu\n", size_rnd_subset);
 
     // the most informative Hessian matrix
-    Eigen::Matrix<double, 6, 6> cur_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
+    Eigen::Matrix<double, 6, 6> sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
+    size_t num_sel_features = 0;
     TicToc t_sel_feature;
     while (true)
     {
@@ -257,7 +271,7 @@ void goodFeatureSelect(const double *para_pose,
             (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
             break;
         size_t num_rnd_que;
-        std::priority_queue<FeatureWithScore> heap_subset;
+        std::priority_queue<FeatureWithScore, std::vector<FeatureWithScore>, std::less<FeatureWithScore> > heap_subset;
         while (heap_subset.size() < size_rnd_subset)
         {
             num_rnd_que = 0;
@@ -265,51 +279,106 @@ void goodFeatureSelect(const double *para_pose,
             while (num_rnd_que < MAX_RANDOM_QUEUE_TIME)
             {
                 j = (std::rand() % all_feature_idx.size());
-                if (feature_visited[j] < num_sel_features)
+                if (feature_visited[j] < int(num_sel_features))
                 {
-                    feature_visited[j] = num_sel_features;
+                    feature_visited[j] = int(num_sel_features);
                     break;
                 }
                 num_rnd_que++;
             }
             if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
                 break;
-            size_t que_idx = all_feature_idx[j];
 
+            size_t que_idx = all_feature_idx[j];
             const PointPlaneFeature &feature = all_features[que_idx];
             Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
             extractCov(laser_cloud_cov[feature.laser_idx_].points[feature.idx_], cov_matrix);
             Eigen::MatrixXd jaco;
             evaluateFeatJacobian(para_pose, feature, cov_matrix, jaco);
 
-            double cur_det = common::logDet(cur_mat_H + jaco.transpose() * jaco);
+            double cur_det = common::logDet(sub_mat_H + jaco.transpose() * jaco, true);
             heap_subset.push(FeatureWithScore(que_idx, cur_det, jaco));
-            if (heap_subset.size() == size_rnd_subset)
+            if (heap_subset.size() >= size_rnd_subset)
             {
                 const FeatureWithScore &fws = heap_subset.top();
-                const Eigen::MatrixXd &jaco = fws.jaco_;
-                cur_mat_H += jaco.transpose() * jaco;
-
                 std::vector<size_t>::iterator iter = std::find(all_feature_idx.begin(), all_feature_idx.end(), fws.idx_);
-                if (iter != all_feature_idx.end())
+                if (iter == all_feature_idx.end())
                 {
-                    size_t position = iter - all_feature_idx.begin();
-                    all_feature_idx.erase(all_feature_idx.begin() + position);
-                    feature_visited.erase(feature_visited.begin() + position);
+                    std::cerr << "[goodFeatureSelct]: not exist feature idx !" << std::endl;
+                    break;
                 }
+
+                const Eigen::MatrixXd &jaco = fws.jaco_;
+                sub_mat_H += jaco.transpose() * jaco;
+
+                size_t position = iter - all_feature_idx.begin();
+                all_feature_idx.erase(all_feature_idx.begin() + position);
+                feature_visited.erase(feature_visited.begin() + position);
                 sel_feature_idx.push_back(fws.idx_);
                 num_sel_features++;
+                // printf("position: %lu, num: %lu\n", position, num_rnd_que);
                 break;
             }
         }
-        if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || heap_subset.size() == 0)
+        if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME)
         {
-            std::cout << "func active feature selection: early termination!" << std::endl;
+            std::cerr << "[goodFeatureSelct]: early termination!" << std::endl;
             break;
         }
     }
+    // printf("logdet of selected sub H: %f\n", common::logDet(sub_mat_H));
+
+    {
+        Eigen::Matrix<double, 6, 6> total_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
+        for (size_t que_idx = 0; que_idx < num_all_features; que_idx++)
+        {
+            const PointPlaneFeature &feature = all_features[que_idx];
+            Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
+            extractCov(laser_cloud_cov[feature.laser_idx_].points[feature.idx_], cov_matrix);
+            Eigen::MatrixXd jaco;
+            evaluateFeatJacobian(para_pose, feature, cov_matrix, jaco);
+            total_mat_H += jaco.transpose() * jaco;
+        }
+        printf("logdet of the selected/complete H: %f(%f)\n", 
+            common::logDet(sub_mat_H, true) ,common::logDet(total_mat_H, true));
+    }
+
     printf("active feature selection time %fms\n", t_sel_feature.toc());
 }
 
+void writeFeature(const std::vector<size_t> &sel_feature_idx,
+                  const std::vector<PointPlaneFeature> &surf_map_features)
+{
+    pcl::PCDWriter pcd_writer;
+
+    common::PointICloud origin_map_feature;
+    for (const PointPlaneFeature &feature : surf_map_features)
+    {
+        common::PointI point;
+        point.x = feature.point_[0];
+        point.z = feature.point_[1];
+        point.y = feature.point_[2];
+        point.intensity = feature.laser_idx_;
+        origin_map_feature.points.push_back(point);
+    }
+    origin_map_feature.height = 1;
+    origin_map_feature.width = origin_map_feature.points.size();
+    pcd_writer.write("/tmp/original_map_feature.pcd", origin_map_feature);
+
+    common::PointICloud sel_map_feature;
+    for (const size_t &idx : sel_feature_idx)
+    {
+        const PointPlaneFeature &feature = surf_map_features[idx];
+        common::PointI point;
+        point.x = feature.point_[0];
+        point.z = feature.point_[1];
+        point.y = feature.point_[2];
+        point.intensity = feature.laser_idx_;
+        sel_map_feature.points.push_back(point);
+    }
+    sel_map_feature.height = 1;
+    sel_map_feature.width = sel_map_feature.points.size();
+    pcd_writer.write("/tmp/sel_map_feature.pcd", sel_map_feature);
+}
 
 //
