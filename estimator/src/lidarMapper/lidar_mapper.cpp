@@ -506,7 +506,7 @@ void process()
 					options.linear_solver_type = ceres::DENSE_SCHUR;
 					options.max_num_iterations = 20;
 					options.max_solver_time_in_seconds = 0.04;
-					options.num_threads = 3;
+					options.num_threads = 2;
 					options.minimizer_progress_to_stdout = false;
 					options.check_gradients = false;
 					options.gradient_check_relative_precision = 1e-4;
@@ -548,8 +548,8 @@ void process()
 									  sel_feature_idx, FLAGS_gf_ratio);
 					printf("selected features num: %lu(%lu)\n", sel_feature_idx.size(), surf_num);
 
-					if (frame_cnt % 20 == 0)
-						writeFeature(sel_feature_idx, surf_map_features);
+					// if (frame_cnt % 100 == 0)
+					// 	writeFeature(sel_feature_idx, surf_map_features);
 
 					TicToc t_add_constraints;
 					CHECK_JACOBIAN = 0;
@@ -572,6 +572,7 @@ void process()
 					printf("add constraints: %fms\n", t_add_constraints.toc());
 					// ******************************************************
 
+					TicToc t_eval_H;
 					double cost = 0.0;
 					ceres::CRSMatrix jaco;
 					ceres::Problem::EvaluateOptions e_option;
@@ -583,9 +584,10 @@ void process()
 					evalHessian(jaco, mat_H);
 					evalDegenracy(mat_H, local_parameterization);
 					cov_mapping = mat_H.inverse(); // covariance of sensor noise: A New Approach to 3D ICP Covariance Estimation/ Censi's approach
-					printf("logdet of ceres H: %f\n", common::logDet(mat_H * 134, true));
-					printf("pose covariance trace: %f\n", cov_mapping.trace());
-					cov_mapping_list.push_back(cov_mapping.trace());				
+					// printf("logdet of ceres H: %f\n", common::logDet(mat_H * 134, true));
+					LOG_EVERY_N(INFO, 10) << "pose covariance trace: " << cov_mapping.trace();
+					cov_mapping_list.push_back(cov_mapping.trace());
+					printf("evaluate H: %fms\n", t_eval_H.toc());
 
 					// *********************************************************
 					TicToc t_solver;
@@ -719,6 +721,7 @@ void process()
 			printf("mapping pub time: %fms \n", t_pub.toc());
 			std::cout << common::RED << "frame: " << frame_cnt
 					  << ", whole mapping time " << t_whole_mapping.toc() << "ms" << common::RESET << std::endl;
+			LOG(INFO) << "whole mapping time " << t_whole_mapping.toc() << "ms";
 			total_mapping += t_whole_mapping.toc();
 
 			// ************************************************************** publish odom
@@ -787,7 +790,7 @@ void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameteri
 	}
 	d_factor_list.push_back(mat_E);
 	d_eigvec_list.push_back(mat_V_f);
-	std::cout << "D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose() << std::endl;
+	LOG_EVERY_N(INFO, 10) << "D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose();
 	Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
 	// std::cout << "jjiao:" << std::endl;
 	// std::cout << "mat_E: " << mat_E << std::endl;

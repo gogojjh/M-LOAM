@@ -266,6 +266,7 @@ void Estimator::inputCloud(const double &t, const PointCloud &laser_cloud_in)
     printf("size of after segmentation: %d\n", laser_cloud_in.size());    
     printf("meaPre time: %fms\n", measurement_pre_time.toc());
     total_measurement_pre_time_ += measurement_pre_time.toc();
+    total_opt_odom_time_ += measurement_pre_time.toc();
 
     m_buf_.lock();
     feature_buf_.push(make_pair(t, feature_frame));
@@ -279,7 +280,6 @@ void Estimator::processMeasurements()
     {
         if (!feature_buf_.empty())
         {
-            TicToc t_process;
             cur_feature_ = feature_buf_.front();
             cur_time_ = cur_feature_.first + td_;
             assert(cur_feature_.second.size() == NUM_OF_LASER);
@@ -289,17 +289,17 @@ void Estimator::processMeasurements()
             m_buf_.unlock();
 
             m_process_.lock();
-            TicToc t_main_process;
+            TicToc t_process;
             process();
-            std::cout << "process time: " << t_main_process.toc() << "ms" << std::endl;
+            std::cout << common::RED << "frame: " << frame_cnt_
+                      << ", processMea time: " << t_process.toc() << "ms" << common::RESET << std::endl << std::endl;
+            LOG(INFO) << "processMea time: " << t_process.toc() << "ms";
+            total_opt_odom_time_ += t_process.toc();
 
             // printStatistics(*this, 0);
             pubOdometry(*this, cur_time_);
             if (frame_cnt_ % SKIP_NUM_ODOM_PUB == 0) pubPointCloud(*this, cur_time_); 
-
             frame_cnt_++;
-            std::cout << common::RED << "frame: " << frame_cnt_
-                      << ", processMea time: " << t_process.toc() << "ms" << common::RESET << std::endl;
             m_process_.unlock();
         }
         if (!MULTIPLE_THREAD) break;
@@ -874,7 +874,6 @@ void Estimator::optimizeMap()
         last_marginalization_parameter_blocks_ = parameter_blocks; // save parameter_blocks at the last optimization
         printf("whole marginalization costs: %fms\n", t_whole_marginalization.toc());
     }
-    total_opt_odom_time_ += t_opt_map.toc();
 }
 
 /****************************************************************************************/
@@ -994,7 +993,7 @@ void Estimator::buildLocalMap()
             for (auto &p: surf_points_trans.points) p.intensity = i;
             surf_points_local_map_[n] += surf_points_trans;
         }
-        float ratio = 0.4 * std::min(1.2, std::max(0.75, NUM_OF_LASER * WINDOW_SIZE * 1.0 / 6));
+        float ratio = 0.4 * std::min(1.5, std::max(0.75, NUM_OF_LASER * WINDOW_SIZE * 1.0 / 6));
         pcl::VoxelGrid<PointI> down_size_filter;
         down_size_filter.setLeafSize(ratio, ratio, ratio);
         down_size_filter.setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_[n]));
@@ -1282,7 +1281,7 @@ void Estimator::visualizePCL()
     //     // double s_normal = coeffs_normalized.head<3>().norm();
     //     // coeffs_normalized = coeffs_normalized / s_normal;
     //     // plane_coeffs.push_back(coeffs_normalized);
-    //     // DLOG(INFO) << p_sel.x * f.coeffs.x() + p_sel.y * f.coeffs.y() + p_sel.z * f.coeffs.z() + f.coeffs.w();
+    //     // LOG(INFO) << p_sel.x * f.coeffs.x() + p_sel.y * f.coeffs.y() + p_sel.z * f.coeffs.z() + f.coeffs.w();
     // }
     // if (plane_normal_vis_.init_)
     // {

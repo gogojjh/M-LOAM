@@ -16,9 +16,9 @@
     <arg name="run_legoloam" default="false" />
 
     <arg name="result_save" default="true" />
-    <arg name="output_path" default="/home/jjiao/trajectory_results/handheld/test/RHD02lab_test/"/>
+    <arg name="output_path" default="/home/jjiao/trajectory_results/handheld/test/RHD02lab_test_gf/"/>
     <arg name="with_ua" default="true" /> <!-- uncertainty propagation -->    
-    <arg name="gf_ratio" default="1.0" />
+    <arg name="gf_ratio" default="0.1" />
 
     <arg name="config_file" default="$(find mloam)/config/config_handheld.yaml" />
     <group if="$(arg run_mloam)">

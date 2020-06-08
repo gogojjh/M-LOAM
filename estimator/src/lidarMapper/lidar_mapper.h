@@ -258,7 +258,7 @@ void goodFeatureSelect(const double *para_pose,
     // size of the random subset
     size_t size_rnd_subset = static_cast<size_t>(float(num_all_features) / float(num_use_features) * 1.0);
     // size_t size_rnd_subset = static_cast<size_t>(float(num_all_features) / float(num_use_features) * 2.3);
-    printf("size of matrix subset: %lu\n", size_rnd_subset);
+    LOG_EVERY_N(INFO, 10) << "[goodFeatureSelct] size of matrix subset: " << size_rnd_subset;
 
     // the most informative Hessian matrix
     Eigen::Matrix<double, 6, 6> sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
@@ -326,24 +326,23 @@ void goodFeatureSelect(const double *para_pose,
             break;
         }
     }
-    // printf("logdet of selected sub H: %f\n", common::logDet(sub_mat_H));
+    printf("logdet of selected sub H: %f\n", common::logDet(sub_mat_H));
 
-    {
-        Eigen::Matrix<double, 6, 6> total_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
-        for (size_t que_idx = 0; que_idx < num_all_features; que_idx++)
-        {
-            const PointPlaneFeature &feature = all_features[que_idx];
-            Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
-            extractCov(laser_cloud_cov[feature.laser_idx_].points[feature.idx_], cov_matrix);
-            Eigen::MatrixXd jaco;
-            evaluateFeatJacobian(para_pose, feature, cov_matrix, jaco);
-            total_mat_H += jaco.transpose() * jaco;
-        }
-        printf("logdet of the selected/complete H: %f(%f)\n", 
-            common::logDet(sub_mat_H, true) ,common::logDet(total_mat_H, true));
-    }
-
-    printf("active feature selection time %fms\n", t_sel_feature.toc());
+    // {
+    //     Eigen::Matrix<double, 6, 6> total_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
+    //     for (size_t que_idx = 0; que_idx < num_all_features; que_idx++)
+    //     {
+    //         const PointPlaneFeature &feature = all_features[que_idx];
+    //         Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
+    //         extractCov(laser_cloud_cov[feature.laser_idx_].points[feature.idx_], cov_matrix);
+    //         Eigen::MatrixXd jaco;
+    //         evaluateFeatJacobian(para_pose, feature, cov_matrix, jaco);
+    //         total_mat_H += jaco.transpose() * jaco;
+    //     }
+    //     printf("logdet of the selected/complete H: %f(%f)\n", 
+    //         common::logDet(sub_mat_H, true) ,common::logDet(total_mat_H, true));
+    // }
+    printf("good feature selection time: %fms\n", t_sel_feature.toc());
 }
 
 void writeFeature(const std::vector<size_t> &sel_feature_idx,

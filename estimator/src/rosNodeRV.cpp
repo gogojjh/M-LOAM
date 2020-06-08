@@ -172,7 +172,7 @@ int main(int argc, char **argv)
     google::InitGoogleLogging(argv[0]);
     google::ParseCommandLineFlags(&argc, &argv, true);
 
-    ros::init(argc, argv, "mloam_node_rt");
+    ros::init(argc, argv, "mloam_node_rv");
     ros::NodeHandle nh("~");
 
     // ******************************************

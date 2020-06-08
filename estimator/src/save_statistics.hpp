@@ -118,11 +118,12 @@ void SaveStatistics::saveOdomTimeStatistics(const string &filename, const Estima
 {
     std::ofstream fout(filename.c_str(), std::ios::out);
     fout.precision(15);
-    fout << "frame, total_mea_pre_time, total_opt_odom_time, total_corner_feature, total_surf_feature" << std::endl;
+    fout << "frame, total_mea_pre_time, total_opt_odom_time, total_corner_feature, total_surf_feature, mean_opt_odom_time" << std::endl;
     fout << estimator.frame_cnt_ << ", " << estimator.total_measurement_pre_time_
          << ", " << estimator.total_opt_odom_time_
          << ", " << estimator.total_corner_feature_
-         << ", " << estimator.total_surf_feature_ << std::endl;
+         << ", " << estimator.total_surf_feature_ 
+         << ", " << estimator.total_opt_odom_time_ / estimator.frame_cnt_ << std::endl;
     fout.close();
     printf("******* Frame: %d, mean measurement preprocess time: %fms, mean optimize odometry time: %fms\n", estimator.frame_cnt_,
            estimator.total_measurement_pre_time_ / estimator.frame_cnt_, estimator.total_opt_odom_time_ / estimator.frame_cnt_);
@@ -181,7 +182,7 @@ void SaveStatistics::saveMapTimeStatistics(const string &filename, const double 
 {
     std::ofstream fout(filename.c_str(), std::ios::out);
     fout.precision(15);
-    fout << "frame, total_mapping_time, average_mapping_time" << std::endl;
+    fout << "frame, total_mapping_time, mean_mapping_time" << std::endl;
     fout << frame_cnt << ", " << total_time << ", " << total_time / frame_cnt << std::endl;
     fout.close();
     printf("******* Frame: %d, mean mapping time: %fms\n", frame_cnt, total_time / frame_cnt);    
