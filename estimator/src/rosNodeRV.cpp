@@ -72,7 +72,8 @@ Pose pose_world_ref_ini;
 
 common::gpsTools gps_tools;
 nav_msgs::Path gps_path;
-ros::Publisher pub_gps_odom, pub_gps_path;
+ros::Publisher pub_gps_odom, pub_gps_path, pub_gps;
+ros::Publisher pub_laser_gt_odom, pub_laser_gt_path;
 
 bool b_pause = false;
 
@@ -89,6 +90,37 @@ void dataProcessCallback(const sensor_msgs::PointCloud2ConstPtr &cloud0_msg,
     all_cloud_buf[3].push(cloud3_msg);
     all_cloud_buf[4].push(cloud4_msg);
     m_buf.unlock();
+}
+
+void gtCallback(const nav_msgs::OdometryConstPtr &gt_odom_msg)
+{
+    Pose pose_world_base(*gt_odom_msg);
+    Pose pose_base_ref(Eigen::Quaterniond(1, 0, 0, 0), Eigen::Vector3d(0, 0, 0));
+    Pose pose_world_ref(pose_world_base * pose_base_ref);
+    if (laser_gt_path.poses.size() == 0)
+        pose_world_ref_ini = pose_world_ref;
+    Pose pose_ref_ini_cur(pose_world_ref_ini.inverse() * pose_world_ref);
+
+    nav_msgs::Odometry laser_gt_odom;
+    laser_gt_odom.header.frame_id = "/world";
+    laser_gt_odom.child_frame_id = "/gt";
+    laser_gt_odom.header.stamp = gt_odom_msg->header.stamp;
+    laser_gt_odom.pose.pose.orientation.x = pose_ref_ini_cur.q_.x();
+    laser_gt_odom.pose.pose.orientation.y = pose_ref_ini_cur.q_.y();
+    laser_gt_odom.pose.pose.orientation.z = pose_ref_ini_cur.q_.z();
+    laser_gt_odom.pose.pose.orientation.w = pose_ref_ini_cur.q_.w();
+    laser_gt_odom.pose.pose.position.x = pose_ref_ini_cur.t_(0);
+    laser_gt_odom.pose.pose.position.y = pose_ref_ini_cur.t_(1);
+    laser_gt_odom.pose.pose.position.z = pose_ref_ini_cur.t_(2);
+    publishTF(laser_gt_odom);
+
+    geometry_msgs::PoseStamped laser_gt_pose;
+    laser_gt_pose.header.frame_id = "/world";
+    laser_gt_pose.header.stamp = gt_odom_msg->header.stamp;
+    laser_gt_pose.pose = laser_gt_odom.pose.pose;
+    laser_gt_path.header = laser_gt_pose.header;
+    laser_gt_path.poses.push_back(laser_gt_pose);
+    pub_laser_gt_path.publish(laser_gt_path);
 }
 
 void gpsCallback(const sensor_msgs::NavSatFixConstPtr &gps_msgs)
@@ -215,7 +247,9 @@ int main(int argc, char **argv)
                 LidarSyncPolicy(10), *sub_lidar[0], *sub_lidar[1], *sub_lidar[2], *sub_lidar[3], *sub_lidar[4]);
         lidar_synchronizer->registerCallback(boost::bind(&dataProcessCallback, _1, _2, _3, _4, _5));
 
+        ros::Subscriber sub_gt = nh.subscribe<nav_msgs::Odometry>("/base_pose_gt", 1, gtCallback);
         ros::Subscriber sub_gps = nh.subscribe<sensor_msgs::NavSatFix>("/novatel718d/pos", 1, gpsCallback);
+        pub_laser_gt_path = nh.advertise<nav_msgs::Path>("/laser_gt_path", 10);
         pub_gps_odom = nh.advertise<nav_msgs::Odometry>("/gps/odom", 10);
         pub_gps_path = nh.advertise<nav_msgs::Path>("/gps/path", 10);
 
@@ -245,9 +279,9 @@ int main(int argc, char **argv)
 
         std::vector<ros::Publisher> pub_laser_cloud_list(NUM_OF_LASER);
         for (size_t i = 0; i < NUM_OF_LASER; i++) pub_laser_cloud_list[i] = nh.advertise<sensor_msgs::PointCloud2>(CLOUD_TOPIC[i], 10);
-        ros::Publisher pub_laser_gt_odom = nh.advertise<nav_msgs::Odometry>("/laser_gt_odom", 10);
-        ros::Publisher pub_laser_gt_path = nh.advertise<nav_msgs::Path>("/laser_gt_path", 10);
-        ros::Publisher pub_gps = nh.advertise<sensor_msgs::NavSatFix>("/novatel718d/pos", 10);
+        pub_laser_gt_odom = nh.advertise<nav_msgs::Odometry>("/laser_gt_odom", 10);
+        pub_laser_gt_path = nh.advertise<nav_msgs::Path>("/laser_gt_path", 10);
+        pub_gps = nh.advertise<sensor_msgs::NavSatFix>("/novatel718d/pos", 10);
 
         std::thread cloud_visualizer_thread;
         if (PCL_VIEWER)

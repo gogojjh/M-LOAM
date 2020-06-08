@@ -129,6 +129,11 @@ void SaveStatistics::saveOdomTimeStatistics(const string &filename, const Estima
            estimator.total_measurement_pre_time_ / estimator.frame_cnt_, estimator.total_opt_odom_time_ / estimator.frame_cnt_);
     printf("******* Frame: %d, mean corner feature: %f, mean surf feature: %f\n", estimator.frame_cnt_,
            estimator.total_corner_feature_ * 1.0 / estimator.frame_cnt_, estimator.total_surf_feature_ * 1.0 / estimator.frame_cnt_);
+
+    LOG(INFO) << "Frame: " << estimator.frame_cnt_ << ", mean measurement preprocess time: " << estimator.total_measurement_pre_time_ / estimator.frame_cnt_
+              << "ms, mean optimize odometry time: " << estimator.total_surf_feature_ * 1.0 / estimator.frame_cnt_;
+    LOG(INFO) << "Frame: " << estimator.frame_cnt_ << ", mean surf feature: " << estimator.total_surf_feature_ * 1.0 / estimator.frame_cnt_
+              << "mean corner feature: " << estimator.total_corner_feature_ * 1.0 / estimator.frame_cnt_;
 }
 
 void SaveStatistics::saveMapStatistics(const string &map_filename,
@@ -185,5 +190,6 @@ void SaveStatistics::saveMapTimeStatistics(const string &filename, const double 
     fout << "frame, total_mapping_time, mean_mapping_time" << std::endl;
     fout << frame_cnt << ", " << total_time << ", " << total_time / frame_cnt << std::endl;
     fout.close();
-    printf("******* Frame: %d, mean mapping time: %fms\n", frame_cnt, total_time / frame_cnt);    
+    printf("******* Frame: %d, mean mapping time: %fms\n", frame_cnt, total_time / frame_cnt);
+    LOG(INFO) << "Frame: " << frame_cnt << ", mean mapping time: " << total_time / frame_cnt << "ms";
 }

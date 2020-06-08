@@ -18,10 +18,10 @@
     <arg name="delta_idx" default="2" />
     <arg name="time_now" default="true" />
 
-    <arg name="result_save" default="false"/>
+    <arg name="result_save" default="true"/>
     <arg name="output_path" default="/home/jjiao/trajectory_results/real_vehicle/shandong/rv01_gf/"/>
     <arg name="with_ua" default="true" /> <!-- uncertainty propagation -->    
-    <arg name="gf_ratio" default="0.5" />    
+    <arg name="gf_ratio" default="1.0" />    
 
     <arg name="config_file" default="$(find mloam)/config/config_realvehicle_shandong.yaml" />
     <group if="$(arg run_mloam)">

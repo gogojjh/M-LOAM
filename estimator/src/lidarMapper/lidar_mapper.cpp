@@ -548,8 +548,8 @@ void process()
 									  sel_feature_idx, FLAGS_gf_ratio);
 					printf("selected features num: %lu(%lu)\n", sel_feature_idx.size(), surf_num);
 
-					// if (frame_cnt % 100 == 0)
-					// 	writeFeature(sel_feature_idx, surf_map_features);
+					if (frame_cnt % 100 == 0)
+						writeFeature(sel_feature_idx, surf_map_features);
 
 					TicToc t_add_constraints;
 					CHECK_JACOBIAN = 0;
