@@ -32,6 +32,7 @@ find_package(Gflags REQUIRED)
 find_package(Glog REQUIRED)
 # find_package(Sophus REQUIRED)
 # find_package(libpointmatcher REQUIRED)
+find_package(G2O)
 
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
@@ -49,9 +50,10 @@ endif()
 
 include_directories(
 	3rdparty
-	${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR}
+	${catkin_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR}
 	${CERES_INCLUDE_DIRS} ${Sophus_INCLUDE_DIRS} ${libpointmatcher_INCLUDE_DIRS}
 	${GFLAGS_INCLUDE_DIRS} ${GLOG_INCLUDE_DIRS}
+    ${G2O_INCLUDE_DIRS} 
 )
 
 catkin_package(
@@ -61,13 +63,13 @@ catkin_package(
 )
 
 ######################################################## float libraries
-add_library(mloam_lib_1 STATIC
+add_library(mloam_lib_1 
     src/estimator/estimator.cpp
 )
 target_link_libraries(mloam_lib_1 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
-add_library(mloam_lib_2 STATIC
+add_library(mloam_lib_2 
     src/featureExtract/feature_extract.cpp
     src/lidarTracker/lidar_tracker.cpp
     src/utility/visualization.cpp
@@ -77,7 +79,7 @@ target_link_libraries(mloam_lib_2 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRA
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})    
 
 ######################################################## fix libraries
-add_library(mloam_lib_3 STATIC
+add_library(mloam_lib_3 
     src/estimator/parameters.cpp
     src/estimator/pose.cpp
     src/initial/initial_extrinsics.cpp
@@ -87,15 +89,15 @@ add_library(mloam_lib_3 STATIC
     src/utility/cloud_visualizer.cpp
 )
 target_link_libraries(mloam_lib_3 ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
-    ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} ${PCL_LIBRARIES} 
+    ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} 
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 ######## --------------------- EXECUTABLE --------------------- ########
-add_executable(mloam_node_sr src/rosNodeSR.cpp)
-target_link_libraries(mloam_node_sr mloam_lib_1 mloam_lib_2 mloam_lib_3)
+#add_executable(mloam_node_sr src/rosNodeSR.cpp)
+#target_link_libraries(mloam_node_sr mloam_lib_1 mloam_lib_2 mloam_lib_3)
 
-add_executable(mloam_node_rhd src/rosNodeRHD.cpp)
-target_link_libraries(mloam_node_rhd mloam_lib_1 mloam_lib_2 mloam_lib_3)
+#add_executable(mloam_node_rhd src/rosNodeRHD.cpp)
+#target_link_libraries(mloam_node_rhd mloam_lib_1 mloam_lib_2 mloam_lib_3)
 
 add_executable(mloam_node_rv src/rosNodeRV.cpp)
 target_link_libraries(mloam_node_rv mloam_lib_1 mloam_lib_2 mloam_lib_3)
@@ -103,6 +105,11 @@ target_link_libraries(mloam_node_rv mloam_lib_1 mloam_lib_2 mloam_lib_3)
 add_executable(lidar_mapper src/lidarMapper/lidar_mapper.cpp)
 target_link_libraries(lidar_mapper mloam_lib_2 mloam_lib_3)
 
+######## --------------------- OTHERS --------------------- ########
+add_library(poseIO SHARED test/g2oIO/PoseGraphIO.cpp)
+target_link_libraries(poseIO g2o_core g2o_stuff g2o_types_slam3d)
+add_executable(test_generate_full_map test/test_generate_full_map.cpp)
+target_link_libraries(test_generate_full_map poseIO mloam_lib_3)
 
 
 

@@ -14,7 +14,7 @@ find_package(PCL REQUIRED)
 # find_package(Glog REQUIRED)
 # find_package(Sophus REQUIRED)
 # find_package(libpointmatcher REQUIRED)
-find_package(G2O)
+# find_package(G2O)
 
 include_directories(${PCL_INCLUDE_DIRS} ${G2O_LIBRARY_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
@@ -58,12 +58,5 @@ include_directories(
 #add_executable(test_cuda_voxelgrid test_cuda_voxelgrid.cpp)
 #target_link_libraries(test_cuda_voxelgrid ${PCL_LIBRARIES})
 
-add_library(poseIO SHARED 
-	g2oIO/PoseGraphIO.cpp
-	)
-target_link_libraries(poseIO g2o_core g2o_stuff g2o_types_slam3d)
-
-add_executable(test_generate_full_map test_generate_full_map.cpp)
-target_link_libraries(test_generate_full_map poseIO mloam_lib_3)
 
 
