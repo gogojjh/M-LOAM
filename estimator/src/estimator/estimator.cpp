@@ -113,7 +113,7 @@ void Estimator::setParameter()
     pose_calib_.resize(NUM_OF_LASER);
     calib_converge_.resize(NUM_OF_LASER, false);
 
-    img_segment_.setParameter(HORIZON_SCAN, MIN_CLUSTER_SIZE, MIN_LINE_SIZE, SEGMENT_VALID_POINT_NUM, SEGMENT_VALID_LINE_NUM);
+    img_segment_.setParameter(N_SCANS, HORIZON_SCAN, MIN_CLUSTER_SIZE, MIN_LINE_SIZE, SEGMENT_VALID_POINT_NUM, SEGMENT_VALID_LINE_NUM);
 
     v_laser_path_.resize(NUM_OF_LASER);
 
@@ -215,7 +215,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
         float start_ori, end_ori;
 		f_extract_.findStartEndAngle(v_laser_cloud_in[i], start_ori, end_ori);
         cloudFeature *tmp_feature_ptr(new cloudFeature);
-        if ((SEGMENT_CLOUD) && (ESTIMATE_EXTRINSIC == 0))
+        if (SEGMENT_CLOUD)
         {
             PointCloud laser_cloud_segment;
 			img_segment_.segmentCloud(v_laser_cloud_in[i], laser_cloud_segment);
@@ -254,7 +254,7 @@ void Estimator::inputCloud(const double &t, const PointCloud &laser_cloud_in)
 
     float start_ori, end_ori;
     f_extract_.findStartEndAngle(laser_cloud_in, start_ori, end_ori);
-    if ((SEGMENT_CLOUD) && (ESTIMATE_EXTRINSIC == 0))
+    if (SEGMENT_CLOUD)
     {
         PointCloud laser_cloud_segment;
         img_segment_.segmentCloud(laser_cloud_in, laser_cloud_segment);

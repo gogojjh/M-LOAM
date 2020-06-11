@@ -10,6 +10,10 @@
  *
  * Author: Jianhao JIAO (jiaojh1994@gmail.com)
  *******************************************************/
+
+// Usage: rosrun mloam test_generate_full_map 
+//            -save_path=xx/pose_graph/ -num_laser=1 -save_interval=1
+
 #include <glog/logging.h>
 #include <gflags/gflags.h>
 
