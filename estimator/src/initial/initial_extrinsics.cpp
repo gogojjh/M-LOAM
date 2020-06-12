@@ -56,7 +56,7 @@ void InitialExtrinsics::setParameter()
     v_rot_cov_.resize(NUM_OF_LASER);
     v_pos_cov_.resize(NUM_OF_LASER);
     rot_cov_thre_ = (PLANAR_MOVEMENT) ? 0.08 : 0.25;
-    printf("[InitialExtrinsics] rot cov thre: %d\n", rot_cov_thre_);
+    printf("[InitialExtrinsics] rot cov thre: %f\n", rot_cov_thre_);
 
     Q_.resize(NUM_OF_LASER);
     for (size_t i = 0; i < Q_.size(); i++) Q_[i] = Eigen::MatrixXd::Zero(N_POSE * 4, 4);

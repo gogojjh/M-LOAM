@@ -26,11 +26,11 @@ segment_valid_line_num: 3
 segment_theta: 1.0 # Lego-loam: 1.0
 
 # window sizes
-window_size: 7
+window_size: 3
 opt_window_size: 1
 
 # Extrinsic parameter between IMU and Camera.
-estimate_extrinsic: 1   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
 optimal_extrinsic: 0
@@ -46,12 +46,12 @@ body_T_laser: !!opencv-matrix
 # initialization
    # data: [0, 0, 0, 1, 0, 0, 0, 
    #        0, 0, 0, 1, 0, -1, 0]
-# refinement
+   # refinement
    data: [0, 0, 0, 1, 0, 0, 0, 
-          -0.0002387, -0.0012604, -0.001491, 0.99999806, 0.97673, -0.01348, 0.0041553]
+          -0.002297, -0.0064405, -0.00202941, 0.9999745, 0.98935, -0.019818, 0.003072]
 # manufactor
    # data: [0, 0, 0, 1, 0, 0, 0,
-   #       [-0.0159, 0.0542, 0.0361, 0.9977, 0.6428, -0.0043, -1.1343]
+   #        -0.0002387, -0.0012604, -0.001491, 0.99999806, 0.97673, -0.01348, 0.0041553]
 
 #unsynchronization parameters
 estimate_td: 0                      # 0 have an accurate time offset among sensors
@@ -77,7 +77,7 @@ roi_range_mapping: 0
 scan_period: 0.1
 distance_sq_threshold: 25
 nearby_scan: 2.5
-distortion: 0
+distortion: 1
 
 # movement type
 planar_movement: 1
@@ -116,15 +116,16 @@ uct_ext: !!opencv-matrix
    cols: 6
    dt: d
    data: [0, 0, 0, 0, 0, 0,
-          0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01]
+         #  0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01]
+          0, 0, 0, 0, 0, 0]
 
 uct_measurement: !!opencv-matrix
    rows: 1
-   cols: 2
+   cols: 3
    dt: d
-   data: [0.0025, 0.0025]
+   data: [0.0025, 0.0025, 0.0025]
 
 trace_threshold_before_mapping: 2
 trace_threshold_after_mapping: 2
 
-skip_num_odom_pub: 2
+skip_num_odom_pub: 1

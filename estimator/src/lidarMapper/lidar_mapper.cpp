@@ -277,8 +277,8 @@ void process()
 			extrinsics = *ext_buf.front();
 			if (!extrinsics.status)
 			{
-				std::cout << common::YELLOW << "Calibration is stable!" << common::RESET << std::endl;
-				for (auto n = 0; n < NUM_OF_LASER; n++)
+				std::cout << common::YELLOW << "Accurate extrinsic calibration!" << common::RESET << std::endl;
+				for (size_t n = 0; n < NUM_OF_LASER; n++)
 				{
 					pose_ext[n].q_ = Eigen::Quaterniond(extrinsics.odoms[n].pose.pose.orientation.w,
 														extrinsics.odoms[n].pose.pose.orientation.x,
@@ -453,21 +453,23 @@ void process()
 				}
 			}
 
+			// load surf map features
 			laser_cloud_surf_from_map_cov->clear();
 			for (int i = 0; i < laser_cloud_valid_num; i++)
 			{
 				*laser_cloud_surf_from_map_cov += *laser_cloud_surf_array_cov[laser_cloud_valid_ind[i]];
 			}
 			int laser_cloud_surf_from_map_num = laser_cloud_surf_from_map_cov->points.size();
-			// printf("map prepare time: %fms\n", t_shift.toc());
+			printf("map prepare time: %fms\n", t_shift.toc());
 
 			PointICloud::Ptr laser_cloud_surf_stack(new PointICloud());
 			down_size_filter_surf.setInputCloud(laser_cloud_surf_last);
 			down_size_filter_surf.filter(*laser_cloud_surf_stack);
-			int laser_cloud_surf_stack_num = laser_cloud_surf_stack->points.size();
+			// int laser_cloud_surf_stack_num = laser_cloud_surf_stack->points.size();
+			// std::cout << "input surf num: " << laser_cloud_surf_stack_num << std::endl;
 
 			//**************************************************************
-			for (auto n = 0; n < NUM_OF_LASER; n++)
+			for (size_t n = 0; n < NUM_OF_LASER; n++)
 			{
 				laser_cloud_surf_split_cov[n].clear();
 			}
@@ -662,7 +664,7 @@ void process()
 			printf("filter time: %fms\n", t_filter.toc());
 
 			// ************************************************************** publish feature and map data
-			// publish surround map (use for optimization) for every 20 frame
+			// publish surround map (use for optimization) for every 50 frame
 			TicToc t_pub;
 			if ((pub_laser_cloud_surround.getNumSubscribers() != 0) && (frame_cnt % 50 ==0))
 			{

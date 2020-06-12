@@ -190,7 +190,20 @@ void sync_process()
             for (size_t i = 0; i < all_cloud_buf.size(); i++) all_cloud_buf[i].pop();
             printf("size of finding laser_cloud: %s\n", ss.str().c_str());
         }
+        while (!all_cloud_buf[0].empty())
+        {
+            for (size_t i = 0; i < all_cloud_buf.size(); i++)
+            {
+                if (!all_cloud_buf[i].empty())
+                {
+                    all_cloud_buf[i].pop();
+                }
+            }
+            std::cout << common::GREEN << "drop lidar frame in odometry for real time performance" 
+                      << common::RESET << std::endl;
+        }
         m_buf.unlock();
+
         bool empty_check = false;
         for (size_t i = 0; i < NUM_OF_LASER; i++)
             if (v_laser_cloud[i].size() == 0) empty_check = true;
