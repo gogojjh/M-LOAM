@@ -227,7 +227,8 @@ void evaluateFeatJacobian(const double *para_pose,
 }
 
 void goodFeatureSelect(const double *para_pose,
-                       const std::vector<PointICovCloud> laser_cloud_cov,
+                       const std::vector<PointICovCloud> laser_cloud_surf_cov,
+                       const std::vector<PointICovCloud> laser_cloud_corner_cov,
                        const std::vector<PointPlaneFeature> &all_features,
                        const size_t &num_all_features,
                        std::vector<size_t> &sel_feature_idx,
@@ -292,7 +293,10 @@ void goodFeatureSelect(const double *para_pose,
             size_t que_idx = all_feature_idx[j];
             const PointPlaneFeature &feature = all_features[que_idx];
             Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
-            extractCov(laser_cloud_cov[feature.laser_idx_].points[feature.idx_], cov_matrix);
+            if (feature.type_ == 's')
+                extractCov(laser_cloud_surf_cov[feature.laser_idx_].points[feature.idx_], cov_matrix);
+            else if (feature.type_ == 's')
+                extractCov(laser_cloud_corner_cov[feature.laser_idx_].points[feature.idx_], cov_matrix);
             Eigen::MatrixXd jaco;
             evaluateFeatJacobian(para_pose, feature, cov_matrix, jaco);
 

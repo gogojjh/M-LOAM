@@ -410,6 +410,7 @@ void FeatureExtract::matchCornerFromMap(const typename pcl::KdTreeFLANN<PointTyp
                     feature1.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
                     feature1.coeffs_ = coeff1 * 0.5;
                     feature1.laser_idx_ = laser_idx;
+                    feature1.type_ = 'c';
                     features[cloud_cnt] = feature1;
                     cloud_cnt++;
 
@@ -417,6 +418,7 @@ void FeatureExtract::matchCornerFromMap(const typename pcl::KdTreeFLANN<PointTyp
                     feature2.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
                     feature2.coeffs_ = coeff2 * 0.5;
                     feature2.laser_idx_ = laser_idx;
+                    feature2.type_ = 'c';
                     features[cloud_cnt] = feature2;
                     cloud_cnt++;
                 }
@@ -547,6 +549,7 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
                     feature.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
                     feature.coeffs_ = coeff;
                     feature.laser_idx_ = laser_idx;
+                    feature.type_ = 's';
                     features[cloud_cnt] = feature;
                     cloud_cnt++;
                 }

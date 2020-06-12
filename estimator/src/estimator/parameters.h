@@ -161,6 +161,7 @@ public:
     size_t laser_idx_;
     Eigen::Vector3d point_;
     Eigen::Vector4d coeffs_;
+    char type_;
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };

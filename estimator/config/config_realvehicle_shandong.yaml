@@ -94,7 +94,7 @@ min_plane_dis: 0.2
 # factor
 marginalization_factor: 1
 point_plane_factor: 1
-point_edge_factor: 0
+point_edge_factor: 1
 prior_factor: 0
 prior_factor_pos: 5
 prior_factor_rot: 1
