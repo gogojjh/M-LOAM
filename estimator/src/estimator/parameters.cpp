@@ -139,7 +139,8 @@ void readParameters(std::string config_file)
     NUM_ITERATIONS = fsSettings["max_num_iterations"];
 
     NUM_OF_LASER = fsSettings["num_of_laser"];
-    printf("laser number %d\n", NUM_OF_LASER);
+    printf("laser number %lu\n", NUM_OF_LASER);
+    assert(NUM_OF_LASER >= 0);
 
     cv::FileNode node_cloud_topic = fsSettings["cloud_topic"];
     int cnt = 0;
@@ -202,6 +203,8 @@ void readParameters(std::string config_file)
 
     LASER_SYNC_THRESHOLD = fsSettings["laser_sync_threshold"];
     N_SCANS = fsSettings["n_scans"];
+    assert(N_SCANS >= 0);
+
     ROI_RANGE = fsSettings["roi_range"];
     ROI_RANGE_MAPPING = fsSettings["roi_range_mapping"];
 
@@ -214,6 +217,7 @@ void readParameters(std::string config_file)
     SEGMENT_THETA = fsSettings["segment_theta"];
 
     IDX_REF = fsSettings["idx_ref"];
+    assert(IDX_REF >= 0);
 
     SCAN_PERIOD = fsSettings["scan_period"];
     DISTANCE_SQ_THRESHOLD = fsSettings["distance_sq_threshold"];

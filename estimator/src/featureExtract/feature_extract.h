@@ -110,7 +110,7 @@ void FeatureExtract::matchCornerFromScan(const typename pcl::KdTreeFLANN<PointTy
     PointType point_sel;
     std::vector<int> point_search_ind;
     std::vector<float> point_search_sqdis;
-    for (auto i = 0; i < cloud_data.points.size(); i++)
+    for (size_t i = 0; i < cloud_data.points.size(); i++)
     {
         TransformToStart(cloud_data.points[i], point_sel, pose_local, DISTORTION, SCAN_PERIOD);
         kdtree_corner_from_scan->nearestKSearch(point_sel, 1, point_search_ind, point_search_sqdis);
@@ -215,7 +215,7 @@ void FeatureExtract::matchSurfFromScan(const typename pcl::KdTreeFLANN<PointType
     PointType point_sel;
     std::vector<int> point_search_ind;
     std::vector<float> point_search_sqdis;
-    for (auto i = 0; i < cloud_data.points.size(); i++)
+    for (size_t i = 0; i < cloud_data.points.size(); i++)
     {
         TransformToStart(cloud_data.points[i], point_sel, pose_local, DISTORTION, SCAN_PERIOD);
         kdtree_surf_from_scan->nearestKSearch(point_sel, 1, point_search_ind, point_search_sqdis);
@@ -406,6 +406,7 @@ void FeatureExtract::matchCornerFromMap(const typename pcl::KdTreeFLANN<PointTyp
                     Eigen::Vector4d coeff2(w2.x(), w2.y(), w2.z(), ld_p2);
 
                     PointPlaneFeature feature1, feature2;
+                    
                     feature1.idx_ = i;
                     feature1.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
                     feature1.coeffs_ = coeff1 * 0.5;
@@ -544,7 +545,6 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
                 {
                     Eigen::Vector4d coeff(norm(0), norm(1), norm(2), negative_OA_dot_norm);
                     PointPlaneFeature feature;
-
                     feature.idx_ = i;
                     feature.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
                     feature.coeffs_ = coeff;

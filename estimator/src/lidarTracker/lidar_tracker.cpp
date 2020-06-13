@@ -81,17 +81,14 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         }
 
         CHECK_JACOBIAN = 0;
-        for (auto &feature : corner_scan_features)
+        for (const PointPlaneFeature &feature : corner_scan_features)
         {
-            const size_t &idx = feature.idx_;
-            const Eigen::Vector3d &p_data = feature.point_;
-            const Eigen::Vector4d &coeff = feature.coeffs_;
             double s = 1.0;
             // if (DISTORTION)
-            //     s = (corner_points_sharp->points[idx].intensity - int(corner_points_sharp->points[idx].intensity)) / SCAN_PERIOD;
+            //     s = (corner_points_sharp->points[feature.idx_].intensity - int(corner_points_sharp->points[idx].intensity)) / SCAN_PERIOD;
             // else
             //     s = 1.0;
-            LidarScanPlaneNormFactor *f = new LidarScanPlaneNormFactor(p_data, coeff, s);
+            LidarScanPlaneNormFactor *f = new LidarScanPlaneNormFactor(feature.point_, feature.coeffs_, s);
             ceres::ResidualBlockId res_id = problem.AddResidualBlock(f, loss_function, para_pose);
             res_ids_proj.push_back(res_id);
             if (CHECK_JACOBIAN)
@@ -103,17 +100,14 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
             }
         }
 
-        for (auto &feature : surf_scan_features)
+        for (const PointPlaneFeature &feature : surf_scan_features)
         {
-            const size_t &idx = feature.idx_;
-            const Eigen::Vector3d &p_data = feature.point_;
-            const Eigen::Vector4d &coeff = feature.coeffs_;
             double s = 1.0;
             // if (DISTORTION)
             //     s = (surf_points_flat->points[idx].intensity - int(surf_points_flat->points[idx].intensity)) / SCAN_PERIOD;
             // else
-            //     s = 1.0;            
-            LidarScanPlaneNormFactor *f = new LidarScanPlaneNormFactor(p_data, coeff, s);
+            //     s = 1.0;
+            LidarScanPlaneNormFactor *f = new LidarScanPlaneNormFactor(feature.point_, feature.coeffs_, s);
             ceres::ResidualBlockId res_id = problem.AddResidualBlock(f, loss_function, para_pose);
             res_ids_proj.push_back(res_id);
         }

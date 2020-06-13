@@ -5,7 +5,7 @@ multiple_thread: 0
 
 #optimization PARAMETERS
 max_solver_time: 0.03  # max solver itration time (s), to guarantee real time
-max_num_iterations: 15   # max solver itrations, to guarantee real time
+max_num_iterations: 7   # max solver itrations, to guarantee real time
 keyframe_parallax: 0 # keyframe selection threshold (pixel)
 
 evaluate_residual: 1
@@ -26,7 +26,7 @@ segment_valid_line_num: 3
 segment_theta: 1.0 # Lego-loam: 1.0
 
 # window sizes
-window_size: 3
+window_size: 4
 opt_window_size: 1
 
 # Extrinsic parameter between IMU and Camera.
@@ -35,24 +35,24 @@ estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trus
                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
 optimal_extrinsic: 0
 
+# the extrinsics from the base_link to laser_link
+# qx qy qz qw px py pz
 body_T_laser: !!opencv-matrix
    rows: 2
    cols: 7
    dt: d
 # no prior
-# qx qy qz qw px py pz
    # data: [0, 0, 0, 1, 0, 0, 0, 
    #        0, 0, 0, 1, 0, 0, 0]
 # initialization
    # data: [0, 0, 0, 1, 0, 0, 0, 
    #        0, 0, 0, 1, 0, -1, 0]
-   # refinement
-   data: [0, 0, 0, 1, 0, 0, 0, 
+# refinement
+   data: [0, 0, 0, 1, 0, 0, 0,
           -0.002297, -0.0064405, -0.00202941, 0.9999745, 0.98935, -0.019818, 0.003072]
-# manufactor
-   # data: [0, 0, 0, 1, 0, 0, 0,
-   #        -0.0002387, -0.0012604, -0.001491, 0.99999806, 0.97673, -0.01348, 0.0041553]
-
+   
+   # data: [0, 0, -0.707, 0.707, 1.4, 0.5, 1.5,
+   #        -0.0061783, -0.0029299, -0.70852, 0.70565, 1.3802, -0.48935, 1.5031]
 #unsynchronization parameters
 estimate_td: 0                      # 0 have an accurate time offset among sensors
                                     # 1 online estimate time offset among sensors
@@ -77,7 +77,7 @@ roi_range_mapping: 0
 scan_period: 0.1
 distance_sq_threshold: 25
 nearby_scan: 2.5
-distortion: 1
+distortion: 0
 
 # movement type
 planar_movement: 1
@@ -116,8 +116,8 @@ uct_ext: !!opencv-matrix
    cols: 6
    dt: d
    data: [0, 0, 0, 0, 0, 0,
-         #  0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01]
-          0, 0, 0, 0, 0, 0]
+          0.0025, 0.0025, 0.0025, 0.0025, 0.0025, 0.0025]
+         #  0, 0, 0, 0, 0, 0]
 
 uct_measurement: !!opencv-matrix
    rows: 1
