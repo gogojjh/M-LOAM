@@ -313,30 +313,30 @@ void Estimator::undistortMeasurements()
     {
         if (ESTIMATE_EXTRINSIC == 2) // initialization
         {
-            // for (auto &point : cur_feature_.second[n]["corner_points_sharp"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
-            // for (auto &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
-            for (auto &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
-            for (auto &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
-			for (auto &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
+            // for (PointI &point : cur_feature_.second[n]["corner_points_sharp"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
+            // for (PointI &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
+            for (PointI &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
+            for (PointI &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
+			for (PointI &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
         } else
-        if (ESTIMATE_EXTRINSIC == 1) // online calibration
-        {
-            if (n != IDX_REF) continue;
-            // for (auto &point : cur_feature_.second[n]["corner_points_sharp"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
-            // for (auto &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
-            for (auto &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
-            for (auto &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
-			for (auto &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
-        } else
-        if (ESTIMATE_EXTRINSIC == 0) // pure odometry with accurate extrinsics
+        // if (ESTIMATE_EXTRINSIC == 1) // online calibration
+        // {
+        //     if (n != IDX_REF) continue;
+        //     // for (PointI &point : cur_feature_.second[n]["corner_points_sharp"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
+        //     // for (PointI &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
+        //     for (PointI &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
+        //     for (PointI &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
+		// 	for (PointI &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_rlt_[n], DISTORTION, SCAN_PERIOD);
+        // } else
+        // if (ESTIMATE_EXTRINSIC == 0) // pure odometry with accurate extrinsics
         {
             Pose pose_ext(qbl_[n], tbl_[n]);
             Pose pose_local = pose_ext.inverse() * pose_rlt_[IDX_REF] * pose_ext;
-            // for (auto &point : cur_feature_.second[n]["corner_points_sharp"]) TransformToEnd(point, point, pose_local, DISTORTION, SCAN_PERIOD);
-            // for (auto &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_local, DISTORTION, SCAN_PERIOD);
-            for (auto &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_local, DISTORTION, SCAN_PERIOD);
-            for (auto &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_local, DISTORTION, SCAN_PERIOD);
-			for (auto &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_local, DISTORTION, SCAN_PERIOD);
+            // for (PointI &point : cur_feature_.second[n]["corner_points_sharp"]) TransformToEnd(point, point, pose_local, DISTORTION, SCAN_PERIOD);
+            // for (PointI &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_local, DISTORTION, SCAN_PERIOD);
+            for (PointI &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_local, DISTORTION, SCAN_PERIOD);
+            for (PointI &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_local, DISTORTION, SCAN_PERIOD);
+			for (PointI &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_local, DISTORTION, SCAN_PERIOD);
         }
     }
 }
@@ -411,11 +411,31 @@ void Estimator::process()
             // printf("lidarTracker: %fms\n", t_mloam_tracker.toc());
         }
     }
-    // if (frame_cnt_ % 10 == 0)
-    //     pcl::io::savePCDFileASCII("/tmp/raw_pc.pcd", cur_feature_.second[IDX_REF]["laser_cloud"]);
+    // if (frame_cnt_ % 3 == 0)
+    // {
+    //     for (size_t n = 0; n < NUM_OF_LASER; n++)
+    //     {
+    //         stringstream ss;
+    //         ss << "/tmp/raw_pc_" << n << ".pcd";
+    //         pcl::io::savePCDFileASCII(ss.str(), cur_feature_.second[n]["laser_cloud"]);
+    //     }
+    // }
     if (DISTORTION) undistortMeasurements(); // after tracking, undistort measurements using last frame odometry
-    // if (frame_cnt_ % 10 == 0)
-    //     pcl::io::savePCDFileASCII("/tmp/undistort_pc.pcd", cur_feature_.second[IDX_REF]["laser_cloud"]);
+    // if (frame_cnt_ % 3 == 0)
+    // {
+    //     for (size_t n = 0; n < NUM_OF_LASER; n++)
+    //     {
+    //         stringstream ss;
+    //         ss << "/tmp/undistort_pc_" << n << ".pcd";
+    //         pcl::io::savePCDFileASCII(ss.str(), cur_feature_.second[n]["laser_cloud"]);
+    //     }
+    // }
+    // ofstream fpose("/tmp/pose_rlt.txt");
+    // fpose << "rlt_0: " << pose_rlt_[IDX_REF] << std::endl;
+    // Pose pose_ext(qbl_[1], tbl_[1]);
+    // Pose pose_local = pose_ext.inverse() * pose_rlt_[IDX_REF] * pose_ext;
+    // fpose << "rlt_1: " << pose_local << std::endl;
+    // fpose.close();
 
     //----------------- update pose and point cloud
     Qs_[cir_buf_cnt_] = pose_laser_cur_[IDX_REF].q_;
@@ -1069,9 +1089,6 @@ void Estimator::buildLocalMap()
         kdtree_surf_points_local_map->setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_filtered_[n]));
         pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_points_local_map(new pcl::KdTreeFLANN<PointI>());
         kdtree_corner_points_local_map->setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_filtered_[n]));
-        stringstream ss;
-        ss << "/tmp/surf_localmap_" << n << ".pcd";
-        pcd_writer_.write(ss.str(), surf_points_local_map_filtered_[n]); 
         int n_neigh = 5;
         for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
         {         

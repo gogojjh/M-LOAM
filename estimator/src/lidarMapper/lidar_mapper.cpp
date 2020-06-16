@@ -238,16 +238,17 @@ void insertNewKeyframe()
 		new_keyframe = false;
 	}
 	if ((new_keyframe) && (pose_keyframe.size() !=0)) return;
-	pose_wmap_prev = pose_wmap_curr;
+	pose_wmap_prev = po	se_wmap_curr;
 
-	if (pose_keyframe.size() == 0)
-	{
-		pose_keyframe.push_back(std::make_pair(time_laser_cloud_surf_last, pose_wmap_curr));
-	} else
-	{
-		pose_keyframe.push_back(std::make_pair(time_laser_cloud_surf_last, pose_wmap_curr));
-		// construct a pose graph
-	}
+	// if (pose_keyframe.size() == 0)
+	// {
+	// 	pose_keyframe.push_back(std::make_pair(time_laser_cloud_surf_last, pose_wmap_curr));
+	// } else
+	// {
+	// 	pose_keyframe.push_back(std::make_pair(time_laser_cloud_surf_last, pose_wmap_curr));
+	// 	// construct a pose graph
+	// }
+	pose_keyframe.push_back(std::make_pair(time_laser_cloud_surf_last, pose_wmap_curr));
 }
 
 void process()
@@ -658,7 +659,7 @@ void process()
 									  sel_feature_idx, FLAGS_gf_ratio);
 					printf("selected features num: %lu(%lu)\n", sel_feature_idx.size(), surf_num + corner_num);
 
-					if (frame_cnt % 100 == 0)
+					if ((frame_cnt % 100 == 0) && (FLAGS_gf_ratio != 1.0))
 						writeFeature(sel_feature_idx, map_features);
 
 					TicToc t_add_constraints;

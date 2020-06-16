@@ -4,8 +4,8 @@
 multiple_thread: 0
 
 #optimization PARAMETERS
-max_solver_time: 0.03  # max solver itration time (s), to guarantee real time
-max_num_iterations: 7   # max solver itrations, to guarantee real time
+max_solver_time: 0.01  # max solver itration time (s), to guarantee real time
+max_num_iterations: 5   # max solver itrations, to guarantee real time
 keyframe_parallax: 0 # keyframe selection threshold (pixel)
 
 evaluate_residual: 1
@@ -17,7 +17,7 @@ num_of_laser: 2
 n_scans: 32
 
 # segmmentation
-segment_cloud: 0
+segment_cloud: 1
 horizon_scan: 1800
 min_cluster_size: 30
 min_line_size: 10
@@ -26,7 +26,7 @@ segment_valid_line_num: 3
 segment_theta: 1.0 # Lego-loam: 1.0
 
 # window sizes
-window_size: 4
+window_size: 3
 opt_window_size: 1
 
 # Extrinsic parameter between IMU and Camera.
@@ -49,11 +49,9 @@ body_T_laser: !!opencv-matrix
    #        0, 0, 0, 1, 0, -1, 0]
 # refinement
    data: [0, 0, 0, 1, 0, 0, 0,
-          -0.002297, -0.0064405, -0.00202941, 0.9999745, 0.98935, -0.019818, 0.003072]
-   # data: [0, 0, 0, 1, 0, 0, 0,
-         #  0, 0, 0, 1, 1, 0, 0]
+          -0.004008, 0.000008, 0.00099912, 0.9999, -0.0036645, -0.89756, 0.006857]
 
-          #unsynchronization parameters
+#unsynchronization parameters
 estimate_td: 0                      # 0 have an accurate time offset among sensors
                                     # 1 online estimate time offset among sensors
 
@@ -66,8 +64,8 @@ td: !!opencv-matrix                 # initial value of time offset. unit: s. rea
 idx_ref: 0
 
 cloud_topic:
-   - "/hdl32e_left/velodyne_points"
-   - "/hdl32e_right/velodyne_points"
+   - "/left/velodyne_points"
+   - "/right/velodyne_points"
 
 laser_sync_threshold: 0.07
 roi_range: 3

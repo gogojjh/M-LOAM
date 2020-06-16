@@ -82,7 +82,8 @@ void TransformToStart(const PointType &pi, PointType &po, const Pose &pose, cons
 // a: last frame; b: current frame; c: frame for points capturing
 // p^a = T(s)*p^c, p^b = T^(-1)*T(s)*p^c
 template <typename PointType>
-void TransformToEnd(const PointType &pi, PointType &po, const Pose &pose, const bool &b_distortion, const float &scan_period = 0.1)
+void TransformToEnd(const PointType &pi, PointType &po, const Pose &pose, 
+                    const bool &b_distortion, const float &scan_period = 0.1)
 {
     if (!pcl::traits::has_field<PointType, pcl::fields::intensity>::value)
     {

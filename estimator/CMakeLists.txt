@@ -106,11 +106,16 @@ add_executable(lidar_mapper src/lidarMapper/lidar_mapper.cpp)
 target_link_libraries(lidar_mapper mloam_lib_2 mloam_lib_3)
 
 ######## --------------------- OTHERS --------------------- ########
-add_library(poseIO SHARED test/g2oIO/PoseGraphIO.cpp)
-target_link_libraries(poseIO g2o_core g2o_stuff g2o_types_slam3d)
-add_executable(test_generate_full_map test/test_generate_full_map.cpp)
-target_link_libraries(test_generate_full_map poseIO mloam_lib_3)
+#add_library(poseIO SHARED test/g2oIO/PoseGraphIO.cpp)
+#target_link_libraries(poseIO g2o_core g2o_stuff g2o_types_slam3d)
+#add_executable(test_generate_full_map test/test_generate_full_map.cpp)
+#target_link_libraries(test_generate_full_map poseIO mloam_lib_3)
 
+add_executable(test_generate_bag_from_data_oxford test/test_generate_bag_from_data_oxford.cpp)
+target_link_libraries(test_generate_bag_from_data_oxford mloam_lib_3)
+
+add_executable(test_merge_pointcloud_oxford test/test_merge_pointcloud_oxford.cpp)
+target_link_libraries(test_merge_pointcloud_oxford mloam_lib_3)
 
 
 
