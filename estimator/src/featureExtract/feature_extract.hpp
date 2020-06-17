@@ -11,7 +11,8 @@
  * Author: Jianhao JIAO (jiaojh1994@gmail.com)
  *******************************************************/
 
-#pragma once
+#ifndef FEATURE_EXTRACT_HPP
+#define FEATURE_EXTRACT_HPP
 
 #include <cstdio>
 #include <iostream>
@@ -38,26 +39,42 @@
 #include "../utility/tic_toc.h"
 #include "../utility/utility.h"
 
+using namespace common;
+
+class compObject
+{
+public:
+    float *cloud_curvature;
+    bool operator()(int i, int j) { return (cloud_curvature[i] < cloud_curvature[j]); }
+};
+
 class FeatureExtract
 {
 public:
-    FeatureExtract();
+    FeatureExtract() {}
 
-    void findStartEndAngle(const common::PointCloud &laser_cloud_in, 
+    template <typename PointType>
+    void findStartEndAngle(const typename pcl::PointCloud<PointType> &laser_cloud_in, 
                            float &start_ori, 
                            float &end_ori);
 
-    void cloudRearrange(const common::PointCloud &laser_cloud_in, 
+    template <typename PointType>
+    void findStartEndTime(const typename pcl::PointCloud<PointType> &laser_cloud_in,
+                          float &start_time, 
+                          float &end_time);                       
+
+    template <typename PointType>
+    void cloudRearrange(const typename pcl::PointCloud<PointType> &laser_cloud_in, 
                         std::vector<common::PointICloud> &laser_cloud_scans, 
-                        int &cloud_size, 
                         const float &start_ori, 
                         const float &end_ori);
 
-    void extractCloud(const double &cur_time, 
-                      const common::PointCloud &laser_cloud_in, 
-                      cloudFeature &cloud_feature,
-                      const float &start_ori,
-                      const float &end_ori);
+    template <typename PointType>
+    void cloudRearrangeWithTime(const typename pcl::PointCloud<PointType> &laser_cloud_in,
+                                std::vector<common::PointICloud> &laser_cloud_scans);
+
+    void extractCloud(const std::vector<common::PointICloud> &laser_cloud_scans,
+                      cloudFeature &cloud_feature);
 
     template <typename PointType>
     void matchCornerFromScan(const typename pcl::KdTreeFLANN<PointType>::Ptr &kdtree_corner_from_scan,
@@ -93,6 +110,195 @@ public:
                           const size_t &N_NEIGH = 5,
                           const bool &CHECK_FOV = true);
 };
+
+template <typename PointType>
+void FeatureExtract::findStartEndAngle(const typename pcl::PointCloud<PointType> &laser_cloud_in,
+                                       float &start_ori,
+                                       float &end_ori)
+{
+    int cloud_size = laser_cloud_in.points.size();
+    start_ori = -atan2(laser_cloud_in.points[0].y, laser_cloud_in.points[0].x);
+    end_ori = -atan2(laser_cloud_in.points[cloud_size - 1].y,
+                     laser_cloud_in.points[cloud_size - 1].x) +
+              2 * M_PI;
+    if (end_ori - start_ori > 3 * M_PI)
+    {
+        end_ori -= 2 * M_PI;
+    }
+    else if (end_ori - start_ori < M_PI)
+    {
+        end_ori += 2 * M_PI;
+    }
+    // std::cout << "end Ori " << end_ori << std::endl;
+}
+
+template <typename PointType>
+void FeatureExtract::findStartEndTime(const typename pcl::PointCloud<PointType> &laser_cloud_in,
+                                      float &start_time,
+                                      float &end_time)
+{
+    start_time = 1e6; 
+    end_time = 0.0;
+    for (const auto &point : laser_cloud_in)
+    {
+        start_time = std::min(point.timestamp, start_time);
+        end_time = std::max(point.timestamp, end_time);
+    }
+}
+
+template <typename PointType>
+void FeatureExtract::cloudRearrange(const typename pcl::PointCloud<PointType> &laser_cloud_in,
+                                    std::vector<PointICloud> &laser_cloud_scans,
+                                    const float &start_ori,
+                                    const float &end_ori)
+{
+    bool half_passed;
+    size_t count = laser_cloud_in.size();
+    PointI point;
+    laser_cloud_scans.clear();
+    laser_cloud_scans.resize(N_SCANS);
+    for (size_t i = 0; i < laser_cloud_in.size(); i++)
+    {
+        point.x = laser_cloud_in.points[i].x;
+        point.y = laser_cloud_in.points[i].y;
+        point.z = laser_cloud_in.points[i].z;
+
+        float angle = atan(point.z / sqrt(point.x * point.x + point.y * point.y)) * 180 / M_PI;
+        int scan_id = 0;
+        if (N_SCANS == 16)
+        {
+            scan_id = int((angle + 15) / 2 + 0.5);
+            if (scan_id > (N_SCANS - 1) || scan_id < 0)
+            {
+                count--;
+                continue;
+            }
+        }
+        else if (N_SCANS == 32)
+        {
+            scan_id = int((angle + 92.0 / 3.0) * 3.0 / 4.0);
+            if (scan_id > (N_SCANS - 1) || scan_id < 0)
+            {
+                count--;
+                continue;
+            }
+        }
+        else if (N_SCANS == 64)
+        {
+            if (angle >= -8.83)
+                scan_id = int((2 - angle) * 3.0 + 0.5);
+            else
+                scan_id = N_SCANS / 2 + int((-8.83 - angle) * 2.0 + 0.5);
+
+            // use [0 50]  > 50 remove outlies
+            if (angle > 2 || angle < -24.33 || scan_id > 50 || scan_id < 0)
+            {
+                count--;
+                continue;
+            }
+        }
+        else
+        {
+            std::cout << "wrong scan number" << std::endl;
+            ROS_BREAK();
+        }
+        // std::cout << "angle " << angle << ", scan_id " << scan_id << std::endl;
+
+        // if predict timestamp
+        float ori = -atan2(point.y, point.x);
+        if (!half_passed)
+        {
+            if (ori < start_ori - M_PI / 2)
+            {
+                ori += 2 * M_PI;
+            }
+            else if (ori > start_ori + M_PI * 3 / 2)
+            {
+                ori -= 2 * M_PI;
+            }
+
+            if (ori - start_ori > M_PI)
+            {
+                half_passed = true;
+            }
+        }
+        else
+        {
+            ori += 2 * M_PI;
+            if (ori < end_ori - M_PI * 3 / 2)
+            {
+                ori += 2 * M_PI;
+            }
+            else if (ori > end_ori + M_PI / 2)
+            {
+                ori -= 2 * M_PI;
+            }
+        }
+        float rel_time = (ori - start_ori) / (end_ori - start_ori);
+        point.intensity = scan_id + SCAN_PERIOD * rel_time;
+        laser_cloud_scans[scan_id].push_back(point);
+    }
+}
+
+template <typename PointType>
+void FeatureExtract::cloudRearrangeWithTime(const typename pcl::PointCloud<PointType> &laser_cloud_in,
+                                            std::vector<PointICloud> &laser_cloud_scans)
+{
+    bool half_passed;
+    size_t count = laser_cloud_in.size();
+    PointI point;
+    laser_cloud_scans.clear();
+    laser_cloud_scans.resize(N_SCANS);
+    for (size_t i = 0; i < laser_cloud_in.size(); i++)
+    {
+        point.x = laser_cloud_in.points[i].x;
+        point.y = laser_cloud_in.points[i].y;
+        point.z = laser_cloud_in.points[i].z;
+
+        float angle = atan(point.z / sqrt(point.x * point.x + point.y * point.y)) * 180 / M_PI;
+        int scan_id = 0;
+        if (N_SCANS == 16)
+        {
+            scan_id = int((angle + 15) / 2 + 0.5);
+            if (scan_id > (N_SCANS - 1) || scan_id < 0)
+            {
+                count--;
+                continue;
+            }
+        }
+        else if (N_SCANS == 32)
+        {
+            scan_id = int((angle + 92.0 / 3.0) * 3.0 / 4.0);
+            if (scan_id > (N_SCANS - 1) || scan_id < 0)
+            {
+                count--;
+                continue;
+            }
+        }
+        else if (N_SCANS == 64)
+        {
+            if (angle >= -8.83)
+                scan_id = int((2 - angle) * 3.0 + 0.5);
+            else
+                scan_id = N_SCANS / 2 + int((-8.83 - angle) * 2.0 + 0.5);
+
+            // use [0 50]  > 50 remove outlies
+            if (angle > 2 || angle < -24.33 || scan_id > 50 || scan_id < 0)
+            {
+                count--;
+                continue;
+            }
+        }
+        else
+        {
+            std::cout << "wrong scan number" << std::endl;
+            ROS_BREAK();
+        }
+        float rel_time = laser_cloud_in.points[i].timestamp * 1e-6;
+        point.intensity = scan_id + rel_time;
+        laser_cloud_scans[scan_id].push_back(point);
+    }
+}
 
 template <typename PointType>
 void FeatureExtract::matchCornerFromScan(const typename pcl::KdTreeFLANN<PointType>::Ptr &kdtree_corner_from_scan,
@@ -131,9 +337,9 @@ void FeatureExtract::matchCornerFromScan(const typename pcl::KdTreeFLANN<PointTy
                 // if not in nearby scans, end the loop
                 if (int(cloud_scan.points[j].intensity) > (closest_point_scan_id + NEARBY_SCAN))
                     break;
-                double point_sqdis = common::sqrSum(cloud_scan.points[j].x - point_sel.x,
-                                                    cloud_scan.points[j].y - point_sel.y,
-                                                    cloud_scan.points[j].z - point_sel.z);
+                double point_sqdis = sqrSum(cloud_scan.points[j].x - point_sel.x,
+                                            cloud_scan.points[j].y - point_sel.y,
+                                            cloud_scan.points[j].z - point_sel.z);
                 if (point_sqdis < min_point_sqdis2)
                 {
                     // find nearer point
@@ -147,13 +353,13 @@ void FeatureExtract::matchCornerFromScan(const typename pcl::KdTreeFLANN<PointTy
             {
                 // if in the same scan line, continue
                 if (int(cloud_scan.points[j].intensity) >= closest_point_scan_id)
-                    continue; 
+                    continue;
                 // if not in nearby scans, end the loop
                 if (int(cloud_scan.points[j].intensity) < (closest_point_scan_id - NEARBY_SCAN))
                     break;
-                double point_sqdis = common::sqrSum(cloud_scan.points[j].x - point_sel.x,
-                                                    cloud_scan.points[j].y - point_sel.y,
-                                                    cloud_scan.points[j].z - point_sel.z);
+                double point_sqdis = sqrSum(cloud_scan.points[j].x - point_sel.x,
+                                            cloud_scan.points[j].y - point_sel.y,
+                                            cloud_scan.points[j].z - point_sel.z);
                 if (point_sqdis < min_point_sqdis2)
                 {
                     // find nearer point
@@ -234,9 +440,9 @@ void FeatureExtract::matchSurfFromScan(const typename pcl::KdTreeFLANN<PointType
                 // if not in nearby scans, end the loop
                 if (int(cloud_scan.points[j].intensity) > (closest_point_scan_id + NEARBY_SCAN))
                     break;
-                double point_sqdis = common::sqrSum(cloud_scan.points[j].x - point_sel.x,
-                                                    cloud_scan.points[j].y - point_sel.y,
-                                                    cloud_scan.points[j].z - point_sel.z);
+                double point_sqdis = sqrSum(cloud_scan.points[j].x - point_sel.x,
+                                            cloud_scan.points[j].y - point_sel.y,
+                                            cloud_scan.points[j].z - point_sel.z);
                 // if in the same or lower scan line
                 if (int(cloud_scan.points[j].intensity) <= closest_point_scan_id && point_sqdis < min_point_sqdis2)
                 {
@@ -257,9 +463,9 @@ void FeatureExtract::matchSurfFromScan(const typename pcl::KdTreeFLANN<PointType
                 // if not in nearby scans, end the loop
                 if (int(cloud_scan.points[j].intensity) < (closest_point_scan_id - NEARBY_SCAN))
                     break;
-                double point_sqdis = common::sqrSum(cloud_scan.points[j].x - point_sel.x,
-                                                    cloud_scan.points[j].y - point_sel.y,
-                                                    cloud_scan.points[j].z - point_sel.z);
+                double point_sqdis = sqrSum(cloud_scan.points[j].x - point_sel.x,
+                                            cloud_scan.points[j].y - point_sel.y,
+                                            cloud_scan.points[j].z - point_sel.z);
                 // if in the same or higher scan line
                 if (int(cloud_scan.points[j].intensity) >= closest_point_scan_id && point_sqdis < min_point_sqdis2)
                 {
@@ -289,7 +495,7 @@ void FeatureExtract::matchSurfFromScan(const typename pcl::KdTreeFLANN<PointType
                 w.normalize();
                 double negative_OA_dot_norm = -w.transpose() * last_point_j;
                 double pd2 = -(w.x() * point_sel.x + w.y() * point_sel.y + w.z() * point_sel.z + negative_OA_dot_norm); // distance
-                double s = 1 - 0.9f * fabs(pd2) / sqrt(common::sqrSum(point_sel.x, point_sel.y, point_sel.z));
+                double s = 1 - 0.9f * fabs(pd2) / sqrt(sqrSum(point_sel.x, point_sel.y, point_sel.z));
                 if (s > 0.1)
                 {
                     Eigen::Vector4d coeff(w.x(), w.y(), w.z(), negative_OA_dot_norm);
@@ -383,12 +589,12 @@ void FeatureExtract::matchCornerFromMap(const typename pcl::KdTreeFLANN<PointTyp
                     point_on_z_axis.y = 0.0;
                     point_on_z_axis.z = 10.0;
                     pointAssociateToMap(point_on_z_axis, point_on_z_axis_trans, pose_local);
-                    double squared_side1 = common::sqrSum(pose_local.t_(0) - point_sel.x,
-                                                          pose_local.t_(1) - point_sel.y,
-                                                          pose_local.t_(2) - point_sel.z);
-                    double squared_side2 = common::sqrSum(point_on_z_axis_trans.x - point_sel.x,
-                                                          point_on_z_axis_trans.y - point_sel.y,
-                                                          point_on_z_axis_trans.z - point_sel.z);
+                    double squared_side1 = sqrSum(pose_local.t_(0) - point_sel.x,
+                                                  pose_local.t_(1) - point_sel.y,
+                                                  pose_local.t_(2) - point_sel.z);
+                    double squared_side2 = sqrSum(point_on_z_axis_trans.x - point_sel.x,
+                                                  point_on_z_axis_trans.y - point_sel.y,
+                                                  point_on_z_axis_trans.z - point_sel.z);
 
                     double check1 = 100.0f + squared_side1 - squared_side2 - 10.0f * sqrt(3.0f) * sqrt(squared_side1);
                     double check2 = 100.0f + squared_side1 - squared_side2 + 10.0f * sqrt(3.0f) * sqrt(squared_side1);
@@ -406,7 +612,7 @@ void FeatureExtract::matchCornerFromMap(const typename pcl::KdTreeFLANN<PointTyp
                     Eigen::Vector4d coeff2(w2.x(), w2.y(), w2.z(), ld_p2);
 
                     PointPlaneFeature feature1, feature2;
-                    
+
                     feature1.idx_ = i;
                     feature1.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
                     feature1.coeffs_ = coeff1 * 0.5;
@@ -466,7 +672,7 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
             // TODO: may use uncertainty to extract features
             std::vector<bool> point_select(num_neighbors, true);
             // size_t field_size = boost::mpl::size<typename pcl::traits::fieldList<PointType>::type>::value;
-            // if (field_size == 11) 
+            // if (field_size == 11)
             // {
             //     std::vector<double> v_trace(num_neighbors, 0);
             //     for (int j = 0; j < num_neighbors; j++)
@@ -488,7 +694,8 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
 
             for (int j = 0; j < num_neighbors; j++)
             {
-                if (!point_select[j]) continue;
+                if (!point_select[j])
+                    continue;
                 mat_A(j, 0) = cloud_map.points[point_search_idx[j]].x;
                 mat_A(j, 1) = cloud_map.points[point_search_idx[j]].y;
                 mat_A(j, 2) = cloud_map.points[point_search_idx[j]].z;
@@ -501,7 +708,8 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
             bool plane_valid = true;
             for (int j = 0; j < num_neighbors; j++)
             {
-                if (!point_select[j]) continue;
+                if (!point_select[j])
+                    continue;
                 if (fabs(norm(0) * cloud_map.points[point_search_idx[j]].x +
                          norm(1) * cloud_map.points[point_search_idx[j]].y +
                          norm(2) * cloud_map.points[point_search_idx[j]].z + negative_OA_dot_norm) > MIN_PLANE_DIS)
@@ -510,12 +718,12 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
                     break;
                 }
             }
-    
+
             if (plane_valid)
             {
                 // pd2 (distance) smaller, s larger
                 double pd2 = norm(0) * point_sel.x + norm(1) * point_sel.y + norm(2) * point_sel.z + negative_OA_dot_norm;
-                double s = 1 - 0.9f * fabs(pd2) / sqrt(common::sqrSum(point_sel.x, point_sel.y, point_sel.z));
+                double s = 1 - 0.9f * fabs(pd2) / sqrt(sqrSum(point_sel.x, point_sel.y, point_sel.z));
                 bool is_in_laser_fov = false;
                 if (CHECK_FOV)
                 {
@@ -525,12 +733,12 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
                     point_on_z_axis.y = 0.0;
                     point_on_z_axis.z = 10.0;
                     pointAssociateToMap(point_on_z_axis, point_on_z_axis_trans, pose_local);
-                    double squared_side1 = common::sqrSum(pose_local.t_(0) - point_sel.x,
-                                                          pose_local.t_(1) - point_sel.y,
-                                                          pose_local.t_(2) - point_sel.z);
-                    double squared_side2 = common::sqrSum(point_on_z_axis_trans.x - point_sel.x,
-                                                          point_on_z_axis_trans.y - point_sel.y,
-                                                          point_on_z_axis_trans.z - point_sel.z);
+                    double squared_side1 = sqrSum(pose_local.t_(0) - point_sel.x,
+                                                  pose_local.t_(1) - point_sel.y,
+                                                  pose_local.t_(2) - point_sel.z);
+                    double squared_side2 = sqrSum(point_on_z_axis_trans.x - point_sel.x,
+                                                  point_on_z_axis_trans.y - point_sel.y,
+                                                  point_on_z_axis_trans.z - point_sel.z);
                     double check1 = 100.0f + squared_side1 - squared_side2 - 10.0f * sqrt(3.0f) * sqrt(squared_side1);
                     double check2 = 100.0f + squared_side1 - squared_side2 + 10.0f * sqrt(3.0f) * sqrt(squared_side1);
                     // within +-60 degree
@@ -559,4 +767,5 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
     features.resize(cloud_cnt);
 }
 
+#endif
 //

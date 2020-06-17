@@ -68,7 +68,7 @@
 #include "../utility/utility.h"
 #include "../estimator/pose.h"
 #include "../estimator/parameters.h"
-#include "../featureExtract/feature_extract.h"
+#include "../featureExtract/feature_extract.hpp"
 #include "../factor/lidar_map_plane_norm_factor.hpp"
 #include "../factor/lidar_plane_norm_factor.hpp"
 #include "../factor/pose_local_parameterization.h"

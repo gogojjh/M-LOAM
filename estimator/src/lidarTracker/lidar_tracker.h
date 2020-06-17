@@ -34,7 +34,7 @@
 #include "common/types/type.h"
 #include "common/algos/math.hpp"
 #include "../estimator/parameters.h"
-#include "../featureExtract/feature_extract.h"
+#include "../featureExtract/feature_extract.hpp"
 #include "../factor/pose_local_parameterization.h"
 #include "../factor/lidar_scan_plane_norm_factor.hpp"
 #include "../utility/tic_toc.h"

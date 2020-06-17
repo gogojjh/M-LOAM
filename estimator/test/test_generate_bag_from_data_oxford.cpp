@@ -30,12 +30,12 @@
 // PCL
 #include <pcl/point_cloud.h> /* pcl::PointCloud */
 #include <pcl/point_types.h> /* pcl::PointXYZ */
-#include <pcl/filters/voxel_grid.h>
-#include <pcl/common/transforms.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/ros/conversions.h>
 
 #include "../src/estimator/pose.h"
+#include "../src/utility/npy.hpp"
+#include "mloam_pcl/point_with_time.hpp"
 
 #include <iostream>
 #include <iomanip>
@@ -43,6 +43,8 @@
 using namespace std;
 
 DEFINE_string(data_path, "/", "oxford data path");
+
+pcl::PCDWriter pcd_writer;
 
 std::vector<float> read_lidar_data(const std::string lidar_data_path)
 {
@@ -66,7 +68,7 @@ int main(int argc, char **argv)
     std::cout << data_path << std::endl;
 
     rosbag::Bag bag;
-    bag.open((data_path + "data.bag").c_str(), rosbag::bagmode::Write);
+    bag.open((data_path + "data_test.bag").c_str(), rosbag::bagmode::Write);
 
     unsigned long long timestamp;
     double start_time = 1e15;
@@ -81,24 +83,40 @@ int main(int argc, char **argv)
     while (fscanf(file, "%llu %d", &timestamp, &id) != EOF)
     {
         stringstream ss;
-        ss << data_path << "velodyne_left/" << timestamp << ".pcd";
-        pcl::PointCloud<pcl::PointXYZI> laser_cloud;
-        pcd_reader.read(ss.str(), laser_cloud);
+        // ss << data_path << "velodyne_left/" << timestamp << ".pcd";
+        // pcl::PointCloud<pcl::PointXYZI> laser_cloud;
+        // pcd_reader.read(ss.str(), laser_cloud);
 
+        ss << data_path << "velodyne_left/" << timestamp << ".npy";
+        vector<double> npy_data;
+        vector<unsigned long> shape_data;
+        bool fortran_order = true; // load numpy as row
+        npy::LoadArrayFromNumpy(ss.str(), shape_data, fortran_order, npy_data);
+        pcl::PointCloud<pcl::PointXYZIWithTime> laser_cloud;
+        for (size_t i = 0; i < shape_data[1]; i++)
+        {
+            pcl::PointXYZIWithTime point;
+            point.x = (float)npy_data[i * shape_data[0]];
+            point.y = (float)npy_data[i * shape_data[0] + 1];
+            point.z = (float)npy_data[i * shape_data[0] + 2];
+            point.intensity = (float)npy_data[i * shape_data[0] + 3];
+            point.timestamp = (float)npy_data[i * shape_data[0] + 4];
+            laser_cloud.push_back(point);
+        }
+            
         sensor_msgs::PointCloud2 msg_cloud;
         pcl::toROSMsg(laser_cloud, msg_cloud);
         std_msgs::Header header;
         header.stamp = ros::Time(timestamp * 1.0 / 1e6);
         header.frame_id = "/velo_left";
         msg_cloud.header = header;
-        bag.write("/left/velodyne_points", ros::Time(timestamp * 1.0 / 1e6), msg_cloud);
+        bag.write("/left/velodyne_points", ros::Time(timestamp * 1.0 / 1e6), msg_cloud);       
         if (timestamp * 1.0 / 1e6 < start_time)
             start_time = timestamp * 1.0 / 1e6;
         if (timestamp * 1.0 / 1e6 > end_time)
             end_time = timestamp * 1.0 / 1e6;
         frame_cnt++;
         // if (frame_cnt > 100) break;
-        // std::cout << timestamp << std::endl;
     }
     std::cout << "Finish loading velo_left" << std::endl;
 
@@ -107,9 +125,26 @@ int main(int argc, char **argv)
     while (fscanf(file, "%llu %d", &timestamp, &id) != EOF)
     {
         stringstream ss;
-        ss << data_path << "velodyne_right/" << timestamp << ".pcd";
-        pcl::PointCloud<pcl::PointXYZI> laser_cloud;
-        pcd_reader.read(ss.str(), laser_cloud);
+        // ss << data_path << "velodyne_right/" << timestamp << ".pcd";
+        // pcl::PointCloud<pcl::PointXYZI> laser_cloud;
+        // pcd_reader.read(ss.str(), laser_cloud);
+
+        ss << data_path << "velodyne_right/" << timestamp << ".npy";
+        vector<double> npy_data;
+        vector<unsigned long> shape_data;
+        bool fortran_order = true; // load numpy as row
+        npy::LoadArrayFromNumpy(ss.str(), shape_data, fortran_order, npy_data);
+        pcl::PointCloud<pcl::PointXYZIWithTime> laser_cloud;
+        for (size_t i = 0; i < shape_data[1]; i++)
+        {
+            pcl::PointXYZIWithTime point;
+            point.x = (float)npy_data[i * shape_data[0]];
+            point.y = (float)npy_data[i * shape_data[0] + 1];
+            point.z = (float)npy_data[i * shape_data[0] + 2];
+            point.intensity = (float)npy_data[i * shape_data[0] + 3];
+            point.timestamp = (float)npy_data[i * shape_data[0] + 4];
+            laser_cloud.push_back(point);
+        }           
 
         sensor_msgs::PointCloud2 msg_cloud;
         pcl::toROSMsg(laser_cloud, msg_cloud);
@@ -120,7 +155,6 @@ int main(int argc, char **argv)
         bag.write("/right/velodyne_points", ros::Time(timestamp * 1.0 / 1e6), msg_cloud);
         frame_cnt++;
         // if (frame_cnt > 100) break;
-        // std::cout << timestamp << std::endl;
     }
     std::cout << "Finish loading velo_right" << std::endl;
  
@@ -138,7 +172,6 @@ int main(int argc, char **argv)
         bag.write("/stereo/centre", ros::Time(timestamp * 1.0 / 1e6), imgMsg);
         frame_cnt++;
         // if (frame_cnt > 100) break;
-        // std::cout << timestamp << std::endl;
     }
     std::cout << "Finish loading stereo" << std::endl;
 

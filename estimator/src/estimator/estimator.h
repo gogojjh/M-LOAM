@@ -36,13 +36,12 @@
 #include <pcl/search/impl/flann_search.hpp>
 #include <pcl/filters/extract_indices.h>
 
-#include "common/types/type.h"
-
 #include "parameters.h"
 #include "common/common.hpp"
 #include "common/color.hpp"
-#include "../imageSegmenter/image_segmenter.h"
-#include "../featureExtract/feature_extract.h"
+#include "common/types/type.h"
+#include "../imageSegmenter/image_segmenter.hpp"
+#include "../featureExtract/feature_extract.hpp"
 #include "../lidarTracker/lidar_tracker.h"
 #include "../initial/initial_extrinsics.h"
 #include "../utility/utility.h"
@@ -55,6 +54,8 @@
 #include "../factor/marginalization_factor.h"
 #include "../factor/prior_factor.hpp"
 
+#include "mloam_pcl/point_with_time.hpp"
+
 class Estimator
 {
   public:
@@ -65,6 +66,7 @@ class Estimator
     void setParameter();
 
     void inputCloud(const double &t, const std::vector<common::PointCloud> &v_laser_cloud_in);
+    void inputCloud(const double &t, const std::vector<common::PointITimeCloud> &v_laser_cloud_in);
     void inputCloud(const double &t, const common::PointCloud &laser_cloud_in);
 
     // process measurements

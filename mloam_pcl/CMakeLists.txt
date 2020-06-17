@@ -24,6 +24,7 @@ set(srcs
 
 set(incs
     include/mloam_pcl/point_with_cov.hpp
+    include/mloam_pcl/point_with_time.hpp
     include/mloam_pcl/voxel_grid_covariance_mloam.h
 )
 

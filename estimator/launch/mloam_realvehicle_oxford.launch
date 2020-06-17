@@ -1,7 +1,7 @@
 <launch>
     <!-- sensor setup: https://oxford-robotics-institute.github.io/radar-robotcar-dataset/documentation/ -->
     <arg name="bag_file_use" default="true" />
-    <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-10-14-36-48-radar-oxford-10k-partial/data.bag" /> 
+    <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-10-14-36-48-radar-oxford-10k-partial/data_test.bag" /> 
 
     <param name="use_sim_time" value="true" />
     <group if="$(arg bag_file_use)">
@@ -25,11 +25,11 @@
     <arg name="config_file" default="$(find mloam)/config/config_realvehicle_oxford.yaml" />
     <group if="$(arg run_mloam)">
         <group if="$(arg run_mloam_odom)">
-            <node pkg="mloam" type="mloam_node_rv" name="mloam_node_rv" 
+            <node pkg="mloam" type="mloam_node_rv_oxford" name="mloam_node_rv_oxford" 
                 args="-config_file=$(arg config_file)
                     -data_source=$(arg data_source)
                     -result_save=$(arg result_save)
-                    -output_path=$(arg output_path)">
+                    -output_path=$(arg output_path)" output="screen">
                 <remap from="/base_pose_gt" to="/current_odom"/>
             </node>
         </group>

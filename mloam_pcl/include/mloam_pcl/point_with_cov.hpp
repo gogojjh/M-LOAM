@@ -101,7 +101,7 @@ namespace pcl
         friend std::ostream &operator << (std::ostream &out, const PointXYZIWithCov &p);
     };
 
-    std::ostream &operator << (std::ostream &out, const PointXYZIWithCov &p)
+    inline std::ostream &operator << (std::ostream &out, const PointXYZIWithCov &p)
     {
         out << "(" << p.x << ", " << p.y << ", " << p.z << ", " << p.intensity << ", "
             << p.cov_vec[0] << ", " << p.cov_vec[1] << ", " << p.cov_vec[2] << ", "

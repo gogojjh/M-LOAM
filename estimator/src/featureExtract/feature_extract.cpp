@@ -13,145 +13,14 @@
 
 // tutorial about LOAM: https://zhuanlan.zhihu.com/p/57351961
 
-#include "feature_extract.h"
+#include "feature_extract.hpp"
 
 using namespace common;
 
-class compObject
-{
-public:
-    float *cloud_curvature;
-    bool operator()(int i, int j) { return (cloud_curvature[i] < cloud_curvature[j]); }
-};
-
-FeatureExtract::FeatureExtract()
-{
-}
-
-void FeatureExtract::findStartEndAngle(const common::PointCloud &laser_cloud_in, float &start_ori, float &end_ori)
-{
-    int cloud_size = laser_cloud_in.points.size();
-    start_ori = -atan2(laser_cloud_in.points[0].y, laser_cloud_in.points[0].x);
-    end_ori = -atan2(laser_cloud_in.points[cloud_size - 1].y,
-                      laser_cloud_in.points[cloud_size - 1].x) + 2 * M_PI;
-    if (end_ori - start_ori > 3 * M_PI)
-    {
-        end_ori -= 2 * M_PI;
-    }
-    else if (end_ori - start_ori < M_PI)
-    {
-        end_ori += 2 * M_PI;
-    }
-    // std::cout << "end Ori " << end_ori << std::endl;
-}
-
-void FeatureExtract::cloudRearrange(const common::PointCloud &laser_cloud_in, 
-                                    std::vector<common::PointICloud> &laser_cloud_scans,
-                                    int &cloud_size, 
-                                    const float &start_ori, 
-                                    const float &end_ori)
-{
-    bool half_passed;
-    int count = cloud_size;
-    PointI point;
-    laser_cloud_scans.clear();
-    laser_cloud_scans.resize(N_SCANS);
-    for (int i = 0; i < cloud_size; i++)
-    {
-        point.x = laser_cloud_in.points[i].x;
-        point.y = laser_cloud_in.points[i].y;
-        point.z = laser_cloud_in.points[i].z;
-
-        float angle = atan(point.z / sqrt(point.x * point.x + point.y * point.y)) * 180 / M_PI;
-        int scan_id = 0;
-
-        if (N_SCANS == 16)
-        {
-            scan_id = int((angle + 15) / 2 + 0.5);
-            if (scan_id > (N_SCANS - 1) || scan_id < 0)
-            {
-                count--;
-                continue;
-            }
-        }
-        else if (N_SCANS == 32)
-        {
-            scan_id = int((angle + 92.0/3.0) * 3.0 / 4.0);
-            if (scan_id > (N_SCANS - 1) || scan_id < 0)
-            {
-                count--;
-                continue;
-            }
-        }
-        else if (N_SCANS == 64)
-        {
-            if (angle >= -8.83)
-                scan_id = int((2 - angle) * 3.0 + 0.5);
-            else
-                scan_id = N_SCANS / 2 + int((-8.83 - angle) * 2.0 + 0.5);
-
-            // use [0 50]  > 50 remove outlies
-            if (angle > 2 || angle < -24.33 || scan_id > 50 || scan_id < 0)
-            {
-                count--;
-                continue;
-            }
-        }
-        else
-        {
-            std::cout << "wrong scan number" << std::endl;
-            ROS_BREAK();
-        }
-        // std::cout << "angle " << angle << ", scan_id " << scan_id << std::endl;
-
-        float ori = -atan2(point.y, point.x);
-        if (!half_passed)
-        {
-            if (ori < start_ori - M_PI / 2)
-            {
-                ori += 2 * M_PI;
-            }
-            else if (ori > start_ori + M_PI * 3 / 2)
-            {
-                ori -= 2 * M_PI;
-            }
-
-            if (ori - start_ori > M_PI)
-            {
-                half_passed = true;
-            }
-        }
-        else
-        {
-            ori += 2 * M_PI;
-            if (ori < end_ori - M_PI * 3 / 2)
-            {
-                ori += 2 * M_PI;
-            }
-            else if (ori > end_ori + M_PI / 2)
-            {
-                ori -= 2 * M_PI;
-            }
-        }
-
-        float relTime = (ori - start_ori) / (end_ori - start_ori);
-        point.intensity = scan_id + SCAN_PERIOD * relTime;
-        laser_cloud_scans[scan_id].push_back(point);
-    }
-    cloud_size = count;
-}
-
-void FeatureExtract::extractCloud(const double &cur_time, 
-                                  const PointCloud &laser_cloud_in, 
-                                  cloudFeature &cloud_feature,
-                                  const float &start_ori,
-                                  const float &end_ori)
+void FeatureExtract::extractCloud(const std::vector<PointICloud> &laser_cloud_scans,
+                                  cloudFeature &cloud_feature)
 {
     TicToc t_whole, t_prepare;
-    std::vector<common::PointICloud> laser_cloud_scans;
-    int cloud_size = laser_cloud_in.size();
-    cloudRearrange(laser_cloud_in, laser_cloud_scans, cloud_size, start_ori, end_ori);
-
     std::vector<int> scan_start_ind(N_SCANS);
     std::vector<int> scan_end_ind(N_SCANS);
 
@@ -170,6 +39,7 @@ void FeatureExtract::extractCloud(const double &cur_time,
     int cloud_neighbor_picked[400000];
     int cloud_label[400000];
 
+    size_t cloud_size = laser_cloud->size();
     for (int i = 5; i < cloud_size - 5; i++)
     {
         float diff_x = laser_cloud->points[i - 5].x + laser_cloud->points[i - 4].x + laser_cloud->points[i - 3].x + laser_cloud->points[i - 2].x + laser_cloud->points[i - 1].x - 10 * laser_cloud->points[i].x + laser_cloud->points[i + 1].x + laser_cloud->points[i + 2].x + laser_cloud->points[i + 3].x + laser_cloud->points[i + 4].x + laser_cloud->points[i + 5].x;
@@ -195,7 +65,8 @@ void FeatureExtract::extractCloud(const double &cur_time,
     float t_q_sort = 0;
     for (int i = 0; i < N_SCANS; i++)
     {
-        if (scan_end_ind[i] - scan_start_ind[i] < 6) continue;
+        if (scan_end_ind[i] - scan_start_ind[i] < 6)
+            continue;
         PointICloud::Ptr surf_points_less_flat_scan(new PointICloud);
         // split the points at each scan into 6 pieces to select features averagely
         for (int j = 0; j < 6; j++)
@@ -315,7 +186,8 @@ void FeatureExtract::extractCloud(const double &cur_time,
     // printf("sort q time %fms\n", t_q_sort);
     // printf("seperate points time %fms\n", t_pts.toc());
     // printf("whole scan registration time %fms \n", t_whole.toc());
-    if(t_whole.toc() > 100) ROS_WARN("whole scan registration process over 100ms");
+    if (t_whole.toc() > 100)
+        ROS_WARN("whole scan registration process over 100ms");
 
     cloud_feature.clear();
     // cloud_feature.find("key")->first/ second

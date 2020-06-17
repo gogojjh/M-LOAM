@@ -366,12 +366,12 @@ void process()
 			if (extrinsics.status) continue;
 			m_buf.unlock();
 
-			//***************************************************************************
 			frame_cnt++;
 			TicToc t_whole_mapping;
 			transformAssociateToMap();
 
-			// step 2: move current map to the managed cube area
+// **********************************************************************
+// step 2: move current map to the managed cube area
 			TicToc t_shift;
 			int center_cub_i = int((pose_wmap_curr.t_.x() + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_width; // the cube id
 			int center_cub_j = int((pose_wmap_curr.t_.y() + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_height;
@@ -532,6 +532,10 @@ void process()
 			}
 			// printf("map prepare time: %fms\n", t_shift.toc());
 
+			// filter
+
+// **********************************************************************
+// step 3: process current input
 			PointICloud::Ptr laser_cloud_surf_stack(new PointICloud());
 			down_size_filter_surf.setInputCloud(laser_cloud_surf_last);
 			down_size_filter_surf.filter(*laser_cloud_surf_stack);
@@ -577,8 +581,8 @@ void process()
 				}
 			}
 
-			//***************************************************************************
-			// step 3: perform scan-to-map optimization
+//***************************************************************************
+// step 4: perform scan-to-map optimization
 			size_t laser_cloud_surf_from_map_num = laser_cloud_surf_from_map_cov->points.size();
 			size_t laser_cloud_corner_from_map_num = laser_cloud_corner_from_map_cov->points.size();
 			printf("map surf num: %lu, corner num: %lu\n", laser_cloud_surf_from_map_num, laser_cloud_corner_from_map_num);
@@ -735,8 +739,8 @@ void process()
 			// check distance and insert new keyframes
 			insertNewKeyframe();
 
-			// *******************************************************************
-			// add newest surf points to the map according to a new keyframe
+// *******************************************************************
+// step 5: add newest surf points to the map according to a new keyframe
 			if (new_keyframe)
 			{
 				TicToc t_add;
@@ -878,7 +882,8 @@ void process()
 			LOG_EVERY_N(INFO, 10) << "whole mapping time " << t_whole_mapping.toc() << "ms";
 			total_mapping += t_whole_mapping.toc();
 
-			// ************************************************************** publish odom
+// **********************************************************************
+// step 5: publish odom
 			nav_msgs::Odometry odom_aft_mapped;
 			odom_aft_mapped.header.frame_id = "/world";
 			odom_aft_mapped.child_frame_id = "/aft_mapped";
