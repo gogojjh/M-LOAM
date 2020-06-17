@@ -1,3 +1,7 @@
+// how to use: 
+// rosrun mloam test_generate_bag_from_data_oxford 
+//   -data_path=/Monster/dataset/oxford_radar_dataset/2019-01-18-15-20-12-radar-oxford-10k/
+
 #include <glog/logging.h>
 #include <gflags/gflags.h>
 
@@ -70,7 +74,9 @@ int main(int argc, char **argv)
     int id;
     FILE *file;
     pcl::PCDReader pcd_reader;
+    size_t frame_cnt;
 
+    frame_cnt = 0;
     file = std::fopen((data_path + "velodyne_left.timestamps").c_str(), "r");
     while (fscanf(file, "%llu %d", &timestamp, &id) != EOF)
     {
@@ -90,29 +96,20 @@ int main(int argc, char **argv)
             start_time = timestamp * 1.0 / 1e6;
         if (timestamp * 1.0 / 1e6 > end_time)
             end_time = timestamp * 1.0 / 1e6;
+        frame_cnt++;
+        // if (frame_cnt > 100) break;
+        // std::cout << timestamp << std::endl;
     }
     std::cout << "Finish loading velo_left" << std::endl;
 
+    frame_cnt = 0;
     file = std::fopen((data_path + "velodyne_right.timestamps").c_str(), "r");
     while (fscanf(file, "%llu %d", &timestamp, &id) != EOF)
     {
         stringstream ss;
-        // ss << data_path << "velodyne_right/" << timestamp << ".pcd";
-        // pcl::PointCloud<pcl::PointXYZI> laser_cloud;
-        // pcd_reader.read(ss.str(), laser_cloud);
-
-        ss << data_path << "velodyne_right/" << timestamp << ".bin";
+        ss << data_path << "velodyne_right/" << timestamp << ".pcd";
         pcl::PointCloud<pcl::PointXYZI> laser_cloud;
-        std::vector<float> lidar_data = read_lidar_data(ss.str());
-        for (std::size_t i = 0; i < lidar_data.size(); i += 4)
-        {
-            pcl::PointXYZI point;
-            point.x = -lidar_data[i];
-            point.y = lidar_data[i + 1];
-            point.z = -lidar_data[i + 2];
-            point.intensity = lidar_data[i + 3];
-            laser_cloud.push_back(point);
-        }
+        pcd_reader.read(ss.str(), laser_cloud);
 
         sensor_msgs::PointCloud2 msg_cloud;
         pcl::toROSMsg(laser_cloud, msg_cloud);
@@ -121,9 +118,13 @@ int main(int argc, char **argv)
         header.frame_id = "/velo_right";
         msg_cloud.header = header;
         bag.write("/right/velodyne_points", ros::Time(timestamp * 1.0 / 1e6), msg_cloud);
+        frame_cnt++;
+        // if (frame_cnt > 100) break;
+        // std::cout << timestamp << std::endl;
     }
     std::cout << "Finish loading velo_right" << std::endl;
  
+    frame_cnt = 0;
     file = std::fopen((data_path + "stereo.timestamps").c_str(), "r");
     while (fscanf(file, "%llu %d", &timestamp, &id) != EOF)
     {
@@ -135,6 +136,9 @@ int main(int argc, char **argv)
         sensor_msgs::ImagePtr imgMsg = cv_bridge::CvImage(std_msgs::Header(), "mono8", img).toImageMsg();
         imgMsg->header.stamp = ros::Time(timestamp * 1.0 / 1e6);
         bag.write("/stereo/centre", ros::Time(timestamp * 1.0 / 1e6), imgMsg);
+        frame_cnt++;
+        // if (frame_cnt > 100) break;
+        // std::cout << timestamp << std::endl;
     }
     std::cout << "Finish loading stereo" << std::endl;
 
@@ -147,6 +151,9 @@ int main(int argc, char **argv)
     q.z() = 1;
     Eigen::Vector3d t(0, 0, 0);
     Pose pose_cur(q, t);
+
+    // std::cout << std::fixed << std::setprecision(6) << start_time << ", " << end_time << std::endl;
+    frame_cnt = 0;
     while (std::getline(ground_truth_file, line))
     {
         std::stringstream pose_stream(line);
@@ -185,6 +192,8 @@ int main(int argc, char **argv)
         odomGT.pose.pose.position.y = pose_cur.t_(1);
         odomGT.pose.pose.position.z = pose_cur.t_(2);
         bag.write("/current_odom", ros::Time(d_time), odomGT);
+        frame_cnt++;
+        // if (frame_cnt > 100) break;
     }
     std::cout << "Finish loading gt" << std::endl;
 

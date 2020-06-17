@@ -237,9 +237,9 @@ void insertNewKeyframe()
 	{
 		new_keyframe = false;
 	}
-	if ((new_keyframe) && (pose_keyframe.size() !=0)) return;
-	pose_wmap_prev = po	se_wmap_curr;
-
+	if ((!new_keyframe) && (pose_keyframe.size() != 0)) return;
+	pose_wmap_prev = pose_wmap_curr;
+	
 	// if (pose_keyframe.size() == 0)
 	// {
 	// 	pose_keyframe.push_back(std::make_pair(time_laser_cloud_surf_last, pose_wmap_curr));
@@ -597,9 +597,9 @@ void process()
 
 					ceres::Solver::Options options;
 					options.linear_solver_type = ceres::DENSE_SCHUR;
-					options.max_num_iterations = 20;
-					options.max_solver_time_in_seconds = 0.04;
-					options.num_threads = 3;
+					options.max_num_iterations = 30;
+					// options.max_solver_time_in_seconds = 0.04;
+					// options.num_threads = 3;
 					options.minimizer_progress_to_stdout = false;
 					options.check_gradients = false;
 					options.gradient_check_relative_precision = 1e-4;
@@ -701,6 +701,7 @@ void process()
 						evalDegenracy(mat_H, local_parameterization);
 						cov_mapping = mat_H.inverse(); // covariance of sensor noise: A New Approach to 3D ICP Covariance Estimation/ Censi's approach
 						cov_mapping_list.push_back(cov_mapping.trace());
+						is_degenerate = local_parameterization->is_degenerate_;
 						LOG_EVERY_N(INFO, 10) << "logdet of H: " << common::logDet(mat_H * 134, true);
 						LOG_EVERY_N(INFO, 10) << "pose covariance trace: " << cov_mapping.trace();
 						printf("evaluate H: %fms\n", t_eval_H.toc());
@@ -736,127 +737,118 @@ void process()
 
 			// *******************************************************************
 			// add newest surf points to the map according to a new keyframe
-			// if (new_keyframe)
-			TicToc t_add;
-			for (size_t n = 0; n < NUM_OF_LASER; n++)
+			if (new_keyframe)
 			{
-				compoundPoseWithCov(pose_wmap_curr, cov_mapping, pose_ext[n], cov_ext[n], pose_compound[n], cov_compound[n], 2);
-				// move the surf points from the lastest frame to different cubes
-				for (const PointIWithCov &point_ori : laser_cloud_surf_split_cov[n])
+				TicToc t_add;
+				for (size_t n = 0; n < NUM_OF_LASER; n++)
 				{
-					PointIWithCov point_sel, point_cov;
-					Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
-					pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
-					evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
-					// 0.01 for RHD02lab
-					// if (!UNCER_AWARE_ON || cov_mapping.trace() < 0.03) cov_point = COV_MEASUREMENT; // add pose and extrinsic perturbation 
-					if (!UNCER_AWARE_ON) cov_point = COV_MEASUREMENT; // add pose and extrinsic perturbation 
-					if (cov_point.trace() > TRACE_THRESHOLD_AFTER_MAPPING) continue;
-					pointAssociateToMap(point_ori, point_cov, pose_wmap_curr);
-					updateCov(point_cov, cov_point);
-
-					int cube_i = int((point_cov.x + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_width;
-					int cube_j = int((point_cov.y + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_height;
-					int cube_k = int((point_cov.z + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_depth;
-
-					if (point_cov.x + CUBE_HALF < 0) cube_i--;
-					if (point_cov.y + CUBE_HALF < 0) cube_j--;
-					if (point_cov.z + CUBE_HALF < 0) cube_k--;
-
-					if (cube_i >= 0 && cube_i < laser_cloud_width &&
-						cube_j >= 0 && cube_j < laser_cloud_height &&
-						cube_k >= 0 && cube_k < laser_cloud_depth)
+					compoundPoseWithCov(pose_wmap_curr, cov_mapping, pose_ext[n], cov_ext[n], pose_compound[n], cov_compound[n], 2);
+					// move the surf points from the lastest frame to different cubes
+					for (const PointIWithCov &point_ori : laser_cloud_surf_split_cov[n])
 					{
-						int cur_cube_idx = toCubeIndex(cube_i, cube_j, cube_k);
-						laser_cloud_surf_array_cov[cur_cube_idx]->push_back(point_cov);
+						PointIWithCov point_sel, point_cov;
+						Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
+						pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
+						evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
+						// 0.01 for RHD02lab
+						// if (!UNCER_AWARE_ON || cov_mapping.trace() < 0.03) cov_point = COV_MEASUREMENT; // add pose and extrinsic perturbation 
+						if (!UNCER_AWARE_ON) cov_point = COV_MEASUREMENT; // add pose and extrinsic perturbation 
+						if (cov_point.trace() > TRACE_THRESHOLD_AFTER_MAPPING) continue;
+						pointAssociateToMap(point_ori, point_cov, pose_wmap_curr);
+						updateCov(point_cov, cov_point);
+
+						int cube_i = int((point_cov.x + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_width;
+						int cube_j = int((point_cov.y + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_height;
+						int cube_k = int((point_cov.z + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_depth;
+
+						if (point_cov.x + CUBE_HALF < 0) cube_i--;
+						if (point_cov.y + CUBE_HALF < 0) cube_j--;
+						if (point_cov.z + CUBE_HALF < 0) cube_k--;
+
+						if (cube_i >= 0 && cube_i < laser_cloud_width &&
+							cube_j >= 0 && cube_j < laser_cloud_height &&
+							cube_k >= 0 && cube_k < laser_cloud_depth)
+						{
+							int cur_cube_idx = toCubeIndex(cube_i, cube_j, cube_k);
+							laser_cloud_surf_array_cov[cur_cube_idx]->push_back(point_cov);
+						}
+					}
+					for (const PointIWithCov &point_ori : laser_cloud_corner_split_cov[n])
+					{
+						PointIWithCov point_sel, point_cov;
+						Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
+						pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
+						evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
+						if (!UNCER_AWARE_ON) cov_point = COV_MEASUREMENT; // add pose and extrinsic perturbation
+						if (cov_point.trace() > TRACE_THRESHOLD_AFTER_MAPPING) continue;
+						pointAssociateToMap(point_ori, point_cov, pose_wmap_curr);
+						updateCov(point_cov, cov_point);
+
+						int cube_i = int((point_cov.x + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_width;
+						int cube_j = int((point_cov.y + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_height;
+						int cube_k = int((point_cov.z + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_depth;
+
+						if (point_cov.x + CUBE_HALF < 0)
+							cube_i--;
+						if (point_cov.y + CUBE_HALF < 0)
+							cube_j--;
+						if (point_cov.z + CUBE_HALF < 0)
+							cube_k--;
+
+						if (cube_i >= 0 && cube_i < laser_cloud_width &&
+							cube_j >= 0 && cube_j < laser_cloud_height &&
+							cube_k >= 0 && cube_k < laser_cloud_depth)
+						{
+							int cur_cube_idx = toCubeIndex(cube_i, cube_j, cube_k);
+							laser_cloud_corner_array_cov[cur_cube_idx]->push_back(point_cov);
+						}
 					}
 				}
-				for (const PointIWithCov &point_ori : laser_cloud_corner_split_cov[n])
+				printf("add points time: %fms\n", t_add.toc());
+
+				// downsample the map (all map points including optimization or not optimization)
+				TicToc t_filter;
+				for (int i = 0; i < laser_cloud_valid_num; i++)
 				{
-					PointIWithCov point_sel, point_cov;
-					Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
-					pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
-					evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
-					if (!UNCER_AWARE_ON) cov_point = COV_MEASUREMENT; // add pose and extrinsic perturbation
-					if (cov_point.trace() > TRACE_THRESHOLD_AFTER_MAPPING) continue;
-					pointAssociateToMap(point_ori, point_cov, pose_wmap_curr);
-					updateCov(point_cov, cov_point);
+					int ind = laser_cloud_valid_ind[i];
 
-					int cube_i = int((point_cov.x + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_width;
-					int cube_j = int((point_cov.y + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_height;
-					int cube_k = int((point_cov.z + CUBE_HALF) / CUBE_SIZE) + laser_cloud_cen_depth;
+					PointICovCloud::Ptr tmp_surf(new PointICovCloud());
+					down_size_filter_surf_map_cov.setInputCloud(laser_cloud_surf_array_cov[ind]);
+					down_size_filter_surf_map_cov.filter(*tmp_surf);
+					laser_cloud_surf_array_cov[ind] = tmp_surf;
 
-					if (point_cov.x + CUBE_HALF < 0)
-						cube_i--;
-					if (point_cov.y + CUBE_HALF < 0)
-						cube_j--;
-					if (point_cov.z + CUBE_HALF < 0)
-						cube_k--;
-
-					if (cube_i >= 0 && cube_i < laser_cloud_width &&
-						cube_j >= 0 && cube_j < laser_cloud_height &&
-						cube_k >= 0 && cube_k < laser_cloud_depth)
-					{
-						int cur_cube_idx = toCubeIndex(cube_i, cube_j, cube_k);
-						laser_cloud_corner_array_cov[cur_cube_idx]->push_back(point_cov);
-					}
+					PointICovCloud::Ptr tmp_corner(new PointICovCloud());
+					down_size_filter_corner_map_cov.setInputCloud(laser_cloud_corner_array_cov[ind]);
+					down_size_filter_corner_map_cov.filter(*tmp_corner);
+					laser_cloud_corner_array_cov[ind] = tmp_corner;
 				}
-			}
-			printf("add points time: %fms\n", t_add.toc());
+				printf("filter time: %fms\n", t_filter.toc());
 
-			// downsample the map (all map points including optimization or not optimization)
-			TicToc t_filter;
-			for (int i = 0; i < laser_cloud_valid_num; i++)
-			{
-				int ind = laser_cloud_valid_ind[i];
-
-				PointICovCloud::Ptr tmp_surf(new PointICovCloud());
-				down_size_filter_surf_map_cov.setInputCloud(laser_cloud_surf_array_cov[ind]);
-				down_size_filter_surf_map_cov.filter(*tmp_surf);
-				laser_cloud_surf_array_cov[ind] = tmp_surf;
-
-				PointICovCloud::Ptr tmp_corner(new PointICovCloud());
-				down_size_filter_corner_map_cov.setInputCloud(laser_cloud_corner_array_cov[ind]);
-				down_size_filter_corner_map_cov.filter(*tmp_corner);
-				laser_cloud_corner_array_cov[ind] = tmp_corner;
-			}
-			printf("filter time: %fms\n", t_filter.toc());
-
-			// ************************************************************** publish feature and map data
-			// publish surround map (use for optimization) for every 50 frame
-			TicToc t_pub;
-			if ((pub_laser_cloud_surround.getNumSubscribers() != 0) && (frame_cnt % 50 ==0))
-			{
-				PointICovCloud laser_cloud_surrond;
-				for (int i = 0; i < laser_cloud_surround_num; i++)
+				// ************************************************************** publish feature and map data
+				// publish surround map (use for optimization) for every 50 frame
+				TicToc t_pub;
+				if (pub_laser_cloud_surround.getNumSubscribers() != 0)
 				{
-					int ind = laser_cloud_surrond_ind[i];
-					laser_cloud_surrond += *laser_cloud_surf_array_cov[ind];
-					laser_cloud_surrond += *laser_cloud_corner_array_cov[ind];
+					sensor_msgs::PointCloud2 laser_cloud_surround_msg;
+					pcl::toROSMsg(*laser_cloud_surf_from_map_cov, laser_cloud_surround_msg);
+					laser_cloud_surround_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
+					laser_cloud_surround_msg.header.frame_id = "/world";
+					pub_laser_cloud_surround.publish(laser_cloud_surround_msg);
+					// printf("size of surround map: %d\n", laser_cloud_surrond.size());
 				}
-				sensor_msgs::PointCloud2 laser_cloud_surround_msg;
-				pcl::toROSMsg(laser_cloud_surrond, laser_cloud_surround_msg);
-				laser_cloud_surround_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
-				laser_cloud_surround_msg.header.frame_id = "/world";
-				pub_laser_cloud_surround.publish(laser_cloud_surround_msg);
-				// printf("size of surround map: %d\n", laser_cloud_surrond.size());
-			}
 
-			// publish complete map for every 50 frame
-			if ((pub_laser_cloud_map.getNumSubscribers() != 0) && (frame_cnt % 50 == 0))
-			{
-				PointICovCloud laser_cloud_map;
-				for (int i = 0; i < laser_cloud_num; i++)
+				if (pub_laser_cloud_map.getNumSubscribers() != 0)
 				{
-					laser_cloud_map += *laser_cloud_surf_array_cov[i];
-					laser_cloud_map += *laser_cloud_corner_array_cov[i];
+					PointICovCloud laser_cloud_map;
+					for (int i = 0; i < laser_cloud_num; i++) laser_cloud_map += *laser_cloud_surf_array_cov[i];
+					sensor_msgs::PointCloud2 laser_cloud_msg;
+					pcl::toROSMsg(laser_cloud_map, laser_cloud_msg);
+					laser_cloud_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
+					laser_cloud_msg.header.frame_id = "/world";
+					pub_laser_cloud_map.publish(laser_cloud_msg);
+					// printf("size of cloud map: %d\n", laser_cloud_map.size());
 				}
-				sensor_msgs::PointCloud2 laser_cloud_msg;
-				pcl::toROSMsg(laser_cloud_map, laser_cloud_msg);
-				laser_cloud_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
-				laser_cloud_msg.header.frame_id = "/world";
-				pub_laser_cloud_map.publish(laser_cloud_msg);
-				// printf("size of cloud map: %d\n", laser_cloud_map.size());
+				LOG_EVERY_N(INFO, 1) << "mapping pub time: " << t_pub.toc() << "ms";
 			}
 
 			// publish registrated laser cloud
@@ -883,7 +875,6 @@ void process()
 
 			std::cout << common::RED << "frame: " << frame_cnt
 					  << ", whole mapping time " << t_whole_mapping.toc() << "ms" << common::RESET << std::endl;
-			LOG_EVERY_N(INFO, 10) << "mapping pub time: " << t_pub.toc() << "ms";
 			LOG_EVERY_N(INFO, 10) << "whole mapping time " << t_whole_mapping.toc() << "ms";
 			total_mapping += t_whole_mapping.toc();
 
@@ -963,7 +954,6 @@ void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameteri
 
 	if (local_parameterization->is_degenerate_)
 	{
-		is_degenerate = true;
 		local_parameterization->V_update_ = mat_P;
 		// std::cout << "param " << i << " is degenerate !" << std::endl;
 		// std::cout << mat_P.transpose() << std::endl;
