@@ -57,7 +57,8 @@ void roiCloudFilter(pcl::PointCloud<PointType> &laser_cloud, const double &roi_r
 // a: last frame; c: frame for points capturing
 // p^a = T(s)*p^c
 template <typename PointType>
-void TransformToStart(const PointType &pi, PointType &po, const Pose &pose, const bool &b_distortion, const float &scan_period = 0.1)
+void TransformToStart(const PointType &pi, PointType &po, const Pose &pose, 
+                      const bool &b_distortion, const float &scan_period = 0.1)
 {
     if (!pcl::traits::has_field<PointType, pcl::fields::intensity>::value)
     {
@@ -66,8 +67,8 @@ void TransformToStart(const PointType &pi, PointType &po, const Pose &pose, cons
     }
     float s = 1.0; //interpolation ratio
     if (b_distortion) s = (pi.intensity - int(pi.intensity)) / scan_period;
-    // spherically interpolates between q1 and q2 by the interpolation coefficient t
     po = pi;
+    // spherically interpolates between q1 and q2 by the interpolation coefficient t
     Eigen::Quaterniond q_point_last = Eigen::Quaterniond::Identity().slerp(s, pose.q_);
     Eigen::Vector3d t_point_last = s * pose.t_;
     Eigen::Vector3d point(pi.x, pi.y, pi.z);

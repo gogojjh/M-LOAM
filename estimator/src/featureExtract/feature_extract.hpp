@@ -318,7 +318,8 @@ void FeatureExtract::matchCornerFromScan(const typename pcl::KdTreeFLANN<PointTy
     std::vector<float> point_search_sqdis;
     for (size_t i = 0; i < cloud_data.points.size(); i++)
     {
-        TransformToStart(cloud_data.points[i], point_sel, pose_local, DISTORTION, SCAN_PERIOD);
+        // not consider distortion
+        TransformToStart(cloud_data.points[i], point_sel, pose_local, false, SCAN_PERIOD);
         kdtree_corner_from_scan->nearestKSearch(point_sel, 1, point_search_ind, point_search_sqdis);
 
         int closest_point_ind = -1, min_point_ind2 = -1;
@@ -423,7 +424,8 @@ void FeatureExtract::matchSurfFromScan(const typename pcl::KdTreeFLANN<PointType
     std::vector<float> point_search_sqdis;
     for (size_t i = 0; i < cloud_data.points.size(); i++)
     {
-        TransformToStart(cloud_data.points[i], point_sel, pose_local, DISTORTION, SCAN_PERIOD);
+        // not consider distortion
+        TransformToStart(cloud_data.points[i], point_sel, pose_local, false, SCAN_PERIOD);
         kdtree_surf_from_scan->nearestKSearch(point_sel, 1, point_search_ind, point_search_sqdis);
 
         int closest_point_ind = -1, min_point_ind2 = -1, min_point_ind3 = -1;
