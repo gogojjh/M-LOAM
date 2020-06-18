@@ -124,6 +124,7 @@ class Estimator
 
     bool b_system_inited_{};
 
+    Pose pose_laser_prev_;
     // pose from laser at k=0 to laser at k=K
     std::vector<Pose> pose_laser_cur_;
     // pose from laser at k=K-1 to laser at k=K

@@ -91,7 +91,6 @@ void pubPointCloud(const Estimator &estimator, const double &time)
     header.frame_id = "laser_" + std::to_string(IDX_REF);
     header.stamp = ros::Time(time);
 
-    // publish raw points
     PointICloud laser_cloud, laser_cloud_proj, corner_points_sharp, corner_points_less_sharp, surf_points_flat, surf_points_less_flat;
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {

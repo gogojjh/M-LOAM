@@ -459,37 +459,12 @@ void Estimator::process()
             cloudFeature &cur_cloud_feature = cur_feature_.second[IDX_REF];
             cloudFeature &prev_cloud_feature = prev_feature_.second[IDX_REF];
             pose_rlt_[IDX_REF] = lidar_tracker_.trackCloud(prev_cloud_feature, cur_cloud_feature, pose_rlt_[IDX_REF]);
-            pose_laser_cur_[IDX_REF] = Pose(Qs_[cir_buf_cnt_-1], Ts_[cir_buf_cnt_-1]) * pose_rlt_[IDX_REF];
+            pose_laser_cur_[IDX_REF] = Pose(Qs_[cir_buf_cnt_ - 1], Ts_[cir_buf_cnt_ - 1]) * pose_rlt_[IDX_REF];
             std::cout << "pose_rlt: " << pose_rlt_[IDX_REF] << std::endl;
             LOG_EVERY_N(INFO, 10) << "lidarTracker: " << t_mloam_tracker.toc() << "ms";
             // printf("lidarTracker: %fms\n", t_mloam_tracker.toc());
         }
     }
-    // if (frame_cnt_ % 3 == 0)
-    // {
-    //     for (size_t n = 0; n < NUM_OF_LASER; n++)
-    //     {
-    //         stringstream ss;
-    //         ss << "/tmp/raw_pc_" << n << ".pcd";
-    //         pcl::io::savePCDFileASCII(ss.str(), cur_feature_.second[n]["laser_cloud"]);
-    //     }
-    // }
-    if (DISTORTION) undistortMeasurements(); // after tracking, undistort measurements using last frame odometry
-    // if (frame_cnt_ % 3 == 0)
-    // {
-    //     for (size_t n = 0; n < NUM_OF_LASER; n++)
-    //     {
-    //         stringstream ss;
-    //         ss << "/tmp/undistort_pc_" << n << ".pcd";
-    //         pcl::io::savePCDFileASCII(ss.str(), cur_feature_.second[n]["laser_cloud"]);
-    //     }
-    // }
-    // ofstream fpose("/tmp/pose_rlt.txt");
-    // fpose << "rlt_0: " << pose_rlt_[IDX_REF] << std::endl;
-    // Pose pose_ext(qbl_[1], tbl_[1]);
-    // Pose pose_local = pose_ext.inverse() * pose_rlt_[IDX_REF] * pose_ext;
-    // fpose << "rlt_1: " << pose_local << std::endl;
-    // fpose.close();
 
     //----------------- update pose and point cloud
     Qs_[cir_buf_cnt_] = pose_laser_cur_[IDX_REF].q_;
@@ -543,6 +518,42 @@ void Estimator::process()
             if (ESTIMATE_EXTRINSIC) evalCalib();
             break;
         }
+    }
+
+    if (DISTORTION)
+    {
+        Pose pose_laser_cur = Pose(Qs_[cir_buf_cnt_ - 1], Ts_[cir_buf_cnt_ - 1]);
+        // Pose pose_ext;
+        // Pose pose_local;
+
+        // ofstream fpose("/tmp/pose_rlt.txt");
+        // fpose << "rlt_0: " << pose_rlt_[IDX_REF] << std::endl;
+        // pose_ext = Pose(qbl_[1], tbl_[1]);
+        // pose_local = pose_ext.inverse() * pose_rlt_[IDX_REF] * pose_ext;
+        // fpose << "rlt_1: " << pose_local << std::endl;
+
+        pose_rlt_[IDX_REF] = pose_laser_prev_.inverse() * pose_laser_cur;
+
+        // fpose << "update rlt_0: " << pose_rlt_[IDX_REF] << std::endl;
+        // pose_ext = Pose(qbl_[1], tbl_[1]);
+        // pose_local = pose_ext.inverse() * pose_rlt_[IDX_REF] * pose_ext;
+        // fpose << "update rlt_1: " << pose_local << std::endl;
+        // fpose.close();
+
+        // for (size_t n = 0; n < NUM_OF_LASER; n++)
+        // {
+            // stringstream ss;
+            // ss << "/tmp/raw_pc_" << n << ".pcd";
+            // pcl::io::savePCDFileASCII(ss.str(), cur_feature_.second[n]["laser_cloud"]);
+        // }
+        undistortMeasurements();
+        // for (size_t n = 0; n < NUM_OF_LASER; n++)
+        // {
+        //     stringstream ss;
+        //     ss << "/tmp/undistort_raw_pc_" << n << ".pcd";
+        //     pcl::io::savePCDFileASCII(ss.str(), cur_feature_.second[n]["laser_cloud"]);
+        // }
+        pose_laser_prev_ = pose_laser_cur;
     }
 
     // pass cur_feature to prev_feature

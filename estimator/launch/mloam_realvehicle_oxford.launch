@@ -1,11 +1,11 @@
 <launch>
     <!-- sensor setup: https://oxford-robotics-institute.github.io/radar-robotcar-dataset/documentation/ -->
     <arg name="bag_file_use" default="true" />
-    <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-10-14-36-48-radar-oxford-10k-partial/data_test.bag" /> 
+    <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-10-14-36-48-radar-oxford-10k-partial/data_distort.bag" /> 
 
     <param name="use_sim_time" value="true" />
     <group if="$(arg bag_file_use)">
-        <node pkg="rosbag" type="play" name="rosbag" args="--clock --pause -r 0.2 $(arg bag_file)" />    
+        <node pkg="rosbag" type="play" name="rosbag" args="--clock --pause -r 0.5 $(arg bag_file)" />    
     </group>    
 
     <include file="$(find rviz_car_model)/launch/default.launch" />
@@ -29,7 +29,7 @@
                 args="-config_file=$(arg config_file)
                     -data_source=$(arg data_source)
                     -result_save=$(arg result_save)
-                    -output_path=$(arg output_path)" output="screen">
+                    -output_path=$(arg output_path)">
                 <remap from="/base_pose_gt" to="/current_odom"/>
             </node>
         </group>
@@ -52,6 +52,10 @@
         args="0 0 1.5 0 0 0 1 world_base world 10"/>
     <node name="static_tf_world_sensor_into_base_sensor" pkg="tf" type="static_transform_publisher"
         args="0 0 0 0 0 0 1 world laser_0 10"/>
+    <node name="static_tf_base_sensor_into_base_sensor_bag" pkg="tf" type="static_transform_publisher"
+        args="0 0 0 0 0 0 1 laser_0 velo_left 10"/>        
+    <node name="static_tf_base_sensor2_into_base_sensor2_bag" pkg="tf" type="static_transform_publisher"
+        args="0 0 0 0 0 0 1 laser_1 velo_right 10"/>                
     <node name="static_tf_base_link_into_base_sensor" pkg="tf" type="static_transform_publisher"
         args="0 0 -1.5 0 0 0 1 aft_mapped base_link 10"/>                
 
