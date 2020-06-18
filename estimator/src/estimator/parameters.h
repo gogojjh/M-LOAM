@@ -35,6 +35,7 @@
 
 #include "common/types/type.h"
 #include "common/csvfile.h"
+#include "common/color.hpp"
 #include "../estimator/pose.h"
 #include "../utility/utility.h"
 
@@ -56,20 +57,6 @@ extern int NUM_ITERATIONS;
 extern int ESTIMATE_EXTRINSIC;
 extern int ESTIMATE_TD;
 
-// LiDAR
-extern int NUM_OF_LASER;
-extern int N_SCANS;
-
-extern int IDX_REF;
-
-extern int WINDOW_SIZE;
-extern int OPT_WINDOW_SIZE;
-
-extern float SCAN_PERIOD;
-extern float DISTANCE_SQ_THRESHOLD;
-extern float NEARBY_SCAN;
-extern int DISTORTION;
-
 extern int SEGMENT_CLOUD;
 extern int HORIZON_SCAN;
 extern int MIN_CLUSTER_SIZE;
@@ -78,17 +65,30 @@ extern int SEGMENT_VALID_POINT_NUM;
 extern int SEGMENT_VALID_LINE_NUM;
 extern float SEGMENT_THETA;
 
+// LiDAR
+extern size_t IDX_REF;
+extern size_t NUM_OF_LASER;
+extern size_t N_SCANS;
+
+extern int WINDOW_SIZE;
+extern int OPT_WINDOW_SIZE;
+
+extern int DISTORTION;
+extern float SCAN_PERIOD;
+extern float DISTANCE_SQ_THRESHOLD;
+extern float NEARBY_SCAN;
+
 extern std::string CLOUD0_TOPIC, CLOUD1_TOPIC;
 extern std::vector<std::string> CLOUD_TOPIC;
 
 extern float LASER_SYNC_THRESHOLD;
 extern double ROI_RANGE;
-extern double ROI_RANGE_MAPPING;
 
 extern std::vector<Eigen::Quaterniond> QBL;
 extern std::vector<Eigen::Vector3d> TBL;
 extern std::vector<double> TDBL;
 
+// odometry
 extern int PLANAR_MOVEMENT;
 
 extern float MIN_MATCH_SQ_DIS;
@@ -102,20 +102,17 @@ extern double PRIOR_FACTOR_POS;
 extern double PRIOR_FACTOR_ROT;
 extern int CHECK_JACOBIAN;
 
-extern int OPTIMAL_EXTRINSIC;
-
-extern int EVALUATE_RESIDUAL;
-
 extern int PCL_VIEWER;
 extern int PCL_VIEWER_NORMAL_RATIO;
 
-extern int OPTIMAL_ODOMETRY;
 extern int N_CUMU_FEATURE;
-
 extern double EIG_INITIAL;
 extern double EIG_THRE_CALIB;
 extern int N_CALIB;
 
+extern int SKIP_NUM_ODOM_PUB;
+
+// mapping
 extern float MAP_CORNER_RES;
 extern float MAP_SURF_RES;
 extern float MAP_EIG_THRE;
@@ -123,8 +120,6 @@ extern float MAP_EIG_THRE;
 extern std::vector<Eigen::Matrix<double, 6, 6> > COV_EXT;
 extern Eigen::Matrix<double, 3, 3> COV_MEASUREMENT;
 extern double TRACE_THRESHOLD_BEFORE_MAPPING, TRACE_THRESHOLD_AFTER_MAPPING;
-
-extern int SKIP_NUM_ODOM_PUB;
 
 void readParameters(std::string config_file);
 

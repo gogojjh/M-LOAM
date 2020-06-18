@@ -315,12 +315,10 @@ void process()
 
 			laser_cloud_surf_last->clear();
 			pcl::fromROSMsg(*surf_last_buf.front(), *laser_cloud_surf_last);
-			// roiCloudFilter(*laser_cloud_surf_last, ROI_RANGE_MAPPING);
 			surf_last_buf.pop();
 
 			laser_cloud_corner_last->clear();
 			pcl::fromROSMsg(*corner_last_buf.front(), *laser_cloud_corner_last);
-			// roiCloudFilter(*laser_cloud_corner_last, ROI_RANGE_MAPPING);
 			corner_last_buf.pop();
 
 			laser_cloud_full_res->clear();

@@ -29,20 +29,6 @@ int NUM_ITERATIONS;
 int ESTIMATE_EXTRINSIC;
 int ESTIMATE_TD;
 
-// LiDAR
-int NUM_OF_LASER;
-int N_SCANS;
-
-int IDX_REF;
-
-int WINDOW_SIZE;
-int OPT_WINDOW_SIZE;
-
-float SCAN_PERIOD;
-float DISTANCE_SQ_THRESHOLD;
-float NEARBY_SCAN;
-int DISTORTION;
-
 // segmentation
 int SEGMENT_CLOUD;
 int HORIZON_SCAN;
@@ -52,17 +38,30 @@ int SEGMENT_VALID_POINT_NUM;
 int SEGMENT_VALID_LINE_NUM;
 float SEGMENT_THETA;
 
+// LiDAR
+size_t NUM_OF_LASER;
+size_t N_SCANS;
+size_t IDX_REF;
+
+int WINDOW_SIZE;
+int OPT_WINDOW_SIZE;
+
+int DISTORTION;
+float SCAN_PERIOD;
+float DISTANCE_SQ_THRESHOLD;
+float NEARBY_SCAN;
+
 std::string CLOUD0_TOPIC, CLOUD1_TOPIC;
 std::vector<std::string> CLOUD_TOPIC;
 
 float LASER_SYNC_THRESHOLD;
 double ROI_RANGE;
-double ROI_RANGE_MAPPING;
 
 std::vector<Eigen::Quaterniond> QBL;
 std::vector<Eigen::Vector3d> TBL;
 std::vector<double> TDBL;
 
+// odometry
 int PLANAR_MOVEMENT;
 
 float MIN_MATCH_SQ_DIS;
@@ -76,20 +75,17 @@ double PRIOR_FACTOR_POS;
 double PRIOR_FACTOR_ROT;
 int CHECK_JACOBIAN;
 
-int OPTIMAL_EXTRINSIC;
-
-int EVALUATE_RESIDUAL;
-
 int PCL_VIEWER;
 int PCL_VIEWER_NORMAL_RATIO;
 
-int OPTIMAL_ODOMETRY;
 int N_CUMU_FEATURE;
-
 double EIG_INITIAL;
 double EIG_THRE_CALIB;
 int N_CALIB;
 
+int SKIP_NUM_ODOM_PUB;
+
+// mapping
 float MAP_CORNER_RES;
 float MAP_SURF_RES;
 float MAP_EIG_THRE;
@@ -97,8 +93,6 @@ float MAP_EIG_THRE;
 std::vector<Eigen::Matrix<double, 6, 6> > COV_EXT;
 Eigen::Matrix<double, 3, 3> COV_MEASUREMENT;
 double TRACE_THRESHOLD_BEFORE_MAPPING, TRACE_THRESHOLD_AFTER_MAPPING;
-
-int SKIP_NUM_ODOM_PUB;
 
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
@@ -121,7 +115,7 @@ void readParameters(std::string config_file)
     FILE *fh = fopen(config_file.c_str(),"r");
     if(fh == NULL)
     {
-        ROS_WARN("config_file dosen't exist; wrong config_file path");
+        std::cout << common::YELLOW << "config_file dosen't exist; wrong config_file path" << common::RESET << std::endl;
         ROS_BREAK();
         return;
     }
@@ -135,22 +129,18 @@ void readParameters(std::string config_file)
 
     MULTIPLE_THREAD = fsSettings["multiple_thread"];
 
-    SOLVER_TIME = fsSettings["max_solver_time"];
-    NUM_ITERATIONS = fsSettings["max_num_iterations"];
-
-    NUM_OF_LASER = fsSettings["num_of_laser"];
+    int num_of_laser = fsSettings["num_of_laser"];
+    assert(num_of_laser >= 0);
+    NUM_OF_LASER = (size_t)num_of_laser;
     printf("laser number %lu\n", NUM_OF_LASER);
-    assert(NUM_OF_LASER >= 0);
 
     cv::FileNode node_cloud_topic = fsSettings["cloud_topic"];
-    int cnt = 0;
     CLOUD_TOPIC.resize(NUM_OF_LASER);
-    for (auto iter = node_cloud_topic.begin(); iter != node_cloud_topic.end(); iter++)
+    for (size_t i = 0; i < node_cloud_topic.size(); i++)
     {
-        CLOUD_TOPIC[cnt] = (std::string)*iter;
-        printf("cloud_topic: %s\n", CLOUD_TOPIC[cnt].c_str());
-        cnt++;
-        if (cnt == NUM_OF_LASER) break;
+        CLOUD_TOPIC[i] = (std::string)node_cloud_topic[i];
+        printf("cloud_topic: %s\n", CLOUD_TOPIC[i].c_str());
+        if (int(i) == NUM_OF_LASER) break;
     }
 
     WINDOW_SIZE = fsSettings["window_size"];
@@ -158,27 +148,25 @@ void readParameters(std::string config_file)
     printf("window_size: %d, opt_window_size: %d\n", WINDOW_SIZE, OPT_WINDOW_SIZE);
 
     ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];
-    OPTIMAL_EXTRINSIC = fsSettings["optimal_extrinsic"];
     QBL.resize(NUM_OF_LASER);
     TBL.resize(NUM_OF_LASER);
     if (ESTIMATE_EXTRINSIC == 2)
     {
-        ROS_WARN("have no prior about extrinsic param, calibrate extrinsic param");
+        std::cout << common::YELLOW << "have no prior about extrinsic param, calibrate extrinsic param" << common::RESET << std::endl;
         for (int i = 0; i < NUM_OF_LASER; i++)
         {
             QBL[i] = Eigen::Quaterniond::Identity();
             TBL[i] = Eigen::Vector3d::Zero();
         }
-    }
-    else
+    } else
     {
         if (ESTIMATE_EXTRINSIC == 1)
         {
-            ROS_WARN("please optimize extrinsic param around initial guess!");
+            std::cout << common::YELLOW << "please optimize extrinsic param around initial guess!" << common::RESET << std::endl;
         }
         if (ESTIMATE_EXTRINSIC == 0)
         {
-            ROS_WARN("fix extrinsic param ");
+            std::cout << common::YELLOW << "fix extrinsic param " << common::RESET << std::endl;
         }
 
         cv::Mat cv_T;
@@ -189,12 +177,10 @@ void readParameters(std::string config_file)
             TBL[i] = Eigen::Vector3d(cv_T.ptr<double>(i)[4], cv_T.ptr<double>(i)[5], cv_T.ptr<double>(i)[6]);
         }
     }
-    int pn = config_file.find_last_of('/');
-    std::string configPath = config_file.substr(0, pn);
 
     cv::Mat cv_TD;
     fsSettings["td"] >> cv_TD;
-    for (int i = 0; i < NUM_OF_LASER; i++) TDBL.push_back(cv_TD.ptr<double>(0)[i]);
+    for (size_t i = 0; i < NUM_OF_LASER; i++) TDBL.push_back(cv_TD.ptr<double>(0)[i]);
     ESTIMATE_TD = fsSettings["estimate_td"];
     if (ESTIMATE_TD)
         ROS_INFO_STREAM("Unsynchronized sensors, online estimate time offset");
@@ -202,11 +188,16 @@ void readParameters(std::string config_file)
         ROS_INFO_STREAM("Synchronized sensors, fix time offset");
 
     LASER_SYNC_THRESHOLD = fsSettings["laser_sync_threshold"];
-    N_SCANS = fsSettings["n_scans"];
-    assert(N_SCANS >= 0);
+
+    int n_scans = fsSettings["n_scans"];
+    assert(n_scans >= 0);
+    N_SCANS = (size_t)n_scans;
+
+    // odometry
+    SOLVER_TIME = fsSettings["max_solver_time"];
+    NUM_ITERATIONS = fsSettings["max_num_iterations"];
 
     ROI_RANGE = fsSettings["roi_range"];
-    ROI_RANGE_MAPPING = fsSettings["roi_range_mapping"];
 
     SEGMENT_CLOUD = fsSettings["segment_cloud"];
     HORIZON_SCAN = fsSettings["horizon_scan"];
@@ -216,8 +207,9 @@ void readParameters(std::string config_file)
     SEGMENT_VALID_LINE_NUM = fsSettings["segment_valid_line_num"];
     SEGMENT_THETA = fsSettings["segment_theta"];
 
-    IDX_REF = fsSettings["idx_ref"];
-    assert(IDX_REF >= 0);
+    int idx_ref = fsSettings["idx_ref"];
+    assert(idx_ref >= 0);
+    IDX_REF = (size_t)idx_ref;
 
     SCAN_PERIOD = fsSettings["scan_period"];
     DISTANCE_SQ_THRESHOLD = fsSettings["distance_sq_threshold"];
@@ -235,21 +227,20 @@ void readParameters(std::string config_file)
     PRIOR_FACTOR = fsSettings["prior_factor"];
     PRIOR_FACTOR_POS = fsSettings["prior_factor_pos"];
     PRIOR_FACTOR_ROT = fsSettings["prior_factor_rot"];
-    CHECK_JACOBIAN = fsSettings["check_jacobian"];
-
-    EVALUATE_RESIDUAL = fsSettings["evaluate_residual"];
+    CHECK_JACOBIAN = 0;
 
     PCL_VIEWER = fsSettings["pcl_viewer"];
     PCL_VIEWER_NORMAL_RATIO = fsSettings["pcl_viewer_normal_ratio"];
 
-    OPTIMAL_ODOMETRY = fsSettings["optimal_odometry"];
     N_CUMU_FEATURE = fsSettings["n_cumu_feature"];
-
     EIG_INITIAL = fsSettings["eig_initial"];
     EIG_THRE_CALIB = fsSettings["eig_thre_calib"];
     N_CALIB = fsSettings["n_calib"];
 
-    // mapping parameter
+    SKIP_NUM_ODOM_PUB = fsSettings["skip_num_odom_pub"];
+    if (SKIP_NUM_ODOM_PUB == 0) SKIP_NUM_ODOM_PUB = 1;
+
+    // mapping 
     MAP_CORNER_RES = fsSettings["map_corner_res"];
     MAP_SURF_RES = fsSettings["map_surf_res"];
     MAP_EIG_THRE = fsSettings["map_eig_thre"];
@@ -275,7 +266,5 @@ void readParameters(std::string config_file)
     TRACE_THRESHOLD_BEFORE_MAPPING = fsSettings["trace_threshold_before_mapping"];
     TRACE_THRESHOLD_AFTER_MAPPING = fsSettings["trace_threshold_after_mapping"];
 
-    SKIP_NUM_ODOM_PUB = fsSettings["skip_num_odom_pub"];
-    if (SKIP_NUM_ODOM_PUB == 0) SKIP_NUM_ODOM_PUB = 1;
     fsSettings.release();
 }

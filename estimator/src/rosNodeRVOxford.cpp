@@ -258,7 +258,7 @@ int main(int argc, char **argv)
         typedef message_filters::Subscriber<LidarMsgType> LidarSubType;
 
         std::vector<LidarSubType *> sub_lidar(5);
-        NUM_OF_LASER = std::min(NUM_OF_LASER, 5);
+        NUM_OF_LASER = NUM_OF_LASER < 5 ? NUM_OF_LASER : 5;
         for (size_t i = 0; i < NUM_OF_LASER; i++) sub_lidar[i] = new LidarSubType(nh, CLOUD_TOPIC[i], 1);
         for (size_t i = NUM_OF_LASER; i < 5; i++) sub_lidar[i] = new LidarSubType(nh, CLOUD_TOPIC[0], 1);
         message_filters::Synchronizer<LidarSyncPolicy> *lidar_synchronizer =
