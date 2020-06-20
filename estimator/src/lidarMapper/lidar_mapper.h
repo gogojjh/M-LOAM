@@ -103,8 +103,8 @@ void pubOdometry();
 
 void saveGlobalMap();
 
-void transformUncertaintyToMap(const PointICovCloud &cloud_local, PointICovCloud &cloud_global,
-                                const Pose &pose_global, const vector<Pose> &pose_ext);
+void cloudUCTAssociateToMap(const PointICovCloud &cloud_local, PointICovCloud &cloud_global,
+                            const Pose &pose_global, const vector<Pose> &pose_ext);
 
 void evalHessian(const ceres::CRSMatrix &jaco, Eigen::Matrix<double, 6, 6> &mat_H);
 

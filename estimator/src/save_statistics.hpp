@@ -77,13 +77,13 @@ void SaveStatistics::saveOdomStatistics(const string &calib_eig_filename,
     fout.setf(ios::fixed, ios::floatfield);
     fout.precision(5);
 
-    for (auto i = 0; i < NUM_OF_LASER; i++)
+    for (size_t i = 0; i < NUM_OF_LASER; i++)
         fout << estimator.cur_eig_calib_[i] << ", ";
     fout << std::endl;
     fout.close();
 
     fout.open(calib_result_filename.c_str(), ios::out);
-    for (auto i = 0; i < NUM_OF_LASER; i++)
+    for (size_t i = 0; i < NUM_OF_LASER; i++)
     {
         fout << estimator.cur_time_ << ", "
                 << estimator.tbl_[i](0) << ", "
@@ -97,7 +97,7 @@ void SaveStatistics::saveOdomStatistics(const string &calib_eig_filename,
     fout.close();
 
     fout.open(odom_filename.c_str(), ios::out);
-    for (auto i = 0; i < estimator.v_laser_path_[IDX_REF].poses.size(); i++)
+    for (size_t i = 0; i < estimator.v_laser_path_[IDX_REF].poses.size(); i++)
     {
         const geometry_msgs::PoseStamped &sensor_pose = estimator.v_laser_path_[IDX_REF].poses[i];
         fout.precision(15);
