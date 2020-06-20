@@ -11,8 +11,6 @@
  * Author: Jianhao JIAO (jiaojh1994@gmail.com)
  *******************************************************/
 
-#pragma once
-
 #include "marginalization_factor.h"
 
 void ResidualBlockInfo::Evaluate()

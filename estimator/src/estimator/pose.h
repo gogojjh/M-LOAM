@@ -45,16 +45,17 @@ public:
 
     static Pose poseTransform(const Pose &pose1, const Pose &pose2);
 
-    Pose inverse();
+    Pose inverse() const;
     Pose operator * (const Pose &pose);
     friend ostream &operator << (ostream &out, const Pose &pose);
 
-     Eigen::Matrix<double, 6, 1> se3() const;
+    Eigen::Matrix<double, 6, 1> se3() const;
 
     double td_;
     Eigen::Quaterniond q_; // q = [cos(theta/2), u*sin(theta/2)]
     Eigen::Vector3d t_;
     Eigen::Matrix4d T_;
+    Eigen::Matrix<double, 6, 6> cov_;
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW // TODO: the Eigen bugs in initializing the class
 };

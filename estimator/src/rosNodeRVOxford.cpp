@@ -361,7 +361,7 @@ int main(int argc, char **argv)
                         return 0;
                     }
                     roiCloudFilter(laser_cloud_list[j], ROI_RANGE);
-                    printf("%d ", laser_cloud_list[j].size());
+                    printf("%lu ", laser_cloud_list[j].size());
                 }
                 printf("\n");
 

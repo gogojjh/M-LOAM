@@ -83,8 +83,6 @@ namespace pcl
         typedef boost::shared_ptr< const VoxelGridCovarianceMLOAM<PointT> > ConstPtr;
 
     public:
-        double trace_threshold_;
-
         /** \brief Empty constructor. */
         VoxelGridCovarianceMLOAM () :
             leaf_size_ (Eigen::Vector4f::Zero ()),
@@ -101,7 +99,7 @@ namespace pcl
             filter_limit_max_ (FLT_MAX),
             filter_limit_negative_ (false),
             min_points_per_voxel_ (0),
-            trace_threshold_(2)
+            trace_threshold_(2.0)
         {
             filter_name_ = "VoxelGridCovarianceMLOAM";
         }
@@ -347,6 +345,12 @@ namespace pcl
         return (filter_limit_negative_);
         }
 
+        inline void 
+        setTraceThreshold (const float trace_threshold)
+        {
+            trace_threshold_ = trace_threshold;
+        }
+
         protected:
         /** \brief The size of a leaf. */
         Eigen::Vector4f leaf_size_;
@@ -380,6 +384,8 @@ namespace pcl
 
         /** \brief Minimum number of points per voxel for the centroid to be computed */
         unsigned int min_points_per_voxel_;
+
+        float trace_threshold_;
 
         typedef typename pcl::traits::fieldList<PointT>::type FieldList;
 
@@ -428,7 +434,8 @@ namespace pcl
         filter_limit_min_ (-FLT_MAX),
         filter_limit_max_ (FLT_MAX),
         filter_limit_negative_ (false),
-        min_points_per_voxel_ (0)
+        min_points_per_voxel_ (0),
+        trace_threshold_ (2.0)
         {
             filter_name_ = "VoxelGridCovarianceMLOAM";
         }
@@ -696,6 +703,12 @@ namespace pcl
         return (filter_limit_negative_);
         }
 
+        inline void
+        setTraceThreshold(const float trace_threshold)
+        {
+            trace_threshold_ = trace_threshold;
+        }
+
         protected:
         /** \brief The size of a leaf. */
         Eigen::Vector4f leaf_size_;
@@ -735,6 +748,8 @@ namespace pcl
 
         /** \brief Minimum number of points per voxel for the centroid to be computed */
         unsigned int min_points_per_voxel_;
+
+        float trace_threshold_;
 
         /** \brief Downsample a Point Cloud using a voxelized grid approach
         * \param[out] output the resultant point cloud

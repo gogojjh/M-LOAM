@@ -36,8 +36,8 @@
 #include "common/types/type.h"
 #include "common/csvfile.h"
 #include "common/color.hpp"
+
 #include "../estimator/pose.h"
-#include "../utility/utility.h"
 
 using namespace std;
 

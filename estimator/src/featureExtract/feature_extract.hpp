@@ -137,7 +137,7 @@ void FeatureExtract::findStartEndTime(const typename pcl::PointCloud<PointType> 
                                       float &start_time,
                                       float &end_time)
 {
-    start_time = 1e6; 
+    start_time = 1e6;
     end_time = 0.0;
     for (const auto &point : laser_cloud_in)
     {

@@ -193,7 +193,7 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
 
     Eigen::Vector3d rot_cov = svd.singularValues().tail<3>(); // singular value
     v_rot_cov_[idx_data].push_back(rot_cov(1));
-    printf("------------------- pose_cnt:%d, ref:%d, data:%d, rot_cov:%f\n", pq_pose_.size(), idx_ref, idx_data, rot_cov(1));
+    printf("------------------- pose_cnt:%lu, ref:%d, data:%d, rot_cov:%f\n", pq_pose_.size(), idx_ref, idx_data, rot_cov(1));
     if (rot_cov(1) > rot_cov_thre_) // converage, the second smallest sigular value
     {
         calib_result = calib_ext_[idx_data];

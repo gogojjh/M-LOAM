@@ -28,7 +28,6 @@
 #include "../estimator/parameters.h"
 #include "../estimator/pose.h"
 
-
 template <typename PointType>
 void roiCloudFilter(pcl::PointCloud<PointType> &laser_cloud, const double &roi_range)
 {
@@ -37,17 +36,12 @@ void roiCloudFilter(pcl::PointCloud<PointType> &laser_cloud, const double &roi_r
     if (roi_range <= 1e-5)
     {
         return;
-    } else
-    if (roi_range < 5)
+    }
+    else if (roi_range < 5)
     {
-        // pcl::PassThrough<PointType> pass_filter;
-        // pass_filter.setInputCloud(laser_cloud);
-        // pass_filter.setFilterFieldName("z");
-        // pass_filter.setFilterLimits(-roi_range, roi_range);
-        // pass_filter.setFilterLimitsNegative(false);
-        // pass_filter.filter(laser_cloud);
         common::removeROIPointCloud(laser_cloud, laser_cloud, roi_range, "inside");
-    } else
+    }
+    else
     {
         common::removeROIPointCloud(laser_cloud, laser_cloud, roi_range, "outside");
     }
@@ -57,7 +51,7 @@ void roiCloudFilter(pcl::PointCloud<PointType> &laser_cloud, const double &roi_r
 // a: last frame; c: frame for points capturing
 // p^a = T(s)*p^c
 template <typename PointType>
-void TransformToStart(const PointType &pi, PointType &po, const Pose &pose, 
+void TransformToStart(const PointType &pi, PointType &po, const Pose &pose,
                       const bool &b_distortion, const float &scan_period = 0.1)
 {
     if (!pcl::traits::has_field<PointType, pcl::fields::intensity>::value)
@@ -66,7 +60,8 @@ void TransformToStart(const PointType &pi, PointType &po, const Pose &pose,
         exit(EXIT_FAILURE);
     }
     float s = 1.0; //interpolation ratio
-    if (b_distortion) s = (pi.intensity - int(pi.intensity)) / scan_period;
+    if (b_distortion)
+        s = (pi.intensity - int(pi.intensity)) / scan_period;
     po = pi;
     // spherically interpolates between q1 and q2 by the interpolation coefficient t
     Eigen::Quaterniond q_point_last = Eigen::Quaterniond::Identity().slerp(s, pose.q_);
@@ -83,7 +78,7 @@ void TransformToStart(const PointType &pi, PointType &po, const Pose &pose,
 // a: last frame; b: current frame; c: frame for points capturing
 // p^a = T(s)*p^c, p^b = T^(-1)*T(s)*p^c
 template <typename PointType>
-void TransformToEnd(const PointType &pi, PointType &po, const Pose &pose, 
+void TransformToEnd(const PointType &pi, PointType &po, const Pose &pose,
                     const bool &b_distortion, const float &scan_period = 0.1)
 {
     if (!pcl::traits::has_field<PointType, pcl::fields::intensity>::value)
@@ -101,7 +96,7 @@ void TransformToEnd(const PointType &pi, PointType &po, const Pose &pose,
     po.intensity = pi.intensity;
 }
 
-template<typename PointType>
+template <typename PointType>
 void pointAssociateToMap(const PointType &pi, PointType &po, const Pose &pose)
 {
     if (!pcl::traits::has_field<PointType, pcl::fields::intensity>::value)

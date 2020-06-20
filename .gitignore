@@ -8,3 +8,6 @@ estimator/cmake-build-debug
 
 .history
 .vscode
+
+build
+build_docker

@@ -1176,7 +1176,7 @@ void Estimator::buildLocalMap()
 void Estimator::slideWindow()
 {
     TicToc t_solid_window;
-    printf("size of sliding window: %d\n", cir_buf_cnt_);
+    printf("size of sliding window: %lu\n", cir_buf_cnt_);
     Qs_.push(Qs_[cir_buf_cnt_]);
     Ts_.push(Ts_[cir_buf_cnt_]);
     Header_.push(Header_[cir_buf_cnt_]);

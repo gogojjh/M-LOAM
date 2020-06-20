@@ -11,8 +11,6 @@
  * Author: Jianhao JIAO (jiaojh1994@gmail.com)
  *******************************************************/
 
-#pragma once
-
 #include "pose_local_parameterization.h"
 
 void PoseLocalParameterization::setParameter()

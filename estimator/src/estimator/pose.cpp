@@ -19,6 +19,7 @@ Pose::Pose()
     t_ = Eigen::Vector3d::Zero();
     T_ = Eigen::Matrix4d::Identity();
     td_ = 0;
+    cov_.setZero();
 }
 
 Pose::Pose(const Pose &pose)
@@ -27,6 +28,7 @@ Pose::Pose(const Pose &pose)
     t_ = pose.t_;
     T_ = pose.T_;
     td_ = pose.td_;
+    cov_ = pose.cov_;
 }
 
 Pose::Pose(const Eigen::Quaterniond &q, const Eigen::Vector3d &t, const double &td)
@@ -65,6 +67,9 @@ Pose::Pose(const nav_msgs::Odometry &odom)
         odom.pose.pose.position.y,
         odom.pose.pose.position.z);
     T_.setIdentity(); T_.topLeftCorner<3, 3>() = q_.toRotationMatrix(); T_.topRightCorner<3, 1>() = t_;
+    for (size_t i = 0; i < 6; i++)
+        for (size_t j = 0; j < 6; j++)
+            cov_(i, j) = double(odom.pose.covariance[i * 6 + j]);
 }
 
 Pose::Pose(const geometry_msgs::Pose &pose)
@@ -88,7 +93,7 @@ Pose Pose::poseTransform(const Pose &pose1, const Pose &pose2)
     return Pose(pose1.q_*pose2.q_, pose1.q_*pose2.t_+pose1.t_);
 }
 
-Pose Pose::inverse()
+Pose Pose::inverse() const
 {
     return Pose(q_.inverse(), -(q_.inverse()*t_));
 }
@@ -153,3 +158,5 @@ void computeMeanPose(const std::vector<std::pair<double, Pose> > &pose_array,
     std::cout << "calib mean: " << pose_mean << std::endl;
     std::cout << "calib cov: " << std::endl << pose_cov << std::endl;
 }
+
+// 

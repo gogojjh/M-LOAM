@@ -17,6 +17,7 @@
 
 using namespace common;
 
+
 void FeatureExtract::extractCloud(const std::vector<PointICloud> &laser_cloud_scans,
                                   cloudFeature &cloud_feature)
 {
@@ -25,7 +26,7 @@ void FeatureExtract::extractCloud(const std::vector<PointICloud> &laser_cloud_sc
     std::vector<int> scan_end_ind(N_SCANS);
 
     PointICloud::Ptr laser_cloud(new PointICloud());
-    for (int i = 0; i < N_SCANS; i++)
+    for (size_t i = 0; i < N_SCANS; i++)
     {
         scan_start_ind[i] = laser_cloud->size() + 5;
         *laser_cloud += laser_cloud_scans[i];
@@ -40,7 +41,7 @@ void FeatureExtract::extractCloud(const std::vector<PointICloud> &laser_cloud_sc
     int cloud_label[400000];
 
     size_t cloud_size = laser_cloud->size();
-    for (int i = 5; i < cloud_size - 5; i++)
+    for (size_t i = 5; i < cloud_size - 5; i++)
     {
         float diff_x = laser_cloud->points[i - 5].x + laser_cloud->points[i - 4].x + laser_cloud->points[i - 3].x + laser_cloud->points[i - 2].x + laser_cloud->points[i - 1].x - 10 * laser_cloud->points[i].x + laser_cloud->points[i + 1].x + laser_cloud->points[i + 2].x + laser_cloud->points[i + 3].x + laser_cloud->points[i + 4].x + laser_cloud->points[i + 5].x;
         float diff_y = laser_cloud->points[i - 5].y + laser_cloud->points[i - 4].y + laser_cloud->points[i - 3].y + laser_cloud->points[i - 2].y + laser_cloud->points[i - 1].y - 10 * laser_cloud->points[i].y + laser_cloud->points[i + 1].y + laser_cloud->points[i + 2].y + laser_cloud->points[i + 3].y + laser_cloud->points[i + 4].y + laser_cloud->points[i + 5].y;
@@ -63,7 +64,7 @@ void FeatureExtract::extractCloud(const std::vector<PointICloud> &laser_cloud_sc
     compObject comp_object;
     comp_object.cloud_curvature = cloud_curvature;
     float t_q_sort = 0;
-    for (int i = 0; i < N_SCANS; i++)
+    for (size_t i = 0; i < N_SCANS; i++)
     {
         if (scan_end_ind[i] - scan_start_ind[i] < 6)
             continue;
