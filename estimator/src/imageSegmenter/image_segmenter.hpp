@@ -22,18 +22,10 @@
 #include <cfloat>
 #include <map>
 
-#include <opencv2/opencv.hpp>
-
 #include <eigen3/Eigen/Dense>
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-#include <pcl/filters/voxel_grid.h>
-#include <pcl/kdtree/kdtree_flann.h>
-#include <pcl/features/normal_3d_omp.h>
-#include <pcl/segmentation/region_growing.h>
-#include <pcl/visualization/cloud_viewer.h>
-
 
 #include "common/types/type.h"
 #include "common/algos/math.hpp"
@@ -67,41 +59,17 @@ public:
                       const int &min_cluster_size,
                       const int &min_line_size,
                       const int &segment_valid_point_num,
-                      const int &segment_valid_line_num) 
-    {
-        vertical_scans_ = vertical_scans;
-        horizon_scans_ = horizon_scans;
-        min_cluster_size_ = min_cluster_size;
-        if (vertical_scans_ == 16)
-        {
-            ang_res_x_ = 360.0 / horizon_scans_;
-            ang_res_y_ = 2.0; 
-            ang_bottom_ = 15.0 + 0.1;
-            ground_scan_id_ = 7;
-        } else
-        if (vertical_scans_ == 32)
-        {
-            ang_res_x_ = 360.0 / horizon_scans_;
-            ang_res_y_ = 41.33 / float(vertical_scans_ - 1);
-            ang_bottom_ = 30.0 + 0.67;
-            ground_scan_id_ = 20;
-        }
-        // else if (vertical_scans_ == 64)
-        // {
-        //     std::cout << common::RED << "[ImageSegmenter::setParameter] TBD" << common::RESET << std::endl;
-        //     ang_res_y_ = 1 / 0.5;
-        //     ang_bottom_ = 15.0 + 0.1;
-        // }
-        segment_alphax_ = ang_res_x_ / 180.0 * M_PI;
-        segment_alphay_ = ang_res_y_ / 180.0 * M_PI;
-        min_line_size_ = min_line_size;
-        segment_valid_point_num_ = segment_valid_point_num;
-        segment_valid_line_num_ = segment_valid_line_num;
-    }
+                      const int &segment_valid_line_num);
+
+    template <typename PointType>
+    void projectCloud(const typename pcl::PointCloud<PointType> &laser_cloud_in,
+                      typename pcl::PointCloud<PointType> &cloud_matrix,
+                      Eigen::MatrixXf &range_mat);
 
     template <typename PointType>
     void segmentCloud(const typename pcl::PointCloud<PointType> &laser_cloud_in,
-                            typename pcl::PointCloud<PointType> &laser_cloud_out) const;
+                      typename pcl::PointCloud<PointType> &laser_cloud_out,
+                      ScanInfo &scan_info);
 
 private:
     int vertical_scans_, horizon_scans_;
@@ -113,32 +81,14 @@ private:
 };
 
 template <typename PointType>
-void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &laser_cloud_in,
-                                        typename pcl::PointCloud<PointType> &laser_cloud_out) const
+void ImageSegmenter::projectCloud(const typename pcl::PointCloud<PointType> &laser_cloud_in,
+                                  typename pcl::PointCloud<PointType> &cloud_matrix,
+                                  Eigen::MatrixXf &range_mat)
 {
-    // set specific parameters
-    pcl::PointCloud<PointType> cloud_matrix;
-    cloud_matrix.resize(vertical_scans_ * horizon_scans_);
-
-    cv::Mat range_mat = cv::Mat(vertical_scans_, horizon_scans_, CV_32F, cv::Scalar::all(FLT_MAX));
-    cv::Mat label_mat = cv::Mat(vertical_scans_, horizon_scans_, CV_32S, cv::Scalar::all(0));
-    int label_count = 1;
-
-    uint16_t *all_pushed_indx = new uint16_t[vertical_scans_ * horizon_scans_];
-    uint16_t *all_pushed_indy = new uint16_t[vertical_scans_ * horizon_scans_];
-
-    uint16_t *queue_indx = new uint16_t[vertical_scans_ * horizon_scans_];
-    uint16_t *queue_indy = new uint16_t[vertical_scans_ * horizon_scans_];
-
-    int *queue_indx_last_negi = new int[vertical_scans_ * horizon_scans_];
-    int *queue_indy_last_negi = new int[vertical_scans_ * horizon_scans_];
-    float *queue_last_dis = new float[vertical_scans_ * horizon_scans_];
-
     // convert point cloud to a range image
     float vertical_angle, horizon_angle, range;
     size_t row_id, column_id;
-    size_t cloud_size = 0;
-    for (size_t i = 0; i < laser_cloud_in.points.size(); i++)
+    for (size_t i = 0; i < laser_cloud_in.size(); i++)
     {
         const auto &point = laser_cloud_in.points[i];
         vertical_angle = atan2(point.z, sqrt(point.x * point.x + point.y * point.y)) * 180 / M_PI;
@@ -154,21 +104,49 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
             continue;
 
         range = sqrt(point.x * point.x + point.y * point.y + point.z * point.z);
-        range_mat.at<float>(row_id, column_id) = range;
+        if (range < ROI_RANGE) continue;
+
+        range_mat(row_id, column_id) = range;
         int index = column_id + row_id * horizon_scans_;
         cloud_matrix.points[index] = point;
-        cloud_size++;
-    }
+    }    
+}
+
+template <typename PointType>
+void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &laser_cloud_in,
+                                  typename pcl::PointCloud<PointType> &laser_cloud_out,
+                                  ScanInfo &scan_info)
+{
+    // set specific parameters
+    Eigen::MatrixXf range_mat = Eigen::MatrixXf::Constant(vertical_scans_, horizon_scans_, FLT_MAX);
+    Eigen::MatrixXf label_mat = Eigen::MatrixXf::Zero(vertical_scans_, horizon_scans_);
+    int label_count = 1;
+
+    pcl::PointCloud<PointType> cloud_matrix;
+    cloud_matrix.resize(vertical_scans_ * horizon_scans_);
+    projectCloud(laser_cloud_in, cloud_matrix, range_mat);
+
+    uint16_t *all_pushed_indx = new uint16_t[vertical_scans_ * horizon_scans_];
+    uint16_t *all_pushed_indy = new uint16_t[vertical_scans_ * horizon_scans_];
+
+    uint16_t *queue_indx = new uint16_t[vertical_scans_ * horizon_scans_];
+    uint16_t *queue_indy = new uint16_t[vertical_scans_ * horizon_scans_];
+
+    int *queue_indx_last_negi = new int[vertical_scans_ * horizon_scans_];
+    int *queue_indy_last_negi = new int[vertical_scans_ * horizon_scans_];
+    float *queue_last_dis = new float[vertical_scans_ * horizon_scans_];
+
+    int flt_cnt = 0;
     for (size_t i = 0; i < vertical_scans_; i++)
         for (size_t j = 0; j < horizon_scans_; j++)
-            if (range_mat.at<float>(i, j) == FLT_MAX)
-                label_mat.at<int>(i, j) = -1;
+            if (range_mat(i, j) == FLT_MAX)
+                label_mat(i, j) = -1;
 
     // label ground points
     for (size_t i = 0; i < ground_scan_id_; i++)
         for (size_t j = 0; j < horizon_scans_; j++)
-            if (label_mat.at<int>(i, j) == 0)
-                label_mat.at<int>(i, j) = label_count;
+            if (label_mat(i, j) == 0)
+                label_mat(i, j) = label_count; // 1: set as ground
     label_count++;
 
     // BFS to search nearest neighbors
@@ -176,7 +154,7 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
     {
         for (size_t j = 0; j < horizon_scans_; j++)
         {
-            if (label_mat.at<int>(i, j) == 0)
+            if (label_mat(i, j) == 0)
             {
                 int row = i;
                 int col = j;
@@ -205,7 +183,7 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
                     from_indy = queue_indy[queue_start_ind];
                     --queue_size;
                     ++queue_start_ind;
-                    label_mat.at<int>(from_indx, from_indy) = label_count;
+                    label_mat(from_indx, from_indy) = label_count;
                     for (auto iter = neighbor_iterator_.begin(); iter != neighbor_iterator_.end(); ++iter)
                     {
                         this_indx = from_indx + iter->first;
@@ -216,13 +194,13 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
                             this_indy = horizon_scans_ - 1;
                         if (this_indy >= horizon_scans_)
                             this_indy = 0;
-                        if (label_mat.at<int>(this_indx, this_indy) != 0)
+                        if (label_mat(this_indx, this_indy) != 0)
                             continue;
 
-                        d1 = std::max(range_mat.at<float>(from_indx, from_indy),
-                                      range_mat.at<float>(this_indx, this_indy));
-                        d2 = std::min(range_mat.at<float>(from_indx, from_indy),
-                                      range_mat.at<float>(this_indx, this_indy));
+                        d1 = std::max(range_mat(from_indx, from_indy),
+                                      range_mat(this_indx, this_indy));
+                        d2 = std::min(range_mat(from_indx, from_indy),
+                                      range_mat(this_indx, this_indy));
                         dist = sqrt(d1 * d1 + d2 * d2 - 2 * d1 * d2 * cos(alpha));
                         alpha = iter->first == 0 ? segment_alphax_ : segment_alphay_;
                         angle = atan2(d2 * sin(alpha), (d1 - d2 * cos(alpha)));
@@ -236,7 +214,7 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
                             queue_size++;
                             queue_end_ind++;
 
-                            label_mat.at<int>(this_indx, this_indy) = label_count;
+                            label_mat(this_indx, this_indy) = label_count;
                             line_count_flag[this_indx] = true;
 
                             all_pushed_indx[all_pushed_ind_size] = this_indx;
@@ -256,7 +234,7 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
                                 queue_size++;
                                 queue_end_ind++;
 
-                                label_mat.at<int>(this_indx, this_indy) = label_count;
+                                label_mat(this_indx, this_indy) = label_count;
                                 line_count_flag[this_indx] = true;
 
                                 all_pushed_indx[all_pushed_ind_size] = this_indx;
@@ -291,55 +269,39 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
                 {
                     for (size_t i = 0; i < all_pushed_ind_size; ++i)
                     {
-                        label_mat.at<int>(all_pushed_indx[i], all_pushed_indy[i]) = 999999;
+                        label_mat(all_pushed_indx[i], all_pushed_indy[i]) = 999999;
                     }
                 }
             }
         }
     }
 
-    // convert segmented points to point cloud
+    // convert segmented points to point cloud, and rearrange the order
     laser_cloud_out.clear();
     for (size_t i = 0; i < vertical_scans_; i++)
+    {
+        scan_info.scan_start_ind_[i] = laser_cloud_out.size() + 5;
         for (size_t j = 0; j < horizon_scans_; j++)
-            if ((label_mat.at<int>(i, j) > 0) && (label_mat.at<int>(i, j) != 999999))
-                laser_cloud_out.push_back(cloud_matrix.points[j + i * horizon_scans_]);
-    // printf("input cloud size:%d, output cloud size:%d\n", laser_cloud_in.size(), laser_cloud_out.size());
+        {
+            if (label_mat(i, j) > 0)
+            {
+                PointType point = cloud_matrix.points[j + i * horizon_scans_];
+                point.intensity += i; // intensity = scan_id.timestamp
+                bool ground_flag = (label_mat(i, j) == 1) ? true : false;
+                if ((scan_info.segment_flag_) && (label_mat(i, j) != 999999))
+                {
+                    laser_cloud_out.push_back(point);
+                    scan_info.ground_flag_.push_back(ground_flag);
+                }
+                else if (!scan_info.segment_flag_)
+                {
+                    laser_cloud_out.push_back(point);
+                    scan_info.ground_flag_.push_back(ground_flag);
+                }
+            }
+        }
+        scan_info.scan_end_ind_[i] = laser_cloud_out.size() - 6;
+    }
+    assert(laser_cloud_out.size() == scan_info.ground_flag_.size());
 }
 
-//
-// LiDAR projection from LeGO-LOAM
-
-// VLP-16
-// extern const int N_SCAN = 16;
-// extern const int Horizon_SCAN = 1800;
-// extern const float ang_res_x = 0.2;
-// extern const float ang_res_y = 2.0;
-// extern const float ang_bottom = 15.0+0.1;
-// extern const int groundScanInd = 7;
-
-// HDL-32E
-// extern const int N_SCAN = 32;
-// extern const int Horizon_SCAN = 1800;
-// extern const float ang_res_x = 360.0 / float(Horizon_SCAN);
-// extern const float ang_res_y = 41.33 / float(N_SCAN - 1);
-// extern const float ang_bottom = 30.67;
-// extern const int groundScanInd = 20;
-
-// Ouster users may need to uncomment line 159 in imageProjection.cpp
-// Usage of Ouster imu data is not fully supported yet, please just publish point cloud data
-// Ouster OS1-16
-// extern const int N_SCAN = 16;
-// extern const int Horizon_SCAN = 1024;
-// extern const float ang_res_x = 360.0/float(Horizon_SCAN);
-// extern const float ang_res_y = 33.2/float(N_SCAN-1);
-// extern const float ang_bottom = 16.6+0.1;
-// extern const int groundScanInd = 7;
-
-// Ouster OS1-64
-// extern const int N_SCAN = 64;
-// extern const int Horizon_SCAN = 1024;
-// extern const float ang_res_x = 360.0/float(Horizon_SCAN);
-// extern const float ang_res_y = 33.2/float(N_SCAN-1);
-// extern const float ang_bottom = 16.6+0.1;
-// extern const int groundScanInd = 15;

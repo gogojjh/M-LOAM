@@ -165,7 +165,7 @@ pcl::PointCloud<pcl::PointXYZIWithTime> getCloudFromMsg(const sensor_msgs::Point
 {
     pcl::PointCloud<pcl::PointXYZIWithTime> laser_cloud;
     pcl::fromROSMsg(*cloud_msg, laser_cloud);
-    roiCloudFilter(laser_cloud, ROI_RANGE);
+    // roiCloudFilter(laser_cloud, ROI_RANGE);
     return laser_cloud;
 }
 
@@ -360,7 +360,7 @@ int main(int argc, char **argv)
                         ROS_BREAK();
                         return 0;
                     }
-                    roiCloudFilter(laser_cloud_list[j], ROI_RANGE);
+                    // roiCloudFilter(laser_cloud_list[j], ROI_RANGE);
                     printf("%lu ", laser_cloud_list[j].size());
                 }
                 printf("\n");

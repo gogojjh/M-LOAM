@@ -39,6 +39,10 @@
 #include "../utility/tic_toc.h"
 #include "../utility/utility.h"
 
+#include "mloam_pcl/point_with_time.hpp"
+
+#define EDGE_THRESHOLD 0.1
+
 using namespace common;
 
 class compObject
@@ -53,27 +57,22 @@ class FeatureExtract
 public:
     FeatureExtract() {}
 
-    template <typename PointType>
-    void findStartEndAngle(const typename pcl::PointCloud<PointType> &laser_cloud_in, 
+    void findStartEndAngle(const PointCloud &laser_cloud_in, 
                            float &start_ori, 
                            float &end_ori);
 
-    template <typename PointType>
-    void findStartEndTime(const typename pcl::PointCloud<PointType> &laser_cloud_in,
+    void findStartEndTime(const PointITimeCloud &laser_cloud_in,
                           float &start_time, 
-                          float &end_time);                       
+                          float &end_time);
 
-    template <typename PointType>
-    void cloudRearrange(const typename pcl::PointCloud<PointType> &laser_cloud_in, 
-                        std::vector<common::PointICloud> &laser_cloud_scans, 
-                        const float &start_ori, 
-                        const float &end_ori);
+    void calTimestamp(const PointCloud &laser_cloud_in,
+                      PointICloud &laser_cloud_out);
 
-    template <typename PointType>
-    void cloudRearrangeWithTime(const typename pcl::PointCloud<PointType> &laser_cloud_in,
-                                std::vector<common::PointICloud> &laser_cloud_scans);
+    void calTimestamp(const PointITimeCloud &laser_cloud_in,
+                      PointICloud &laser_cloud_out);
 
-    void extractCloud(const std::vector<common::PointICloud> &laser_cloud_scans,
+    void extractCloud(const PointICloud &laser_cloud_in,
+                      const ScanInfo &scan_info,
                       cloudFeature &cloud_feature);
 
     template <typename PointType>
@@ -110,195 +109,6 @@ public:
                           const size_t &N_NEIGH = 5,
                           const bool &CHECK_FOV = true);
 };
-
-template <typename PointType>
-void FeatureExtract::findStartEndAngle(const typename pcl::PointCloud<PointType> &laser_cloud_in,
-                                       float &start_ori,
-                                       float &end_ori)
-{
-    int cloud_size = laser_cloud_in.points.size();
-    start_ori = -atan2(laser_cloud_in.points[0].y, laser_cloud_in.points[0].x);
-    end_ori = -atan2(laser_cloud_in.points[cloud_size - 1].y,
-                     laser_cloud_in.points[cloud_size - 1].x) +
-              2 * M_PI;
-    if (end_ori - start_ori > 3 * M_PI)
-    {
-        end_ori -= 2 * M_PI;
-    }
-    else if (end_ori - start_ori < M_PI)
-    {
-        end_ori += 2 * M_PI;
-    }
-    // std::cout << "end Ori " << end_ori << std::endl;
-}
-
-template <typename PointType>
-void FeatureExtract::findStartEndTime(const typename pcl::PointCloud<PointType> &laser_cloud_in,
-                                      float &start_time,
-                                      float &end_time)
-{
-    start_time = 1e6;
-    end_time = 0.0;
-    for (const auto &point : laser_cloud_in)
-    {
-        start_time = std::min(point.timestamp, start_time);
-        end_time = std::max(point.timestamp, end_time);
-    }
-}
-
-template <typename PointType>
-void FeatureExtract::cloudRearrange(const typename pcl::PointCloud<PointType> &laser_cloud_in,
-                                    std::vector<PointICloud> &laser_cloud_scans,
-                                    const float &start_ori,
-                                    const float &end_ori)
-{
-    bool half_passed;
-    size_t count = laser_cloud_in.size();
-    PointI point;
-    laser_cloud_scans.clear();
-    laser_cloud_scans.resize(N_SCANS);
-    for (size_t i = 0; i < laser_cloud_in.size(); i++)
-    {
-        point.x = laser_cloud_in.points[i].x;
-        point.y = laser_cloud_in.points[i].y;
-        point.z = laser_cloud_in.points[i].z;
-
-        float angle = atan(point.z / sqrt(point.x * point.x + point.y * point.y)) * 180 / M_PI;
-        int scan_id = 0;
-        if (N_SCANS == 16)
-        {
-            scan_id = int((angle + 15) / 2 + 0.5);
-            if (scan_id > (N_SCANS - 1) || scan_id < 0)
-            {
-                count--;
-                continue;
-            }
-        }
-        else if (N_SCANS == 32)
-        {
-            scan_id = int((angle + 92.0 / 3.0) * 3.0 / 4.0);
-            if (scan_id > (N_SCANS - 1) || scan_id < 0)
-            {
-                count--;
-                continue;
-            }
-        }
-        else if (N_SCANS == 64)
-        {
-            if (angle >= -8.83)
-                scan_id = int((2 - angle) * 3.0 + 0.5);
-            else
-                scan_id = N_SCANS / 2 + int((-8.83 - angle) * 2.0 + 0.5);
-
-            // use [0 50]  > 50 remove outlies
-            if (angle > 2 || angle < -24.33 || scan_id > 50 || scan_id < 0)
-            {
-                count--;
-                continue;
-            }
-        }
-        else
-        {
-            std::cout << "wrong scan number" << std::endl;
-            ROS_BREAK();
-        }
-        // std::cout << "angle " << angle << ", scan_id " << scan_id << std::endl;
-
-        // if predict timestamp
-        float ori = -atan2(point.y, point.x);
-        if (!half_passed)
-        {
-            if (ori < start_ori - M_PI / 2)
-            {
-                ori += 2 * M_PI;
-            }
-            else if (ori > start_ori + M_PI * 3 / 2)
-            {
-                ori -= 2 * M_PI;
-            }
-
-            if (ori - start_ori > M_PI)
-            {
-                half_passed = true;
-            }
-        }
-        else
-        {
-            ori += 2 * M_PI;
-            if (ori < end_ori - M_PI * 3 / 2)
-            {
-                ori += 2 * M_PI;
-            }
-            else if (ori > end_ori + M_PI / 2)
-            {
-                ori -= 2 * M_PI;
-            }
-        }
-        float rel_time = (ori - start_ori) / (end_ori - start_ori);
-        point.intensity = scan_id + SCAN_PERIOD * rel_time;
-        laser_cloud_scans[scan_id].push_back(point);
-    }
-}
-
-template <typename PointType>
-void FeatureExtract::cloudRearrangeWithTime(const typename pcl::PointCloud<PointType> &laser_cloud_in,
-                                            std::vector<PointICloud> &laser_cloud_scans)
-{
-    bool half_passed;
-    size_t count = laser_cloud_in.size();
-    PointI point;
-    laser_cloud_scans.clear();
-    laser_cloud_scans.resize(N_SCANS);
-    for (size_t i = 0; i < laser_cloud_in.size(); i++)
-    {
-        point.x = laser_cloud_in.points[i].x;
-        point.y = laser_cloud_in.points[i].y;
-        point.z = laser_cloud_in.points[i].z;
-
-        float angle = atan(point.z / sqrt(point.x * point.x + point.y * point.y)) * 180 / M_PI;
-        int scan_id = 0;
-        if (N_SCANS == 16)
-        {
-            scan_id = int((angle + 15) / 2 + 0.5);
-            if (scan_id > (N_SCANS - 1) || scan_id < 0)
-            {
-                count--;
-                continue;
-            }
-        }
-        else if (N_SCANS == 32)
-        {
-            scan_id = int((angle + 92.0 / 3.0) * 3.0 / 4.0);
-            if (scan_id > (N_SCANS - 1) || scan_id < 0)
-            {
-                count--;
-                continue;
-            }
-        }
-        else if (N_SCANS == 64)
-        {
-            if (angle >= -8.83)
-                scan_id = int((2 - angle) * 3.0 + 0.5);
-            else
-                scan_id = N_SCANS / 2 + int((-8.83 - angle) * 2.0 + 0.5);
-
-            // use [0 50]  > 50 remove outlies
-            if (angle > 2 || angle < -24.33 || scan_id > 50 || scan_id < 0)
-            {
-                count--;
-                continue;
-            }
-        }
-        else
-        {
-            std::cout << "wrong scan number" << std::endl;
-            ROS_BREAK();
-        }
-        float rel_time = laser_cloud_in.points[i].timestamp * 1e-6;
-        point.intensity = scan_id + rel_time;
-        laser_cloud_scans[scan_id].push_back(point);
-    }
-}
 
 template <typename PointType>
 void FeatureExtract::matchCornerFromScan(const typename pcl::KdTreeFLANN<PointType>::Ptr &kdtree_corner_from_scan,

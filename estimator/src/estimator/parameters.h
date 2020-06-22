@@ -176,3 +176,19 @@ public:
     double score_;
     Eigen::MatrixXd jaco_;
 };
+
+class ScanInfo
+{
+public:
+    ScanInfo(const int &n_scan, const bool &segment_flag)
+    {
+        segment_flag_ = segment_flag;
+        scan_start_ind_.resize(n_scan);
+        scan_end_ind_.resize(n_scan);
+        ground_flag_.clear();
+    }
+
+    std::vector<int> scan_start_ind_, scan_end_ind_;
+    bool segment_flag_;
+    std::vector<bool> ground_flag_;
+};

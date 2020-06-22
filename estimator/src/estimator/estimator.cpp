@@ -212,24 +212,18 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
     #pragma omp parallel for num_threads(NUM_OF_LASER)
     for (size_t i = 0; i < v_laser_cloud_in.size(); i++)
     {
-        float start_ori, end_ori;
-		f_extract_.findStartEndAngle(v_laser_cloud_in[i], start_ori, end_ori);
+        PointICloud laser_cloud;
+        f_extract_.calTimestamp(v_laser_cloud_in[i], laser_cloud);
 
-        std::vector<PointICloud> laser_cloud_scans;
+        PointICloud laser_cloud_segment;
+        ScanInfo scan_info(N_SCANS, SEGMENT_CLOUD);
+        img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, scan_info);
+
         cloudFeature *tmp_feature_ptr(new cloudFeature);
-        if (SEGMENT_CLOUD)
-        {
-            PointCloud laser_cloud_segment;
-			img_segment_.segmentCloud(v_laser_cloud_in[i], laser_cloud_segment);
-            f_extract_.cloudRearrange(laser_cloud_segment, laser_cloud_scans, start_ori, end_ori);
-            f_extract_.extractCloud(laser_cloud_scans, *tmp_feature_ptr);
-        } else
-        {
-            f_extract_.cloudRearrange(v_laser_cloud_in[i], laser_cloud_scans, start_ori, end_ori);
-            f_extract_.extractCloud(laser_cloud_scans, *tmp_feature_ptr);
-        }
-		feature_frame_ptr[i] = tmp_feature_ptr;
+        f_extract_.extractCloud(laser_cloud_segment, scan_info, *tmp_feature_ptr);
+        feature_frame_ptr[i] = tmp_feature_ptr;
     }
+
     stringstream ss;
     std::vector<cloudFeature> feature_frame(NUM_OF_LASER);
     for (size_t i = 0; i < NUM_OF_LASER; i++) 
@@ -241,8 +235,8 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
         total_surf_feature_ += feature_frame[i]["surf_points_less_flat"].size();
     }
     printf("size of after segmentation: %s\n", ss.str().c_str());
-    printf("meaPre time: %fms (%lu*%fms)\n", measurement_pre_time.toc(), 
-            v_laser_cloud_in.size(), measurement_pre_time.toc() / v_laser_cloud_in.size());
+    printf("meaPre time: %fms (%lu*%fms)\n", measurement_pre_time.toc(),
+           v_laser_cloud_in.size(), measurement_pre_time.toc() / v_laser_cloud_in.size());
     total_measurement_pre_time_ += measurement_pre_time.toc();
 
     m_buf_.lock();
@@ -260,22 +254,18 @@ void Estimator::inputCloud(const double &t, const std::vector<PointITimeCloud> &
     #pragma omp parallel for num_threads(NUM_OF_LASER)
     for (size_t i = 0; i < v_laser_cloud_in.size(); i++)
     {
-        std::vector<PointICloud> laser_cloud_scans;
+        PointICloud laser_cloud;
+        f_extract_.calTimestamp(v_laser_cloud_in[i], laser_cloud);
+
+        PointICloud laser_cloud_segment;
+        ScanInfo scan_info(N_SCANS, SEGMENT_CLOUD);
+        img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, scan_info);
+
         cloudFeature *tmp_feature_ptr(new cloudFeature);
-        if (SEGMENT_CLOUD)
-        {
-            PointITimeCloud laser_cloud_segment;
-            img_segment_.segmentCloud(v_laser_cloud_in[i], laser_cloud_segment);
-            f_extract_.cloudRearrangeWithTime(laser_cloud_segment, laser_cloud_scans);
-            f_extract_.extractCloud(laser_cloud_scans, *tmp_feature_ptr);
-        }
-        else
-        {
-            f_extract_.cloudRearrangeWithTime(v_laser_cloud_in[i], laser_cloud_scans);
-            f_extract_.extractCloud(laser_cloud_scans, *tmp_feature_ptr);
-        }
+        f_extract_.extractCloud(laser_cloud_segment, scan_info, *tmp_feature_ptr);
         feature_frame_ptr[i] = tmp_feature_ptr;
     }
+
     stringstream ss;
     std::vector<cloudFeature> feature_frame(NUM_OF_LASER);
     for (size_t i = 0; i < NUM_OF_LASER; i++)
@@ -302,25 +292,20 @@ void Estimator::inputCloud(const double &t, const PointCloud &laser_cloud_in)
     TicToc measurement_pre_time;
     std::vector<cloudFeature> feature_frame(1);
 
-    float start_ori, end_ori;
-    f_extract_.findStartEndAngle(laser_cloud_in, start_ori, end_ori);
+    PointICloud laser_cloud;
+    f_extract_.calTimestamp(laser_cloud_in, laser_cloud);
 
-    std::vector<PointICloud> laser_cloud_scans;
-    if (SEGMENT_CLOUD)
-    {
-        PointCloud laser_cloud_segment;
-        img_segment_.segmentCloud(laser_cloud_in, laser_cloud_segment);
-        f_extract_.cloudRearrange(laser_cloud_segment, laser_cloud_scans, start_ori, end_ori);
-        f_extract_.extractCloud(laser_cloud_scans, feature_frame[0]);
-    } else
-    {
-        f_extract_.cloudRearrange(laser_cloud_in, laser_cloud_scans, start_ori, end_ori);
-        f_extract_.extractCloud(laser_cloud_scans, feature_frame[0]);
-    }
+    PointICloud laser_cloud_segment;
+    ScanInfo scan_info(N_SCANS, SEGMENT_CLOUD);
+    img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, scan_info);
+
+    f_extract_.extractCloud(laser_cloud_segment, scan_info, feature_frame[0]);
+
+    total_corner_feature_ += feature_frame[0]["corner_points_less_sharp"].size();
+    total_surf_feature_ += feature_frame[0]["surf_points_less_flat"].size();
     printf("size of after segmentation: %lu\n", laser_cloud_in.size());    
     printf("meaPre time: %fms\n", measurement_pre_time.toc());
     total_measurement_pre_time_ += measurement_pre_time.toc();
-    total_opt_odom_time_ += measurement_pre_time.toc();
 
     m_buf_.lock();
     feature_buf_.push(make_pair(t, feature_frame));
@@ -416,7 +401,7 @@ void Estimator::process()
                 pose_rlt_[n] = lidar_tracker_.trackCloud(prev_cloud_feature, cur_cloud_feature, pose_rlt_[n]);
                 pose_laser_cur_[n] = pose_laser_cur_[n] * pose_rlt_[n];
             }
-            printf("lidarTracker: %fms (%d*%fms)\n", t_mloam_tracker.toc(), NUM_OF_LASER, t_mloam_tracker.toc() / NUM_OF_LASER);
+            printf("lidarTracker: %fms (%lu*%fms)\n", t_mloam_tracker.toc(), NUM_OF_LASER, t_mloam_tracker.toc() / NUM_OF_LASER);
             for (size_t n = 0; n < NUM_OF_LASER; n++)
                 std::cout << "laser_" << n << ", pose_rlt: " << pose_rlt_[n] << std::endl;
 
@@ -555,9 +540,9 @@ void Estimator::process()
 
         // for (size_t n = 0; n < NUM_OF_LASER; n++)
         // {
-        // stringstream ss;
-        // ss << "/tmp/raw_pc_" << n << ".pcd";
-        // pcl::io::savePCDFileASCII(ss.str(), cur_feature_.second[n]["laser_cloud"]);
+        //     stringstream ss;
+        //     ss << "/tmp/raw_pc_" << n << ".pcd";
+        //     pcl::io::savePCDFileASCII(ss.str(), cur_feature_.second[n]["laser_cloud"]);
         // }
         undistortMeasurements();
         // for (size_t n = 0; n < NUM_OF_LASER; n++)
@@ -586,7 +571,7 @@ void Estimator::optimizeMap()
     ceres::Solver::Options options;
     options.linear_solver_type = ceres::DENSE_SCHUR;
     // options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
-    options.num_threads = 3;
+    options.num_threads = 1;
     // options.trust_region_strategy_type = ceres::DOGLEG;
     options.max_num_iterations = NUM_ITERATIONS;
     options.gradient_check_relative_precision = 1e-3;

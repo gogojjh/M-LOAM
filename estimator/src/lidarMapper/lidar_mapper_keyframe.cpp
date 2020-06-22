@@ -223,7 +223,7 @@ void extractSurroundingKeyFrames()
     surrounding_keyframes->clear();
     surrounding_keyframes_ds->clear();
     for (size_t i = 0; i < point_search_ind.size(); i++)
-        surrounding_keyframes->points.push_back(pose_keyframes_3d->points[point_search_ind[i]]);
+        surrounding_keyframes->push_back(pose_keyframes_3d->points[point_search_ind[i]]);
     down_size_filter_surrounding_keyframes.setInputCloud(surrounding_keyframes);
     down_size_filter_surrounding_keyframes.filter(*surrounding_keyframes_ds);
 
@@ -293,8 +293,8 @@ void extractSurroundingKeyFrames()
     down_size_filter_surf_map_cov.filter(*laser_cloud_surf_from_map_cov_ds);
     down_size_filter_corner_map_cov.setInputCloud(laser_cloud_corner_from_map_cov);
     down_size_filter_corner_map_cov.filter(*laser_cloud_corner_from_map_cov_ds);
-    printf("before ds: %lu, %lu;  after ds: %lum %lu\n", laser_cloud_corner_from_map_cov->size(), laser_cloud_surf_from_map_cov->size(),
-           laser_cloud_corner_from_map_cov_ds->points.size(), laser_cloud_surf_from_map_cov_ds->size());
+    printf("before ds: %lu, %lu; after ds: %lu, %lu\n", laser_cloud_corner_from_map_cov->size(), laser_cloud_surf_from_map_cov->size(),
+           laser_cloud_corner_from_map_cov_ds->size(), laser_cloud_surf_from_map_cov_ds->size());
     printf("filter time: %fms\n", t_filter.toc());
 }
 
@@ -307,9 +307,9 @@ void downsampleCurrentScan()
     laser_cloud_corner_last_ds->clear();
     down_size_filter_corner.setInputCloud(laser_cloud_corner_last);
     down_size_filter_corner.filter(*laser_cloud_corner_last_ds);
-    
+
     std::cout << "input surf num: " << laser_cloud_surf_last_ds->size()
-              << " corner num: " << laser_cloud_corner_last_ds->size();
+              << " corner num: " << laser_cloud_corner_last_ds->size() << std::endl;
 
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
@@ -346,8 +346,8 @@ void downsampleCurrentScan()
 void scan2MapOptimization()
 {
     // step 4: perform scan-to-map optimization
-    size_t laser_cloud_surf_from_map_num = laser_cloud_surf_from_map_cov_ds->points.size();
-    size_t laser_cloud_corner_from_map_num = laser_cloud_corner_from_map_cov_ds->points.size();
+    size_t laser_cloud_surf_from_map_num = laser_cloud_surf_from_map_cov_ds->size();
+    size_t laser_cloud_corner_from_map_num = laser_cloud_corner_from_map_cov_ds->size();
     printf("map surf num: %lu, corner num: %lu\n", laser_cloud_surf_from_map_num, laser_cloud_corner_from_map_num);
     if ((laser_cloud_surf_from_map_num > 100) && (laser_cloud_corner_from_map_num > 10))
     {
@@ -364,12 +364,12 @@ void scan2MapOptimization()
 
             ceres::Solver::Options options;
             options.linear_solver_type = ceres::DENSE_SCHUR;
-            options.max_num_iterations = 30;
+            options.max_num_iterations = 15;
             // options.max_solver_time_in_seconds = 0.04;
             // options.num_threads = 3;
             options.minimizer_progress_to_stdout = false;
             options.check_gradients = false;
-            options.gradient_check_relative_precision = 1e-4;
+            options.gradient_check_relative_precision = 1e-3;
 
             vector2Double();
 
@@ -515,17 +515,6 @@ void saveKeyframeAndInsertGraph()
     if ((!save_new_keyframe) && (pose_keyframes_6d.size() != 0)) return;
     pose_point_prev = pose_point_cur;
     
-    // update the pose graph
-    // if (pose_keyframes_6d.size() == 0)
-    // {
-    // 	pose_keyframes_6d.push_back(std::make_pair(time_laser_cloud_surf_last, pose_wmap_curr));
-    //     // pose_graph.addKeyFrame(keyframe, 1);
-    // } else
-    // {
-    // 	pose_keyframes_6d.push_back(std::make_pair(time_laser_cloud_surf_last, pose_wmap_curr));
-    //     // pose_graph.addKeyFrame(keyframe, 1);
-    // }
-
     // if (cloudKeyPoses3D->points.empty())
     // {
     //     gtSAMgraph.add(PriorFactor<Pose3>(0, Pose3(Rot3::RzRyRx(transformTobeMapped[2], transformTobeMapped[0], transformTobeMapped[1]), Point3(transformTobeMapped[5], transformTobeMapped[3], transformTobeMapped[4])), priorNoise));
@@ -539,8 +528,8 @@ void saveKeyframeAndInsertGraph()
     //                                   Point3(transformLast[5], transformLast[3], transformLast[4]));
     //     gtsam::Pose3 poseTo = Pose3(Rot3::RzRyRx(transformAftMapped[2], transformAftMapped[0], transformAftMapped[1]),
     //                                 Point3(transformAftMapped[5], transformAftMapped[3], transformAftMapped[4]));
-    //     gtSAMgraph.add(BetweenFactor<Pose3>(cloudKeyPoses3D->points.size() - 1, cloudKeyPoses3D->points.size(), poseFrom.between(poseTo), odometryNoise));
-    //     initialEstimate.insert(cloudKeyPoses3D->points.size(), Pose3(Rot3::RzRyRx(transformAftMapped[2], transformAftMapped[0], transformAftMapped[1]),
+    //     gtSAMgraph.add(BetweenFactor<Pose3>(cloudKeyPoses3D->size() - 1, cloudKeyPoses3D->size(), poseFrom.between(poseTo), odometryNoise));
+    //     initialEstimate.insert(cloudKeyPoses3D->size(), Pose3(Rot3::RzRyRx(transformAftMapped[2], transformAftMapped[0], transformAftMapped[1]),
     //                                                                  Point3(transformAftMapped[5], transformAftMapped[3], transformAftMapped[4])));
     // }
 
@@ -549,7 +538,7 @@ void saveKeyframeAndInsertGraph()
     pose_3d.y = pose_wmap_curr.t_[1];
     pose_3d.z = pose_wmap_curr.t_[2];
     pose_3d.intensity = pose_keyframes_3d->size();
-    pose_keyframes_3d->points.push_back(pose_3d);
+    pose_keyframes_3d->push_back(pose_3d);
     pose_keyframes_6d.push_back(std::make_pair(time_laser_odometry, pose_wmap_curr));
 
     PointICovCloud::Ptr surf_keyframe_cov(new PointICovCloud());
@@ -696,7 +685,6 @@ void visualizeGlobalMap()
         cloudUCTAssociateToMap(*corner_cloud_keyframes_cov[i], corner_trans, pose_keyframes_6d[i].second, pose_ext);
         *laser_cloud_corner_map += corner_trans;
     }
-
     down_size_filter_surf_map_cov.setInputCloud(laser_cloud_surf_map);
     down_size_filter_surf_map_cov.filter(*laser_cloud_surf_map_ds);
     *laser_cloud_map += *laser_cloud_surf_map_ds;
@@ -708,6 +696,7 @@ void visualizeGlobalMap()
     pcd_writer.write("/tmp/mloam_mapping_cloud.pcd", *laser_cloud_map);
     pcd_writer.write("/tmp/mloam_mapping_surf_cloud.pcd", *laser_cloud_surf_map_ds);
     pcd_writer.write("/tmp/mloam_mapping_corner_cloud.pcd", *laser_cloud_corner_map_ds);
+    pcd_writer.write("/tmp/mloam_mapping_keyframes.pcd", *pose_keyframes_3d);
 }
 
 void process()
@@ -1041,6 +1030,8 @@ int main(int argc, char **argv)
 	laser_cloud_corner_split_cov.resize(NUM_OF_LASER);
 
     pose_ext.resize(NUM_OF_LASER);
+
+    pose_keyframes_3d->height = 1;
 
     pose_point_prev.x = 0.0;
     pose_point_prev.y = 0.0;
