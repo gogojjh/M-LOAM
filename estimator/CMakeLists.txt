@@ -1,17 +1,17 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(mloam)
 
-set(CMAKE_BUILD_TYPE "Release")
-set(CMAKE_CXX_FLAGS "-std=c++17 -fPIC")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
+#set(CMAKE_BUILD_TYPE "Release")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O3 -fPIC")
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 find_package(catkin REQUIRED COMPONENTS
+	tf
 	roscpp
 	std_msgs
-	geometry_msgs
 	nav_msgs
-	tf
+    sensor_msgs
+	geometry_msgs
 	cv_bridge
 	image_transport
 	message_generation
@@ -24,21 +24,12 @@ find_package(catkin REQUIRED COMPONENTS
 	mloam_pcl
 )
 
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 find_package(Eigen3 REQUIRED)
-
 find_package(OpenCV REQUIRED)
 find_package(PCL REQUIRED)
 find_package(Ceres REQUIRED)
 find_package(Gflags REQUIRED)
 find_package(Glog REQUIRED)
-# find_package(Sophus REQUIRED)
-# find_package(libpointmatcher REQUIRED)
-find_package(G2O)
-
-include_directories(${PCL_INCLUDE_DIRS})
-link_directories(${PCL_LIBRARY_DIRS})
-add_definitions(${PCL_DEFINITIONS})
 
 find_package(OpenMP REQUIRED)
 if (OPENMP_FOUND)
@@ -49,11 +40,10 @@ endif()
 
 include_directories(
 	3rdparty
-	${catkin_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR}
-	${CERES_INCLUDE_DIRS} ${Sophus_INCLUDE_DIRS} ${libpointmatcher_INCLUDE_DIRS}
-	${GFLAGS_INCLUDE_DIRS} ${GLOG_INCLUDE_DIRS}
-    ${G2O_INCLUDE_DIRS} 
+	${catkin_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR} ${PCL_INCLUDE_DIRS}
+	${CERES_INCLUDE_DIRS} ${Sophus_INCLUDE_DIRS} ${GFLAGS_INCLUDE_DIRS} ${GLOG_INCLUDE_DIRS}
 )
+link_directories(${PCL_LIBRARY_DIRS})
 
 catkin_package(
 #   INCLUDE_DIRS include
@@ -77,7 +67,6 @@ add_library(mloam_lib_1
 )
 target_link_libraries(mloam_lib_1
     ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
-    ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} 
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
 )
 
@@ -86,7 +75,6 @@ add_library(mloam_lib_2
 )
 target_link_libraries(mloam_lib_2
     ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
-    ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} 
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
 )
 
@@ -108,5 +96,4 @@ target_link_libraries(mloam_node_rv_oxford mloam_lib_1 mloam_lib_2)
 
 add_executable(lidar_mapper_keyframe src/lidarMapper/lidar_mapper_keyframe.cpp)
 target_link_libraries(lidar_mapper_keyframe mloam_lib_1)
-
 

@@ -219,6 +219,7 @@ void extractSurroundingKeyFrames()
     kdtree_surrounding_keyframes->setInputCloud(pose_keyframes_3d);
     kdtree_surrounding_keyframes->radiusSearch(pose_point_cur, (double)SURROUNDING_KF_RADIUS, point_search_ind, point_search_sq_dis, 0);
 
+    TicToc t_extract;
     surrounding_keyframes->clear();
     surrounding_keyframes_ds->clear();
     for (size_t i = 0; i < point_search_ind.size(); i++)
@@ -277,6 +278,7 @@ void extractSurroundingKeyFrames()
             surrounding_corner_cloud_keyframes.push_back(corner_trans);
         }
     }
+    printf("extract keyframes: %fms\n", t_extract.toc());
 
     laser_cloud_surf_from_map_cov->clear();
     laser_cloud_corner_from_map_cov->clear();
@@ -289,9 +291,10 @@ void extractSurroundingKeyFrames()
     TicToc t_filter;
     down_size_filter_surf_map_cov.setInputCloud(laser_cloud_surf_from_map_cov);
     down_size_filter_surf_map_cov.filter(*laser_cloud_surf_from_map_cov_ds);
-
     down_size_filter_corner_map_cov.setInputCloud(laser_cloud_corner_from_map_cov);
     down_size_filter_corner_map_cov.filter(*laser_cloud_corner_from_map_cov_ds);
+    printf("before ds: %lu, %lu;  after ds: %lum %lu\n", laser_cloud_corner_from_map_cov->size(), laser_cloud_surf_from_map_cov->size(),
+           laser_cloud_corner_from_map_cov_ds->points.size(), laser_cloud_surf_from_map_cov_ds->size());
     printf("filter time: %fms\n", t_filter.toc());
 }
 
@@ -304,8 +307,9 @@ void downsampleCurrentScan()
     laser_cloud_corner_last_ds->clear();
     down_size_filter_corner.setInputCloud(laser_cloud_corner_last);
     down_size_filter_corner.filter(*laser_cloud_corner_last_ds);
-    LOG_EVERY_N(INFO, 10) << "input surf num: " << laser_cloud_surf_last_ds->size()
-                          << " corner num: " << laser_cloud_corner_last_ds->size();
+    
+    std::cout << "input surf num: " << laser_cloud_surf_last_ds->size()
+              << " corner num: " << laser_cloud_corner_last_ds->size();
 
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
@@ -625,7 +629,6 @@ void pubOdometry()
 
 void pubGlobalMap()
 {
-    TicToc t_pub;
     if (pub_laser_cloud_surrounding.getNumSubscribers() != 0)
     {
         sensor_msgs::PointCloud2 laser_cloud_surround_msg;
@@ -667,8 +670,6 @@ void pubGlobalMap()
         pub_laser_cloud_map.publish(laser_cloud_msg);
         // printf("size of cloud map: %d\n", laser_cloud_map->size());
     }
-    printf("mapping pub time: %fms\n", t_pub.toc());
-    LOG_EVERY_N(INFO, 1) << "mapping pub time: " << t_pub.toc() << "ms";
 }
 
 void visualizeGlobalMap()
@@ -825,18 +826,29 @@ void process()
 
 			transformAssociateToMap();
 
+            TicToc t_extract;
             extractSurroundingKeyFrames();
+            printf("extract keyframes: %fms\n", t_extract.toc());
 
+            TicToc t_dscs;
             downsampleCurrentScan();
+            printf("downsample current scan time: %fms\n", t_dscs.toc());
 
+            TicToc t_opti;
             scan2MapOptimization();
+            printf("optimization time: %fms\n", t_opti.toc());
 
 			transformUpdate();
 
+            TicToc t_skf;
             saveKeyframeAndInsertGraph();
+            printf("save keyframes time: %fms\n", t_skf.toc());
 
+            TicToc t_pub;
             pubPointCloud();
- 
+            printf("mapping pub time: %fms\n", t_pub.toc());
+            LOG_EVERY_N(INFO, 1) << "mapping pub time: " << t_pub.toc() << "ms";
+
             pubOdometry();
 
             std::cout << common::RED << "frame: " << frame_cnt

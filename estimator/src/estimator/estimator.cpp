@@ -1011,7 +1011,7 @@ void Estimator::buildCalibMap()
     corner_points_local_map_filtered_.clear(); 
     corner_points_local_map_filtered_.resize(NUM_OF_LASER);
 
-    #pragma omp parallel for num_threads(NUM_OF_LASER)
+    // #pragma omp parallel for num_threads(NUM_OF_LASER)
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
         Pose pose_ext = Pose(qbl_[n], tbl_[n]);
@@ -1062,7 +1062,7 @@ void Estimator::buildCalibMap()
     pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_points_local_map(new pcl::KdTreeFLANN<PointI>());
     kdtree_corner_points_local_map->setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_filtered_[IDX_REF]));
 
-    #pragma omp parallel for num_threads(NUM_OF_LASER)
+    // #pragma omp parallel for num_threads(NUM_OF_LASER)
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
         if (calib_converge_[n]) continue;
@@ -1102,7 +1102,7 @@ void Estimator::buildLocalMap()
         corner_points_local_map_filtered_[n].clear();
     }
 
-    #pragma omp parallel for num_threads(NUM_OF_LASER)
+    // #pragma omp parallel for num_threads(NUM_OF_LASER)
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
         Pose pose_ext = Pose(qbl_[n], tbl_[n]);
@@ -1147,7 +1147,7 @@ void Estimator::buildLocalMap()
         corner_map_features_[n].resize(WINDOW_SIZE + 1);
     }
 
-    #pragma omp parallel for num_threads(NUM_OF_LASER)
+    // #pragma omp parallel for num_threads(NUM_OF_LASER)
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
         pcl::KdTreeFLANN<PointI>::Ptr kdtree_surf_points_local_map(new pcl::KdTreeFLANN<PointI>());
