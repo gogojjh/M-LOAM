@@ -31,6 +31,7 @@
 #include <algorithm>
 #include <utility>
 #include <omp.h>
+#include <signal.h>
 
 #include <ros/ros.h>
 #include <sensor_msgs/Imu.h>

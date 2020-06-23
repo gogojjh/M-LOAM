@@ -367,7 +367,7 @@ void scan2MapOptimization()
             options.linear_solver_type = ceres::DENSE_SCHUR;
             options.max_num_iterations = 15;
             // options.max_solver_time_in_seconds = 0.04;
-            options.num_threads = 2;
+            // options.num_threads = 2;
             options.minimizer_progress_to_stdout = false;
             options.check_gradients = false;
             options.gradient_check_relative_precision = 1e-3;
@@ -607,6 +607,7 @@ void pubOdometry()
     geometry_msgs::PoseStamped laser_after_mapped_pose;
     laser_after_mapped_pose.header = odom_aft_mapped.header;
     laser_after_mapped_pose.pose = odom_aft_mapped.pose.pose;
+    laser_after_mapped_path.header = odom_aft_mapped.header;
     laser_after_mapped_path.poses.push_back(laser_after_mapped_pose);
     pub_laser_after_mapped_path.publish(laser_after_mapped_path);
     publishTF(odom_aft_mapped);
@@ -623,69 +624,68 @@ void pubOdometry()
 
 void pubGlobalMap()
 {
-    if (pub_laser_cloud_surrounding.getNumSubscribers() != 0)
-    {
-        m_process.lock();
-        sensor_msgs::PointCloud2 laser_cloud_surround_msg;
-        pcl::toROSMsg(*laser_cloud_surf_from_map_cov_ds, laser_cloud_surround_msg);
-        m_process.unlock();
-        laser_cloud_surround_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
-        laser_cloud_surround_msg.header.frame_id = "/world";
-        pub_laser_cloud_surrounding.publish(laser_cloud_surround_msg);
-        // printf("size of surround map: %d\n", laser_cloud_surrond.size());
-    }
-
-    if (pub_laser_cloud_map.getNumSubscribers() != 0)
-    {
-        PointICovCloud::Ptr laser_cloud_map(new PointICovCloud());
-        PointICovCloud::Ptr laser_cloud_surf_map(new PointICovCloud());
-        PointICovCloud::Ptr laser_cloud_surf_map_ds(new PointICovCloud());
-        PointICovCloud::Ptr laser_cloud_corner_map(new PointICovCloud());
-        PointICovCloud::Ptr laser_cloud_corner_map_ds(new PointICovCloud());
-        m_process.lock();
-        for (int i = 0; i < surf_cloud_keyframes_cov.size(); i++)
-        {
-            PointICovCloud surf_trans;
-            cloudUCTAssociateToMap(*surf_cloud_keyframes_cov[i], surf_trans, pose_keyframes_6d[i].second, pose_ext);
-            *laser_cloud_surf_map += surf_trans;
-
-            PointICovCloud corner_trans;
-            cloudUCTAssociateToMap(*corner_cloud_keyframes_cov[i], corner_trans, pose_keyframes_6d[i].second, pose_ext);
-            *laser_cloud_corner_map += corner_trans;
-        }
-        down_size_filter_surf_map_cov.setInputCloud(laser_cloud_surf_map);
-        down_size_filter_surf_map_cov.filter(*laser_cloud_surf_map_ds);
-        down_size_filter_corner_map_cov.setInputCloud(laser_cloud_corner_map);
-        down_size_filter_corner_map_cov.filter(*laser_cloud_corner_map_ds);
-        m_process.unlock();
-
-        *laser_cloud_map += *laser_cloud_surf_map_ds;
-        *laser_cloud_map += *laser_cloud_corner_map_ds;
-
-        sensor_msgs::PointCloud2 laser_cloud_msg;
-        pcl::toROSMsg(*laser_cloud_map, laser_cloud_msg);
-        laser_cloud_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
-        laser_cloud_msg.header.frame_id = "/world";
-        pub_laser_cloud_map.publish(laser_cloud_msg);
-        // printf("size of cloud map: %d\n", laser_cloud_map->size());
-    }
-}
-
-void visualizeGlobalMap()
-{
     ros::Rate rate(2);
     while (ros::ok())
     {
         rate.sleep();
-        pubGlobalMap();
-    }
+        if (pub_laser_cloud_surrounding.getNumSubscribers() != 0)
+        {
+            m_process.lock();
+            sensor_msgs::PointCloud2 laser_cloud_surround_msg;
+            pcl::toROSMsg(*laser_cloud_surf_from_map_cov_ds, laser_cloud_surround_msg);
+            m_process.unlock();
+            laser_cloud_surround_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
+            laser_cloud_surround_msg.header.frame_id = "/world";
+            pub_laser_cloud_surrounding.publish(laser_cloud_surround_msg);
+            // printf("size of surround map: %d\n", laser_cloud_surrond.size());
+        }
 
+        if (pub_laser_cloud_map.getNumSubscribers() != 0)
+        {
+            PointICovCloud::Ptr laser_cloud_map(new PointICovCloud());
+            PointICovCloud::Ptr laser_cloud_surf_map(new PointICovCloud());
+            PointICovCloud::Ptr laser_cloud_surf_map_ds(new PointICovCloud());
+            PointICovCloud::Ptr laser_cloud_corner_map(new PointICovCloud());
+            PointICovCloud::Ptr laser_cloud_corner_map_ds(new PointICovCloud());
+            m_process.lock();
+            for (int i = 0; i < surf_cloud_keyframes_cov.size(); i++)
+            {
+                PointICovCloud surf_trans;
+                cloudUCTAssociateToMap(*surf_cloud_keyframes_cov[i], surf_trans, pose_keyframes_6d[i].second, pose_ext);
+                *laser_cloud_surf_map += surf_trans;
+
+                PointICovCloud corner_trans;
+                cloudUCTAssociateToMap(*corner_cloud_keyframes_cov[i], corner_trans, pose_keyframes_6d[i].second, pose_ext);
+                *laser_cloud_corner_map += corner_trans;
+            }
+            down_size_filter_surf_map_cov.setInputCloud(laser_cloud_surf_map);
+            down_size_filter_surf_map_cov.filter(*laser_cloud_surf_map_ds);
+            down_size_filter_corner_map_cov.setInputCloud(laser_cloud_corner_map);
+            down_size_filter_corner_map_cov.filter(*laser_cloud_corner_map_ds);
+            m_process.unlock();
+
+            *laser_cloud_map += *laser_cloud_surf_map_ds;
+            *laser_cloud_map += *laser_cloud_corner_map_ds;
+
+            sensor_msgs::PointCloud2 laser_cloud_msg;
+            pcl::toROSMsg(*laser_cloud_map, laser_cloud_msg);
+            laser_cloud_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
+            laser_cloud_msg.header.frame_id = "/world";
+            pub_laser_cloud_map.publish(laser_cloud_msg);
+            // printf("size of cloud map: %d\n", laser_cloud_map->size());
+        }
+    }
+}
+
+// TODO
+void saveGlobalMap()
+{
+    pcl::io::savePCDFileASCII("/tmp/mloam_mapping_keyframes.pcd", *pose_keyframes_3d);
     PointICovCloud::Ptr laser_cloud_map(new PointICovCloud());
     PointICovCloud::Ptr laser_cloud_surf_map(new PointICovCloud());
     PointICovCloud::Ptr laser_cloud_surf_map_ds(new PointICovCloud());
     PointICovCloud::Ptr laser_cloud_corner_map(new PointICovCloud());
     PointICovCloud::Ptr laser_cloud_corner_map_ds(new PointICovCloud());
-    m_process.lock();
     for (int i = 0; i < surf_cloud_keyframes_cov.size(); i++)
     {
         PointICovCloud surf_trans;
@@ -700,15 +700,14 @@ void visualizeGlobalMap()
     down_size_filter_surf_map_cov.filter(*laser_cloud_surf_map_ds);
     down_size_filter_corner_map_cov.setInputCloud(laser_cloud_corner_map);
     down_size_filter_corner_map_cov.filter(*laser_cloud_corner_map_ds);
-    m_process.unlock();
 
     *laser_cloud_map += *laser_cloud_surf_map_ds;
     *laser_cloud_map += *laser_cloud_corner_map_ds;
 
-    pcd_writer.write("/tmp/mloam_mapping_cloud.pcd", *laser_cloud_map);
-    pcd_writer.write("/tmp/mloam_mapping_surf_cloud.pcd", *laser_cloud_surf_map_ds);
-    pcd_writer.write("/tmp/mloam_mapping_corner_cloud.pcd", *laser_cloud_corner_map_ds);
-    pcd_writer.write("/tmp/mloam_mapping_keyframes.pcd", *pose_keyframes_3d);
+    std::cout << common::YELLOW << "Saving map cloud (corner + surf) to /tmp/mloam_mapping_*.pcd" << common::RESET << std::endl;
+    pcl::io::savePCDFileASCII("/tmp/mloam_mapping_cloud.pcd", *laser_cloud_map);
+    pcl::io::savePCDFileASCII("/tmp/mloam_mapping_surf_cloud.pcd", *laser_cloud_surf_map_ds);
+    pcl::io::savePCDFileASCII("/tmp/mloam_mapping_corner_cloud.pcd", *laser_cloud_corner_map_ds);
 }
 
 void process()
@@ -973,6 +972,25 @@ void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameteri
 	// printf("evaluate degeneracy: %fms\n", t_eval_degenracy.toc());
 }
 
+void sigintHandler(int sig)
+{
+    printf("press ctrl-c\n");
+    if (MLOAM_RESULT_SAVE)
+    {
+        save_statistics.saveMapStatistics(MLOAM_MAP_PATH,
+                                          OUTPUT_FOLDER + "mapping_factor.txt",
+                                          OUTPUT_FOLDER + "mapping_d_eigvec.txt",
+                                          OUTPUT_FOLDER + "mapping_pose_uncertainty",
+                                          laser_after_mapped_path,
+                                          d_factor_list,
+                                          d_eigvec_list,
+                                          cov_mapping_list);
+        save_statistics.saveMapTimeStatistics(OUTPUT_FOLDER + "time_mapping.txt", total_mapping, frame_cnt);
+    }
+    saveGlobalMap();
+    ros::shutdown();
+}
+
 int main(int argc, char **argv)
 {
 	if (argc < 5)
@@ -991,7 +1009,7 @@ int main(int argc, char **argv)
     MLOAM_RESULT_SAVE = FLAGS_result_save;
     OUTPUT_FOLDER = FLAGS_output_path;
 	with_ua_flag = FLAGS_with_ua;
-    printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
+    printf("save result (0/1): %d to %s\n", MLOAM_RESULT_SAVE, OUTPUT_FOLDER.c_str());
 	printf("uncertainty propagation on (0/1): %d\n", with_ua_flag);
 	
 	stringstream ss;
@@ -1053,28 +1071,19 @@ int main(int argc, char **argv)
     pose_keyframes_6d.clear();
     pose_keyframes_3d->clear();
 
+    signal(SIGINT, sigintHandler);
+
     std::thread mapping_process{process};
-    std::thread visualize_map_process{visualizeGlobalMap};
+    std::thread pub_map_process{pubGlobalMap};
+
     ros::Rate loop_rate(100);
-	while (ros::ok())
+	while (ros::ok()) 
 	{
 		ros::spinOnce();
 		loop_rate.sleep();
-	}
-    visualize_map_process.join();
-    mapping_process.join();
+    }
 
-	if (MLOAM_RESULT_SAVE)
-	{
-		save_statistics.saveMapStatistics(MLOAM_MAP_PATH,
-										  OUTPUT_FOLDER + "mapping_factor.txt",
-										  OUTPUT_FOLDER + "mapping_d_eigvec.txt",
-										  OUTPUT_FOLDER + "mapping_pose_uncertainty",
-										  laser_after_mapped_path,
-										  d_factor_list,
-										  d_eigvec_list,
-										  cov_mapping_list);
-		save_statistics.saveMapTimeStatistics(OUTPUT_FOLDER + "time_mapping.txt", total_mapping, frame_cnt);
-	}
+    pub_map_process.join();
+    mapping_process.join();
 	return 0;
 }

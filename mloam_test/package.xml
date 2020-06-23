@@ -15,7 +15,6 @@
   <!--   BSD, MIT, Boost Software License, GPLv2, GPLv3, LGPLv2.1, LGPLv3 -->
   <license>TODO</license>
 
-
   <!-- Url tags are optional, but mutiple are allowed, one per tag -->
   <!-- Optional attribute type can be: website, bugtracker, or repository -->
   <!-- Example: -->
@@ -43,11 +42,15 @@
   <build_depend>roscpp</build_depend>
   <build_depend>image_transport</build_depend>
   <build_depend>message_generation</build_depend>
+  <build_depend>mloam_msgs</build_depend>
+  <build_depend>mloam_pcl</build_depend>
   <build_depend>libgoogle-glog-dev</build_depend>
 
   <run_depend>roscpp</run_depend>
   <run_depend>image_transport</run_depend>
   <run_depend>message_runtime</run_depend>
+  <run_depend>mloam_msgs</run_depend>
+  <run_depend>mloam_pcl</run_depend>  
   <run_depend>libgoogle-glog-dev</run_depend>
 
 

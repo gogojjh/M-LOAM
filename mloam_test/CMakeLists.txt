@@ -58,6 +58,12 @@ include_directories(
 	${GFLAGS_INCLUDE_DIRS} ${GLOG_INCLUDE_DIRS}
 )
 
+catkin_package(
+#   INCLUDE_DIRS include
+  CATKIN_DEPENDS mloam_msgs mloam_pcl
+  DEPENDS PCL
+)
+
 # add_executable(test_ceres test_ceres.cpp)
 # target_link_libraries(test_ceres ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
@@ -89,7 +95,7 @@ include_directories(
 # target_link_libraries(test_generate_full_map poseIO mloam_lib_1)
 
 add_executable(test_generate_bag_from_data_oxford 
-	test_generate_bag_from_data_oxford.cpp ../estimator/src/estimator/pose.cpp)
+	src/test_generate_bag_from_data_oxford.cpp ../estimator/src/estimator/pose.cpp)
 target_link_libraries(test_generate_bag_from_data_oxford
     ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
     ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} 
@@ -97,7 +103,7 @@ target_link_libraries(test_generate_bag_from_data_oxford
 )
 
 add_executable(test_merge_pointcloud_oxford 
-	test_merge_pointcloud_oxford.cpp ../estimator/src/estimator/pose.cpp)
+	src/test_merge_pointcloud_oxford.cpp ../estimator/src/estimator/pose.cpp)
 target_link_libraries(test_merge_pointcloud_oxford
     ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
     ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} 

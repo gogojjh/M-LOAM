@@ -267,7 +267,7 @@ int main(int argc, char **argv)
         std::cout << common::RED << "saving odometry results" << common::RESET << std::endl;
         save_statistics.saveSensorPath(MLOAM_GT_PATH, laser_gt_path);
         save_statistics.saveOdomStatistics(EX_CALIB_EIG_PATH, EX_CALIB_RESULT_PATH, MLOAM_ODOM_PATH, estimator);
-        save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time_odometry_txt", estimator);
+        save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time_odometry.txt", estimator);
     }
 
     cloud_visualizer_thread.join();
