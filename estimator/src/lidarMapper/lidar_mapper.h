@@ -73,6 +73,8 @@
 #include "../factor/lidar_plane_norm_factor.hpp"
 #include "../factor/pose_local_parameterization.h"
 
+#define SURROUNDING_KF_RADIUS 50.0
+#define DISTANCE_KEYFRAMES 0.3
 #define MAX_FEATURE_SELECT_TIME 10 // 10ms
 #define MAX_RANDOM_QUEUE_TIME 20
 
@@ -82,7 +84,7 @@ DEFINE_string(output_path, "", "the path ouf saving results");
 DEFINE_bool(with_ua, true, "with or without the awareness of uncertainty");
 DEFINE_double(gf_ratio, 0.2, "with or without the good features selection");
 
-// ***************************************************************** main process of lidar mapper
+// ****************** main process of lidar mapper
 void transformAssociateToMap();
 
 void extractSurroundingKeyFrames();
@@ -110,7 +112,7 @@ void evalHessian(const ceres::CRSMatrix &jaco, Eigen::Matrix<double, 6, 6> &mat_
 
 void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameterization *local_parameterization);
 
-// ***************************************************************** Barfoot's method on associating uncertainty on SE3
+// ****************** Barfoot's method on associating uncertainty on SE3
 Eigen::Matrix<double, 6, 6> adjointMatrix(const Eigen::Matrix4d &T)
 {
     Eigen::Matrix<double, 6, 6> AdT = Eigen::Matrix<double, 6, 6>::Zero();
@@ -313,7 +315,7 @@ void evalPointUncertainty(const PointType &pi, Eigen::Matrix3d &cov_point, const
     cov_point = Eigen::Matrix4d(G * cov_input * G.transpose()).topLeftCorner<3, 3>(); // 3x3
  }
 
-// ***************************************************************** good feature selection
+// ****************** good feature selection
 void evaluateFeatJacobian(const double *para_pose,
                           const PointPlaneFeature &feature,
                           const Eigen::Matrix3d &cov_matrix,
@@ -363,7 +365,7 @@ void goodFeatureSelect(const double *para_pose,
     // size of the random subset
     size_t size_rnd_subset = static_cast<size_t>(float(num_all_features) / float(num_use_features) * 1.0);
     // size_t size_rnd_subset = static_cast<size_t>(float(num_all_features) / float(num_use_features) * 2.3);
-    LOG_EVERY_N(INFO, 10) << "[goodFeatureSelct] size of matrix subset: " << size_rnd_subset;
+    LOG_EVERY_N(INFO, 100) << "[goodFeatureSelct] size of matrix subset: " << size_rnd_subset;
 
     // the most informative Hessian matrix
     Eigen::Matrix<double, 6, 6> sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;

@@ -332,7 +332,7 @@ void Estimator::processMeasurements()
             process();
             std::cout << common::RED << "frame: " << frame_cnt_
                       << ", processMea time: " << t_process.toc() << "ms" << common::RESET << std::endl << std::endl;
-            LOG_EVERY_N(INFO, 10) << "processMea time: " << t_process.toc() << "ms";
+            LOG_EVERY_N(INFO, 100) << "processMea time: " << t_process.toc() << "ms";
             total_opt_odom_time_ += t_process.toc();
 
             // printStatistics(*this, 0);
@@ -435,7 +435,7 @@ void Estimator::process()
                     ESTIMATE_EXTRINSIC = 1;
                     initial_extrinsics_.saveStatistics();
                 }
-                LOG_EVERY_N(INFO, 10) << "initialize extrinsics: " << t_calib_ext.toc() << "ms";
+                LOG_EVERY_N(INFO, 100) << "initialize extrinsics: " << t_calib_ext.toc() << "ms";
                 // printf("initialize extrinsics: %fms\n", t_calib_ext.toc());
             }
         }
@@ -446,7 +446,7 @@ void Estimator::process()
             pose_rlt_[IDX_REF] = lidar_tracker_.trackCloud(prev_cloud_feature, cur_cloud_feature, pose_rlt_[IDX_REF]);
             pose_laser_cur_[IDX_REF] = Pose(Qs_[cir_buf_cnt_ - 1], Ts_[cir_buf_cnt_ - 1]) * pose_rlt_[IDX_REF];
             std::cout << "pose_rlt: " << pose_rlt_[IDX_REF] << std::endl;
-            LOG_EVERY_N(INFO, 10) << "lidarTracker: " << t_mloam_tracker.toc() << "ms";
+            LOG_EVERY_N(INFO, 100) << "lidarTracker: " << t_mloam_tracker.toc() << "ms";
             // printf("lidarTracker: %fms\n", t_mloam_tracker.toc());
         }
     }
@@ -571,7 +571,7 @@ void Estimator::optimizeMap()
     ceres::Solver::Options options;
     options.linear_solver_type = ceres::DENSE_SCHUR;
     // options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
-    options.num_threads = 1;
+    // options.num_threads = 1;
     // options.trust_region_strategy_type = ceres::DOGLEG;
     options.max_num_iterations = NUM_ITERATIONS;
     options.gradient_check_relative_precision = 1e-3;
@@ -1065,7 +1065,7 @@ void Estimator::buildCalibMap()
                                           n, n_neigh, true);
         }
     }
-    LOG_EVERY_N(INFO, 10) << "build map(extract map): " << t_build_map.toc() << "ms("
+    LOG_EVERY_N(INFO, 100) << "build map(extract map): " << t_build_map.toc() << "ms("
                           << t_extract_map.toc() << ")ms";
     // printf("build map (extract map): %f (%f)ms\n", t_build_map.toc(), t_extract_map.toc());
     // if (PCL_VIEWER) visualizePCL();
@@ -1150,7 +1150,7 @@ void Estimator::buildLocalMap()
                                           n, n_neigh, true);
         }
     }
-    LOG_EVERY_N(INFO, 10) << "build map(extract map): " << t_build_map.toc() << "ms("
+    LOG_EVERY_N(INFO, 100) << "build map(extract map): " << t_build_map.toc() << "ms("
                           << t_extract_map.toc() << ")ms";
     // printf("build map (extract map): %f (%f)ms\n", t_build_map.toc(), t_extract_map.toc());
     // if (PCL_VIEWER) visualizePCL();

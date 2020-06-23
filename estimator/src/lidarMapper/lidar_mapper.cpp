@@ -540,7 +540,7 @@ void process()
 			PointICloud::Ptr laser_cloud_corner_stack(new PointICloud());
 			down_size_filter_corner.setInputCloud(laser_cloud_corner_last);
 			down_size_filter_corner.filter(*laser_cloud_corner_stack);
-			LOG_EVERY_N(INFO, 10) << "input surf num: " << laser_cloud_surf_stack->size() 
+			LOG_EVERY_N(INFO, 100) << "input surf num: " << laser_cloud_surf_stack->size() 
 			 					   << " corner num: " << laser_cloud_corner_stack->size();
 
 			//**************************************************************
@@ -652,7 +652,7 @@ void process()
 						}
 					}
 					printf("matching features time: %fms\n", t_match_features.toc());
-					LOG_EVERY_N(INFO, 10) << "matching surf & corner features num: " <<  surf_num << ", " << corner_num;
+					LOG_EVERY_N(INFO, 100) << "matching surf & corner features num: " <<  surf_num << ", " << corner_num;
 
 					std::vector<size_t> sel_feature_idx;
 					goodFeatureSelect(para_pose, 
@@ -704,8 +704,8 @@ void process()
 						cov_mapping = mat_H.inverse(); // covariance of sensor noise: A New Approach to 3D ICP Covariance Estimation/ Censi's approach
 						cov_mapping_list.push_back(cov_mapping.trace());
 						is_degenerate = local_parameterization->is_degenerate_;
-						LOG_EVERY_N(INFO, 10) << "logdet of H: " << common::logDet(mat_H * 134, true);
-						LOG_EVERY_N(INFO, 10) << "pose covariance trace: " << cov_mapping.trace();
+						LOG_EVERY_N(INFO, 100) << "logdet of H: " << common::logDet(mat_H * 134, true);
+						LOG_EVERY_N(INFO, 100) << "pose covariance trace: " << cov_mapping.trace();
 						printf("evaluate H: %fms\n", t_eval_H.toc());
 					} 
 					else if (is_degenerate)
@@ -877,7 +877,7 @@ void process()
 
 			std::cout << common::RED << "frame: " << frame_cnt
 					  << ", whole mapping time " << t_whole_mapping.toc() << "ms" << common::RESET << std::endl;
-			LOG_EVERY_N(INFO, 10) << "whole mapping time " << t_whole_mapping.toc() << "ms";
+			LOG_EVERY_N(INFO, 100) << "whole mapping time " << t_whole_mapping.toc() << "ms";
 			total_mapping += t_whole_mapping.toc();
 
 // **********************************************************************
@@ -947,7 +947,7 @@ void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameteri
 	}
 	d_factor_list.push_back(mat_E);
 	d_eigvec_list.push_back(mat_V_f);
-	LOG_EVERY_N(INFO, 10) << "D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose();
+	LOG_EVERY_N(INFO, 100) << "D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose();
  	mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
 	// std::cout << "jjiao:" << std::endl;
 	// std::cout << "mat_E: " << mat_E << std::endl;

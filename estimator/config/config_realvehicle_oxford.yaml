@@ -63,7 +63,7 @@ laser_sync_threshold: 0.07
 ######################################################## odometry
 # optimization 
 max_solver_time: 0.01  # max solver itration time (s), to guarantee real time
-max_num_iterations: 5   # max solver itrations, to guarantee real time
+max_num_iterations: 6   # max solver itrations, to guarantee real time
 
 roi_range: 3
 distance_sq_threshold: 25
