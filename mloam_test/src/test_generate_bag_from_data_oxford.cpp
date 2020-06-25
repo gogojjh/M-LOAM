@@ -95,6 +95,8 @@ int main(int argc, char **argv)
         file = std::fopen((data_path + "velodyne_left.timestamps").c_str(), "r");
         while (fscanf(file, "%llu %d", &timestamp, &id) != EOF)
         {
+            frame_cnt++;
+            if (frame_cnt % 2 == 0) continue;
             stringstream ss;
             ss << data_path << "velodyne_left/" << timestamp << ".npy";
             vector<double> npy_data;
@@ -124,7 +126,6 @@ int main(int argc, char **argv)
                 start_time = timestamp * 1.0 / 1e6;
             if (timestamp * 1.0 / 1e6 > end_time)
                 end_time = timestamp * 1.0 / 1e6;
-            frame_cnt++;
             if (frame_cnt > FLAGS_frame_max) break;
         }
         std::cout << "Finish loading velo_left" << std::endl;
@@ -133,11 +134,9 @@ int main(int argc, char **argv)
         file = std::fopen((data_path + "velodyne_right.timestamps").c_str(), "r");
         while (fscanf(file, "%llu %d", &timestamp, &id) != EOF)
         {
+            frame_cnt++;
+            if (frame_cnt % 2 == 0) continue;            
             stringstream ss;
-            // ss << data_path << "velodyne_right/" << timestamp << ".pcd";
-            // pcl::PointCloud<pcl::PointXYZI> laser_cloud;
-            // pcd_reader.read(ss.str(), laser_cloud);
-
             ss << data_path << "velodyne_right/" << timestamp << ".npy";
             vector<double> npy_data;
             vector<unsigned long> shape_data;
@@ -162,7 +161,6 @@ int main(int argc, char **argv)
             header.frame_id = "/velo_right";
             msg_cloud.header = header;
             bag.write("/right/velodyne_points", ros::Time(timestamp * 1.0 / 1e6), msg_cloud);
-            frame_cnt++;
             if (frame_cnt > FLAGS_frame_max) break;
         }
         std::cout << "Finish loading velo_right" << std::endl;
@@ -188,16 +186,18 @@ int main(int argc, char **argv)
         file = std::fopen((data_path + "stereo.timestamps").c_str(), "r");
         while (fscanf(file, "%llu %d", &timestamp, &id) != EOF)
         {
+            frame_cnt++;
+            if (frame_cnt % 2 == 0) continue;
             stringstream ss;
             ss << data_path << "stereo/centre/" << timestamp << ".png";
-
             cv::Mat img;
             img = cv::imread(ss.str().c_str(), CV_LOAD_IMAGE_GRAYSCALE);
+            cv::Size dsize = cv::Size(img.cols * 0.5, img.rows * 0.5);
+            cv::resize(img, img, dsize, 0, 0, cv::INTER_AREA);
             sensor_msgs::ImagePtr imgMsg = cv_bridge::CvImage(std_msgs::Header(), "mono8", img).toImageMsg();
             imgMsg->header.stamp = ros::Time(timestamp * 1.0 / 1e6);
             bag.write("/stereo/centre", ros::Time(timestamp * 1.0 / 1e6), imgMsg);
-            frame_cnt++;
-            // if (frame_cnt > 100) break;
+            if (frame_cnt > FLAGS_frame_max) break;
         }
         std::cout << "Finish loading stereo" << std::endl;
     }

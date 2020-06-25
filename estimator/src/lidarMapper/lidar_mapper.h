@@ -75,6 +75,7 @@
 #include "../factor/pose_local_parameterization.h"
 
 #define SURROUNDING_KF_RADIUS 50.0
+#define GLOBALMAP_KF_RADIUS 50.0
 #define DISTANCE_KEYFRAMES 0.3
 #define MAX_FEATURE_SELECT_TIME 10 // 10ms
 #define MAX_RANDOM_QUEUE_TIME 20
@@ -333,9 +334,10 @@ void evaluateFeatJacobian(const double *para_pose,
     mat_jaco = mat_jacobian.topLeftCorner<3, 6>();
 }
 
+// TODO: add feature matching
 void goodFeatureSelect(const double *para_pose,
-                       const std::vector<PointICovCloud> laser_cloud_surf_cov,
-                       const std::vector<PointICovCloud> laser_cloud_corner_cov,
+                       const std::vector<PointICovCloud> &laser_cloud_surf_cov,
+                       const std::vector<PointICovCloud> &laser_cloud_corner_cov,
                        const std::vector<PointPlaneFeature> &all_features,
                        const size_t &num_all_features,
                        std::vector<size_t> &sel_feature_idx,
@@ -454,6 +456,137 @@ void goodFeatureSelect(const double *para_pose,
     //         common::logDet(sub_mat_H, true) ,common::logDet(total_mat_H, true));
     // }
     printf("good feature selection time: %fms\n", t_sel_feature.toc());
+}
+
+// TODO: add feature matching
+void goodFeatureSelectTest(const double *para_pose,
+                           const std::vector<PointICovCloud> &laser_cloud_surf_cov,
+                           const std::vector<PointICovCloud> &laser_cloud_corner_cov,
+                           const std::vector<PointPlaneFeature> &all_features,
+                           const size_t &num_all_features,
+                           std::vector<size_t> sel_feature_idx,
+                           const float &gf_ratio = 0.2)
+{
+    Eigen::Matrix<double, 6, 6> total_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
+    double total_det;
+    for (size_t que_idx = 0; que_idx < num_all_features; que_idx++)
+    {
+        const PointPlaneFeature &feature = all_features[que_idx];
+        Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
+        if (feature.type_ == 's')
+            extractCov(laser_cloud_surf_cov[feature.laser_idx_].points[feature.idx_], cov_matrix);
+        else if (feature.type_ == 'c')
+            extractCov(laser_cloud_corner_cov[feature.laser_idx_].points[feature.idx_], cov_matrix);
+        Eigen::MatrixXd jaco;
+        evaluateFeatJacobian(para_pose, feature, cov_matrix, jaco);
+        total_mat_H += jaco.transpose() * jaco;
+    }
+    total_det = common::logDet(total_mat_H, true);
+
+    // create a query of the index of the valid features
+    std::vector<size_t> all_feature_idx(num_all_features);
+    std::vector<int> feature_visited(num_all_features, -1);
+    std::iota(all_feature_idx.begin(), all_feature_idx.end(), 0);
+
+    size_t num_use_features;
+    if (gf_ratio >= 1.0)
+    {
+        sel_feature_idx = all_feature_idx;
+        printf("use all features: %lu!\n", sel_feature_idx.size());
+        return;
+    }
+    else if (gf_ratio <= 0.0)
+    {
+        num_use_features = 100;
+    }
+    else
+    {
+        num_use_features = static_cast<size_t>(num_all_features * gf_ratio);
+    }
+
+    size_t size_rnd_subset = static_cast<size_t>(float(num_all_features) / float(num_use_features) * 1.0);
+    Eigen::Matrix<double, 6, 6> sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
+    size_t num_sel_features = 0;
+    TicToc t_sel_feature;
+    double cur_det;
+    while (true)
+    {
+        if (((num_sel_features >= num_use_features) && (cur_det >= total_det + std::log(0.8))) ||
+            (all_feature_idx.size() == 0) ||
+            (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
+            break;
+        size_t num_rnd_que;
+        std::priority_queue<FeatureWithScore, std::vector<FeatureWithScore>, std::less<FeatureWithScore>> heap_subset;
+        while (heap_subset.size() < size_rnd_subset)
+        {
+            num_rnd_que = 0;
+            size_t j;
+            while (num_rnd_que < MAX_RANDOM_QUEUE_TIME)
+            {
+                j = (std::rand() % all_feature_idx.size());
+                if (feature_visited[j] < int(num_sel_features))
+                {
+                    feature_visited[j] = int(num_sel_features);
+                    break;
+                }
+                num_rnd_que++;
+            }
+            if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
+                break;
+
+            size_t que_idx = all_feature_idx[j];
+            const PointPlaneFeature &feature = all_features[que_idx];
+            Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
+            if (feature.type_ == 's')
+                extractCov(laser_cloud_surf_cov[feature.laser_idx_].points[feature.idx_], cov_matrix);
+            else if (feature.type_ == 'c')
+                extractCov(laser_cloud_corner_cov[feature.laser_idx_].points[feature.idx_], cov_matrix);
+            Eigen::MatrixXd jaco;
+            evaluateFeatJacobian(para_pose, feature, cov_matrix, jaco);
+
+            cur_det = common::logDet(sub_mat_H + jaco.transpose() * jaco, true);
+            heap_subset.push(FeatureWithScore(que_idx, cur_det, jaco));
+            if (heap_subset.size() >= size_rnd_subset)
+            {
+                const FeatureWithScore &fws = heap_subset.top();
+                std::vector<size_t>::iterator iter = std::find(all_feature_idx.begin(), all_feature_idx.end(), fws.idx_);
+                if (iter == all_feature_idx.end())
+                {
+                    std::cerr << "[goodFeatureSelct]: not exist feature idx !" << std::endl;
+                    break;
+                }
+
+                const Eigen::MatrixXd &jaco = fws.jaco_;
+                sub_mat_H += jaco.transpose() * jaco;
+
+                size_t position = iter - all_feature_idx.begin();
+                all_feature_idx.erase(all_feature_idx.begin() + position);
+                feature_visited.erase(feature_visited.begin() + position);
+                sel_feature_idx.push_back(fws.idx_);
+                num_sel_features++;
+                // printf("position: %lu, num: %lu\n", position, num_rnd_que);
+                break;
+            }
+        }
+        if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME)
+        {
+            std::cerr << "[goodFeatureSelct]: early termination!" << std::endl;
+            break;
+        }
+    }
+    // printf("logdet of selected sub H: %f\n", common::logDet(sub_mat_H));
+    // printf("good feature selection time: %fms\n", t_sel_feature.toc());
+
+    // complete H, threshold, |F|, |S|, |S|/|F|
+    std::cout << total_det << " " << total_det + std::log(0.8) << " "
+              << all_features.size() << " "
+              << sel_feature_idx.size() << " "
+              << (float)sel_feature_idx.size() * 1.0 / all_features.size() << std::endl;
+
+    LOG_EVERY_N(INFO, 1) << total_det << " " << total_det + std::log(0.8) << " "
+                         << all_features.size() << " "
+                         << sel_feature_idx.size() << " "
+                         << (float)sel_feature_idx.size() * 1.0 / all_features.size();
 }
 
 void writeFeature(const std::vector<size_t> &sel_feature_idx,

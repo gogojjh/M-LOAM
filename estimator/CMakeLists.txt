@@ -82,8 +82,8 @@ target_link_libraries(mloam_lib_2
 #add_executable(mloam_node_sr src/rosNodeSR.cpp)
 #target_link_libraries(mloam_node_sr mloam_lib_1 mloam_lib_2)
 
-#add_executable(mloam_node_rhd src/rosNodeRHD.cpp)
-#target_link_libraries(mloam_node_rhd mloam_lib_1 mloam_lib_2)
+add_executable(mloam_node_rhd src/rosNodeRHD.cpp)
+target_link_libraries(mloam_node_rhd mloam_lib_1 mloam_lib_2)
 
 #add_executable(mloam_node_rv src/rosNodeRV.cpp)
 #target_link_libraries(mloam_node_rv mloam_lib_1 mloam_lib_2)

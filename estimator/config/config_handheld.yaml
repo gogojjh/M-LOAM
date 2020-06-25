@@ -1,41 +1,38 @@
 %YAML:1.0
 
-#Multiple thread support
+# Multiple thread support
 multiple_thread: 0
 
-#optimization PARAMETERS
-max_solver_time: 0.05  # max solver itration time (s), to guarantee real time
-max_num_iterations: 10   # max solver itrations, to guarantee real time
-keyframe_parallax: 0 # keyframe selection threshold (pixel)
-
-evaluate_residual: 1
-optimal_odometry: 1
-
-###############################################
-# laser parameters
-num_of_laser: 2
-n_scans: 16
-
 # segmmentation
-segment_cloud: 0 # for indoor office
-# segment_cloud: 1 
+segment_cloud: 0
+# segment_cloud: 1
 horizon_scan: 1800
 min_cluster_size: 30
-min_line_size: 5
+min_line_size: 10
 segment_valid_point_num: 5
 segment_valid_line_num: 3
-segment_theta: 0.53
+segment_theta: 1.0 # Lego-loam: 1.0
+
+# laser parameters
+idx_ref: 0
+n_scans: 16
+num_of_laser: 2
+
+cloud_topic:
+   - "/left/velodyne_points"
+   - "/right/velodyne_points"
 
 # window sizes
-window_size: 5
-opt_window_size: 3
+window_size: 4
+opt_window_size: 2
 
 # Extrinsic parameter between IMU and Camera.
 estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
-optimal_extrinsic: 0
 
+# the extrinsics from the base_link to laser_link
+# qx qy qz qw px py pz
 body_T_laser: !!opencv-matrix
    rows: 2
    cols: 7
@@ -43,7 +40,6 @@ body_T_laser: !!opencv-matrix
 # data for 20200201
    # data: [0, 0, 0, 1, 0, 0, 0,
    #        0.40093, 0.00536, -0.02534, 0.91574, -0.01571, -0.47446, -0.21247]
-
 # data for 20200303/ 20200310
 # no prior
    # data: [0, 0, 0, 1, 0, 0, 0,
@@ -58,6 +54,7 @@ body_T_laser: !!opencv-matrix
    # data: [0, 0, 0, 1, 0, 0, 0,
    #        0.34087, -0.0101817, 0.0147921, 0.945613, 0.0334837, -0.540249, -0.141798]
 
+
 #unsynchronization parameters
 estimate_td: 0                      # 0 have an accurate time offset among sensors
                                     # 1 online estimate time offset among sensors
@@ -68,24 +65,21 @@ td: !!opencv-matrix                 # initial value of time offset. unit: s. rea
    dt: d
    data: [0, 0]
 
-idx_ref: 0
-
-cloud_topic: 
-   - "/left/velodyne_points"
-   - "/right/velodyne_points"
-
+distortion: 0
+scan_period: 0.05
 laser_sync_threshold: 0.07
-roi_range: 1
-roi_range_mapping: 100
 
-# odometry parameters
-scan_period: 0.1
+######################################################## odometry
+# optimization 
+max_solver_time: 0.01  # max solver itration time (s), to guarantee real time
+max_num_iterations: 6   # max solver itrations, to guarantee real time
+
+roi_range: 0.5
 distance_sq_threshold: 25
 nearby_scan: 2.5
-distortion: 0
 
 # movement type
-planar_movement: 0
+planar_movement: 1
 
 # feature corresponding paprameters
 min_match_sq_dis: 1.0
@@ -94,28 +88,26 @@ min_plane_dis: 0.2
 # factor
 marginalization_factor: 1
 point_plane_factor: 1
-point_edge_factor: 0
+point_edge_factor: 1
 prior_factor: 0
 prior_factor_pos: 5
 prior_factor_rot: 1
-check_jacobian: 0
 
 pcl_viewer: 0
 pcl_viewer_normal_ratio: 10
 
 # calibration converage parameters
 n_cumu_feature: 10
-eig_initial: 120
-eig_thre_calib: 400
-n_calib: 10
+eig_initial: 400
+eig_thre_calib: 1000
+n_calib: 30
 
-# mapping 
-map_eig_thre: 200
+skip_num_odom_pub: 1
+
+######################################################## mapping
 map_corner_res: 0.2
-# for indoor office
 map_surf_res: 0.2
-# for outdoot building
-# map_surf_res: 0.3
+map_eig_thre: 100
 
 # uncertainty parameter
 # translation, rotation, point (rho, phi, zeta)
@@ -124,8 +116,7 @@ uct_ext: !!opencv-matrix
    cols: 6
    dt: d
    data: [0, 0, 0, 0, 0, 0,
-          0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01] 
-
+          0.0025, 0.0025, 0.0025, 0.0025, 0.0025, 0.0025] 
 
 uct_measurement: !!opencv-matrix
    rows: 1
@@ -141,4 +132,3 @@ trace_threshold_after_mapping: 0.3
 # trace_threshold_before_mapping: 1
 # trace_threshold_after_mapping: 0.7
 
-skip_num_odom_pub: 1

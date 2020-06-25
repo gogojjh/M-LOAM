@@ -20,7 +20,9 @@
 #include <mutex>
 #include <iomanip>
 
+#include <pcl/common/common.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl/ros/conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/filters/voxel_grid.h>
@@ -28,12 +30,14 @@
 
 #include <ros/ros.h>
 #include <std_msgs/Header.h>
-#include <std_msgs/Float32.h>
-#include <std_msgs/Bool.h>
+#include <std_msgs/String.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
+#include <sensor_msgs/NavSatFix.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/Imu.h>
+#include <message_filters/sync_policies/approximate_time.h>
+#include <message_filters/subscriber.h>
 
 #include "save_statistics.hpp"
 #include "common/common.hpp"
@@ -54,8 +58,7 @@ Estimator estimator;
 SaveStatistics save_statistics;
 
 // message buffer
-queue<sensor_msgs::PointCloud2ConstPtr> cloud0_buf;
-queue<sensor_msgs::PointCloud2ConstPtr> cloud1_buf;
+std::vector<std::queue<sensor_msgs::PointCloud2ConstPtr>> all_cloud_buf(2);
 std::mutex m_buf;
 
 // laser path groundtruth
@@ -63,17 +66,12 @@ nav_msgs::Path laser_gt_path;
 ros::Publisher pub_laser_gt_path;
 Pose pose_world_ref_ini;
 
-void cloud0_callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg)
+void dataProcessCallback(const sensor_msgs::PointCloud2ConstPtr &cloud0_msg,
+                         const sensor_msgs::PointCloud2ConstPtr &cloud1_msg)
 {
     m_buf.lock();
-    cloud0_buf.push(cloud_msg);
-    m_buf.unlock();
-}
-
-void cloud1_callback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg)
-{
-    m_buf.lock();
-    cloud1_buf.push(cloud_msg);
+    all_cloud_buf[0].push(cloud0_msg);
+    all_cloud_buf[1].push(cloud1_msg);
     m_buf.unlock();
 }
 
@@ -81,7 +79,7 @@ pcl::PointCloud<pcl::PointXYZ> getCloudFromMsg(const sensor_msgs::PointCloud2Con
 {
     pcl::PointCloud<pcl::PointXYZ> laser_cloud;
     pcl::fromROSMsg(*cloud_msg, laser_cloud);
-    roiCloudFilter(laser_cloud, ROI_RANGE);
+    // roiCloudFilter(laser_cloud, ROI_RANGE);
     return laser_cloud;
 }
 
@@ -91,80 +89,42 @@ void sync_process()
 {
     while(1)
     {
-        if(NUM_OF_LASER == 2)
+        std::vector<pcl::PointCloud<pcl::PointXYZ> > v_laser_cloud(NUM_OF_LASER);
+        std_msgs::Header header;
+        double time = 0;
+        m_buf.lock();
+        if (!all_cloud_buf[0].empty() && !all_cloud_buf[1].empty())
         {
-            pcl::PointCloud<pcl::PointXYZ> laser_cloud0, laser_cloud1;
-            std::vector<pcl::PointCloud<pcl::PointXYZ> > v_laser_cloud;
-            std_msgs::Header header;
-            double time = 0;
-            m_buf.lock();
-            if (!cloud0_buf.empty() && !cloud1_buf.empty())
+            time = all_cloud_buf[0].front()->header.stamp.toSec();
+            header = all_cloud_buf[0].front()->header;
+            stringstream ss;
+            for (size_t i = 0; i < NUM_OF_LASER; i++)
             {
-                double time0 = cloud0_buf.front()->header.stamp.toSec();
-                double time1 = cloud1_buf.front()->header.stamp.toSec();
-                printf("\ntimestamps: (%.3f, %.3f)\n", time0, time1);
-                // 0.07s sync tolerance
-                if(time0 < time1 - LASER_SYNC_THRESHOLD)
-                {
-                    cloud0_buf.pop();
-                    printf("throw cloud0\n");
-                }
-                else if(time0 > time1 + LASER_SYNC_THRESHOLD)
-                {
-                    cloud1_buf.pop();
-                    printf("throw cloud1\n");
-                }
-                else
-                {
-                    time = cloud0_buf.front()->header.stamp.toSec();
-                    header = cloud0_buf.front()->header;
-
-                    laser_cloud0 = getCloudFromMsg(cloud0_buf.front());
-                    v_laser_cloud.push_back(laser_cloud0);
-                    cloud0_buf.pop();
-
-                    laser_cloud1 = getCloudFromMsg(cloud1_buf.front());
-                    v_laser_cloud.push_back(laser_cloud1);
-                    cloud1_buf.pop();
-
-                    // TODO: inject extrinsic perturbation on point clouds
-                    // if (estimator.frame_cnt_ >= 0)
-                    // {
-                    //     ROS_WARN("Inject extrinsic perturbation on point clouds !");
-                    //     Eigen::Quaterniond q_perturb(0.98929, 0.078924, 0.094058, 0.078924);
-                    //     Eigen::Vector3d t_perturb(0.1, 0.1, 0.1);
-                    //     Pose pose_perturb(q_perturb, t_perturb);
-                    //     pcl::transformPointCloud(v_laser_cloud[1], v_laser_cloud[1], pose_perturb.T_.cast<float>());
-                    // }
-                    printf("size of finding laser_cloud0: %d, laser_cloud1: %d\n", laser_cloud0.points.size(), laser_cloud1.points.size());
-                }
+                v_laser_cloud[i] = getCloudFromMsg(all_cloud_buf[i].front());
+                ss << v_laser_cloud[i].size() << " ";
             }
-            m_buf.unlock();
-            if ((laser_cloud0.points.size() != 0) && (laser_cloud1.points.size() != 0))
-            {
-                estimator.inputCloud(time, v_laser_cloud);
-            }
+            for (size_t i = 0; i < all_cloud_buf.size(); i++) all_cloud_buf[i].pop();
+            printf("size of finding laser_cloud: %s\n", ss.str().c_str());
         }
-        else if (NUM_OF_LASER == 1)
+        while (!all_cloud_buf[0].empty())
         {
-            pcl::PointCloud<pcl::PointXYZ> laser_cloud0;
-            std_msgs::Header header;
-            double time = 0;
-            m_buf.lock();
-            if (!cloud0_buf.empty())
+            for (size_t i = 0; i < all_cloud_buf.size(); i++)
             {
-                time = cloud0_buf.front()->header.stamp.toSec();
-                header = cloud0_buf.front()->header;
-                laser_cloud0 = getCloudFromMsg(cloud0_buf.front());
-                cloud0_buf.pop();
-                printf("find laser_cloud0: %d \n", laser_cloud0.points.size());
+                if (!all_cloud_buf[i].empty())
+                {
+                    all_cloud_buf[i].pop();
+                }
             }
-            m_buf.unlock();
-            if (laser_cloud0.points.size() != 0)
-            {
-                estimator.inputCloud(time, laser_cloud0);
-            }
+            std::cout << common::GREEN << "drop lidar frame in odometry for real time performance"
+                      << common::RESET << std::endl;
         }
+        m_buf.unlock();
+
+        bool empty_check = false;
+        for (size_t i = 0; i < NUM_OF_LASER; i++)
+            if (v_laser_cloud[i].size() == 0) empty_check = true;
+
+        if (!empty_check) estimator.inputCloud(time, v_laser_cloud);
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
 }
@@ -212,13 +172,9 @@ void pose_gt_callback(const geometry_msgs::PoseStamped &pose_msg)
 
 int main(int argc, char **argv)
 {
-    if (argc < 2)
+    if (argc < 5)
     {
-        printf("please intput: rosrun mloam mloam_node_rhd [config file] \n"
-               "for example: "
-               "rosrun mloam mloam_node_rhd "
-               "~/catkin_ws/src/M-LOAM/config/config_handheld.yaml"
-               "/Monster xxx \n");
+        printf("please intput: rosrun mloam mloam_node_rhd -help\n");
         return 1;
     }
     google::InitGoogleLogging(argv[0]);
@@ -234,34 +190,34 @@ int main(int argc, char **argv)
     registerPub(nh);
 
     MLOAM_RESULT_SAVE = FLAGS_result_save;
-    printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
     OUTPUT_FOLDER = FLAGS_output_path;
     MLOAM_GT_PATH = OUTPUT_FOLDER + "stamped_groundtruth.txt";
     MLOAM_ODOM_PATH = OUTPUT_FOLDER + "stamped_mloam_odom_estimate.txt";
     EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
     EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "calib_eig.txt";
-    ROS_WARN("waiting for cloud...");
+    printf("save result (0/1): %d to %s\n", MLOAM_RESULT_SAVE, OUTPUT_FOLDER.c_str());
     if (NUM_OF_LASER > 2)
     {
         printf("not support > 2 cases");
         ROS_BREAK();
         return 0;
     }
+    std::cout << common::YELLOW << "waiting for cloud..." << common::RESET << std::endl;
 
     // ******************************************
-    ros::Subscriber sub_cloud0, sub_cloud1;
-    if (NUM_OF_LASER == 1)
-    {
-        CLOUD0_TOPIC = CLOUD_TOPIC[0];
-        sub_cloud0 = nh.subscribe(CLOUD0_TOPIC, 5, cloud0_callback);
-    } else
-    {
-        CLOUD0_TOPIC = CLOUD_TOPIC[0];
-        CLOUD1_TOPIC = CLOUD_TOPIC[1];
-        sub_cloud0 = nh.subscribe(CLOUD0_TOPIC, 5, cloud0_callback);
-        sub_cloud1 = nh.subscribe(CLOUD1_TOPIC, 5, cloud1_callback);       
-    }
-    
+    typedef sensor_msgs::PointCloud2 LidarMsgType;
+    typedef message_filters::sync_policies::ApproximateTime<LidarMsgType, LidarMsgType> LidarSyncPolicy;
+    typedef message_filters::Subscriber<LidarMsgType> LidarSubType;
+
+    std::vector<LidarSubType *> sub_lidar(2);
+    NUM_OF_LASER = NUM_OF_LASER < 2 ? NUM_OF_LASER : 2;
+    for (size_t i = 0; i < NUM_OF_LASER; i++) sub_lidar[i] = new LidarSubType(nh, CLOUD_TOPIC[i], 1);
+    for (size_t i = NUM_OF_LASER; i < 2; i++) sub_lidar[i] = new LidarSubType(nh, CLOUD_TOPIC[0], 1);
+    message_filters::Synchronizer<LidarSyncPolicy> *lidar_synchronizer =
+        new message_filters::Synchronizer<LidarSyncPolicy>(
+            LidarSyncPolicy(10), *sub_lidar[0], *sub_lidar[1]);
+    lidar_synchronizer->registerCallback(boost::bind(&dataProcessCallback, _1, _2));
+
     ros::Subscriber sub_restart = nh.subscribe("/mlod_restart", 5, restart_callback);
     ros::Subscriber sub_pose_gt = nh.subscribe("/base_pose_gt", 5, pose_gt_callback);
     pub_laser_gt_path = nh.advertise<nav_msgs::Path>("/laser_gt_path", 5);

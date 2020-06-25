@@ -210,6 +210,7 @@ void sync_process()
             if (v_laser_cloud[i].size() == 0) empty_check = true;
 
         if (!empty_check) estimator.inputCloud(time, v_laser_cloud);
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
 }
 
@@ -298,15 +299,10 @@ int main(int argc, char **argv)
 
         std::vector<ros::Publisher> pub_laser_cloud_list(NUM_OF_LASER);
         for (size_t i = 0; i < NUM_OF_LASER; i++) pub_laser_cloud_list[i] = nh.advertise<sensor_msgs::PointCloud2>(CLOUD_TOPIC[i], 10);
-        pub_laser_gt_odom = nh.advertise<nav_msgs::Odometry>("/laser_gt_odom", 10);
+        pub_laser_gt_odom = nh.advertise<nav_msgs::Odometry>("/current_odom", 10);
         pub_laser_gt_path = nh.advertise<nav_msgs::Path>("/laser_gt_path", 10);
-        pub_gps = nh.advertise<sensor_msgs::NavSatFix>("/novatel718d/pos", 10);
-
-        std::thread cloud_visualizer_thread;
-        if (PCL_VIEWER)
-        {
-            cloud_visualizer_thread = std::thread(&PlaneNormalVisualizer::Spin, &estimator.plane_normal_vis_);
-        }
+        pub_gps_odom = nh.advertise<sensor_msgs::NavSatFix>("/gps/odom", 10);
+        pub_gps_path = nh.advertise<nav_msgs::Path>("/gps/path", 10);
 
         // *************************************
         // read cloud list
@@ -474,7 +470,6 @@ int main(int argc, char **argv)
             save_statistics.saveOdomStatistics(EX_CALIB_EIG_PATH, EX_CALIB_RESULT_PATH, MLOAM_ODOM_PATH, estimator);
             save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time_odometry.txt", estimator);
         }
-        cloud_visualizer_thread.join();
     }
 
     return 0;

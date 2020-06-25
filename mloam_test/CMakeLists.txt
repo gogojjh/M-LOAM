@@ -70,13 +70,13 @@ catkin_package(
 # add_executable(test_pointiwithcov test_pointiwithcov.cpp)
 # target_link_libraries(test_pointiwithcov ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-# add_executable(test_merge_pointcloud_sr test_merge_pointcloud_sr.cpp)
+# add_executable(test_merge_pointcloud_sr src/test_merge_pointcloud_sr.cpp)
 # target_link_libraries(test_merge_pointcloud_sr ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-# add_executable(test_merge_pointcloud_rhd test_merge_pointcloud_rhd.cpp)
-# target_link_libraries(test_merge_pointcloud_rhd ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+add_executable(test_merge_pointcloud_rhd src/test_merge_pointcloud_rhd.cpp)
+target_link_libraries(test_merge_pointcloud_rhd ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-# add_executable(test_merge_pointcloud_rv test_merge_pointcloud_rv.cpp)
+# add_executable(test_merge_pointcloud_rv src/test_merge_pointcloud_rv.cpp)
 # target_link_libraries(test_merge_pointcloud_rv ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 # add_executable(test_parse_bag test_parse_bag.cpp)
