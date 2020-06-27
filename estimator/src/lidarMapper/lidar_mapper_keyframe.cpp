@@ -234,15 +234,15 @@ void extractSurroundingKeyFrames()
         surrounding_keyframes->push_back(pose_keyframes_3d->points[point_search_ind[i]]);
     // down_size_filter_surrounding_keyframes.setInputCloud(surrounding_keyframes);
     // down_size_filter_surrounding_keyframes.filter(*surrounding_keyframes_ds);
-    *surrounding_keyframes_ds = *surrounding_keyframes;
+    // *surrounding_keyframes_ds = *surrounding_keyframes;
 
     // TicToc t_search;
     for (int i = 0; i < surrounding_existing_keyframes_id.size(); i++) // existing keyframes id
     {
         bool existing_flag = false;
-        for (int j = 0; j < surrounding_keyframes_ds->size(); j++) // current surrounding keyframes id
+        for (int j = 0; j < surrounding_keyframes->size(); j++) // current surrounding keyframes id
         {
-            if (surrounding_existing_keyframes_id[i] == (int)surrounding_keyframes_ds->points[j].intensity)
+            if (surrounding_existing_keyframes_id[i] == (int)surrounding_keyframes->points[j].intensity)
             {
                 existing_flag = true;
                 break;
@@ -261,12 +261,12 @@ void extractSurroundingKeyFrames()
     // add new key frames that are not in calculated existing key frames
     // t_search.tic();
     // int cnt = 0;
-    for (int i = 0; i < surrounding_keyframes_ds->size(); i++)
+    for (int i = 0; i < surrounding_keyframes->size(); i++)
     {
         bool existing_flag = false;
         for (int j = 0; j < surrounding_existing_keyframes_id.size(); j++)
         {
-            if (surrounding_existing_keyframes_id[j] == (int)surrounding_keyframes_ds->points[i].intensity)
+            if (surrounding_existing_keyframes_id[j] == (int)surrounding_keyframes->points[i].intensity)
             {
                 existing_flag = true;
                 break;
@@ -407,7 +407,7 @@ void scan2MapOptimization()
 
             ceres::Solver::Options options;
             options.linear_solver_type = ceres::DENSE_SCHUR;
-            options.max_num_iterations = 10;
+            options.max_num_iterations = 15;
             // options.max_solver_time_in_seconds = 0.04;
             // options.num_threads = 2;
             options.minimizer_progress_to_stdout = false;
