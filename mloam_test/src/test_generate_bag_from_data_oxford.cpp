@@ -233,7 +233,7 @@ int main(int argc, char **argv)
             y = -pose_data[3];
             z = -pose_data[4];
             roll = pose_data[5];
-            pitch = pose_data[6];
+            pitch = -pose_data[6];
             yaw = -pose_data[7];
             Eigen::Quaterniond q = Eigen::AngleAxisd(roll, Vector3d::UnitX()) 
                                 * Eigen::AngleAxisd(pitch, Vector3d::UnitY()) 

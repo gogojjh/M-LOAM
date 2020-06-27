@@ -47,7 +47,7 @@
     <!-- publish static tf -->
     <!-- x y z yaw pitch roll -->
     <!-- x y z qx qy qz qw -->
-    <include file="$(find rviz_car_model)/launch/default.launch" />
+    <!-- <include file="$(find rviz_car_model)/launch/default.launch" /> -->
     <node name="static_tf_base_sensor_into_base_link" pkg="tf" type="static_transform_publisher"
         args="0 0 0 0 0 0 1 aft_mapped base_link 10"/>                
     <node name="static_tf_world_base_into_world_sensor" pkg="tf" type="static_transform_publisher"
@@ -57,7 +57,7 @@
     <node name="static_tf_laser_into_laser_left" pkg="tf" type="static_transform_publisher"
         args="0 0 0 0 0 0 1 laser_0 velo_left 10"/>        
     <node name="static_tf_laser_into_laser_right" pkg="tf" type="static_transform_publisher"
-        args="0 0 0 0 0 0 1 laser_1 velo_right 10"/>                
+        args="0 0 0 0 0 0 1 laser_1 velo_right 10"/>      
 
     <!-- merge cloud -->
     <group unless="$(arg run_mloam)">

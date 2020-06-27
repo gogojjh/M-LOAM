@@ -88,3 +88,15 @@ Thanks for
 
 * LOAM (J. Zhang and S. Singh. LOAM: Lidar Odometry and Mapping in Real-time) and its advanced version: [A-LOAM](https://github.com/HKUST-Aerial-Robotics/A-LOAM);
 * [LIO-MAPPING](https://github.com/hyye/lio-mapping) (Haoyang Ye, Yuying Chen, and Ming Liu. Tightly Coupled 3D Lidar Inertial Odometry and Mapping).
+
+### 8. Compared with LEGO-LOAM
+Algorithm                  | LEGO-LOAM  | M-LOAM 
+---------------            | ----       | ---  
+before ds                  | 18734/90578| 97999/220828
+after ds                   | 11934/28110| 42378/28310
+ds map time                | 6.63ms     | 61.75ms
+input surf/corner num      | 3387/736   | 4179/1913
+ds current scan time       | 0.5851ms   | 2.37ms
+matching feature time      | 8.67ms     | 14.52ms
+whole optimization time    | 60-100ms   | 100-200ms
+save keyframes time        | 0.3913ms   | 0.000172ms

@@ -94,7 +94,7 @@ void FeatureExtract::calTimestamp(const PointCloud &laser_cloud_in,
             }
         }
         float rel_time = (ori - start_ori) / (end_ori - start_ori);
-        point.intensity = rel_time;
+        point.intensity += rel_time;
         laser_cloud_out.push_back(point);
     }
 }
@@ -110,7 +110,7 @@ void FeatureExtract::calTimestamp(const PointITimeCloud &laser_cloud_in,
         point.y = laser_cloud_in.points[i].y;
         point.z = laser_cloud_in.points[i].z;
         float rel_time = laser_cloud_in.points[i].timestamp * 1e-6;
-        point.intensity = rel_time;
+        point.intensity += rel_time;
         laser_cloud_out.push_back(point);
     }
 }

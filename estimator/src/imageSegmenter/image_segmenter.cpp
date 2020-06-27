@@ -18,7 +18,6 @@ using namespace common;
 void ImageSegmenter::setParameter(const int &vertical_scans,
                                   const int &horizon_scans,
                                   const int &min_cluster_size,
-                                  const int &min_line_size,
                                   const int &segment_valid_point_num,
                                   const int &segment_valid_line_num)
 {
@@ -47,9 +46,10 @@ void ImageSegmenter::setParameter(const int &vertical_scans,
     // }
     segment_alphax_ = ang_res_x_ / 180.0 * M_PI;
     segment_alphay_ = ang_res_y_ / 180.0 * M_PI;
-    min_line_size_ = min_line_size;
     segment_valid_point_num_ = segment_valid_point_num;
     segment_valid_line_num_ = segment_valid_line_num;
+    printf("[ImageSegmenter param] v_scans:%d, h_scans:%d, c_size:%d\n", 
+        vertical_scans, horizon_scans_, min_cluster_size_);
 }
 
 // VLP-16

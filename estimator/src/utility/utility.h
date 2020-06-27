@@ -31,8 +31,8 @@
 template <typename PointType>
 void roiCloudFilter(pcl::PointCloud<PointType> &laser_cloud, const double &roi_range)
 {
-    std::vector<int> indices;
-    pcl::removeNaNFromPointCloud(laser_cloud, laser_cloud, indices);
+    // std::vector<int> indices;
+    // pcl::removeNaNFromPointCloud(laser_cloud, laser_cloud, indices);
     if (roi_range <= 1e-5)
     {
         return;

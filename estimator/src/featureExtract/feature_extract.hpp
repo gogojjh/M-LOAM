@@ -454,13 +454,13 @@ void FeatureExtract::matchCornerFromMap(const typename pcl::KdTreeFLANN<PointTyp
                     features[cloud_cnt] = feature1;
                     cloud_cnt++;
 
-                    feature2.idx_ = i;
-                    feature2.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
-                    feature2.coeffs_ = coeff2 * 0.5;
-                    feature2.laser_idx_ = laser_idx;
-                    feature2.type_ = 'c';
-                    features[cloud_cnt] = feature2;
-                    cloud_cnt++;
+                    // feature2.idx_ = i;
+                    // feature2.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
+                    // feature2.coeffs_ = coeff2 * 0.5;
+                    // feature2.laser_idx_ = laser_idx;
+                    // feature2.type_ = 'c';
+                    // features[cloud_cnt] = feature2;
+                    // cloud_cnt++;
                 }
             }
         }

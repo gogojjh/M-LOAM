@@ -75,7 +75,7 @@
 #include "../factor/pose_local_parameterization.h"
 
 #define SURROUNDING_KF_RADIUS 50.0
-#define GLOBALMAP_KF_RADIUS 50.0
+#define GLOBALMAP_KF_RADIUS 2000.0
 #define DISTANCE_KEYFRAMES 0.3
 #define MAX_FEATURE_SELECT_TIME 10 // 10ms
 #define MAX_RANDOM_QUEUE_TIME 20

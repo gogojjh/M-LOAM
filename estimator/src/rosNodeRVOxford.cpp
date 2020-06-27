@@ -107,7 +107,7 @@ void gtCallback(const nav_msgs::OdometryConstPtr &gt_odom_msg)
     Pose pose_ref_ini_cur(pose_world_ref_ini.inverse() * pose_world_ref);
 
     nav_msgs::Odometry laser_gt_odom;
-    laser_gt_odom.header.frame_id = "/world";
+    laser_gt_odom.header.frame_id = "/world_stereo";
     laser_gt_odom.child_frame_id = "/gt";
     laser_gt_odom.header.stamp = gt_odom_msg->header.stamp;
     laser_gt_odom.pose.pose.orientation.x = pose_ref_ini_cur.q_.x();
@@ -120,7 +120,7 @@ void gtCallback(const nav_msgs::OdometryConstPtr &gt_odom_msg)
     publishTF(laser_gt_odom);
 
     geometry_msgs::PoseStamped laser_gt_pose;
-    laser_gt_pose.header.frame_id = "/world";
+    laser_gt_pose.header.frame_id = "/world_stereo";
     laser_gt_pose.header.stamp = gt_odom_msg->header.stamp;
     laser_gt_pose.pose = laser_gt_odom.pose.pose;
     laser_gt_path.header = laser_gt_pose.header;
@@ -166,6 +166,8 @@ pcl::PointCloud<pcl::PointXYZIWithTime> getCloudFromMsg(const sensor_msgs::Point
     pcl::PointCloud<pcl::PointXYZIWithTime> laser_cloud;
     pcl::fromROSMsg(*cloud_msg, laser_cloud);
     // roiCloudFilter(laser_cloud, ROI_RANGE);
+    std::vector<int> indices;
+    pcl::removeNaNFromPointCloud(laser_cloud, laser_cloud, indices);
     return laser_cloud;
 }
 

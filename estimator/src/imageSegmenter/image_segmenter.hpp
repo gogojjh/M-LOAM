@@ -57,7 +57,6 @@ public:
     void setParameter(const int &vertical_scans,
                       const int &horizon_scans,
                       const int &min_cluster_size,
-                      const int &min_line_size,
                       const int &segment_valid_point_num,
                       const int &segment_valid_line_num);
 
@@ -74,12 +73,13 @@ public:
 private:
     int vertical_scans_, horizon_scans_;
     int ground_scan_id_;
-    int min_cluster_size_, min_line_size_, segment_valid_point_num_, segment_valid_line_num_;
+    int min_cluster_size_, segment_valid_point_num_, segment_valid_line_num_;
     float ang_res_x_, ang_res_y_, ang_bottom_;
     float segment_alphax_, segment_alphay_;
     std::vector<pair<int8_t, int8_t> > neighbor_iterator_;
 };
 
+// project point cloud onto a range image and rearrange the order
 template <typename PointType>
 void ImageSegmenter::projectCloud(const typename pcl::PointCloud<PointType> &laser_cloud_in,
                                   typename pcl::PointCloud<PointType> &cloud_matrix,
@@ -90,7 +90,7 @@ void ImageSegmenter::projectCloud(const typename pcl::PointCloud<PointType> &las
     size_t row_id, column_id;
     for (size_t i = 0; i < laser_cloud_in.size(); i++)
     {
-        const auto &point = laser_cloud_in.points[i];
+        const PointType &point = laser_cloud_in.points[i];
         vertical_angle = atan2(point.z, sqrt(point.x * point.x + point.y * point.y)) * 180 / M_PI;
         horizon_angle = atan2(point.x, point.y) * 180 / M_PI;
 
@@ -119,8 +119,7 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
 {
     // set specific parameters
     Eigen::MatrixXf range_mat = Eigen::MatrixXf::Constant(vertical_scans_, horizon_scans_, FLT_MAX);
-    Eigen::MatrixXf label_mat = Eigen::MatrixXf::Zero(vertical_scans_, horizon_scans_);
-    int label_count = 1;
+    Eigen::MatrixXi label_mat = Eigen::MatrixXi::Zero(vertical_scans_, horizon_scans_);
 
     pcl::PointCloud<PointType> cloud_matrix;
     cloud_matrix.resize(vertical_scans_ * horizon_scans_);
@@ -136,17 +135,38 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
     int *queue_indy_last_negi = new int[vertical_scans_ * horizon_scans_];
     float *queue_last_dis = new float[vertical_scans_ * horizon_scans_];
 
-    int flt_cnt = 0;
+    // remote FLT_MAX points
     for (size_t i = 0; i < vertical_scans_; i++)
         for (size_t j = 0; j < horizon_scans_; j++)
-            if (range_mat(i, j) == FLT_MAX)
+            if (range_mat(i, j) == FLT_MAX) 
                 label_mat(i, j) = -1;
 
     // label ground points
+    int label_count = 1;
+    size_t lower_ind, upper_ind;
+    float vertical_angle;
+    float diff_x, diff_y, diff_z;
     for (size_t i = 0; i < ground_scan_id_; i++)
+    {
         for (size_t j = 0; j < horizon_scans_; j++)
-            if (label_mat(i, j) == 0)
-                label_mat(i, j) = label_count; // 1: set as ground
+        {
+            if (range_mat(i, j) == FLT_MAX || range_mat(i + 1, j) == FLT_MAX)
+                continue;
+            lower_ind = j + i * horizon_scans_;
+            upper_ind = j + (i + 1) * horizon_scans_;
+            const PointType &point1 = cloud_matrix.points[lower_ind];
+            const PointType &point2 = cloud_matrix.points[upper_ind];
+            diff_x = point1.x - point2.x;
+            diff_y = point1.y - point2.y;
+            diff_z = point1.z - point2.z;
+            vertical_angle = atan2(diff_z, sqrt(diff_x * diff_x + diff_y * diff_y)) * 180 / M_PI;
+            if (abs(vertical_angle) <= 10) // 10deg
+            {
+                label_mat(i, j) = label_count;
+                label_mat(i+1, j) = label_count;
+            }
+        }
+    }
     label_count++;
 
     // BFS to search nearest neighbors
@@ -286,7 +306,7 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
             if (label_mat(i, j) > 0)
             {
                 PointType point = cloud_matrix.points[j + i * horizon_scans_];
-                point.intensity += i; // intensity = scan_id.timestamp
+                point.intensity = i; // intensity = scan_id.timestamp
                 bool ground_flag = (label_mat(i, j) == 1) ? true : false;
                 if ((scan_info.segment_flag_) && (label_mat(i, j) != 999999))
                 {
