@@ -81,6 +81,7 @@ std::vector<int> point_search_ind;
 std::vector<float> point_search_sq_dis;
 
 PointI pose_point_cur, pose_point_prev;
+Eigen::Quaterniond pose_ori_cur, pose_ori_prev;
 std::vector<std::pair<double, Pose> > pose_keyframes_6d;
 PointICloud::Ptr pose_keyframes_3d(new PointICloud());
 
@@ -215,7 +216,6 @@ void double2Vector()
 	pose_wmap_curr.q_ = Eigen::Quaterniond(para_pose[6], para_pose[3], para_pose[4], para_pose[5]);
 }
 
-// TODO: use active map and inactivate map
 void extractSurroundingKeyFrames()
 {
     if (pose_keyframes_6d.size() == 0) return;
@@ -226,7 +226,7 @@ void extractSurroundingKeyFrames()
     pose_point_cur.z = pose_wmap_curr.t_[2];
 
     surrounding_keyframes->clear();
-    surrounding_keyframes_ds->clear();
+    // surrounding_keyframes_ds->clear();
     kdtree_surrounding_keyframes->setInputCloud(pose_keyframes_3d);
     kdtree_surrounding_keyframes->radiusSearch(pose_point_cur, (double)SURROUNDING_KF_RADIUS, point_search_ind, point_search_sq_dis, 0);
 
@@ -234,9 +234,7 @@ void extractSurroundingKeyFrames()
         surrounding_keyframes->push_back(pose_keyframes_3d->points[point_search_ind[i]]);
     // down_size_filter_surrounding_keyframes.setInputCloud(surrounding_keyframes);
     // down_size_filter_surrounding_keyframes.filter(*surrounding_keyframes_ds);
-    // *surrounding_keyframes_ds = *surrounding_keyframes;
 
-    // TicToc t_search;
     for (int i = 0; i < surrounding_existing_keyframes_id.size(); i++) // existing keyframes id
     {
         bool existing_flag = false;
@@ -256,11 +254,7 @@ void extractSurroundingKeyFrames()
             i--;
         }
     }
-    // printf("search 1 keyframes: %fms\n", t_search.toc());
 
-    // add new key frames that are not in calculated existing key frames
-    // t_search.tic();
-    // int cnt = 0;
     for (int i = 0; i < surrounding_keyframes->size(); i++)
     {
         bool existing_flag = false;
@@ -278,7 +272,7 @@ void extractSurroundingKeyFrames()
         }
         else
         {
-            int key_ind = (int)surrounding_keyframes_ds->points[i].intensity;
+            int key_ind = (int)surrounding_keyframes->points[i].intensity;
             surrounding_existing_keyframes_id.push_back(key_ind);
             const Pose &pose_local = pose_keyframes_6d[key_ind].second;
 
@@ -292,7 +286,6 @@ void extractSurroundingKeyFrames()
         }
     }
 
-    // TicToc t_add_kf;
     PointICloud::Ptr surrounding_existing_keyframes(new PointICloud());
     PointICloud::Ptr surrounding_existing_keyframes_ds(new PointICloud());
     for (size_t i = 0; i < surrounding_existing_keyframes_id.size(); i++)
@@ -360,7 +353,6 @@ void downsampleCurrentScan()
         {
             pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
             evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
-            // evalPointUncertainty(point_ori, cov_point, pose_ext[idx]);
             if (cov_point.trace() > TRACE_THRESHOLD_BEFORE_MAPPING) continue;
         }
         PointIWithCov point_cov(point_ori, cov_point.cast<float>());
@@ -378,7 +370,6 @@ void downsampleCurrentScan()
         {
             pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
             evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
-            // evalPointUncertainty(point_ori, cov_point, pose_ext[idx]);
             if (cov_point.trace() > TRACE_THRESHOLD_BEFORE_MAPPING) continue;
         }
         PointIWithCov point_cov(point_ori, cov_point.cast<float>());
@@ -470,8 +461,8 @@ void scan2MapOptimization()
                               sel_feature_idx, FLAGS_gf_ratio);
             printf("selected features num: %lu(%lu)\n", sel_feature_idx.size(), surf_num + corner_num);
 
-            if ((frame_cnt % 100 == 0) && (FLAGS_gf_ratio != 1.0))
-                writeFeature(sel_feature_idx, map_features);
+            // if ((frame_cnt % 100 == 0) && (FLAGS_gf_ratio != 1.0))
+            //     writeFeature(sel_feature_idx, map_features);
 
             // test the good feature selection
             // {
@@ -557,17 +548,20 @@ void saveKeyframeAndInsertGraph()
     pose_point_cur.x = pose_wmap_curr.t_[0];
     pose_point_cur.y = pose_wmap_curr.t_[1];
     pose_point_cur.z = pose_wmap_curr.t_[2];
+    pose_ori_cur = pose_wmap_curr.q_;
 
-    save_new_keyframe = true;
+    save_new_keyframe = false;
     if (common::sqrSum(pose_point_cur.x - pose_point_prev.x,
                        pose_point_cur.y - pose_point_prev.y,
-                       pose_point_cur.z - pose_point_prev.z) < DISTANCE_KEYFRAMES * DISTANCE_KEYFRAMES)
+                       pose_point_cur.z - pose_point_prev.z) > DISTANCE_KEYFRAMES * DISTANCE_KEYFRAMES ||
+        pose_ori_cur.angularDistance(pose_ori_prev) / M_PI * 180 > ORIENTATION_KEYFRAMES)
     {
-        save_new_keyframe = false;
+        save_new_keyframe = true;
     }
     if ((!save_new_keyframe) && (pose_keyframes_6d.size() != 0)) return;
     pose_point_prev = pose_point_cur;
-    
+    pose_ori_prev = pose_ori_cur;
+
     // if (cloudKeyPoses3D->points.empty())
     // {
     //     gtSAMgraph.add(PriorFactor<Pose3>(0, Pose3(Rot3::RzRyRx(transformTobeMapped[2], transformTobeMapped[0], transformTobeMapped[1]), Point3(transformTobeMapped[5], transformTobeMapped[3], transformTobeMapped[4])), priorNoise));
@@ -1140,10 +1134,12 @@ int main(int argc, char **argv)
     pose_point_prev.x = 0.0;
     pose_point_prev.y = 0.0;
     pose_point_prev.z = 0.0;
+    pose_ori_prev.setIdentity();
 
     pose_point_cur.x = 0.0;
     pose_point_cur.y = 0.0;
     pose_point_cur.z = 0.0;
+    pose_ori_cur.setIdentity();
 
     pose_keyframes_6d.clear();
     pose_keyframes_3d->clear();
@@ -1164,3 +1160,6 @@ int main(int argc, char **argv)
     mapping_process.join();
 	return 0;
 }
+
+
+
