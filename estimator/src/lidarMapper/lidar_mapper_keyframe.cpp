@@ -503,7 +503,6 @@ void scan2MapOptimization()
             std::vector<PointPlaneFeature> all_surf_features, all_corner_features;
             std::vector<size_t> sel_surf_feature_idx, sel_corner_feature_idx;
             size_t surf_num = 0, corner_num = 0;
-
             TicToc t_match_features;
             if (POINT_PLANE_FACTOR)
             {
@@ -521,7 +520,7 @@ void scan2MapOptimization()
             {
                 goodFeatureMatching(kdtree_corner_from_map,
                                     *laser_cloud_corner_from_map_cov_ds,
-                                    *laser_cloud_surf_cov,
+                                    *laser_cloud_corner_cov,
                                     pose_wmap_curr,
                                     all_corner_features,
                                     sel_corner_feature_idx,
