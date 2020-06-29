@@ -68,14 +68,14 @@ std::vector<PointICovCloud::Ptr> surf_cloud_keyframes_cov;
 std::vector<PointICovCloud::Ptr> corner_cloud_keyframes_cov;
 
 // downsampling voxel grid
-pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_surrounding_keyframes;
 pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_surf;
 pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_corner;
 pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_surf_map_cov;
 pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_corner_map_cov;
-
-pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_global_map_keyframes;
 pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_global_map_cov;
+
+pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_surrounding_keyframes;
+pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_global_map_keyframes;
 
 std::vector<int> point_search_ind;
 std::vector<float> point_search_sq_dis;
@@ -197,6 +197,14 @@ void laserOdometryHandler(const nav_msgs::Odometry::ConstPtr &laser_odom)
 	odom_aft_mapped.pose.pose.position.y = pose_wmap_curr_ini.t_.y();
 	odom_aft_mapped.pose.pose.position.z = pose_wmap_curr_ini.t_.z();
 	pub_odom_aft_mapped_high_frec.publish(odom_aft_mapped); // publish (k-1)th oldest map * kth newest odom
+
+    geometry_msgs::PoseStamped laser_after_mapped_pose;
+    laser_after_mapped_pose.header = odom_aft_mapped.header;
+    laser_after_mapped_pose.pose = odom_aft_mapped.pose.pose;
+    laser_after_mapped_path.header = odom_aft_mapped.header;
+    laser_after_mapped_path.poses.push_back(laser_after_mapped_pose);
+    pub_laser_after_mapped_path.publish(laser_after_mapped_path);
+    publishTF(odom_aft_mapped);
 }
 
 void vector2Double()
@@ -288,7 +296,7 @@ void extractSurroundingKeyFrames()
 
     PointICloud::Ptr surrounding_existing_keyframes(new PointICloud());
     PointICloud::Ptr surrounding_existing_keyframes_ds(new PointICloud());
-    for (size_t i = 0; i < surrounding_existing_keyframes_id.size(); i++)
+    for (int i = 0; i < surrounding_existing_keyframes_id.size(); i++)
     {
         int key_ind = surrounding_existing_keyframes_id[i];
         PointI point = pose_keyframes_3d->points[key_ind];
@@ -431,7 +439,7 @@ void scan2MapOptimization()
                                                feature_frame,
                                                n,
                                                n_neigh,
-                                               true);
+                                               false);
                     map_features.insert(map_features.end(), feature_frame.begin(), feature_frame.end());
                     surf_num += feature_frame.size();
                 }
@@ -445,7 +453,7 @@ void scan2MapOptimization()
                                                  feature_frame,
                                                  n,
                                                  n_neigh,
-                                                 true);
+                                                 false);
                     map_features.insert(map_features.end(), feature_frame.begin(), feature_frame.end());
                     corner_num += feature_frame.size();
                 }
@@ -495,8 +503,17 @@ void scan2MapOptimization()
                 }
             }
             // printf("add constraints: %fms\n", t_add_constraints.toc());
-            // ******************************************************
 
+            // ******************************************************
+            // TODO:
+            // std::vector<PointPlaneFeature> good_surf_features, good_corner_features;
+            // goodFeatureMatching(para_pose,
+            //                     kdtree_surf_from_map,
+            //                     laser_cloud_surf_split_cov,
+            //                     FLAGS_gf_ratio,
+            //                     );
+
+            // ******************************************************
             if (iter_cnt == 0)
             {
                 TicToc t_eval_H;
@@ -551,14 +568,14 @@ void saveKeyframeAndInsertGraph()
     pose_ori_cur = pose_wmap_curr.q_;
 
     save_new_keyframe = false;
-    if (common::sqrSum(pose_point_cur.x - pose_point_prev.x,
-                       pose_point_cur.y - pose_point_prev.y,
-                       pose_point_cur.z - pose_point_prev.z) > DISTANCE_KEYFRAMES * DISTANCE_KEYFRAMES ||
+    if (sqrt((pose_point_cur.x - pose_point_prev.x) * (pose_point_cur.x - pose_point_prev.x)
+           + (pose_point_cur.y - pose_point_prev.y) * (pose_point_cur.y - pose_point_prev.y) 
+           + (pose_point_cur.z - pose_point_prev.z) * (pose_point_cur.z - pose_point_prev.z)) > DISTANCE_KEYFRAMES ||
         pose_ori_cur.angularDistance(pose_ori_prev) / M_PI * 180 > ORIENTATION_KEYFRAMES)
     {
         save_new_keyframe = true;
     }
-    if ((!save_new_keyframe) && (pose_keyframes_6d.size() != 0)) return;
+    if (!save_new_keyframe && pose_keyframes_6d.size() != 0) return;
     pose_point_prev = pose_point_cur;
     pose_ori_prev = pose_ori_cur;
 
@@ -649,14 +666,6 @@ void pubOdometry()
             odom_aft_mapped.pose.covariance[i * 6 + j] = float(cov_mapping(i, j));
     pub_odom_aft_mapped.publish(odom_aft_mapped);
 
-    geometry_msgs::PoseStamped laser_after_mapped_pose;
-    laser_after_mapped_pose.header = odom_aft_mapped.header;
-    laser_after_mapped_pose.pose = odom_aft_mapped.pose.pose;
-    laser_after_mapped_path.header = odom_aft_mapped.header;
-    laser_after_mapped_path.poses.push_back(laser_after_mapped_pose);
-    pub_laser_after_mapped_path.publish(laser_after_mapped_path);
-    publishTF(odom_aft_mapped);
-
     if (pub_keyframes.getNumSubscribers() != 0)
     {
         m_process.lock();
@@ -730,7 +739,7 @@ void pubGlobalMap()
 
 void saveGlobalMap()
 {
-    std::cout << common::YELLOW << "Saving keyframe poses & map cloud (corner + surf) to /tmp/mloam_*.pcd" << common::RESET << std::endl;
+    std::cout << common::YELLOW << "Saving keyframe poses & map cloud (corner + surf) tomp/mloam_*.pcd" << common::RESET << std::endl;
     pcd_writer.write("/tmp/mloam_mapping_keyframes.pcd", *pose_keyframes_3d);
     
     PointICovCloud::Ptr laser_cloud_map(new PointICovCloud());
@@ -758,9 +767,9 @@ void saveGlobalMap()
     *laser_cloud_map += *laser_cloud_surf_map_ds;
     *laser_cloud_map += *laser_cloud_corner_map_ds;
 
-    pcd_writer.write("/tmp/mloam_mapping_cloud.pcd", *laser_cloud_map);
-    pcd_writer.write("/tmp/mloam_mapping_surf_cloud.pcd", *laser_cloud_surf_map_ds);
     pcd_writer.write("/tmp/mloam_mapping_corner_cloud.pcd", *laser_cloud_corner_map_ds);
+    pcd_writer.write("/tmp/mloam_mapping_surf_cloud.pcd", *laser_cloud_surf_map_ds);
+    pcd_writer.write("/tmp/mloam_mapping_cloud.pcd", *laser_cloud_map);
 }
 
 void clearCloud()

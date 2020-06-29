@@ -152,6 +152,8 @@ typedef std::map<std::string, common::PointICloud> cloudFeature;
 class PointPlaneFeature
 {
 public:
+    PointPlaneFeature() : idx_(0), laser_idx_(0), type_('n') {}
+    
     size_t idx_;
     size_t laser_idx_;
     Eigen::Vector3d point_;

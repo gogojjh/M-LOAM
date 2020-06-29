@@ -55,7 +55,7 @@ td: !!opencv-matrix                 # initial value of time offset. unit: s. rea
    dt: d
    data: [0, 0]
 
-distortion: 1
+distortion: 0
 scan_period: 0.05
 laser_sync_threshold: 0.07
 
