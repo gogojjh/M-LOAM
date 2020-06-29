@@ -92,7 +92,7 @@ eig_initial: 400
 eig_thre_calib: 1000
 n_calib: 30
 
-skip_num_odom_pub: 2
+skip_num_odom_pub: 4
 
 ######################################################## mapping
 map_corner_res: 0.2

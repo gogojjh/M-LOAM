@@ -49,6 +49,9 @@ PointICovCloud::Ptr laser_cloud_corner_from_map_cov_ds(new PointICovCloud());
 std::vector<PointICovCloud> laser_cloud_surf_split_cov;
 std::vector<PointICovCloud> laser_cloud_corner_split_cov;
 
+PointICovCloud::Ptr laser_cloud_surf_cov(new PointICovCloud());
+PointICovCloud::Ptr laser_cloud_corner_cov(new PointICovCloud());
+
 pcl::KdTreeFLANN<PointI>::Ptr kdtree_surrounding_keyframes(new pcl::KdTreeFLANN<PointI>());
 pcl::KdTreeFLANN<PointI>::Ptr kdtree_global_map_keyframes(new pcl::KdTreeFLANN<PointI>());
 pcl::KdTreeFLANN<PointIWithCov>::Ptr kdtree_surf_from_map(new pcl::KdTreeFLANN<PointIWithCov>());
@@ -114,8 +117,6 @@ std::vector<double> cov_mapping_list;
 double total_mapping = 0.0;
 bool is_degenerate;
 bool with_ua_flag;
-
-FeatureExtract f_extract;
 
 pcl::PCDWriter pcd_writer;
 
@@ -319,12 +320,10 @@ void extractSurroundingKeyFrames()
     // }
 
     TicToc t_filter;
-    m_process.lock();
     down_size_filter_surf_map_cov.setInputCloud(laser_cloud_surf_from_map_cov);
     down_size_filter_surf_map_cov.filter(*laser_cloud_surf_from_map_cov_ds);
     down_size_filter_corner_map_cov.setInputCloud(laser_cloud_corner_from_map_cov);
     down_size_filter_corner_map_cov.filter(*laser_cloud_corner_from_map_cov_ds);
-    m_process.unlock();
     printf("corner/surf: before ds: %lu, %lu; after ds: %lu, %lu\n", 
             laser_cloud_corner_from_map_cov->size(), laser_cloud_surf_from_map_cov->size(),
             laser_cloud_corner_from_map_cov_ds->size(), laser_cloud_surf_from_map_cov_ds->size());
@@ -340,14 +339,10 @@ void downsampleCurrentScan()
     laser_cloud_corner_last_ds->clear();
     down_size_filter_corner.setInputCloud(laser_cloud_corner_last);
     down_size_filter_corner.filter(*laser_cloud_corner_last_ds);
-    std::cout << "input surf num: " << laser_cloud_surf_last_ds->size()
-              << " corner num: " << laser_cloud_corner_last_ds->size() << std::endl;
 
-    for (size_t n = 0; n < NUM_OF_LASER; n++)
-    {
-        laser_cloud_surf_split_cov[n].clear();
-        laser_cloud_corner_split_cov[n].clear();
-    }
+    laser_cloud_surf_cov->clear();
+    laser_cloud_corner_cov->clear();
+
     // propagate the extrinsic uncertainty on points
     for (PointI &point_ori : *laser_cloud_surf_last_ds)
     {
@@ -357,14 +352,15 @@ void downsampleCurrentScan()
         if (!with_ua_flag) 
         {
             cov_point = COV_MEASUREMENT; // add extrinsic perturbation
-        } else
+        } 
+        else
         {
             pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
             evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
             if (cov_point.trace() > TRACE_THRESHOLD_BEFORE_MAPPING) continue;
         }
         PointIWithCov point_cov(point_ori, cov_point.cast<float>());
-        laser_cloud_surf_split_cov[idx].push_back(point_cov);
+        laser_cloud_surf_cov->push_back(point_cov);
     }
     for (PointI &point_ori : *laser_cloud_corner_last_ds)
     {
@@ -374,15 +370,18 @@ void downsampleCurrentScan()
         if (!with_ua_flag) 
         {
             cov_point = COV_MEASUREMENT; // add extrinsic perturbation
-        } else
+        } 
+        else
         {
             pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
             evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
             if (cov_point.trace() > TRACE_THRESHOLD_BEFORE_MAPPING) continue;
         }
         PointIWithCov point_cov(point_ori, cov_point.cast<float>());
-        laser_cloud_corner_split_cov[idx].push_back(point_cov);
+        laser_cloud_corner_cov->push_back(point_cov);
     }
+    std::cout << "input surf num: " << laser_cloud_surf_cov->size()
+              << " corner num: " << laser_cloud_corner_cov->size() << std::endl;
 }
 
 void scan2MapOptimization()
@@ -423,51 +422,47 @@ void scan2MapOptimization()
             para_ids.push_back(para_pose);
 
             // ******************************************************
-            TicToc t_match_features;
-            std::vector<PointPlaneFeature> map_features;
-            size_t surf_num = 0, corner_num = 0;
-            for (size_t n = 0; n < NUM_OF_LASER; n++)
-            {
-                int n_neigh = 5;
-                if (POINT_PLANE_FACTOR)
-                {
-                    std::vector<PointPlaneFeature> feature_frame;
-                    f_extract.matchSurfFromMap(kdtree_surf_from_map,
-                                               *laser_cloud_surf_from_map_cov_ds,
-                                               laser_cloud_surf_split_cov[n],
-                                               pose_wmap_curr,
-                                               feature_frame,
-                                               n,
-                                               n_neigh,
-                                               false);
-                    map_features.insert(map_features.end(), feature_frame.begin(), feature_frame.end());
-                    surf_num += feature_frame.size();
-                }
-                if (POINT_EDGE_FACTOR)
-                {
-                    std::vector<PointPlaneFeature> feature_frame;
-                    f_extract.matchCornerFromMap(kdtree_corner_from_map,
-                                                 *laser_cloud_corner_from_map_cov_ds,
-                                                 laser_cloud_corner_split_cov[n],
-                                                 pose_wmap_curr,
-                                                 feature_frame,
-                                                 n,
-                                                 n_neigh,
-                                                 false);
-                    map_features.insert(map_features.end(), feature_frame.begin(), feature_frame.end());
-                    corner_num += feature_frame.size();
-                }
-            }
-            printf("matching features time: %fms\n", t_match_features.toc());
-            LOG_EVERY_N(INFO, 100) << "matching surf & corner features num: " << surf_num << ", " << corner_num;
+            // TicToc t_match_features;
+            // std::vector<PointPlaneFeature> map_features;
+            // size_t surf_num = 0, corner_num = 0;
 
-            // TODO: testing good feature selection
-            std::vector<size_t> sel_feature_idx;
-            goodFeatureSelect(para_pose,
-                              laser_cloud_surf_split_cov, laser_cloud_corner_split_cov,
-                              map_features, map_features.size(),
-                              sel_feature_idx, FLAGS_gf_ratio);
-            printf("selected features num: %lu(%lu)\n", sel_feature_idx.size(), surf_num + corner_num);
+            // int n_neigh = 5;
+            // if (POINT_PLANE_FACTOR)
+            // {
+            //     std::vector<PointPlaneFeature> feature_frame;
+            //     f_extract.matchSurfFromMap(kdtree_surf_from_map,
+            //                                *laser_cloud_surf_from_map_cov_ds,
+            //                                *laser_cloud_surf_cov,
+            //                                pose_wmap_curr,
+            //                                feature_frame,
+            //                                n_neigh,
+            //                                false);
+            //     map_features.insert(map_features.end(), feature_frame.begin(), feature_frame.end());
+            //     surf_num += feature_frame.size();
+            // }
+            // if (POINT_EDGE_FACTOR)
+            // {
+            //     std::vector<PointPlaneFeature> feature_frame;
+            //     f_extract.matchCornerFromMap(kdtree_corner_from_map,
+            //                                  *laser_cloud_corner_from_map_cov_ds,
+            //                                  *laser_cloud_corner_cov,
+            //                                  pose_wmap_curr,
+            //                                  feature_frame,
+            //                                  n_neigh,
+            //                                  false);
+            //     map_features.insert(map_features.end(), feature_frame.begin(), feature_frame.end());
+            //     corner_num += feature_frame.size();
+            // }
+            // printf("matching features time: %fms\n", t_match_features.toc());
+            // LOG_EVERY_N(INFO, 100) << "matching surf & corner features num: " << surf_num << ", " << corner_num;
+
+            // // TODO: testing good feature selection
+            // std::vector<size_t> sel_feature_idx;
+            // goodFeatureSelect(para_pose,
+            //                   *laser_cloud_surf_cov, *laser_cloud_corner_cov,
+            //                   map_features, map_features.size(),
+            //                   sel_feature_idx, FLAGS_gf_ratio);
+            // printf("selected features num: %lu(%lu)\n", sel_feature_idx.size(), surf_num + corner_num);
 
             // if ((frame_cnt % 100 == 0) && (FLAGS_gf_ratio != 1.0))
             //     writeFeature(sel_feature_idx, map_features);
@@ -481,16 +476,69 @@ void scan2MapOptimization()
             //                           sel_feature_idx_test, FLAGS_gf_ratio);
             // }
 
+            // TicToc t_add_constraints;
+            // CHECK_JACOBIAN = 0;
+            // for (const size_t &fid : sel_feature_idx)
+            // {
+            //     const PointPlaneFeature &feature = map_features[fid];
+            //     Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
+            //     if (feature.type_ == 's')
+            //         extractCov(laser_cloud_surf_cov->points[feature.idx_], cov_matrix);
+            //     else if (feature.type_ == 'c')
+            //         extractCov(laser_cloud_corner_cov->points[feature.idx_], cov_matrix);
+            //     LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
+            //     ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
+            //     res_ids_proj.push_back(res_id);
+            //     if (CHECK_JACOBIAN)
+            //     {
+            //         const double **tmp_param = new const double *[1];
+            //         tmp_param[0] = para_pose;
+            //         f->check(tmp_param);
+            //         CHECK_JACOBIAN = 0;
+            //     }
+            // }
+            // printf("add constraints: %fms\n", t_add_constraints.toc());
+            // // ******************************************************
+
+            std::vector<PointPlaneFeature> all_surf_features, all_corner_features;
+            std::vector<size_t> sel_surf_feature_idx, sel_corner_feature_idx;
+            size_t surf_num = 0, corner_num = 0;
+
+            TicToc t_match_features;
+            if (POINT_PLANE_FACTOR)
+            {
+                goodFeatureMatching(kdtree_surf_from_map,
+                                    *laser_cloud_surf_from_map_cov_ds,
+                                    *laser_cloud_surf_cov,
+                                    pose_wmap_curr,
+                                    all_surf_features,
+                                    sel_surf_feature_idx,
+                                    's',
+                                    FLAGS_gf_ratio);
+                surf_num = sel_surf_feature_idx.size();
+            }
+            if (POINT_EDGE_FACTOR)
+            {
+                goodFeatureMatching(kdtree_corner_from_map,
+                                    *laser_cloud_corner_from_map_cov_ds,
+                                    *laser_cloud_surf_cov,
+                                    pose_wmap_curr,
+                                    all_corner_features,
+                                    sel_corner_feature_idx,
+                                    'c',
+                                    FLAGS_gf_ratio);
+                corner_num = sel_corner_feature_idx.size();
+            }
+            printf("matching features time: %fms\n", t_match_features.toc());
+            printf("matching surf & corner num: %lu, %lu\n", surf_num, corner_num);
+
             TicToc t_add_constraints;
             CHECK_JACOBIAN = 0;
-            for (const size_t &fid : sel_feature_idx)
+            for (const size_t &fid : sel_surf_feature_idx)
             {
-                const PointPlaneFeature &feature = map_features[fid];
+                const PointPlaneFeature &feature = all_surf_features[fid];
                 Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
-                if (feature.type_ == 's')
-                    extractCov(laser_cloud_surf_split_cov[feature.laser_idx_].points[feature.idx_], cov_matrix);
-                else if (feature.type_ == 'c')
-                    extractCov(laser_cloud_corner_split_cov[feature.laser_idx_].points[feature.idx_], cov_matrix);
+                extractCov(laser_cloud_surf_cov->points[feature.idx_], cov_matrix);
                 LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
                 ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
                 res_ids_proj.push_back(res_id);
@@ -502,16 +550,16 @@ void scan2MapOptimization()
                     CHECK_JACOBIAN = 0;
                 }
             }
-            // printf("add constraints: %fms\n", t_add_constraints.toc());
-
-            // ******************************************************
-            // TODO:
-            // std::vector<PointPlaneFeature> good_surf_features, good_corner_features;
-            // goodFeatureMatching(para_pose,
-            //                     kdtree_surf_from_map,
-            //                     laser_cloud_surf_split_cov,
-            //                     FLAGS_gf_ratio,
-            //                     );
+            for (const size_t &fid : sel_corner_feature_idx)
+            {
+                const PointPlaneFeature &feature = all_corner_features[fid];
+                Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
+                extractCov(laser_cloud_corner_cov->points[feature.idx_], cov_matrix);
+                LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
+                ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
+                res_ids_proj.push_back(res_id);
+            }
+            printf("add constraints: %fms\n", t_add_constraints.toc());
 
             // ******************************************************
             if (iter_cnt == 0)
@@ -603,22 +651,17 @@ void saveKeyframeAndInsertGraph()
     pose_3d.z = pose_wmap_curr.t_[2];
     pose_3d.intensity = pose_keyframes_3d->size();
 
-    m_process.lock();
     pose_keyframes_3d->push_back(pose_3d);
     pose_keyframes_6d.push_back(std::make_pair(time_laser_odometry, pose_wmap_curr));
-    m_process.unlock();
 
     PointICovCloud::Ptr surf_keyframe_cov(new PointICovCloud());
     PointICovCloud::Ptr corner_keyframe_cov(new PointICovCloud());
-    for (size_t n = 0; n < NUM_OF_LASER; n++)
-    {
-        *surf_keyframe_cov += laser_cloud_surf_split_cov[n];
-        *corner_keyframe_cov += laser_cloud_corner_split_cov[n];
-    }
-    m_process.lock();
+
+    pcl::copyPointCloud(*laser_cloud_surf_cov, *surf_keyframe_cov);
+    pcl::copyPointCloud(*laser_cloud_corner_cov, *corner_keyframe_cov);
+
     surf_cloud_keyframes_cov.push_back(surf_keyframe_cov);
     corner_cloud_keyframes_cov.push_back(corner_keyframe_cov);
-    m_process.unlock();
     printf("current keyframes size: %lu\n", pose_keyframes_3d->size());
 }
 
@@ -668,10 +711,8 @@ void pubOdometry()
 
     if (pub_keyframes.getNumSubscribers() != 0)
     {
-        m_process.lock();
         sensor_msgs::PointCloud2 keyframes_msg;
         pcl::toROSMsg(*pose_keyframes_3d, keyframes_msg);
-        m_process.unlock();
         keyframes_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
         keyframes_msg.header.frame_id = "/world";
         pub_keyframes.publish(keyframes_msg);
@@ -686,10 +727,10 @@ void pubGlobalMap()
         rate.sleep();
         if (pub_laser_cloud_surrounding.getNumSubscribers() != 0)
         {
-            m_process.lock();
+            // m_process.lock();
             sensor_msgs::PointCloud2 laser_cloud_surround_msg;
             pcl::toROSMsg(*laser_cloud_surf_from_map_cov_ds, laser_cloud_surround_msg);
-            m_process.unlock();
+            // m_process.unlock();
             laser_cloud_surround_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
             laser_cloud_surround_msg.header.frame_id = "/world";
             pub_laser_cloud_surrounding.publish(laser_cloud_surround_msg);
@@ -889,6 +930,8 @@ void process()
 			m_buf.unlock();
 			
 			if (extrinsics.status) continue; // calibration is not finish
+            std::lock_guard<std::mutex> lock(m_process);
+
 			frame_cnt++;
 			TicToc t_whole_mapping;
 
@@ -1101,7 +1144,7 @@ int main(int argc, char **argv)
 
 	std::cout << "config file: " << FLAGS_config_file << std::endl;
 	readParameters(FLAGS_config_file);
-	printf("Mapping as %fhz\n", 10.0 / SKIP_NUM_ODOM_PUB);
+	printf("Mapping as %fhz\n", 1.0 / (SCAN_PERIOD * SKIP_NUM_ODOM_PUB));
 
 	ros::Subscriber sub_laser_cloud_full_res = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud", 2, laserCloudFullResHandler);
 	ros::Subscriber sub_laser_cloud_surf_last = nh.subscribe<sensor_msgs::PointCloud2>("/surf_points_less_flat", 2, laserCloudSurfLastHandler);

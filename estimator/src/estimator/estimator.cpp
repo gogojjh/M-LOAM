@@ -1057,10 +1057,10 @@ void Estimator::buildCalibMap()
             int n_neigh = 5;
             f_extract_.matchSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[IDX_REF],
                                         surf_points_stack_[n][i], pose_local_[n][i], surf_map_features_[n][i], 
-                                        n, n_neigh, true);
+                                        n_neigh, true);
             f_extract_.matchCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[IDX_REF],
                                           corner_points_stack_[n][i], pose_local_[n][i], corner_map_features_[n][i], 
-                                          n, n_neigh, true);
+                                          n_neigh, true);
         }
     }
     LOG_EVERY_N(INFO, 100) << "build map(extract map): " << t_build_map.toc() << "ms("
@@ -1142,10 +1142,10 @@ void Estimator::buildLocalMap()
         {         
             f_extract_.matchSurfFromMap(kdtree_surf_points_local_map, surf_points_local_map_filtered_[n],
                                         surf_points_stack_[n][i], pose_local_[n][i], surf_map_features_[n][i], 
-                                        n, n_neigh, true);
+                                        n_neigh, true);
             f_extract_.matchCornerFromMap(kdtree_corner_points_local_map, corner_points_local_map_filtered_[n],
                                           corner_points_stack_[n][i], pose_local_[n][i], corner_map_features_[n][i],
-                                          n, n_neigh, true);
+                                          n_neigh, true);
         }
     }
     LOG_EVERY_N(INFO, 100) << "build map(extract map): " << t_build_map.toc() << "ms("

@@ -95,7 +95,6 @@ public:
                             const typename pcl::PointCloud<PointType> &cloud_data,
                             const Pose &pose_local, 
                             std::vector<PointPlaneFeature> &features, 
-                            const size_t &laser_idx = 0,
                             const size_t &N_NEIGH = 5, 
                             const bool &CHECK_FOV = true);
 
@@ -105,30 +104,28 @@ public:
                           const typename pcl::PointCloud<PointType> &cloud_data,
                           const Pose &pose_local,
                           std::vector<PointPlaneFeature> &features,
-                          const size_t &laser_idx = 0,
                           const size_t &N_NEIGH = 5,
                           const bool &CHECK_FOV = true);
 
-    // template <typename PointType>
-    // void matchCornerPointFromMap(const typename pcl::KdTreeFLANN<PointType>::Ptr &kdtree_corner_from_map,
-    //                              const typename pcl::PointCloud<PointType> &cloud_map,
-    //                              const typename PointType &point_ori,
-    //                              const Pose &pose_local,
-    //                              PointPlaneFeature &feature1,
-    //                              PointPlaneFeature &feature2,
-    //                              const size_t &laser_idx = 0,
-    //                              const size_t &N_NEIGH = 5,
-    //                              const bool &CHECK_FOV = true); 
+    template <typename PointType>
+    bool matchCornerPointFromMap(const typename pcl::KdTreeFLANN<PointType>::Ptr &kdtree_corner_from_map,
+                                 const typename pcl::PointCloud<PointType> &cloud_map,
+                                 const PointType &point_ori,
+                                 const Pose &pose_local,
+                                 PointPlaneFeature &feature,
+                                 const size_t &idx,
+                                 const size_t &N_NEIGH = 5,
+                                 const bool &CHECK_FOV = true);
 
-    // template <typename PointType>
-    // bool matchSurfPointFromMap(const typename pcl::KdTreeFLANN<PointType>::Ptr &kdtree_surf_from_map,
-    //                            const typename pcl::PointCloud<PointType> &cloud_map,
-    //                            const typename PointType &point_ori,
-    //                            const Pose &pose_local,
-    //                            PointPlaneFeature &feature,
-    //                            const size_t &laser_idx = 0,
-    //                            const size_t &N_NEIGH = 5,
-    //                            const bool &CHECK_FOV = true);
+    template <typename PointType>
+    bool matchSurfPointFromMap(const typename pcl::KdTreeFLANN<PointType>::Ptr &kdtree_surf_from_map,
+                               const typename pcl::PointCloud<PointType> &cloud_map,
+                               const PointType &point_ori,
+                               const Pose &pose_local,
+                               PointPlaneFeature &feature,
+                               const size_t &idx,
+                               const size_t &N_NEIGH = 5,
+                               const bool &CHECK_FOV = true);
 };
 
 template <typename PointType>
@@ -349,7 +346,6 @@ void FeatureExtract::matchCornerFromMap(const typename pcl::KdTreeFLANN<PointTyp
                                         const typename pcl::PointCloud<PointType> &cloud_data,
                                         const Pose &pose_local,
                                         std::vector<PointPlaneFeature> &features,
-                                        const size_t &laser_idx,
                                         const size_t &N_NEIGH,
                                         const bool &CHECK_FOV)
 {
@@ -449,7 +445,7 @@ void FeatureExtract::matchCornerFromMap(const typename pcl::KdTreeFLANN<PointTyp
                     feature1.idx_ = i;
                     feature1.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
                     feature1.coeffs_ = coeff1 * 0.5;
-                    feature1.laser_idx_ = laser_idx;
+                    feature1.laser_idx_ = (size_t)point_ori.intensity;
                     feature1.type_ = 'c';
                     features[cloud_cnt] = feature1;
                     cloud_cnt++;
@@ -457,7 +453,7 @@ void FeatureExtract::matchCornerFromMap(const typename pcl::KdTreeFLANN<PointTyp
                     feature2.idx_ = i;
                     feature2.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
                     feature2.coeffs_ = coeff2 * 0.5;
-                    feature2.laser_idx_ = laser_idx;
+                    feature2.laser_idx_ = (size_t)point_ori.intensity;
                     feature2.type_ = 'c';
                     features[cloud_cnt] = feature2;
                     cloud_cnt++;
@@ -475,7 +471,6 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
                                       const typename pcl::PointCloud<PointType> &cloud_data,
                                       const Pose &pose_local,
                                       std::vector<PointPlaneFeature> &features,
-                                      const size_t &laser_idx,
                                       const size_t &N_NEIGH,
                                       const bool &CHECK_FOV)
 {
@@ -589,7 +584,7 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
                     feature.idx_ = i;
                     feature.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
                     feature.coeffs_ = coeff;
-                    feature.laser_idx_ = laser_idx;
+                    feature.laser_idx_ = (size_t)point_ori.intensity;
                     feature.type_ = 's';
                     features[cloud_cnt] = feature;
                     cloud_cnt++;
@@ -600,213 +595,217 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
     features.resize(cloud_cnt);
 }
 
-// template <typename PointType>
-// void FeatureExtract::matchCornerPointFromMap(const typename pcl::KdTreeFLANN<PointType>::Ptr &kdtree_corner_from_map,
-//                                              const typename pcl::PointCloud<PointType> &cloud_map,
-//                                              const typename PointType &point_ori,
-//                                              const Pose &pose_local,
-//                                              PointPlaneFeature &feature1,
-//                                              PointPlaneFeature &feature2,
-//                                              const size_t &laser_idx,
-//                                              const size_t &N_NEIGH,
-//                                              const bool &CHECK_FOV)
-// {
-//     if (!pcl::traits::has_field<PointType, pcl::fields::intensity>::value)
-//     {
-//         std::cerr << "[FeatureExtract] Point does not have intensity field!" << std::endl;
-//         exit(EXIT_FAILURE);
-//     }
-//     std::vector<int> point_search_idx(N_NEIGH, 0);
-//     std::vector<float> point_search_sq_dis(N_NEIGH, 0);
+template <typename PointType>
+bool FeatureExtract::matchCornerPointFromMap(const typename pcl::KdTreeFLANN<PointType>::Ptr &kdtree_corner_from_map,
+                                             const typename pcl::PointCloud<PointType> &cloud_map,
+                                             const PointType &point_ori,
+                                             const Pose &pose_local,
+                                             PointPlaneFeature &feature,
+                                             const size_t &idx,
+                                             const size_t &N_NEIGH,
+                                             const bool &CHECK_FOV)
+{
+    if (!pcl::traits::has_field<PointType, pcl::fields::intensity>::value)
+    {
+        LOG(INFO) << "[FeatureExtract] Point does not have intensity field!";
+        return false;
+    }
+    std::vector<int> point_search_idx(N_NEIGH, 0);
+    std::vector<float> point_search_sq_dis(N_NEIGH, 0);
+    int num_neighbors = N_NEIGH;
 
-//     pointAssociateToMap(point_ori, point_sel, pose_local);
-//     kdtree_corner_from_map->nearestKSearch(point_sel, num_neighbors, point_search_idx, point_search_sq_dis);
-//     if (point_search_sq_dis[num_neighbors - 1] < MIN_MATCH_SQ_DIS)
-//     {
-//         // calculate the coefficients of edge points
-//         std::vector<Eigen::Vector3f> near_corners;
-//         Eigen::Vector3f center(0, 0, 0); // mean value
-//         for (int j = 0; j < num_neighbors; j++)
-//         {
-//             Eigen::Vector3f tmp(cloud_map.points[point_search_idx[j]].x,
-//                                 cloud_map.points[point_search_idx[j]].y,
-//                                 cloud_map.points[point_search_idx[j]].z);
-//             center += tmp;
-//             near_corners.push_back(tmp);
-//         }
-//         center /= (1.0 * num_neighbors);
-//         Eigen::Matrix3f cov_mat = Eigen::Matrix3f::Zero();
-//         for (int j = 0; j < num_neighbors; j++)
-//         {
-//             Eigen::Vector3f tmp_zero_mean = near_corners[j] - center;
-//             cov_mat += tmp_zero_mean * tmp_zero_mean.transpose();
-//         }
-//         Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> esolver(cov_mat);
+    PointType point_sel;
+    pointAssociateToMap(point_ori, point_sel, pose_local);
+    kdtree_corner_from_map->nearestKSearch(point_sel, num_neighbors, point_search_idx, point_search_sq_dis);
+    if (point_search_sq_dis[num_neighbors - 1] < MIN_MATCH_SQ_DIS)
+    {
+        // calculate the coefficients of edge points
+        std::vector<Eigen::Vector3f> near_corners;
+        Eigen::Vector3f center(0, 0, 0); // mean value
+        for (int j = 0; j < num_neighbors; j++)
+        {
+            Eigen::Vector3f tmp(cloud_map.points[point_search_idx[j]].x,
+                                cloud_map.points[point_search_idx[j]].y,
+                                cloud_map.points[point_search_idx[j]].z);
+            center += tmp;
+            near_corners.push_back(tmp);
+        }
+        center /= (1.0 * num_neighbors);
+        Eigen::Matrix3f cov_mat = Eigen::Matrix3f::Zero();
+        for (int j = 0; j < num_neighbors; j++)
+        {
+            Eigen::Vector3f tmp_zero_mean = near_corners[j] - center;
+            cov_mat += tmp_zero_mean * tmp_zero_mean.transpose();
+        }
+        Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> esolver(cov_mat);
 
-//         // if is indeed line feature
-//         // note Eigen library sort eigenvalues in increasing order
-//         Eigen::Vector3f unit_direction = esolver.eigenvectors().col(2);
-//         if (esolver.eigenvalues()[2] > 3 * esolver.eigenvalues()[1])
-//         {
-//             Eigen::Vector3f X0(point_sel.x, point_sel.y, point_sel.z);
-//             Eigen::Vector3f point_on_line = center;
-//             Eigen::Vector3f X1, X2;
-//             X1 = 0.1 * unit_direction + point_on_line;
-//             X2 = -0.1 * unit_direction + point_on_line;
+        // if is indeed line feature
+        // note Eigen library sort eigenvalues in increasing order
+        Eigen::Vector3f unit_direction = esolver.eigenvectors().col(2);
+        if (esolver.eigenvalues()[2] > 3 * esolver.eigenvalues()[1])
+        {
+            Eigen::Vector3f X0(point_sel.x, point_sel.y, point_sel.z);
+            Eigen::Vector3f point_on_line = center;
+            Eigen::Vector3f X1, X2;
+            X1 = 0.1 * unit_direction + point_on_line;
+            X2 = -0.1 * unit_direction + point_on_line;
 
-//             Eigen::Vector3f n = (X1 - X0).cross(X2 - X0);
-//             Eigen::Vector3f w2 = n.normalized();
-//             Eigen::Vector3f w1 = (w2.cross(X2 - X1)).normalized();
-//             float ld_1 = n.norm() / (X1 - X2).norm(); // the distance between point to plane
-//             float ld_2 = 0.0;
-//             float ld_p1 = -(w1.x() * point_sel.x + w1.y() * point_sel.y + w1.z() * point_sel.z - ld_1);
-//             float ld_p2 = -(w2.x() * point_sel.x + w2.y() * point_sel.y + w2.z() * point_sel.z - ld_2);
-//             float s = 1 - 0.9f * fabs(ld_1);
-//             bool is_in_laser_fov = false;
-//             if (CHECK_FOV)
-//             {
-//                 PointType point_on_z_axis, point_on_z_axis_trans;
-//                 point_on_z_axis.x = 0.0;
-//                 point_on_z_axis.y = 0.0;
-//                 point_on_z_axis.z = 10.0;
-//                 pointAssociateToMap(point_on_z_axis, point_on_z_axis_trans, pose_local);
-//                 float squared_side1 = sqrSum(pose_local.t_(0) - point_sel.x,
-//                                                 pose_local.t_(1) - point_sel.y,
-//                                                 pose_local.t_(2) - point_sel.z);
-//                 float squared_side2 = sqrSum(point_on_z_axis_trans.x - point_sel.x,
-//                                                 point_on_z_axis_trans.y - point_sel.y,
-//                                                 point_on_z_axis_trans.z - point_sel.z);
+            Eigen::Vector3f n = (X1 - X0).cross(X2 - X0);
+            Eigen::Vector3f w2 = n.normalized();
+            Eigen::Vector3f w1 = (w2.cross(X2 - X1)).normalized();
+            float ld_1 = n.norm() / (X1 - X2).norm(); // the distance between point to plane
+            float ld_2 = 0.0;
+            float ld_p1 = -(w1.x() * point_sel.x + w1.y() * point_sel.y + w1.z() * point_sel.z - ld_1);
+            float ld_p2 = -(w2.x() * point_sel.x + w2.y() * point_sel.y + w2.z() * point_sel.z - ld_2);
+            float s = 1 - 0.9f * fabs(ld_1);
+            bool is_in_laser_fov = false;
+            if (CHECK_FOV)
+            {
+                PointType point_on_z_axis, point_on_z_axis_trans;
+                point_on_z_axis.x = 0.0;
+                point_on_z_axis.y = 0.0;
+                point_on_z_axis.z = 10.0;
+                pointAssociateToMap(point_on_z_axis, point_on_z_axis_trans, pose_local);
+                float squared_side1 = sqrSum(pose_local.t_(0) - point_sel.x,
+                                                pose_local.t_(1) - point_sel.y,
+                                                pose_local.t_(2) - point_sel.z);
+                float squared_side2 = sqrSum(point_on_z_axis_trans.x - point_sel.x,
+                                                point_on_z_axis_trans.y - point_sel.y,
+                                                point_on_z_axis_trans.z - point_sel.z);
 
-//                 float check1 = 100.0f + squared_side1 - squared_side2 - 10.0f * sqrt(3.0f) * sqrt(squared_side1);
-//                 float check2 = 100.0f + squared_side1 - squared_side2 + 10.0f * sqrt(3.0f) * sqrt(squared_side1);
-//                 // within +-60 degree
-//                 if (check1 < 0 && check2 > 0)
-//                     is_in_laser_fov = true;
-//             }
-//             else
-//             {
-//                 is_in_laser_fov = true;
-//             }
-//             if ((s > 0.1) && (is_in_laser_fov))
-//             {
-//                 Eigen::Vector4d coeff1(w1.x(), w1.y(), w1.z(), ld_p1);
-//                 Eigen::Vector4d coeff2(w2.x(), w2.y(), w2.z(), ld_p2);
+                float check1 = 100.0f + squared_side1 - squared_side2 - 10.0f * sqrt(3.0f) * sqrt(squared_side1);
+                float check2 = 100.0f + squared_side1 - squared_side2 + 10.0f * sqrt(3.0f) * sqrt(squared_side1);
+                // within +-60 degree
+                if (check1 < 0 && check2 > 0)
+                    is_in_laser_fov = true;
+            }
+            else
+            {
+                is_in_laser_fov = true;
+            }
+            if (s > 0.1 && is_in_laser_fov)
+            {
+                // Eigen::Vector4d coeff1(w1.x(), w1.y(), w1.z(), ld_p1);
+                // Eigen::Vector4d coeff2(w2.x(), w2.y(), w2.z(), ld_p2);
 
-//                 feature1.idx_ = i;
-//                 feature1.point_ = Eigen::Vector3f{point_ori.x, point_ori.y, point_ori.z};
-//                 feature1.coeffs_ = coeff1 * 0.5;
-//                 feature1.laser_idx_ = laser_idx;
-//                 feature1.type_ = 'c';
+                // feature1.idx_ = i;
+                // feature1.point_ = Eigen::Vector3f{point_ori.x, point_ori.y, point_ori.z};
+                // feature1.coeffs_ = coeff1 * 0.5;
+                // feature1.laser_idx_ = (size_t)point_ori.intensity;
+                // feature1.type_ = 'c';
 
-//                 feature2.idx_ = i;
-//                 feature2.point_ = Eigen::Vector3f{point_ori.x, point_ori.y, point_ori.z};
-//                 feature2.coeffs_ = coeff2 * 0.5;
-//                 feature2.laser_idx_ = laser_idx;
-//                 feature2.type_ = 'c';
-//                 return true;
-//             }
-//         }
-//     }
-//     return false;
-// }
+                // feature2.idx_ = i;
+                // feature2.point_ = Eigen::Vector3f{point_ori.x, point_ori.y, point_ori.z};
+                // feature2.coeffs_ = coeff2 * 0.5;
+                // feature2.laser_idx_ = (size_t)point_ori.intensity;
+                // feature2.type_ = 'c';
 
-// // TODO:
-// template <typename PointType>
-// bool FeatureExtract::matchSurfPointFromMap(const typename pcl::KdTreeFLANN<PointType>::Ptr &kdtree_surf_from_map,
-//                                            const typename pcl::PointCloud<PointType> &cloud_map,
-//                                            const typename PointType &point_ori,
-//                                            const Pose &pose_local,
-//                                            PointPlaneFeature &feature,
-//                                            const size_t &laser_idx,
-//                                            const size_t &N_NEIGH,
-//                                            const bool &CHECK_FOV)
-// {
-//     if (!pcl::traits::has_field<PointType, pcl::fields::intensity>::value)
-//     {
-//         std::cerr << "[FeatureExtract] Point does not have intensity field!" << std::endl;
-//         exit(EXIT_FAILURE);
-//     }
-//     std::vector<int> point_search_idx(N_NEIGH, 0);
-//     std::vector<float> point_search_sq_dis(N_NEIGH, 0);
-//     Eigen::MatrixXd mat_A = Eigen::MatrixXd::Zero(N_NEIGH, 3);
-//     Eigen::MatrixXd mat_B = Eigen::MatrixXd::Constant(N_NEIGH, 1, -1);
-//     const int num_neighbors = N_NEIGH;
+                Eigen::Vector4d coeff1(w1.x(), w1.y(), w1.z(), ld_p1);
+                feature.idx_ = idx;
+                feature.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
+                feature.coeffs_ = coeff1;
+                feature.laser_idx_ = (size_t)point_ori.intensity;
+                feature.type_ = 'c';
+                return true;
+            }
+        }
+    }
+    return false;
+}
 
-//     pointAssociateToMap(point_ori, point_sel, pose_local);
-//     kdtree_surf_from_map->nearestKSearch(point_sel, num_neighbors, point_search_idx, point_search_sq_dis);
-//     if (point_search_sq_dis[num_neighbors - 1] < MIN_MATCH_SQ_DIS)
-//     {
-//         std::vector<bool> point_select(num_neighbors, true);
-//         for (int j = 0; j < num_neighbors; j++)
-//         {
-//             if (!point_select[j])
-//                 continue;
-//             mat_A(j, 0) = cloud_map.points[point_search_idx[j]].x;
-//             mat_A(j, 1) = cloud_map.points[point_search_idx[j]].y;
-//             mat_A(j, 2) = cloud_map.points[point_search_idx[j]].z;
-//         }
-//         Eigen::Vector3f norm = mat_A.colPivHouseholderQr().solve(mat_B);
-//         float negative_OA_dot_norm = 1 / norm.norm();
-//         norm.normalize();
+template <typename PointType>
+bool FeatureExtract::matchSurfPointFromMap(const typename pcl::KdTreeFLANN<PointType>::Ptr &kdtree_surf_from_map,
+                                           const typename pcl::PointCloud<PointType> &cloud_map,
+                                           const PointType &point_ori,
+                                           const Pose &pose_local,
+                                           PointPlaneFeature &feature,
+                                           const size_t &idx,
+                                           const size_t &N_NEIGH,
+                                           const bool &CHECK_FOV)
+{
+    if (!pcl::traits::has_field<PointType, pcl::fields::intensity>::value)
+    {
+        LOG(INFO) << "[FeatureExtract] Point does not have intensity field!";
+        return false;
+    }
+    std::vector<int> point_search_idx(N_NEIGH, 0);
+    std::vector<float> point_search_sq_dis(N_NEIGH, 0);
+    Eigen::MatrixXf mat_A = Eigen::MatrixXf::Zero(N_NEIGH, 3);
+    Eigen::MatrixXf mat_B = Eigen::MatrixXf::Constant(N_NEIGH, 1, -1);
+    const int num_neighbors = N_NEIGH;
 
-//         bool plane_valid = true;
-//         for (int j = 0; j < num_neighbors; j++)
-//         {
-//             if (!point_select[j])
-//                 continue;
-//             if (fabs(norm(0) * cloud_map.points[point_search_idx[j]].x +
-//                         norm(1) * cloud_map.points[point_search_idx[j]].y +
-//                         norm(2) * cloud_map.points[point_search_idx[j]].z + negative_OA_dot_norm) > MIN_PLANE_DIS)
-//             {
-//                 plane_valid = false;
-//                 break;
-//             }
-//         }
+    PointType point_sel;
+    pointAssociateToMap(point_ori, point_sel, pose_local);
+    kdtree_surf_from_map->nearestKSearch(point_sel, num_neighbors, point_search_idx, point_search_sq_dis);
+    if (point_search_sq_dis[num_neighbors - 1] < MIN_MATCH_SQ_DIS)
+    {
+        std::vector<bool> point_select(num_neighbors, true);
+        for (int j = 0; j < num_neighbors; j++)
+        {
+            mat_A(j, 0) = cloud_map.points[point_search_idx[j]].x;
+            mat_A(j, 1) = cloud_map.points[point_search_idx[j]].y;
+            mat_A(j, 2) = cloud_map.points[point_search_idx[j]].z;
+        }
+        Eigen::Vector3f norm = mat_A.colPivHouseholderQr().solve(mat_B);
+        float negative_OA_dot_norm = 1 / norm.norm();
+        norm.normalize();
 
-//         if (plane_valid)
-//         {
-//             // pd2 (distance) smaller, s larger
-//             float pd2 = norm(0) * point_sel.x + norm(1) * point_sel.y + norm(2) * point_sel.z + negative_OA_dot_norm;
-//             float s = 1 - 0.9f * fabs(pd2) / sqrt(sqrSum(point_sel.x, point_sel.y, point_sel.z));
-//             bool is_in_laser_fov = false;
-//             if (CHECK_FOV)
-//             {
-//                 PointType transform_pos;
-//                 PointType point_on_z_axis, point_on_z_axis_trans;
-//                 point_on_z_axis.x = 0.0;
-//                 point_on_z_axis.y = 0.0;
-//                 point_on_z_axis.z = 10.0;
-//                 pointAssociateToMap(point_on_z_axis, point_on_z_axis_trans, pose_local);
-//                 float squared_side1 = sqrSum(pose_local.t_(0) - point_sel.x,
-//                                                 pose_local.t_(1) - point_sel.y,
-//                                                 pose_local.t_(2) - point_sel.z);
-//                 float squared_side2 = sqrSum(point_on_z_axis_trans.x - point_sel.x,
-//                                                 point_on_z_axis_trans.y - point_sel.y,
-//                                                 point_on_z_axis_trans.z - point_sel.z);
-//                 float check1 = 100.0f + squared_side1 - squared_side2 - 10.0f * sqrt(3.0f) * sqrt(squared_side1);
-//                 float check2 = 100.0f + squared_side1 - squared_side2 + 10.0f * sqrt(3.0f) * sqrt(squared_side1);
-//                 // within +-60 degree
-//                 if (check1 < 0 && check2 > 0)
-//                     is_in_laser_fov = true;
-//             }
-//             else
-//             {
-//                 is_in_laser_fov = true;
-//             }
-//             if ((s > 0.1) && (is_in_laser_fov))
-//             {
-//                 Eigen::Vector4d coeff(norm(0), norm(1), norm(2), negative_OA_dot_norm);
-//                 feature.idx_ = i;
-//                 feature.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
-//                 feature.coeffs_ = coeff;
-//                 feature.laser_idx_ = laser_idx;
-//                 feature.type_ = 's';
-//                 return true;
-//             }
-//         }
-//     }
-//     return false;
-// }
+        bool plane_valid = true;
+        for (int j = 0; j < num_neighbors; j++)
+        {
+            if (fabs(norm(0) * cloud_map.points[point_search_idx[j]].x +
+                     norm(1) * cloud_map.points[point_search_idx[j]].y +
+                     norm(2) * cloud_map.points[point_search_idx[j]].z + negative_OA_dot_norm) > MIN_PLANE_DIS)
+            {
+                plane_valid = false;
+                break;
+            }
+        }
+
+        if (plane_valid)
+        {
+            // pd2 (distance) smaller, s larger
+            float pd2 = norm(0) * point_sel.x + norm(1) * point_sel.y + norm(2) * point_sel.z + negative_OA_dot_norm;
+            float s = 1 - 0.9f * fabs(pd2) / sqrt(sqrSum(point_sel.x, point_sel.y, point_sel.z));
+            bool is_in_laser_fov = false;
+            if (CHECK_FOV)
+            {
+                PointType transform_pos;
+                PointType point_on_z_axis, point_on_z_axis_trans;
+                point_on_z_axis.x = 0.0;
+                point_on_z_axis.y = 0.0;
+                point_on_z_axis.z = 10.0;
+                pointAssociateToMap(point_on_z_axis, point_on_z_axis_trans, pose_local);
+                float squared_side1 = sqrSum(pose_local.t_(0) - point_sel.x,
+                                                pose_local.t_(1) - point_sel.y,
+                                                pose_local.t_(2) - point_sel.z);
+                float squared_side2 = sqrSum(point_on_z_axis_trans.x - point_sel.x,
+                                                point_on_z_axis_trans.y - point_sel.y,
+                                                point_on_z_axis_trans.z - point_sel.z);
+                float check1 = 100.0f + squared_side1 - squared_side2 - 10.0f * sqrt(3.0f) * sqrt(squared_side1);
+                float check2 = 100.0f + squared_side1 - squared_side2 + 10.0f * sqrt(3.0f) * sqrt(squared_side1);
+                // within +-60 degree
+                if (check1 < 0 && check2 > 0)
+                    is_in_laser_fov = true;
+            }
+            else
+            {
+                is_in_laser_fov = true;
+            }
+            if (s > 0.1 && is_in_laser_fov)
+            {
+                Eigen::Vector4d coeff(norm(0), norm(1), norm(2), negative_OA_dot_norm);
+                feature.idx_ = idx;
+                feature.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
+                feature.coeffs_ = coeff;
+                feature.laser_idx_ = (size_t)point_ori.intensity;
+                feature.type_ = 's';
+                return true;
+            }
+        }
+    }
+    return false;
+}
 
 #endif
 //

@@ -73,10 +73,11 @@
 #include "../factor/lidar_map_plane_norm_factor.hpp"
 #include "../factor/lidar_plane_norm_factor.hpp"
 #include "../factor/pose_local_parameterization.h"
+#include "associate_uct.hpp"
 
 #define SURROUNDING_KF_RADIUS 50.0
 #define GLOBALMAP_KF_RADIUS 2000.0
-#define DISTANCE_KEYFRAMES 1.0
+#define DISTANCE_KEYFRAMES 0.5
 #define ORIENTATION_KEYFRAMES 5
 #define MAX_FEATURE_SELECT_TIME 20 // 10ms
 #define MAX_RANDOM_QUEUE_TIME 20
@@ -86,6 +87,8 @@ DEFINE_string(config_file, "config.yaml", "the yaml config file");
 DEFINE_string(output_path, "", "the path ouf saving results");
 DEFINE_bool(with_ua, true, "with or without the awareness of uncertainty");
 DEFINE_double(gf_ratio, 0.2, "with or without the good features selection");
+
+FeatureExtract f_extract;
 
 // ****************** main process of lidar mapper
 void transformAssociateToMap();
@@ -115,209 +118,6 @@ void evalHessian(const ceres::CRSMatrix &jaco, Eigen::Matrix<double, 6, 6> &mat_
 
 void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameterization *local_parameterization);
 
-// ****************** Barfoot's method on associating uncertainty on SE3
-Eigen::Matrix<double, 6, 6> adjointMatrix(const Eigen::Matrix4d &T)
-{
-    Eigen::Matrix<double, 6, 6> AdT = Eigen::Matrix<double, 6, 6>::Zero();
-    AdT.topLeftCorner<3, 3>() = T.topLeftCorner<3, 3>();
-    AdT.topRightCorner<3, 3>() = Utility::skewSymmetric(T.topRightCorner<3, 1>()) * T.topLeftCorner<3, 3>();
-    AdT.bottomRightCorner<3, 3>() = T.topLeftCorner<3, 3>();
-    return AdT;
-}
-
-Eigen::Matrix3d covop1(const Eigen::Matrix3d &B)
-{
-    Eigen::Matrix3d A = -B.trace() * Eigen::Matrix3d::Identity() + B;
-    return A;
-}
-
-Eigen::Matrix3d covop2(const Eigen::Matrix3d &B, const Eigen::Matrix3d &C)
-{
-    Eigen::Matrix3d A = covop1(B) * covop1(C) * covop1(C * B);
-    return A;
-}
-
-// fixed: topLeftCorner<3, 3>()
-// dynamic: topLeftCorner(3, 3)
-void compoundPoseWithCov(const Pose &pose_1, const Eigen::Matrix<double, 6, 6> &cov_1,
-                         const Pose &pose_2, const Eigen::Matrix<double, 6, 6> &cov_2,
-                         Pose &pose_cp, Eigen::Matrix<double, 6, 6> &cov_cp, const int &method = 2)
-{
-    pose_cp.q_ = pose_1.q_ * pose_2.q_;
-    pose_cp.t_ = pose_1.q_ * pose_2.t_ + pose_1.t_;
-    Eigen::Matrix<double, 6, 6> AdT1 = adjointMatrix(pose_1.T_); // the adjoint matrix of T1
-    Eigen::Matrix<double, 6, 6> cov_2_prime = AdT1 * cov_2 * AdT1.transpose();
-    if (method == 1)
-    {
-        cov_cp = cov_1 + cov_2_prime;
-    }
-    else if (method == 2)
-    {
-        Eigen::Matrix3d cov_1_rr = cov_1.topLeftCorner<3, 3>();
-        Eigen::Matrix3d cov_1_rp = cov_1.topRightCorner<3, 3>();
-        Eigen::Matrix3d cov_1_pp = cov_1.bottomRightCorner<3, 3>();
-
-        Eigen::Matrix3d cov_2_rr = cov_2_prime.topLeftCorner<3, 3>();
-        Eigen::Matrix3d cov_2_rp = cov_2_prime.topRightCorner<3, 3>();
-        Eigen::Matrix3d cov_2_pp = cov_2_prime.bottomRightCorner<3, 3>();
-
-        Eigen::Matrix<double, 6, 6> A1 = Eigen::Matrix<double, 6, 6>::Zero();
-        A1.topLeftCorner<3, 3>() = covop1(cov_1_pp);
-        A1.topRightCorner<3, 3>() = covop1(cov_1_rp + cov_1_rp.transpose());
-        A1.bottomRightCorner<3, 3>() = covop1(cov_1_pp);
-
-        Eigen::Matrix<double, 6, 6> A2 = Eigen::Matrix<double, 6, 6>::Zero();
-        A2.topLeftCorner<3, 3>() = covop1(cov_2_pp);
-        A2.topRightCorner<3, 3>() = covop1(cov_2_rp + cov_2_rp.transpose());
-        A2.bottomRightCorner<3, 3>() = covop1(cov_2_pp);
-
-        Eigen::Matrix3d Brr = covop2(cov_1_pp, cov_2_rr) + covop2(cov_1_rp.transpose(), cov_2_rp) + covop2(cov_1_rp, cov_2_rp.transpose()) + covop2(cov_1_rr, cov_2_pp);
-        Eigen::Matrix3d Brp = covop2(cov_1_pp, cov_2_rp.transpose()) + covop2(cov_1_rp.transpose(), cov_2_pp);
-        Eigen::Matrix3d Bpp = covop2(cov_1_pp, cov_2_pp);
-        Eigen::Matrix<double, 6, 6> B = Eigen::Matrix<double, 6, 6>::Zero();
-        B.topLeftCorner<3, 3>() = Brr;
-        B.topRightCorner<3, 3>() = Brp;
-        B.bottomLeftCorner<3, 3>() = Brp.transpose();
-        B.bottomRightCorner<3, 3>() = Bpp;
-
-        cov_cp = cov_1 + cov_2_prime + (A1 * cov_2_prime + cov_2_prime * A1.transpose() + A2 * cov_1 + cov_1 * A2.transpose()) / 12 + B / 4;
-    }
-    else
-    {
-        printf("[compoundPoseWithCov] No %dth method !\n", method);
-        cov_cp.setZero();
-    }
-    // std::cout << pose_1 << std::endl << cov_1 << std::endl;
-    // std::cout << pose_2 << std::endl << cov_2 << std::endl;
-    // std::cout << pose_cp << std::endl << cov_cp << std::endl;
-    // exit(EXIT_FAILURE);
-}
-
-// fixed: topLeftCorner<3, 3>()
-// dynamic: topLeftCorner(3, 3)
-void compoundPoseWithCov(const Pose &pose_1, const Pose &pose_2, 
-                               Pose &pose_cp, const int &method = 2)
-{
-    Eigen::Matrix<double, 6, 6> cov_1 = pose_1.cov_;
-    Eigen::Matrix<double, 6, 6> cov_2 = pose_2.cov_;
-    Eigen::Matrix<double, 6, 6> cov_cp;
-
-    pose_cp.q_ = pose_1.q_ * pose_2.q_;
-    pose_cp.t_ = pose_1.q_ * pose_2.t_ + pose_1.t_;
-    Eigen::Matrix<double, 6, 6> AdT1 = adjointMatrix(pose_1.T_); // the adjoint matrix of T1
-    Eigen::Matrix<double, 6, 6> cov_2_prime = AdT1 * cov_2 * AdT1.transpose();
-    if (method == 1)
-    {
-        cov_cp = cov_1 + cov_2_prime;
-    }
-    else if (method == 2)
-    {
-        Eigen::Matrix3d cov_1_rr = cov_1.topLeftCorner<3, 3>();
-        Eigen::Matrix3d cov_1_rp = cov_1.topRightCorner<3, 3>();
-        Eigen::Matrix3d cov_1_pp = cov_1.bottomRightCorner<3, 3>();
-
-        Eigen::Matrix3d cov_2_rr = cov_2_prime.topLeftCorner<3, 3>();
-        Eigen::Matrix3d cov_2_rp = cov_2_prime.topRightCorner<3, 3>();
-        Eigen::Matrix3d cov_2_pp = cov_2_prime.bottomRightCorner<3, 3>();
-
-        Eigen::Matrix<double, 6, 6> A1 = Eigen::Matrix<double, 6, 6>::Zero();
-        A1.topLeftCorner<3, 3>() = covop1(cov_1_pp);
-        A1.topRightCorner<3, 3>() = covop1(cov_1_rp + cov_1_rp.transpose());
-        A1.bottomRightCorner<3, 3>() = covop1(cov_1_pp);
-
-        Eigen::Matrix<double, 6, 6> A2 = Eigen::Matrix<double, 6, 6>::Zero();
-        A2.topLeftCorner<3, 3>() = covop1(cov_2_pp);
-        A2.topRightCorner<3, 3>() = covop1(cov_2_rp + cov_2_rp.transpose());
-        A2.bottomRightCorner<3, 3>() = covop1(cov_2_pp);
-
-        Eigen::Matrix3d Brr = covop2(cov_1_pp, cov_2_rr) + covop2(cov_1_rp.transpose(), cov_2_rp) + covop2(cov_1_rp, cov_2_rp.transpose()) + covop2(cov_1_rr, cov_2_pp);
-        Eigen::Matrix3d Brp = covop2(cov_1_pp, cov_2_rp.transpose()) + covop2(cov_1_rp.transpose(), cov_2_pp);
-        Eigen::Matrix3d Bpp = covop2(cov_1_pp, cov_2_pp);
-        Eigen::Matrix<double, 6, 6> B = Eigen::Matrix<double, 6, 6>::Zero();
-        B.topLeftCorner<3, 3>() = Brr;
-        B.topRightCorner<3, 3>() = Brp;
-        B.bottomLeftCorner<3, 3>() = Brp.transpose();
-        B.bottomRightCorner<3, 3>() = Bpp;
-
-        cov_cp = cov_1 + cov_2_prime + (A1 * cov_2_prime + cov_2_prime * A1.transpose() + A2 * cov_1 + cov_1 * A2.transpose()) / 12 + B / 4;
-    }
-    else
-    {
-        printf("[compoundPoseWithCov] No %dth method !\n", method);
-        cov_cp.setZero();
-    }
-    pose_cp.cov_ = cov_cp;
-    // std::cout << pose_1 << std::endl << cov_1 << std::endl;
-    // std::cout << pose_2 << std::endl << cov_2 << std::endl;
-    // std::cout << pose_cp << std::endl << cov_cp << std::endl;
-    // exit(EXIT_FAILURE);
-}
-
-// pointToFS turns a 4x1 homogeneous point into a special 4x6 matrix
-Eigen::Matrix<double, 4, 6> pointToFS(const Eigen::Vector4d &point)
-{
-    Eigen::Matrix<double, 4, 6> G = Eigen::Matrix<double, 4, 6>::Zero();
-    G.block<3, 3>(0, 0) = point(3) * Eigen::Matrix3d::Identity();
-    G.block<3, 3>(0, 3) = -Utility::skewSymmetric(point.block<3, 1>(0, 0));
-    return G;
-}
-
-/*
- * pi: the original point for evaluating uncertainty
- * cov_point: associated covariance of the point
- * pose: pose
- * cov_pose: associated covariance of the pose
- */
-template<typename PointType>
-void evalPointUncertainty(const PointType &pi, Eigen::Matrix3d &cov_point, const Pose &pose, const Eigen::Matrix<double, 6, 6> &cov_pose)
-{
-    // THETA: diag(P, Phi, Z) includes the translation, rotation, measurement uncertainty
-    Eigen::Matrix<double, 9, 9> cov_input = Eigen::Matrix<double, 9, 9>::Zero();
-    cov_input.topLeftCorner<6, 6>() = cov_pose;
-    cov_input.bottomRightCorner<3, 3>() = COV_MEASUREMENT;
-
-    Eigen::Vector4d point_curr(pi.x, pi.y, pi.z, 1);
-    Eigen::Matrix4d T = pose.T_;
-    // Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
-    Eigen::Matrix<double, 4, 3> D;
-    D << 1, 0, 0,
-         0, 1, 0,
-         0, 0, 1,
-         0, 0, 0;
-    Eigen::Matrix<double, 4, 9> G = Eigen::Matrix<double, 4, 9>::Zero();
-    G.block<4, 6>(0, 0) = pointToFS(T * point_curr);
-    G.block<4, 3>(0, 6) = T * D;
-    cov_point = Eigen::Matrix4d(G * cov_input * G.transpose()).topLeftCorner<3, 3>(); // 3x3
-    // std::cout << cov_input << std::endl;
-    // std::cout << G << std::endl;
-    // std::cout << "evalUncertainty:" << std::endl
-    //           << point_curr.transpose() << std::endl
-    //           << cov_point << std::endl;
-    // exit(EXIT_FAILURE);
-}
-
-template <typename PointType>
-void evalPointUncertainty(const PointType &pi, Eigen::Matrix3d &cov_point, const Pose &pose)
-{
-    // THETA: diag(P, Phi, Z) includes the translation, rotation, measurement uncertainty
-    Eigen::Matrix<double, 9, 9> cov_input = Eigen::Matrix<double, 9, 9>::Zero();
-    cov_input.topLeftCorner<6, 6>() = pose.cov_;
-    cov_input.bottomRightCorner<3, 3>() = COV_MEASUREMENT;
-
-    Eigen::Vector4d point_curr(pi.x, pi.y, pi.z, 1);
-    Eigen::Matrix4d T = pose.T_;
-    // Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
-    Eigen::Matrix<double, 4, 3> D;
-    D << 1, 0, 0,
-        0, 1, 0,
-        0, 0, 1,
-        0, 0, 0;
-    Eigen::Matrix<double, 4, 9> G = Eigen::Matrix<double, 4, 9>::Zero();
-    G.block<4, 6>(0, 0) = pointToFS(T * point_curr);
-    G.block<4, 3>(0, 6) = T * D;
-    cov_point = Eigen::Matrix4d(G * cov_input * G.transpose()).topLeftCorner<3, 3>(); // 3x3
- }
-
 // ****************** good feature selection
 void evaluateFeatJacobian(const double *para_pose,
                           const PointPlaneFeature &feature,
@@ -335,10 +135,36 @@ void evaluateFeatJacobian(const double *para_pose,
     mat_jaco = mat_jacobian.topLeftCorner<3, 6>();
 }
 
+// ****************** good feature selection
+void evaluateFeatJacobianMatching(const Pose &pose_local,
+                                  const PointPlaneFeature &feature,
+                                  const Eigen::Matrix3d &cov_matrix,
+                                  Eigen::MatrixXd &mat_jaco)
+{
+    double pose_array[SIZE_POSE];
+    pose_array[0] = pose_local.t_(0);
+    pose_array[1] = pose_local.t_(1);
+    pose_array[2] = pose_local.t_(2);
+    pose_array[3] = pose_local.q_.x();
+    pose_array[4] = pose_local.q_.y();
+    pose_array[5] = pose_local.q_.z();
+    pose_array[6] = pose_local.q_.w();
+
+    LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
+    const double **param = new const double *[1];
+    param[0] = pose_array;
+    double *res = new double[1];
+    double **jaco = new double *[1];
+    jaco[0] = new double[3 * 7];
+    f->Evaluate(param, res, jaco);
+    Eigen::Map<Eigen::Matrix<double, 3, 7, Eigen::RowMajor>> mat_jacobian(jaco[0]);
+    mat_jaco = mat_jacobian.topLeftCorner<3, 6>();
+}
+
 // TODO: add feature matching
 void goodFeatureSelect(const double *para_pose,
-                       const std::vector<PointICovCloud> &laser_cloud_surf_cov,
-                       const std::vector<PointICovCloud> &laser_cloud_corner_cov,
+                       const PointICovCloud &laser_cloud_surf_cov,
+                       const PointICovCloud &laser_cloud_corner_cov,
                        const std::vector<PointPlaneFeature> &all_features,
                        const size_t &num_all_features,
                        std::vector<size_t> &sel_feature_idx,
@@ -404,9 +230,9 @@ void goodFeatureSelect(const double *para_pose,
             const PointPlaneFeature &feature = all_features[que_idx];
             Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
             if (feature.type_ == 's')
-                extractCov(laser_cloud_surf_cov[feature.laser_idx_].points[feature.idx_], cov_matrix);
+                extractCov(laser_cloud_surf_cov.points[feature.idx_], cov_matrix);
             else if (feature.type_ == 's')
-                extractCov(laser_cloud_corner_cov[feature.laser_idx_].points[feature.idx_], cov_matrix);
+                extractCov(laser_cloud_corner_cov.points[feature.idx_], cov_matrix);
             Eigen::MatrixXd jaco;
             evaluateFeatJacobian(para_pose, feature, cov_matrix, jaco);
 
@@ -459,127 +285,149 @@ void goodFeatureSelect(const double *para_pose,
     printf("good feature selection time: %fms\n", t_sel_feature.toc());
 }
 
-// TODO: 
-// void goodFeatureMatching(const double *para_pose,
-//                          const pcl::kdtree,
-//                          const PointICovCloud &laser_map,
-//                          const PointICovCloud &laser_cloud,
-//                          std::vector<PointPlaneFeature> &all_features,
-//                          std::vector<size_t> &sel_feature_idx,
-//                          const float &gf_ratio = 0.2)
-// {
-//     size_t num_all_features = laser_cloud.size();
-//     all_features.resize(num_all_features);
+// TODO:
+void goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_from_map,
+                         const PointICovCloud &laser_map,
+                         const PointICovCloud &laser_cloud,
+                         const Pose &pose_local,
+                         std::vector<PointPlaneFeature> &all_features,
+                         std::vector<size_t> &sel_feature_idx,
+                         const char feature_type,
+                         const float &gf_ratio = 0.2)
+{
+    size_t num_all_features = laser_cloud.size();
+    all_features.resize(num_all_features);
 
-//     // create a query of the index of the valid features
-//     std::vector<size_t> all_feature_idx(num_all_features);
-//     std::vector<int> feature_visited(num_all_features, -1);
-//     std::iota(all_feature_idx.begin(), all_feature_idx.end(), 0);
+    std::vector<size_t> all_feature_idx(num_all_features);
+    std::vector<int> feature_visited(num_all_features, -1);
+    std::iota(all_feature_idx.begin(), all_feature_idx.end(), 0);
 
-//     size_t num_use_features;
-//     if (gf_ratio <= 0.0)
-//     {
-//         num_use_features = 100;
-//     }
-//     else
-//     {
-//         num_use_features = static_cast<size_t>(num_all_features * gf_ratio);
-//     }
-//     size_t size_rnd_subset = static_cast<size_t>(1.0 * num_all_features / num_use_features);
-//     LOG_EVERY_N(INFO, 100) << "[goodFeatureSelct] size of matrix subset: " << size_rnd_subset;
+    size_t num_use_features;
+    if (gf_ratio <= 0.0)
+    {
+        num_use_features = 100;
+    }
+    else
+    {
+        num_use_features = static_cast<size_t>(num_all_features * gf_ratio);
+    }
+    printf("num of all features: %lu, sel features: %lu\n", num_all_features, num_use_features);
 
-//     // the most informative Hessian matrix
-//     Eigen::Matrix<double, 6, 6> sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
-//     size_t num_sel_features = 0;
-//     TicToc t_sel_feature;
-//     while (true)
-//     {
-//         if ((num_sel_features >= num_use_features) ||
-//             (all_feature_idx.size() == 0) ||
-//             (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
-//             break;
-//         size_t num_rnd_que;
-//         std::priority_queue<FeatureWithScore, std::vector<FeatureWithScore>, std::less<FeatureWithScore>> heap_subset;
-//         while (heap_subset.size() < size_rnd_subset)
-//         {
-//             num_rnd_que = 0;
-//             size_t j;
-//             while (num_rnd_que < MAX_RANDOM_QUEUE_TIME)
-//             {
-//                 j = (std::rand() % all_feature_idx.size());
-//                 if (feature_visited[j] < int(num_sel_features))
-//                 {
-//                     feature_visited[j] = int(num_sel_features);
-//                     break;
-//                 }
-//                 num_rnd_que++;
-//             }
-//             if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
-//                 break;
+    size_t size_rnd_subset = static_cast<size_t>(1.0 * num_all_features / num_use_features);
+    LOG_EVERY_N(INFO, 100) << "[goodFeatureMatching] size of matrix subset: " << size_rnd_subset;
 
-//             size_t que_idx = all_feature_idx[j];
-//             if (map_features[que_idx].type_ == 'n')
-//             {
-//                 int n_neigh = 5;
-//                 bool b_match = true;
-//                 if (type == 's')
-//                     b_match = f_extract.matchSurfPointFromMap(kdtree_map,
-//                                                     laser_map,
-//                                                     laser_cloud,
-//                                                     pose_wmap_curr,
-//                                                     map_features[que_idx],
-//                                                     n_neigh,
-//                                                     true);
-//                 else 
-//                     // xxx
-//             }
+    // the most informative Hessian matrix
+    Eigen::Matrix<double, 6, 6> sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
+    size_t num_sel_features = 0;
+    TicToc t_sel_feature;
+    while (true)
+    {
+        if ((num_sel_features >= num_use_features) ||
+            (all_feature_idx.size() == 0) ||
+            (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
+                break;
+        size_t num_rnd_que;
+        std::priority_queue<FeatureWithScore, std::vector<FeatureWithScore>, std::less<FeatureWithScore>> heap_subset;
+        while (heap_subset.size() < size_rnd_subset)
+        {
+            num_rnd_que = 0;
+            size_t j;
+            while (num_rnd_que < MAX_RANDOM_QUEUE_TIME)
+            {
+                j = (std::rand() % all_feature_idx.size());
+                if (feature_visited[j] < int(num_sel_features))
+                {
+                    feature_visited[j] = int(num_sel_features);
+                    break;
+                }
+                num_rnd_que++;
+            }
+            if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
+                break;
 
-//             if (!b_match) {}
+            size_t que_idx = all_feature_idx[j];
+            if (all_features[que_idx].type_ == 'n')
+            {
+                size_t n_neigh = 5;
+                bool b_match = true;
+                if (feature_type == 's')
+                {
+                    b_match = f_extract.matchSurfPointFromMap(kdtree_from_map,
+                                                              laser_map,
+                                                              laser_cloud.points[que_idx],
+                                                              pose_local,
+                                                              all_features[que_idx],
+                                                              que_idx,
+                                                              n_neigh,
+                                                              false);
+                }
+                else if (feature_type == 'c')
+                {
+                    b_match = f_extract.matchCornerPointFromMap(kdtree_from_map,
+                                                                laser_map,
+                                                                laser_cloud.points[que_idx],
+                                                                pose_local,
+                                                                all_features[que_idx],
+                                                                que_idx,
+                                                                n_neigh,
+                                                                false);
+                }
+                if (b_match) 
+                {
 
-//             const PointPlaneFeature &feature = all_features[que_idx];
-//             Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
-//             extractCov(laser_cloud[feature.laser_idx_].points[feature.idx_], cov_matrix);
-//             Eigen::MatrixXd jaco;
-//             evaluateFeatJacobian(para_pose, feature, cov_matrix, jaco);
+                }
+                else // not found constraints or outlier constraints
+                {
+                    all_feature_idx.erase(all_feature_idx.begin() + j);
+                    feature_visited.erase(feature_visited.begin() + j);
+                    break;
+                }
+            }
 
-//             double cur_det = common::logDet(sub_mat_H + jaco.transpose() * jaco, true);
-//             heap_subset.push(FeatureWithScore(que_idx, cur_det, jaco));
-//             if (heap_subset.size() >= size_rnd_subset)
-//             {
-//                 const FeatureWithScore &fws = heap_subset.top();
-//                 std::vector<size_t>::iterator iter = std::find(all_feature_idx.begin(), all_feature_idx.end(), fws.idx_);
-//                 if (iter == all_feature_idx.end())
-//                 {
-//                     std::cerr << "[goodFeatureSelct]: not exist feature idx !" << std::endl;
-//                     break;
-//                 }
+            const PointPlaneFeature &feature = all_features[que_idx];
+            Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
+            extractCov(laser_cloud.points[que_idx], cov_matrix);
+            Eigen::MatrixXd jaco;
+            evaluateFeatJacobianMatching(pose_local, feature, cov_matrix, jaco);
 
-//                 const Eigen::MatrixXd &jaco = fws.jaco_;
-//                 sub_mat_H += jaco.transpose() * jaco;
+            double cur_det = common::logDet(sub_mat_H + jaco.transpose() * jaco, true);
+            heap_subset.push(FeatureWithScore(que_idx, cur_det, jaco));
+            if (heap_subset.size() >= size_rnd_subset)
+            {
+                const FeatureWithScore &fws = heap_subset.top();
+                std::vector<size_t>::iterator iter = std::find(all_feature_idx.begin(), all_feature_idx.end(), fws.idx_);
+                if (iter == all_feature_idx.end())
+                {
+                    std::cerr << "[goodFeatureMatching]: not exist feature idx !" << std::endl;
+                    break;
+                }
 
-//                 size_t position = iter - all_feature_idx.begin();
-//                 all_feature_idx.erase(all_feature_idx.begin() + position);
-//                 feature_visited.erase(feature_visited.begin() + position);
-//                 sel_feature_idx.push_back(fws.idx_);
-//                 num_sel_features++;
-//                 // printf("position: %lu, num: %lu\n", position, num_rnd_que);
-//                 break;
-//             }
-//         }
-//         if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME)
-//         {
-//             std::cerr << "[goodFeatureSelct]: early termination!" << std::endl;
-//             break;
-//         }
-//     }
-//     printf("logdet of selected sub H: %f\n", common::logDet(sub_mat_H));
-// }
+                const Eigen::MatrixXd &jaco = fws.jaco_;
+                sub_mat_H += jaco.transpose() * jaco;
+
+                size_t position = iter - all_feature_idx.begin();
+                all_feature_idx.erase(all_feature_idx.begin() + position);
+                feature_visited.erase(feature_visited.begin() + position);
+                sel_feature_idx.push_back(fws.idx_);
+                num_sel_features++;
+                // printf("position: %lu, num: %lu\n", position, num_rnd_que);
+                break;
+            }
+        }
+        if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME)
+        {
+            std::cerr << "[goodFeatureMatching]: early termination!" << std::endl;
+            break;
+        }
+    }
+    printf("logdet of selected sub H: %f\n", common::logDet(sub_mat_H));
+}
 
 
 // TODO: add feature matching
 void goodFeatureSelectTest(const double *para_pose,
-                           const std::vector<PointICovCloud> &laser_cloud_surf_cov,
-                           const std::vector<PointICovCloud> &laser_cloud_corner_cov,
+                           const PointICovCloud &laser_cloud_surf_cov,
+                           const PointICovCloud &laser_cloud_corner_cov,
                            const std::vector<PointPlaneFeature> &all_features,
                            const size_t &num_all_features,
                            std::vector<size_t> sel_feature_idx,
@@ -592,9 +440,9 @@ void goodFeatureSelectTest(const double *para_pose,
         const PointPlaneFeature &feature = all_features[que_idx];
         Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
         if (feature.type_ == 's')
-            extractCov(laser_cloud_surf_cov[feature.laser_idx_].points[feature.idx_], cov_matrix);
+            extractCov(laser_cloud_surf_cov.points[feature.idx_], cov_matrix);
         else if (feature.type_ == 'c')
-            extractCov(laser_cloud_corner_cov[feature.laser_idx_].points[feature.idx_], cov_matrix);
+            extractCov(laser_cloud_corner_cov.points[feature.idx_], cov_matrix);
         Eigen::MatrixXd jaco;
         evaluateFeatJacobian(para_pose, feature, cov_matrix, jaco);
         total_mat_H += jaco.transpose() * jaco;
@@ -656,9 +504,9 @@ void goodFeatureSelectTest(const double *para_pose,
             const PointPlaneFeature &feature = all_features[que_idx];
             Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
             if (feature.type_ == 's')
-                extractCov(laser_cloud_surf_cov[feature.laser_idx_].points[feature.idx_], cov_matrix);
+                extractCov(laser_cloud_surf_cov.points[feature.idx_], cov_matrix);
             else if (feature.type_ == 'c')
-                extractCov(laser_cloud_corner_cov[feature.laser_idx_].points[feature.idx_], cov_matrix);
+                extractCov(laser_cloud_corner_cov.points[feature.idx_], cov_matrix);
             Eigen::MatrixXd jaco;
             evaluateFeatJacobian(para_pose, feature, cov_matrix, jaco);
 
