@@ -572,11 +572,11 @@ void Estimator::optimizeMap()
     // options.num_threads = 1;
     // options.trust_region_strategy_type = ceres::DOGLEG;
     options.max_num_iterations = NUM_ITERATIONS;
+    options.max_solver_time_in_seconds = SOLVER_TIME;
     options.gradient_check_relative_precision = 1e-4;
     //options.use_explicit_schur_complement = true;
     //options.minimizer_progress_to_stdout = true;
     //options.use_nonmonotonic_steps = true;
-    options.max_solver_time_in_seconds = SOLVER_TIME;
 
     vector2Double();
 
@@ -1107,12 +1107,12 @@ void Estimator::buildLocalMap()
         float ratio;
         pcl::VoxelGrid<PointI> down_size_filter;
 
-        ratio = 0.4 * std::min(1.5, std::max(0.75, NUM_OF_LASER * WINDOW_SIZE * 1.0 / 8));
+        ratio = 0.4 * std::min(1.5, std::max(0.75, NUM_OF_LASER * WINDOW_SIZE * 1.0 / 6));
         down_size_filter.setLeafSize(ratio, ratio, ratio);
         down_size_filter.setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_[n]));
         down_size_filter.filter(surf_points_local_map_filtered_[n]);
 
-        ratio = 0.2 * std::min(1.5, std::max(0.75, NUM_OF_LASER * WINDOW_SIZE * 1.0 / 8));
+        ratio = 0.2 * std::min(1.5, std::max(0.75, NUM_OF_LASER * WINDOW_SIZE * 1.0 / 6));
         down_size_filter.setLeafSize(ratio, ratio, ratio);
         down_size_filter.setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_[n]));
         down_size_filter.filter(corner_points_local_map_filtered_[n]);

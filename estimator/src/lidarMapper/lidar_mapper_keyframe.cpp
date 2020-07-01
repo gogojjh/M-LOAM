@@ -405,7 +405,7 @@ void scan2MapOptimization()
 
             ceres::Solver::Options options;
             options.linear_solver_type = ceres::DENSE_SCHUR;
-            options.max_num_iterations = 15;
+            options.max_num_iterations = 10;
             // options.max_solver_time_in_seconds = 0.04;
             // options.num_threads = 2;
             options.minimizer_progress_to_stdout = false;
@@ -422,84 +422,6 @@ void scan2MapOptimization()
             para_ids.push_back(para_pose);
 
             // ******************************************************
-            // TicToc t_match_features;
-            // std::vector<PointPlaneFeature> map_features;
-            // size_t surf_num = 0, corner_num = 0;
-
-            // int n_neigh = 5;
-            // if (POINT_PLANE_FACTOR)
-            // {
-            //     std::vector<PointPlaneFeature> feature_frame;
-            //     f_extract.matchSurfFromMap(kdtree_surf_from_map,
-            //                                *laser_cloud_surf_from_map_cov_ds,
-            //                                *laser_cloud_surf_cov,
-            //                                pose_wmap_curr,
-            //                                feature_frame,
-            //                                n_neigh,
-            //                                false);
-            //     map_features.insert(map_features.end(), feature_frame.begin(), feature_frame.end());
-            //     surf_num += feature_frame.size();
-            // }
-            // if (POINT_EDGE_FACTOR)
-            // {
-            //     std::vector<PointPlaneFeature> feature_frame;
-            //     f_extract.matchCornerFromMap(kdtree_corner_from_map,
-            //                                  *laser_cloud_corner_from_map_cov_ds,
-            //                                  *laser_cloud_corner_cov,
-            //                                  pose_wmap_curr,
-            //                                  feature_frame,
-            //                                  n_neigh,
-            //                                  false);
-            //     map_features.insert(map_features.end(), feature_frame.begin(), feature_frame.end());
-            //     corner_num += feature_frame.size();
-            // }
-            // printf("matching features time: %fms\n", t_match_features.toc());
-            // LOG_EVERY_N(INFO, 100) << "matching surf & corner features num: " << surf_num << ", " << corner_num;
-
-            // // TODO: testing good feature selection
-            // std::vector<size_t> sel_feature_idx;
-            // goodFeatureSelect(para_pose,
-            //                   *laser_cloud_surf_cov, *laser_cloud_corner_cov,
-            //                   map_features, map_features.size(),
-            //                   sel_feature_idx, FLAGS_gf_ratio);
-            // printf("selected features num: %lu(%lu)\n", sel_feature_idx.size(), surf_num + corner_num);
-
-            // if ((frame_cnt % 100 == 0) && (FLAGS_gf_ratio != 1.0))
-            //     writeFeature(sel_feature_idx, map_features);
-
-            // test the good feature selection
-            // {
-            //     std::vector<size_t> sel_feature_idx_test;
-            //     goodFeatureSelectTest(para_pose,
-            //                           laser_cloud_surf_split_cov, laser_cloud_corner_split_cov,
-            //                           map_features, map_features.size(),
-            //                           sel_feature_idx_test, FLAGS_gf_ratio);
-            // }
-
-            // TicToc t_add_constraints;
-            // CHECK_JACOBIAN = 0;
-            // for (const size_t &fid : sel_feature_idx)
-            // {
-            //     const PointPlaneFeature &feature = map_features[fid];
-            //     Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
-            //     if (feature.type_ == 's')
-            //         extractCov(laser_cloud_surf_cov->points[feature.idx_], cov_matrix);
-            //     else if (feature.type_ == 'c')
-            //         extractCov(laser_cloud_corner_cov->points[feature.idx_], cov_matrix);
-            //     LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
-            //     ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
-            //     res_ids_proj.push_back(res_id);
-            //     if (CHECK_JACOBIAN)
-            //     {
-            //         const double **tmp_param = new const double *[1];
-            //         tmp_param[0] = para_pose;
-            //         f->check(tmp_param);
-            //         CHECK_JACOBIAN = 0;
-            //     }
-            // }
-            // printf("add constraints: %fms\n", t_add_constraints.toc());
-            // // ******************************************************
-
             std::vector<PointPlaneFeature> all_surf_features, all_corner_features;
             std::vector<size_t> sel_surf_feature_idx, sel_corner_feature_idx;
             size_t surf_num = 0, corner_num = 0;

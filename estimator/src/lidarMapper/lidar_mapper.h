@@ -79,7 +79,7 @@
 #define GLOBALMAP_KF_RADIUS 2000.0
 #define DISTANCE_KEYFRAMES 0.5
 #define ORIENTATION_KEYFRAMES 5
-#define MAX_FEATURE_SELECT_TIME 30 // 10ms
+#define MAX_FEATURE_SELECT_TIME 20 // 10ms
 #define MAX_RANDOM_QUEUE_TIME 20
 
 DEFINE_bool(result_save, true, "save or not save the results");
