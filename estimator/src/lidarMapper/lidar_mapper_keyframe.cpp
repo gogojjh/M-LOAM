@@ -112,6 +112,7 @@ std::vector<Eigen::Matrix<double, 6, 6> > d_eigvec_list;
 Eigen::Matrix<double, 6, 6> mat_P;
 Eigen::Matrix<double, 6, 6> cov_mapping;
 
+std::vector<double> logdet_H_list;
 std::vector<double> cov_mapping_list;
 
 double total_mapping = 0.0;
@@ -119,6 +120,9 @@ bool is_degenerate;
 bool with_ua_flag;
 
 pcl::PCDWriter pcd_writer;
+
+double lambda;
+double gf_ratio;
 
 std::mutex m_process;
 
@@ -205,7 +209,6 @@ void laserOdometryHandler(const nav_msgs::Odometry::ConstPtr &laser_odom)
     laser_after_mapped_path.header = odom_aft_mapped.header;
     laser_after_mapped_path.poses.push_back(laser_after_mapped_pose);
     pub_laser_after_mapped_path.publish(laser_after_mapped_path);
-    publishTF(odom_aft_mapped);
 }
 
 void vector2Double()
@@ -405,7 +408,7 @@ void scan2MapOptimization()
 
             ceres::Solver::Options options;
             options.linear_solver_type = ceres::DENSE_SCHUR;
-            options.max_num_iterations = 10;
+            options.max_num_iterations = 15;
             // options.max_solver_time_in_seconds = 0.04;
             // options.num_threads = 2;
             options.minimizer_progress_to_stdout = false;
@@ -422,6 +425,37 @@ void scan2MapOptimization()
             para_ids.push_back(para_pose);
 
             // ******************************************************
+            bool ratio_change_flag = false;
+            if (iter_cnt == 0)
+            {
+                if (frame_cnt % 10 == 0)
+                {
+                    int total_feat_num = 0;
+                    Eigen::Matrix<double, 6, 6> mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
+                    if (POINT_PLANE_FACTOR)
+                    {
+                        evalFullHessian(kdtree_surf_from_map, *laser_cloud_surf_from_map_cov_ds,
+                                        *laser_cloud_surf_cov, pose_wmap_curr, 's', mat_H, total_feat_num);
+                    }
+                    if (POINT_EDGE_FACTOR)
+                    {
+                        evalFullHessian(kdtree_corner_from_map, *laser_cloud_corner_from_map_cov_ds,
+                                        *laser_cloud_corner_cov, pose_wmap_curr, 'c', mat_H, total_feat_num);
+                    }
+                    double normalize_logdet_H = common::logDet(mat_H * 134, true) - mat_H.rows() * std::log(1.0 * total_feat_num);
+                    logdet_H_list.push_back(normalize_logdet_H);
+                    // lambda = LAMBDA_SCALAR * normalize_logdet_H * normalize_logdet_H;
+                    if (normalize_logdet_H >= 64)
+                        lambda = 10;
+                    else 
+                        lambda = 5;
+                    std::cout << common::YELLOW << "lambda: " << lambda << common::RESET << std::endl;
+                    // ratio_change_flag = true;
+                    // gf_ratio = FLAGS_gf_ratio_ini;
+                }
+            }
+
+            // ******************************************************
             std::vector<PointPlaneFeature> all_surf_features, all_corner_features;
             std::vector<size_t> sel_surf_feature_idx, sel_corner_feature_idx;
             size_t surf_num = 0, corner_num = 0;
@@ -435,7 +469,8 @@ void scan2MapOptimization()
                                     all_surf_features,
                                     sel_surf_feature_idx,
                                     's',
-                                    FLAGS_gf_ratio);
+                                    FLAGS_gf_ratio_ini,
+                                    lambda);
                 surf_num = sel_surf_feature_idx.size();
             }
             if (POINT_EDGE_FACTOR)
@@ -447,9 +482,12 @@ void scan2MapOptimization()
                                     all_corner_features,
                                     sel_corner_feature_idx,
                                     'c',
-                                    FLAGS_gf_ratio);
+                                    FLAGS_gf_ratio_ini,
+                                    lambda);
                 corner_num = sel_corner_feature_idx.size();
             }
+            if (frame_cnt % 100 == 0)
+                writeFeature(*laser_cloud_surf_cov, sel_surf_feature_idx, all_surf_features);
             printf("matching features time: %fms\n", t_match_features.toc());
             printf("matching surf & corner num: %lu, %lu\n", surf_num, corner_num);
 
@@ -480,7 +518,7 @@ void scan2MapOptimization()
                 ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
                 res_ids_proj.push_back(res_id);
             }
-            printf("add constraints: %fms\n", t_add_constraints.toc());
+            // printf("add constraints: %fms\n", t_add_constraints.toc());
 
             // ******************************************************
             if (iter_cnt == 0)
@@ -629,6 +667,7 @@ void pubOdometry()
         for (size_t j = 0; j < 6; j++)
             odom_aft_mapped.pose.covariance[i * 6 + j] = float(cov_mapping(i, j));
     pub_odom_aft_mapped.publish(odom_aft_mapped);
+    publishTF(odom_aft_mapped);
 
     if (pub_keyframes.getNumSubscribers() != 0)
     {
@@ -1021,10 +1060,12 @@ void sigintHandler(int sig)
                                           OUTPUT_FOLDER + "mapping_factor.txt",
                                           OUTPUT_FOLDER + "mapping_d_eigvec.txt",
                                           OUTPUT_FOLDER + "mapping_pose_uncertainty.txt",
+                                          OUTPUT_FOLDER + "mapping_logdet_H.txt",
                                           laser_after_mapped_path,
                                           d_factor_list,
                                           d_eigvec_list,
-                                          cov_mapping_list);
+                                          cov_mapping_list,
+                                          logdet_H_list);
         save_statistics.saveMapTimeStatistics(OUTPUT_FOLDER + "time_mapping.txt", total_mapping, frame_cnt);
     }
     saveGlobalMap();
@@ -1057,11 +1098,11 @@ int main(int argc, char **argv)
     	ss << OUTPUT_FOLDER << "stamped_mloam_map_estimate";
 	else
 		ss << OUTPUT_FOLDER << "stamped_mloam_map_wo_ua_estimate";
-	if (FLAGS_gf_ratio == 1.0)
+	if (FLAGS_gf_ratio_ini == 1.0)
 		ss << ".txt";
 	else
-		ss << FLAGS_gf_ratio << ".txt";
-	MLOAM_MAP_PATH = ss.str(); 
+        ss << FLAGS_gf_ratio_ini << ".txt";
+    MLOAM_MAP_PATH = ss.str(); 
 
 	std::cout << "config file: " << FLAGS_config_file << std::endl;
 	readParameters(FLAGS_config_file);
@@ -1116,6 +1157,8 @@ int main(int argc, char **argv)
 
     pose_keyframes_6d.clear();
     pose_keyframes_3d->clear();
+
+    lambda = 60.0;
 
     signal(SIGINT, sigintHandler);
 

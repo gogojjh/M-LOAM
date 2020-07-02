@@ -33,13 +33,16 @@ public:
     void saveOdomTimeStatistics(const string &filename, const Estimator &estimator);
 
     void saveMapStatistics(const string &map_filename,
-                                           const string &map_factor_filename,
-                                           const string &map_eig_filename,
-                                           const string &map_pose_uct_filename,
-                                           const nav_msgs::Path &laser_aft_mapped_path,
-                                           const std::vector<Eigen::Matrix<double, 1, 6>> &d_factor_list,
-                                           const std::vector<Eigen::Matrix<double, 6, 6>> &d_eigvec_list,
-                                           const std::vector<double> &cov_mapping_list); 
+                           const string &map_factor_filename,
+                           const string &map_eig_filename,
+                           const string &map_pose_uct_filename,
+                           const string &map_logdet_filename,
+                           const nav_msgs::Path &laser_aft_mapped_path,
+                           const std::vector<Eigen::Matrix<double, 1, 6>> &d_factor_list,
+                           const std::vector<Eigen::Matrix<double, 6, 6>> &d_eigvec_list,
+                           const std::vector<double> &cov_mapping_list,
+                           const std::vector<double> &logdet_H_list); 
+
     void saveMapTimeStatistics(const string &filename, const double &total_time, const int &frame_cnt);
 };
 
@@ -104,12 +107,12 @@ void SaveStatistics::saveOdomStatistics(const string &calib_eig_filename,
         fout << sensor_pose.header.stamp.toSec() << " ";
         fout.precision(8);
         fout << sensor_pose.pose.position.x << " "
-                << sensor_pose.pose.position.y << " "
-                << sensor_pose.pose.position.z << " "
-                << sensor_pose.pose.orientation.x << " "
-                << sensor_pose.pose.orientation.y << " "
-                << sensor_pose.pose.orientation.z << " "
-                << sensor_pose.pose.orientation.w << std::endl;
+             << sensor_pose.pose.position.y << " "
+             << sensor_pose.pose.position.z << " "
+             << sensor_pose.pose.orientation.x << " "
+             << sensor_pose.pose.orientation.y << " "
+             << sensor_pose.pose.orientation.z << " "
+             << sensor_pose.pose.orientation.w << std::endl;
     }
     fout.close();
 }
@@ -140,10 +143,12 @@ void SaveStatistics::saveMapStatistics(const string &map_filename,
                                        const string &map_factor_filename,
                                        const string &map_eig_filename,
                                        const string &map_pose_uct_filename,
+                                       const string &map_logdet_filename,
                                        const nav_msgs::Path &laser_aft_mapped_path,
                                        const std::vector<Eigen::Matrix<double, 1, 6>> &d_factor_list,
                                        const std::vector<Eigen::Matrix<double, 6, 6>> &d_eigvec_list,
-                                       const std::vector<double> &cov_mapping_list)
+                                       const std::vector<double> &cov_mapping_list,
+                                       const std::vector<double> &logdet_H_list)
 {
     printf("Saving mapping statistics\n");
     std::ofstream fout(map_filename.c_str(), std::ios::out);
@@ -154,22 +159,24 @@ void SaveStatistics::saveMapStatistics(const string &map_filename,
         fout << laser_pose.header.stamp.toSec() << " ";
         fout.precision(8);
         fout << laser_pose.pose.position.x << " "
-                << laser_pose.pose.position.y << " "
-                << laser_pose.pose.position.z << " "
-                << laser_pose.pose.orientation.x << " "
-                << laser_pose.pose.orientation.y << " "
-                << laser_pose.pose.orientation.z << " "
-                << laser_pose.pose.orientation.w << std::endl;
+             << laser_pose.pose.position.y << " "
+             << laser_pose.pose.position.z << " "
+             << laser_pose.pose.orientation.x << " "
+             << laser_pose.pose.orientation.y << " "
+             << laser_pose.pose.orientation.z << " "
+             << laser_pose.pose.orientation.w << std::endl;
     }
     fout.close();
 
     fout.open(map_factor_filename.c_str(), std::ios::out);
+    fout << "d_factor" << std::endl;
     fout.precision(8);
     for (size_t i = 0; i < d_factor_list.size(); i++)
         fout << d_factor_list[i] << std::endl;
     fout.close();
 
     fout.open(map_eig_filename.c_str(), std::ios::out);
+    fout << "d_eigvec" << std::endl;
     fout.precision(8);
     for (size_t i = 0; i < d_eigvec_list.size(); i++)
         fout << d_eigvec_list[i] << std::endl;
@@ -180,6 +187,13 @@ void SaveStatistics::saveMapStatistics(const string &map_filename,
     fout.precision(8);
     for (size_t i = 0; i < cov_mapping_list.size(); i++)
         fout << cov_mapping_list[i] << std::endl;
+    fout.close();
+
+    fout.open(map_logdet_filename.c_str(), std::ios::out);
+    fout << "logdet_H_list" << std::endl;
+    fout.precision(8);
+    for (size_t i = 0; i < logdet_H_list.size(); i++)
+        fout << logdet_H_list[i] << std::endl;
     fout.close();
 }
 

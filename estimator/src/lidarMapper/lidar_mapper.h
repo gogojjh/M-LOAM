@@ -77,16 +77,18 @@
 
 #define SURROUNDING_KF_RADIUS 50.0
 #define GLOBALMAP_KF_RADIUS 2000.0
-#define DISTANCE_KEYFRAMES 0.5
+#define DISTANCE_KEYFRAMES 0.3
 #define ORIENTATION_KEYFRAMES 5
-#define MAX_FEATURE_SELECT_TIME 20 // 10ms
+#define MAX_FEATURE_SELECT_TIME 25 // 10ms
 #define MAX_RANDOM_QUEUE_TIME 20
+#define LAMBDA_SCALAR 0.003 // TODO
+#define GF_RATIO_SIGMA 1.20
 
 DEFINE_bool(result_save, true, "save or not save the results");
 DEFINE_string(config_file, "config.yaml", "the yaml config file");
 DEFINE_string(output_path, "", "the path ouf saving results");
 DEFINE_bool(with_ua, true, "with or without the awareness of uncertainty");
-DEFINE_double(gf_ratio, 0.2, "with or without the good features selection");
+DEFINE_double(gf_ratio_ini, 0.2, "with or without the good features selection");
 
 FeatureExtract f_extract;
 
@@ -285,6 +287,59 @@ void goodFeatureSelect(const double *para_pose,
     printf("good feature selection time: %fms\n", t_sel_feature.toc());
 }
 
+void evalFullHessian(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_from_map,
+                     const PointICovCloud &laser_map,
+                     const PointICovCloud &laser_cloud,
+                     const Pose &pose_local,
+                     const char feature_type,
+                     Eigen::Matrix<double, 6, 6> &mat_H,
+                     int &feat_num)
+{
+    size_t num_all_features = laser_cloud.size();
+    std::vector<PointPlaneFeature> all_features(num_all_features);
+    // std::vector<Eigen::MatrixXd> v_jaco;
+    for (size_t i = 0; i < num_all_features; i++) 
+    {
+        size_t n_neigh = 5;
+        bool b_match = true;
+        if (feature_type == 's')
+        {
+            b_match = f_extract.matchSurfPointFromMap(kdtree_from_map,
+                                                      laser_map,
+                                                      laser_cloud.points[i],
+                                                      pose_local,
+                                                      all_features[i],
+                                                      i,
+                                                      n_neigh,
+                                                      false);
+        } else if (feature_type == 'c')
+        {
+            b_match = f_extract.matchCornerPointFromMap(kdtree_from_map,
+                                                        laser_map,
+                                                        laser_cloud.points[i],
+                                                        pose_local,
+                                                        all_features[i],
+                                                        i,
+                                                        n_neigh,
+                                                        false);
+        }
+        if (!b_match) continue;
+        Eigen::Matrix3d cov_matrix;
+        extractCov(laser_cloud.points[i], cov_matrix);
+        Eigen::MatrixXd jaco;
+        evaluateFeatJacobianMatching(pose_local, all_features[i], cov_matrix, jaco);
+        mat_H = mat_H + jaco.transpose() * jaco;
+        // v_jaco.push_back(jaco);
+        feat_num++;
+    }
+    // std::ofstream fout((OUTPUT_FOLDER + "jacobian.txt").c_str(), std::ios::out);
+    // fout << "jacobian" << std::endl;
+    // fout.precision(8);
+    // for (size_t i = 0; i < v_jaco.size(); i++)
+    //     fout << v_jaco[i] << std::endl;
+    // fout.close();
+}
+
 // TODO:
 void goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_from_map,
                          const PointICovCloud &laser_map,
@@ -293,7 +348,8 @@ void goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_from
                          std::vector<PointPlaneFeature> &all_features,
                          std::vector<size_t> &sel_feature_idx,
                          const char feature_type,
-                         const float &gf_ratio = 0.2)
+                         const double &gf_ratio_ini = 0.2,
+                         const double &lambda = 60.0)
 {
     size_t num_all_features = laser_cloud.size();
     all_features.resize(num_all_features);
@@ -303,67 +359,56 @@ void goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_from
     std::iota(all_feature_idx.begin(), all_feature_idx.end(), 0);
 
     size_t num_use_features;
-    if (gf_ratio <= 0.0)
-    {
-        num_use_features = 100;
-    }
-    else
-    {
-        num_use_features = static_cast<size_t>(num_all_features * gf_ratio);
-    }
-    printf("num of all features: %lu, sel features: %lu\n", num_all_features, num_use_features);
+    float cur_gf_ratio = gf_ratio_ini;
+    float pre_gf_ratio = cur_gf_ratio;
+    num_use_features = static_cast<size_t>(num_all_features * cur_gf_ratio);
 
-    size_t size_rnd_subset = static_cast<size_t>(1.0 * num_all_features / num_use_features);
-    LOG_EVERY_N(INFO, 100) << "[goodFeatureMatching] size of matrix subset: " << size_rnd_subset;
-
-    // the most informative Hessian matrix
     Eigen::Matrix<double, 6, 6> sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
     size_t num_sel_features = 0;
+    double pre_cost = 0, cur_cost = 0;
     TicToc t_sel_feature;
     while (true)
     {
-        if ((num_sel_features >= num_use_features) ||
-            (all_feature_idx.size() == 0) ||
-            (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
-                break;
-        size_t num_rnd_que;
-        std::priority_queue<FeatureWithScore, std::vector<FeatureWithScore>, std::less<FeatureWithScore>> heap_subset;
-        while (heap_subset.size() < size_rnd_subset)
+        while (true)
         {
-            num_rnd_que = 0;
-            size_t j;
-            while (num_rnd_que < MAX_RANDOM_QUEUE_TIME)
+            if ((num_sel_features >= num_use_features) ||
+                (all_feature_idx.size() == 0) ||
+                (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
+                    break;
+
+            size_t size_rnd_subset = static_cast<size_t>(1.0 * num_all_features / num_use_features);
+            // LOG_EVERY_N(INFO, 100) << "[goodFeatureMatching] size of matrix subset: " << size_rnd_subset;
+
+            size_t num_rnd_que;
+            std::priority_queue<FeatureWithScore, std::vector<FeatureWithScore>, std::less<FeatureWithScore>> heap_subset;
+            while (heap_subset.size() < size_rnd_subset)
             {
-                j = (std::rand() % all_feature_idx.size());
-                if (feature_visited[j] < int(num_sel_features))
+                num_rnd_que = 0;
+                size_t j;
+                while (num_rnd_que < MAX_RANDOM_QUEUE_TIME)
                 {
-                    feature_visited[j] = int(num_sel_features);
+                    j = (std::rand() % all_feature_idx.size());
+                    if (feature_visited[j] < int(num_sel_features))
+                    {
+                        feature_visited[j] = int(num_sel_features);
+                        break;
+                    }
+                    num_rnd_que++;
+                }
+                if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME)
+                {
+                    std::cerr << "[goodFeatureMatching]: early termination!" << std::endl;
                     break;
                 }
-                num_rnd_que++;
-            }
-            if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
-                break;
 
-            size_t que_idx = all_feature_idx[j];
-            if (all_features[que_idx].type_ == 'n')
-            {
-                size_t n_neigh = 5;
-                bool b_match = true;
-                if (feature_type == 's')
+                size_t que_idx = all_feature_idx[j];
+                if (all_features[que_idx].type_ == 'n')
                 {
-                    b_match = f_extract.matchSurfPointFromMap(kdtree_from_map,
-                                                              laser_map,
-                                                              laser_cloud.points[que_idx],
-                                                              pose_local,
-                                                              all_features[que_idx],
-                                                              que_idx,
-                                                              n_neigh,
-                                                              false);
-                }
-                else if (feature_type == 'c')
-                {
-                    b_match = f_extract.matchCornerPointFromMap(kdtree_from_map,
+                    size_t n_neigh = 5;
+                    bool b_match = true;
+                    if (feature_type == 's')
+                    {
+                        b_match = f_extract.matchSurfPointFromMap(kdtree_from_map,
                                                                 laser_map,
                                                                 laser_cloud.points[que_idx],
                                                                 pose_local,
@@ -371,208 +416,89 @@ void goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_from
                                                                 que_idx,
                                                                 n_neigh,
                                                                 false);
-                }
-                if (b_match) 
-                {
+                    } else if (feature_type == 'c')
+                    {
+                        b_match = f_extract.matchCornerPointFromMap(kdtree_from_map,
+                                                                    laser_map,
+                                                                    laser_cloud.points[que_idx],
+                                                                    pose_local,
+                                                                    all_features[que_idx],
+                                                                    que_idx,
+                                                                    n_neigh,
+                                                                    false);
+                    }
+                    if (b_match) 
+                    {
 
+                    }
+                    else // not found constraints or outlier constraints
+                    {
+                        all_feature_idx.erase(all_feature_idx.begin() + j);
+                        feature_visited.erase(feature_visited.begin() + j);
+                        break;
+                    }
                 }
-                else // not found constraints or outlier constraints
+
+                const PointPlaneFeature &feature = all_features[que_idx];
+                Eigen::Matrix3d cov_matrix;
+                extractCov(laser_cloud.points[que_idx], cov_matrix);
+                Eigen::MatrixXd jaco;
+                evaluateFeatJacobianMatching(pose_local, feature, cov_matrix, jaco);
+
+                double cur_det = common::logDet(sub_mat_H + jaco.transpose() * jaco, true);
+                heap_subset.push(FeatureWithScore(que_idx, cur_det, jaco));
+                if (heap_subset.size() >= size_rnd_subset)
                 {
-                    all_feature_idx.erase(all_feature_idx.begin() + j);
-                    feature_visited.erase(feature_visited.begin() + j);
+                    const FeatureWithScore &fws = heap_subset.top();
+                    std::vector<size_t>::iterator iter = std::find(all_feature_idx.begin(), all_feature_idx.end(), fws.idx_);
+                    if (iter == all_feature_idx.end())
+                    {
+                        std::cerr << "[goodFeatureMatching]: not exist feature idx !" << std::endl;
+                        break;
+                    }
+
+                    const Eigen::MatrixXd &jaco = fws.jaco_;
+                    sub_mat_H += jaco.transpose() * jaco;
+
+                    size_t position = iter - all_feature_idx.begin();
+                    all_feature_idx.erase(all_feature_idx.begin() + position);
+                    feature_visited.erase(feature_visited.begin() + position);
+                    sel_feature_idx.push_back(fws.idx_);
+                    num_sel_features++;
+                    // printf("position: %lu, num: %lu\n", position, num_rnd_que);
                     break;
                 }
-            }
-
-            const PointPlaneFeature &feature = all_features[que_idx];
-            Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
-            extractCov(laser_cloud.points[que_idx], cov_matrix);
-            Eigen::MatrixXd jaco;
-            evaluateFeatJacobianMatching(pose_local, feature, cov_matrix, jaco);
-
-            double cur_det = common::logDet(sub_mat_H + jaco.transpose() * jaco, true);
-            heap_subset.push(FeatureWithScore(que_idx, cur_det, jaco));
-            if (heap_subset.size() >= size_rnd_subset)
-            {
-                const FeatureWithScore &fws = heap_subset.top();
-                std::vector<size_t>::iterator iter = std::find(all_feature_idx.begin(), all_feature_idx.end(), fws.idx_);
-                if (iter == all_feature_idx.end())
-                {
-                    std::cerr << "[goodFeatureMatching]: not exist feature idx !" << std::endl;
-                    break;
-                }
-
-                const Eigen::MatrixXd &jaco = fws.jaco_;
-                sub_mat_H += jaco.transpose() * jaco;
-
-                size_t position = iter - all_feature_idx.begin();
-                all_feature_idx.erase(all_feature_idx.begin() + position);
-                feature_visited.erase(feature_visited.begin() + position);
-                sel_feature_idx.push_back(fws.idx_);
-                num_sel_features++;
-                // printf("position: %lu, num: %lu\n", position, num_rnd_que);
-                break;
             }
         }
-        if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
+
+        cur_cost = common::logDet(sub_mat_H) - lambda * 1e-3 * num_use_features;
+        std::cout << cur_cost << "(" << cur_gf_ratio << ") ";
+        if (cur_cost <= pre_cost) 
         {
-            std::cerr << "[goodFeatureMatching]: early termination!" << std::endl;
+            std::cout << std::endl;
+            num_use_features = static_cast<size_t>(num_all_features * pre_gf_ratio);
+            sel_feature_idx.resize(num_use_features);
             break;
+        } else
+        {
+            pre_cost = cur_cost;
+            pre_gf_ratio = cur_gf_ratio;
+            cur_gf_ratio = GF_RATIO_SIGMA * cur_gf_ratio;
+            if (cur_gf_ratio > 1.0) break;
+            num_use_features = static_cast<size_t>(num_all_features * cur_gf_ratio);
         }
+        if (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME) break;
     }
+    printf("num of all features: %lu, sel features: %lu\n", num_all_features, num_use_features);
     printf("logdet of selected sub H: %f\n", common::logDet(sub_mat_H));
 }
 
-
-// TODO: add feature matching
-void goodFeatureSelectTest(const double *para_pose,
-                           const PointICovCloud &laser_cloud_surf_cov,
-                           const PointICovCloud &laser_cloud_corner_cov,
-                           const std::vector<PointPlaneFeature> &all_features,
-                           const size_t &num_all_features,
-                           std::vector<size_t> sel_feature_idx,
-                           const float &gf_ratio = 0.2)
-{
-    Eigen::Matrix<double, 6, 6> total_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
-    double total_det;
-    for (size_t que_idx = 0; que_idx < num_all_features; que_idx++)
-    {
-        const PointPlaneFeature &feature = all_features[que_idx];
-        Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
-        if (feature.type_ == 's')
-            extractCov(laser_cloud_surf_cov.points[feature.idx_], cov_matrix);
-        else if (feature.type_ == 'c')
-            extractCov(laser_cloud_corner_cov.points[feature.idx_], cov_matrix);
-        Eigen::MatrixXd jaco;
-        evaluateFeatJacobian(para_pose, feature, cov_matrix, jaco);
-        total_mat_H += jaco.transpose() * jaco;
-    }
-    total_det = common::logDet(total_mat_H, true);
-
-    // create a query of the index of the valid features
-    std::vector<size_t> all_feature_idx(num_all_features);
-    std::vector<int> feature_visited(num_all_features, -1);
-    std::iota(all_feature_idx.begin(), all_feature_idx.end(), 0);
-
-    size_t num_use_features;
-    if (gf_ratio >= 1.0)
-    {
-        sel_feature_idx = all_feature_idx;
-        printf("use all features: %lu!\n", sel_feature_idx.size());
-        return;
-    }
-    else if (gf_ratio <= 0.0)
-    {
-        num_use_features = 100;
-    }
-    else
-    {
-        num_use_features = static_cast<size_t>(num_all_features * gf_ratio);
-    }
-
-    size_t size_rnd_subset = static_cast<size_t>(float(num_all_features) / float(num_use_features) * 1.0);
-    Eigen::Matrix<double, 6, 6> sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
-    size_t num_sel_features = 0;
-    TicToc t_sel_feature;
-    double cur_det;
-    while (true)
-    {
-        if (((num_sel_features >= num_use_features) && (cur_det >= total_det + std::log(0.8))) ||
-            (all_feature_idx.size() == 0) ||
-            (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
-            break;
-        size_t num_rnd_que;
-        std::priority_queue<FeatureWithScore, std::vector<FeatureWithScore>, std::less<FeatureWithScore>> heap_subset;
-        while (heap_subset.size() < size_rnd_subset)
-        {
-            num_rnd_que = 0;
-            size_t j;
-            while (num_rnd_que < MAX_RANDOM_QUEUE_TIME)
-            {
-                j = (std::rand() % all_feature_idx.size());
-                if (feature_visited[j] < int(num_sel_features))
-                {
-                    feature_visited[j] = int(num_sel_features);
-                    break;
-                }
-                num_rnd_que++;
-            }
-            if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
-                break;
-
-            size_t que_idx = all_feature_idx[j];
-            const PointPlaneFeature &feature = all_features[que_idx];
-            Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
-            if (feature.type_ == 's')
-                extractCov(laser_cloud_surf_cov.points[feature.idx_], cov_matrix);
-            else if (feature.type_ == 'c')
-                extractCov(laser_cloud_corner_cov.points[feature.idx_], cov_matrix);
-            Eigen::MatrixXd jaco;
-            evaluateFeatJacobian(para_pose, feature, cov_matrix, jaco);
-
-            cur_det = common::logDet(sub_mat_H + jaco.transpose() * jaco, true);
-            heap_subset.push(FeatureWithScore(que_idx, cur_det, jaco));
-            if (heap_subset.size() >= size_rnd_subset)
-            {
-                const FeatureWithScore &fws = heap_subset.top();
-                std::vector<size_t>::iterator iter = std::find(all_feature_idx.begin(), all_feature_idx.end(), fws.idx_);
-                if (iter == all_feature_idx.end())
-                {
-                    std::cerr << "[goodFeatureSelct]: not exist feature idx !" << std::endl;
-                    break;
-                }
-
-                const Eigen::MatrixXd &jaco = fws.jaco_;
-                sub_mat_H += jaco.transpose() * jaco;
-
-                size_t position = iter - all_feature_idx.begin();
-                all_feature_idx.erase(all_feature_idx.begin() + position);
-                feature_visited.erase(feature_visited.begin() + position);
-                sel_feature_idx.push_back(fws.idx_);
-                num_sel_features++;
-                // printf("position: %lu, num: %lu\n", position, num_rnd_que);
-                break;
-            }
-        }
-        if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME)
-        {
-            std::cerr << "[goodFeatureSelct]: early termination!" << std::endl;
-            break;
-        }
-    }
-    // printf("logdet of selected sub H: %f\n", common::logDet(sub_mat_H));
-    // printf("good feature selection time: %fms\n", t_sel_feature.toc());
-
-    // complete H, threshold, |F|, |S|, |S|/|F|
-    std::cout << total_det << " " << total_det + std::log(0.8) << " "
-              << all_features.size() << " "
-              << sel_feature_idx.size() << " "
-              << (float)sel_feature_idx.size() * 1.0 / all_features.size() << std::endl;
-
-    LOG_EVERY_N(INFO, 1) << total_det << " " << total_det + std::log(0.8) << " "
-                         << all_features.size() << " "
-                         << sel_feature_idx.size() << " "
-                         << (float)sel_feature_idx.size() * 1.0 / all_features.size();
-}
-
-void writeFeature(const std::vector<size_t> &sel_feature_idx,
+void writeFeature(const PointICovCloud &laser_cloud,
+                  const std::vector<size_t> &sel_feature_idx,
                   const std::vector<PointPlaneFeature> &surf_map_features)
 {
     pcl::PCDWriter pcd_writer;
-
-    common::PointICloud origin_map_feature;
-    for (const PointPlaneFeature &feature : surf_map_features)
-    {
-        common::PointI point;
-        point.x = feature.point_[0];
-        point.z = feature.point_[1];
-        point.y = feature.point_[2];
-        point.intensity = feature.laser_idx_;
-        origin_map_feature.points.push_back(point);
-    }
-    origin_map_feature.height = 1;
-    origin_map_feature.width = origin_map_feature.points.size();
-    pcd_writer.write("/tmp/original_map_feature.pcd", origin_map_feature);
+    pcd_writer.write("/tmp/original_map_feature.pcd", laser_cloud);
 
     common::PointICloud sel_map_feature;
     for (const size_t &idx : sel_feature_idx)
