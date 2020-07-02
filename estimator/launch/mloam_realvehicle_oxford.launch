@@ -3,12 +3,12 @@
     <arg name="bag_file_use" default="true" />
     <!-- <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-10-14-36-48-radar-oxford-10k-partial/data.bag" />  -->
     <!-- <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-18-15-20-12-radar-oxford-10k/data_filter.bag" /> -->
-    <!-- <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-18-15-20-12-radar-oxford-10k/data_loop1.bag" />     -->
-    <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-18-15-20-12-radar-oxford-10k/data_loop1back.bag" />
+    <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-18-15-20-12-radar-oxford-10k/data_loop1.bag" />    
+    <!-- <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-18-15-20-12-radar-oxford-10k/data_loop1back.bag" /> -->
 
     <param name="use_sim_time" value="true" />
     <group if="$(arg bag_file_use)">
-        <node pkg="rosbag" type="play" name="rosbag" args="--clock --pause -r 1 $(arg bag_file)" />    
+        <node pkg="rosbag" type="play" name="rosbag" args="--clock --pause -r 0.6 $(arg bag_file)" />    
     </group>    
 
     <include file="$(find rviz_car_model)/launch/default.launch" />
@@ -21,7 +21,7 @@
 
     <arg name="data_source" default="bag"/>
     <arg name="result_save" default="false"/>
-    <arg name="output_path" default="/home/jjiao/trajectory_results/real_vehicle/oxford/20190118_loop1_back/"/>
+    <arg name="output_path" default="/home/jjiao/trajectory_results/real_vehicle/oxford/20190118_loop1/"/>
     <arg name="with_ua" default="true" /> <!-- awareness of uncertainty propagation-->    
     <arg name="gf_ratio_ini" default="1" />    
 

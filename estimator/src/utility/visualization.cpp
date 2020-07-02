@@ -15,7 +15,6 @@
 
 using namespace ros;
 using namespace Eigen;
-
 using namespace common;
 
 // pointcloud
@@ -62,10 +61,10 @@ void clearPath()
 void registerPub(ros::NodeHandle &nh)
 {
     pub_laser_cloud = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud", 5);
-    pub_laser_cloud_proj = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_proj", 5);
-    pub_corner_points_sharp = nh.advertise<sensor_msgs::PointCloud2>("/corner_points_sharp",5);
+    // pub_laser_cloud_proj = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_proj", 5);
+    // pub_corner_points_sharp = nh.advertise<sensor_msgs::PointCloud2>("/corner_points_sharp",5);
     pub_corner_points_less_sharp = nh.advertise<sensor_msgs::PointCloud2>("/corner_points_less_sharp", 5);
-    pub_surf_points_flat = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_flat", 5);
+    // pub_surf_points_flat = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_flat", 5);
     pub_surf_points_less_flat = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_less_flat", 5);
     pub_extrinsics = nh.advertise<mloam_msgs::Extrinsics>("/extrinsics", 5);
     for (int i = 0; i < NUM_OF_LASER; i++)
@@ -104,14 +103,14 @@ void pubPointCloud(const Estimator &estimator, const double &time)
             corner_points_less_sharp += cloud_feature_trans["corner_points_less_sharp"];
             surf_points_less_flat += cloud_feature_trans["surf_points_less_flat"];
         }
-        laser_cloud_proj += cloud_feature_trans["laser_cloud"];
+        // laser_cloud_proj += cloud_feature_trans["laser_cloud"];
     }
     publishCloud(pub_laser_cloud, header, laser_cloud);
     // publishCloud(pub_corner_points_sharp, header, corner_points_sharp);
     // publishCloud(pub_surf_points_flat, header, surf_points_flat);
     publishCloud(pub_corner_points_less_sharp, header, corner_points_less_sharp);
     publishCloud(pub_surf_points_less_flat, header, surf_points_less_flat);
-    publishCloud(pub_laser_cloud_proj, header, laser_cloud_proj);
+    // publishCloud(pub_laser_cloud_proj, header, laser_cloud_proj);
 
     // publish local map
     if (estimator.solver_flag_ == Estimator::SolverFlag::NON_LINEAR)
@@ -160,57 +159,7 @@ void pubPointCloud(const Estimator &estimator, const double &time)
 
 void printStatistics(const Estimator &estimator, double t)
 {
-    // if (MLOAM_RESULT_SAVE)
-    // {
-        // if (estimator.solver_flag_ != Estimator::SolverFlag::NON_LINEAR) return;
-        // timestamp tx ty tz qx qy qz qw
-        // {
-        //     ofstream fout(EX_CALIB_EIG_PATH.c_str(), ios::app);
-        //     fout.setf(ios::fixed, ios::floatfield);
-        //     fout.precision(3);
-        //     for (auto i = 0; i < NUM_OF_LASER; i++) fout << estimator.cur_eig_calib_[i] << ", ";
-        //     fout << std::endl;
-        //     fout.close();
-        // }
 
-        // {
-        //     ofstream fout(EX_CALIB_RESULT_PATH.c_str(), ios::app);
-        //     fout.setf(ios::fixed, ios::floatfield);
-        //     fout.precision(5);
-        //     for (auto i = 0; i < NUM_OF_LASER; i++)
-        //     {
-        //         fout << estimator.cur_time_ << ", "
-        //             << estimator.tbl_[i](0) << ", "
-        //             << estimator.tbl_[i](1) << ", "
-        //             << estimator.tbl_[i](2) << ", "
-        //             << estimator.qbl_[i].x() << ", "
-        //             << estimator.qbl_[i].y() << ", "
-        //             << estimator.qbl_[i].z() << ", "
-        //             << estimator.qbl_[i].w() << std::endl;
-        //     }
-        //     fout.close();
-        // }        
-
-        // {
-        //     ofstream fout(MLOAM_ODOM_PATH.c_str(), ios::out);
-        //     fout.setf(ios::fixed, ios::floatfield);
-        //     for (auto i = 0; i < v_laser_path[IDX_REF].poses.size(); i++)
-        //     {
-        //         geometry_msgs::PoseStamped &laser_pose = v_laser_path[IDX_REF].poses[i];
-        //         fout.precision(15);
-        //         fout << laser_pose.header.stamp.toSec() << " ";
-        //         fout.precision(8);
-        //         fout << laser_pose.pose.position.x << " "
-        //             << laser_pose.pose.position.y << " "
-        //             << laser_pose.pose.position.z << " "
-        //             << laser_pose.pose.orientation.x << " "
-        //             << laser_pose.pose.orientation.y << " "
-        //             << laser_pose.pose.orientation.z << " "
-        //             << laser_pose.pose.orientation.w << std::endl;
-        //     }
-        //     fout.close();
-        // }
-    // }
 }
 
 void pubOdometry(Estimator &estimator, const double &time)

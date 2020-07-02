@@ -122,7 +122,7 @@ bool with_ua_flag;
 pcl::PCDWriter pcd_writer;
 
 double lambda;
-double gf_ratio;
+double gf_ratio_cur;
 
 std::mutex m_process;
 
@@ -400,7 +400,7 @@ void scan2MapOptimization()
         kdtree_corner_from_map->setInputCloud(laser_cloud_corner_from_map_cov_ds);
         printf("build tree time %fms\n", t_tree.toc());
         printf("********************************\n");
-        for (int iter_cnt = 0; iter_cnt < 3; iter_cnt++)
+        for (int iter_cnt = 0; iter_cnt < 2; iter_cnt++)
         {
             ceres::Problem problem;
             ceres::Solver::Summary summary;
@@ -408,7 +408,7 @@ void scan2MapOptimization()
 
             ceres::Solver::Options options;
             options.linear_solver_type = ceres::DENSE_SCHUR;
-            options.max_num_iterations = 15;
+            options.max_num_iterations = 30;
             // options.max_solver_time_in_seconds = 0.04;
             // options.num_threads = 2;
             options.minimizer_progress_to_stdout = false;
@@ -444,14 +444,13 @@ void scan2MapOptimization()
                     }
                     double normalize_logdet_H = common::logDet(mat_H * 134, true) - mat_H.rows() * std::log(1.0 * total_feat_num);
                     logdet_H_list.push_back(normalize_logdet_H);
-                    // lambda = LAMBDA_SCALAR * normalize_logdet_H * normalize_logdet_H;
-                    if (normalize_logdet_H >= 64)
-                        lambda = 10;
+                    if (normalize_logdet_H >= LOGDET_H_THRESHOLD)
+                        lambda = 7;
                     else 
-                        lambda = 5;
+                        lambda = 3 ;
                     std::cout << common::YELLOW << "lambda: " << lambda << common::RESET << std::endl;
-                    // ratio_change_flag = true;
-                    // gf_ratio = FLAGS_gf_ratio_ini;
+                    ratio_change_flag = true;
+                    gf_ratio_cur = FLAGS_gf_ratio_ini;
                 }
             }
 
@@ -462,34 +461,36 @@ void scan2MapOptimization()
             TicToc t_match_features;
             if (POINT_PLANE_FACTOR)
             {
-                goodFeatureMatching(kdtree_surf_from_map,
-                                    *laser_cloud_surf_from_map_cov_ds,
-                                    *laser_cloud_surf_cov,
-                                    pose_wmap_curr,
-                                    all_surf_features,
-                                    sel_surf_feature_idx,
-                                    's',
-                                    FLAGS_gf_ratio_ini,
-                                    lambda);
+                gf_ratio_cur = goodFeatureMatching(kdtree_surf_from_map,
+                                                   *laser_cloud_surf_from_map_cov_ds,
+                                                   *laser_cloud_surf_cov,
+                                                   pose_wmap_curr,
+                                                   all_surf_features,
+                                                   sel_surf_feature_idx,
+                                                   's',
+                                                   gf_ratio_cur,
+                                                   lambda,
+                                                   ratio_change_flag);
                 surf_num = sel_surf_feature_idx.size();
             }
             if (POINT_EDGE_FACTOR)
             {
-                goodFeatureMatching(kdtree_corner_from_map,
-                                    *laser_cloud_corner_from_map_cov_ds,
-                                    *laser_cloud_corner_cov,
-                                    pose_wmap_curr,
-                                    all_corner_features,
-                                    sel_corner_feature_idx,
-                                    'c',
-                                    FLAGS_gf_ratio_ini,
-                                    lambda);
+                gf_ratio_cur = goodFeatureMatching(kdtree_corner_from_map,
+                                                   *laser_cloud_corner_from_map_cov_ds,
+                                                   *laser_cloud_corner_cov,
+                                                   pose_wmap_curr,
+                                                   all_corner_features,
+                                                   sel_corner_feature_idx,
+                                                   'c',
+                                                   gf_ratio_cur,
+                                                   lambda,
+                                                   false);
                 corner_num = sel_corner_feature_idx.size();
             }
-            if (frame_cnt % 100 == 0)
-                writeFeature(*laser_cloud_surf_cov, sel_surf_feature_idx, all_surf_features);
+            // if (frame_cnt % 100 == 0)
+            //     writeFeature(*laser_cloud_surf_cov, sel_surf_feature_idx, all_surf_features);
             printf("matching features time: %fms\n", t_match_features.toc());
-            printf("matching surf & corner num: %lu, %lu\n", surf_num, corner_num);
+            // printf("matching surf & corner num: %lu, %lu\n", surf_num, corner_num);
 
             TicToc t_add_constraints;
             CHECK_JACOBIAN = 0;
@@ -554,10 +555,10 @@ void scan2MapOptimization()
             printf("mapping solver time: %fms\n", t_solver.toc());
 
             double2Vector();
-            std::cout << iter_cnt << "th result: " << pose_wmap_curr << std::endl;
-            if (iter_cnt != 2)
+            if (iter_cnt != 3)
                 printf("-------------------------------------\n");
         }
+        std::cout << "optimization result: " << pose_wmap_curr << std::endl;
         printf("********************************\n");
         // printf("mapping optimization time: %fms\n", t_opt.toc());
     }
@@ -634,19 +635,19 @@ void pubPointCloud()
     laser_cloud_full_res_msg.header.frame_id = "/world";
     pub_laser_cloud_full_res.publish(laser_cloud_full_res_msg);
 
-    for (PointI &point : *laser_cloud_surf_last) pointAssociateToMap(point, point, pose_wmap_curr);
-    sensor_msgs::PointCloud2 laser_cloud_surf_last_msg;
-    pcl::toROSMsg(*laser_cloud_surf_last, laser_cloud_surf_last_msg);
-    laser_cloud_surf_last_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
-    laser_cloud_surf_last_msg.header.frame_id = "/world";
-    pub_laser_cloud_surf_last_res.publish(laser_cloud_surf_last_msg);
+    // for (PointI &point : *laser_cloud_surf_last) pointAssociateToMap(point, point, pose_wmap_curr);
+    // sensor_msgs::PointCloud2 laser_cloud_surf_last_msg;
+    // pcl::toROSMsg(*laser_cloud_surf_last, laser_cloud_surf_last_msg);
+    // laser_cloud_surf_last_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
+    // laser_cloud_surf_last_msg.header.frame_id = "/world";
+    // pub_laser_cloud_surf_last_res.publish(laser_cloud_surf_last_msg);
 
-    for (PointI &point : *laser_cloud_corner_last) pointAssociateToMap(point, point, pose_wmap_curr);
-    sensor_msgs::PointCloud2 laser_cloud_corner_last_msg;
-    pcl::toROSMsg(*laser_cloud_corner_last, laser_cloud_corner_last_msg);
-    laser_cloud_corner_last_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
-    laser_cloud_corner_last_msg.header.frame_id = "/world";
-    pub_laser_cloud_corner_last_res.publish(laser_cloud_corner_last_msg);
+    // for (PointI &point : *laser_cloud_corner_last) pointAssociateToMap(point, point, pose_wmap_curr);
+    // sensor_msgs::PointCloud2 laser_cloud_corner_last_msg;
+    // pcl::toROSMsg(*laser_cloud_corner_last, laser_cloud_corner_last_msg);
+    // laser_cloud_corner_last_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
+    // laser_cloud_corner_last_msg.header.frame_id = "/world";
+    // pub_laser_cloud_corner_last_res.publish(laser_cloud_corner_last_msg);
 }
 
 void pubOdometry()
@@ -687,10 +688,8 @@ void pubGlobalMap()
         rate.sleep();
         if (pub_laser_cloud_surrounding.getNumSubscribers() != 0)
         {
-            // m_process.lock();
             sensor_msgs::PointCloud2 laser_cloud_surround_msg;
             pcl::toROSMsg(*laser_cloud_surf_from_map_cov_ds, laser_cloud_surround_msg);
-            // m_process.unlock();
             laser_cloud_surround_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
             laser_cloud_surround_msg.header.frame_id = "/world";
             pub_laser_cloud_surrounding.publish(laser_cloud_surround_msg);
@@ -740,7 +739,7 @@ void pubGlobalMap()
 
 void saveGlobalMap()
 {
-    std::cout << common::YELLOW << "Saving keyframe poses & map cloud (corner + surf) tomp/mloam_*.pcd" << common::RESET << std::endl;
+    std::cout << common::YELLOW << "Saving keyframe poses & map cloud (corner + surf) /tmp/mloam_*.pcd" << common::RESET << std::endl;
     pcd_writer.write("/tmp/mloam_mapping_keyframes.pcd", *pose_keyframes_3d);
     
     PointICovCloud::Ptr laser_cloud_map(new PointICovCloud());
@@ -903,7 +902,7 @@ void process()
 
             TicToc t_dscs;
             downsampleCurrentScan();
-            printf("downsample current scan time: %fms\n", t_dscs.toc());
+            // printf("downsample current scan time: %fms\n", t_dscs.toc());
 
             TicToc t_opti;
             scan2MapOptimization();
@@ -917,7 +916,7 @@ void process()
 
             TicToc t_pub;
             pubPointCloud();
-            printf("mapping pub time: %fms\n", t_pub.toc());
+            // printf("mapping pub time: %fms\n", t_pub.toc());
             LOG_EVERY_N(INFO, 100) << "mapping pub time: " << t_pub.toc() << "ms";
 
             pubOdometry();
@@ -1102,6 +1101,7 @@ int main(int argc, char **argv)
 		ss << ".txt";
 	else
         ss << FLAGS_gf_ratio_ini << ".txt";
+    gf_ratio_cur = FLAGS_gf_ratio_ini;
     MLOAM_MAP_PATH = ss.str(); 
 
 	std::cout << "config file: " << FLAGS_config_file << std::endl;
@@ -1158,7 +1158,7 @@ int main(int argc, char **argv)
     pose_keyframes_6d.clear();
     pose_keyframes_3d->clear();
 
-    lambda = 60.0;
+    lambda = 10.0;
 
     signal(SIGINT, sigintHandler);
 
