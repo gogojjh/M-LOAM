@@ -109,6 +109,7 @@ extern int N_CUMU_FEATURE;
 extern double EIG_INITIAL;
 extern double EIG_THRE_CALIB;
 extern int N_CALIB;
+extern float ODOM_GF_RATIO;
 
 extern int SKIP_NUM_ODOM_PUB;
 
@@ -116,6 +117,9 @@ extern int SKIP_NUM_ODOM_PUB;
 extern float MAP_CORNER_RES;
 extern float MAP_SURF_RES;
 extern float MAP_EIG_THRE;
+extern float MAP_GF_RATIO;
+extern float LAMBDA_1;
+extern float LAMBDA_2;
 
 extern std::vector<Eigen::Matrix<double, 6, 6> > COV_EXT;
 extern Eigen::Matrix<double, 3, 3> COV_MEASUREMENT;

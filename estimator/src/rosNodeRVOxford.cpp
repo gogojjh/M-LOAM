@@ -237,7 +237,13 @@ int main(int argc, char **argv)
 
     MLOAM_RESULT_SAVE = FLAGS_result_save;
     OUTPUT_FOLDER = FLAGS_output_path;
-    MLOAM_ODOM_PATH = OUTPUT_FOLDER + "stamped_mloam_odom_estimate.txt";
+    stringstream ss;
+    ss << OUTPUT_FOLDER + "stamped_mloam_odom_estimate";
+    if (ODOM_GF_RATIO == 1.0)
+        ss << ".txt";
+    else
+        ss << ODOM_GF_RATIO << ".txt";
+    MLOAM_ODOM_PATH = ss.str();
     MLOAM_GPS_PATH = OUTPUT_FOLDER + "stamped_gps.txt";
     MLOAM_GT_PATH = OUTPUT_FOLDER + "stamped_groundtruth.txt";
     EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";

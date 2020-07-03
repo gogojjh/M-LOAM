@@ -198,7 +198,7 @@ void goodFeatureSelect(const double *para_pose,
     // size of the random subset
     size_t size_rnd_subset = static_cast<size_t>(float(num_all_features) / float(num_use_features) * 1.0);
     // size_t size_rnd_subset = static_cast<size_t>(float(num_all_features) / float(num_use_features) * 2.3);
-    LOG_EVERY_N(INFO, 100) << "[goodFeatureSelct] size of matrix subset: " << size_rnd_subset;
+    LOG_EVERY_N(INFO, 20) << "[goodFeatureSelct] size of matrix subset: " << size_rnd_subset;
 
     // the most informative Hessian matrix
     Eigen::Matrix<double, 6, 6> sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
@@ -341,7 +341,6 @@ void evalFullHessian(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_from_map
     // fout.close();
 }
 
-// TODO:
 double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_from_map,
                            const PointICovCloud &laser_map,
                            const PointICovCloud &laser_cloud,
@@ -349,9 +348,9 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
                            std::vector<PointPlaneFeature> &all_features,
                            std::vector<size_t> &sel_feature_idx,
                            const char feature_type,
-                           const double &gf_ratio_ini = 0.2,
-                           const double &lambda = 10.0,
-                           const bool &ratio_change_flag = false)
+                           const double gf_ratio_ini = 0.2,
+                           const double lambda = 10.0,
+                           const bool ratio_change_flag = false)
 {
     size_t num_all_features = laser_cloud.size();
     all_features.resize(num_all_features);
@@ -381,7 +380,7 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
                     break;
 
             size_t size_rnd_subset = static_cast<size_t>(1.0 * num_all_features / num_use_features);
-            // LOG_EVERY_N(INFO, 100) << "[goodFeatureMatching] size of matrix subset: " << size_rnd_subset;
+            // LOG_EVERY_N(INFO, 20) << "[goodFeatureMatching] size of matrix subset: " << size_rnd_subset;
 
             size_t num_rnd_que;
             std::priority_queue<FeatureWithScore, std::vector<FeatureWithScore>, std::less<FeatureWithScore>> heap_subset;

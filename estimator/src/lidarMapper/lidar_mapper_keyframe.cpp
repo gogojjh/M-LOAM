@@ -445,9 +445,9 @@ void scan2MapOptimization()
                     double normalize_logdet_H = common::logDet(mat_H * 134, true) - mat_H.rows() * std::log(1.0 * total_feat_num);
                     logdet_H_list.push_back(normalize_logdet_H);
                     if (normalize_logdet_H >= LOGDET_H_THRESHOLD)
-                        lambda = 7;
+                        lambda = LAMBDA_1;
                     else 
-                        lambda = 3 ;
+                        lambda = LAMBDA_2;
                     std::cout << common::YELLOW << "lambda: " << lambda << common::RESET << std::endl;
                     ratio_change_flag = true;
                     gf_ratio_cur = FLAGS_gf_ratio_ini;
@@ -538,8 +538,8 @@ void scan2MapOptimization()
                 cov_mapping = mat_H.inverse(); // covariance of sensor noise: A New Approach to 3D ICP Covariance Estimation/ Censi's approach
                 cov_mapping_list.push_back(cov_mapping.trace());
                 is_degenerate = local_parameterization->is_degenerate_;
-                LOG_EVERY_N(INFO, 100) << "logdet of H: " << common::logDet(mat_H * 134, true);
-                LOG_EVERY_N(INFO, 100) << "pose covariance trace: " << cov_mapping.trace();
+                LOG_EVERY_N(INFO, 20) << "logdet of H: " << common::logDet(mat_H * 134, true);
+                LOG_EVERY_N(INFO, 20) << "pose covariance trace: " << cov_mapping.trace();
                 printf("evaluate H: %fms\n", t_eval_H.toc());
             }
             else if (is_degenerate)
@@ -917,7 +917,7 @@ void process()
             TicToc t_pub;
             pubPointCloud();
             // printf("mapping pub time: %fms\n", t_pub.toc());
-            LOG_EVERY_N(INFO, 100) << "mapping pub time: " << t_pub.toc() << "ms";
+            LOG_EVERY_N(INFO, 20) << "mapping pub time: " << t_pub.toc() << "ms";
 
             pubOdometry();
 
@@ -925,7 +925,7 @@ void process()
 
             std::cout << common::RED << "frame: " << frame_cnt
                       << ", whole mapping time " << t_whole_mapping.toc() << "ms" << common::RESET << std::endl;
-            LOG_EVERY_N(INFO, 100) << "whole mapping time " << t_whole_mapping.toc() << "ms";
+            LOG_EVERY_N(INFO, 20) << "whole mapping time " << t_whole_mapping.toc() << "ms";
             total_mapping += t_whole_mapping.toc();
 
             // std::cout << "pose_wmap_curr: " << pose_wmap_curr << std::endl;

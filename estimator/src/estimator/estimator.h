@@ -56,6 +56,9 @@
 
 #include "mloam_pcl/point_with_time.hpp"
 
+#define MAX_FEATURE_SELECT_TIME 10 // 10ms
+#define MAX_RANDOM_QUEUE_TIME 20
+
 class Estimator
 {
   public:
@@ -81,6 +84,19 @@ class Estimator
     // process localmap optimization
     void optimizeMap();
 
+    void evaluateFeatJacobian(const double *para_pose_pivot,
+                              const double *para_pose_other,
+                              const double *para_pose_ext,
+                              const PointPlaneFeature &feature,
+                              Eigen::MatrixXd &mat_jaco);
+
+    void goodFeatureSelect(const std::vector<PointPlaneFeature> &all_features,
+                           std::vector<size_t> &sel_feature_idx,
+                           const double *para_pose_pivot,
+                           const double *para_pose_other,
+                           const double *para_pose_ext,
+                           const double gf_ratio = 0.5);
+
     void vector2Double();
     void double2Vector();
 
@@ -88,12 +104,11 @@ class Estimator
     void slideWindow();
 
     void evalResidual(ceres::Problem &problem,
-        std::vector<PoseLocalParameterization *> &local_param_ids,
-        const std::vector<double *> &para_ids,
-        const std::vector<ceres::internal::ResidualBlock *> &res_ids_proj,
-        const MarginalizationInfo *last_marginalization_info_,
-        const std::vector<ceres::internal::ResidualBlock *> &res_ids_marg,
-        const bool b_eval_degenracy = false);
+                      std::vector<PoseLocalParameterization *> &local_param_ids,
+                      const std::vector<double *> &para_ids,
+                      const std::vector<ceres::internal::ResidualBlock *> &res_ids_proj,
+                      const MarginalizationInfo *last_marginalization_info_,
+                      const std::vector<ceres::internal::ResidualBlock *> &res_ids_marg);
     void evalDegenracy(std::vector<PoseLocalParameterization *> &local_param_ids, const ceres::CRSMatrix &jaco);
     void evalCalib();
 
@@ -169,6 +184,8 @@ class Estimator
     std::vector<std::vector<std::vector<PointPlaneFeature> > > surf_map_features_, corner_map_features_;
     std::vector<std::vector<PointPlaneFeature> > cumu_surf_map_features_, cumu_corner_map_features_;
     size_t cumu_surf_feature_cnt_, cumu_corner_feature_cnt_;
+
+    std::vector<std::vector<std::vector<size_t> > > sel_surf_feature_idx_, sel_corner_feature_idx_;
 
     double **para_pose_{};
     double **para_ex_pose_{};

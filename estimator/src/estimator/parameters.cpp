@@ -82,6 +82,7 @@ int N_CUMU_FEATURE;
 double EIG_INITIAL;
 double EIG_THRE_CALIB;
 int N_CALIB;
+float ODOM_GF_RATIO;
 
 int SKIP_NUM_ODOM_PUB;
 
@@ -89,6 +90,9 @@ int SKIP_NUM_ODOM_PUB;
 float MAP_CORNER_RES;
 float MAP_SURF_RES;
 float MAP_EIG_THRE;
+float MAP_GF_RATIO;
+float LAMBDA_1;
+float LAMBDA_2;
 
 std::vector<Eigen::Matrix<double, 6, 6> > COV_EXT;
 Eigen::Matrix<double, 3, 3> COV_MEASUREMENT;
@@ -236,6 +240,7 @@ void readParameters(std::string config_file)
     EIG_INITIAL = fsSettings["eig_initial"];
     EIG_THRE_CALIB = fsSettings["eig_thre_calib"];
     N_CALIB = fsSettings["n_calib"];
+    ODOM_GF_RATIO = fsSettings["odom_gf_ratio"];
 
     SKIP_NUM_ODOM_PUB = fsSettings["skip_num_odom_pub"];
     if (SKIP_NUM_ODOM_PUB == 0) SKIP_NUM_ODOM_PUB = 1;
@@ -244,6 +249,10 @@ void readParameters(std::string config_file)
     MAP_CORNER_RES = fsSettings["map_corner_res"];
     MAP_SURF_RES = fsSettings["map_surf_res"];
     MAP_EIG_THRE = fsSettings["map_eig_thre"];
+    MAP_GF_RATIO = fsSettings["map_gf_ratio"];
+
+    LAMBDA_1 = fsSettings["lambda_1"];
+    LAMBDA_2 = fsSettings["lambda_2"];    
 
     printf("map corner resolution:%f, surf resolution:%f\n", MAP_CORNER_RES, MAP_SURF_RES);
 

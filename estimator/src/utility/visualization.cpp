@@ -46,8 +46,8 @@ cloudFeature transformCloudFeature(const cloudFeature &cloud_feature, const Eige
     {
         PointICloud trans_cloud;
         pcl::transformPointCloud(iter->second, trans_cloud, trans);
-        // for (auto &p: trans_cloud.points) p.intensity = n + (p.intensity - int(p.intensity));
-        for (auto &p: trans_cloud.points) p.intensity = n;
+        for (auto &p: trans_cloud.points) p.intensity = n + (p.intensity - int(p.intensity));
+        // for (auto &p: trans_cloud.points) p.intensity = n;
         trans_cloud_feature.insert(pair<std::string, PointICloud>(iter->first, trans_cloud));
     }
     return trans_cloud_feature;

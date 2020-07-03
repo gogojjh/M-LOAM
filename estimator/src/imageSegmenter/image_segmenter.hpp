@@ -306,7 +306,7 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
             if (label_mat(i, j) > 0)
             {
                 PointType point = cloud_matrix.points[j + i * horizon_scans_];
-                point.intensity = i; // intensity = scan_id.timestamp
+                point.intensity += i; // intensity = scan_id.timestamp
                 bool ground_flag = (label_mat(i, j) == 1) ? true : false;
                 if ((scan_info.segment_flag_) && (label_mat(i, j) != 999999))
                 {
