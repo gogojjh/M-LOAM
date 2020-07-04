@@ -194,6 +194,7 @@ void goodFeatureSelect(const double *para_pose,
         num_use_features = static_cast<size_t>(num_all_features * gf_ratio);
     }
     // printf("size of good features: %lu\n", num_use_features);
+    sel_feature_idx.resize(num_use_features);
 
     // size of the random subset
     size_t size_rnd_subset = static_cast<size_t>(float(num_all_features) / float(num_use_features) * 1.0);
@@ -257,7 +258,7 @@ void goodFeatureSelect(const double *para_pose,
                 size_t position = iter - all_feature_idx.begin();
                 all_feature_idx.erase(all_feature_idx.begin() + position);
                 feature_visited.erase(feature_visited.begin() + position);
-                sel_feature_idx.push_back(fws.idx_);
+                sel_feature_idx[num_sel_features] = fws.idx_;
                 num_sel_features++;
                 // printf("position: %lu, num: %lu\n", position, num_rnd_que);
                 break;
@@ -269,6 +270,7 @@ void goodFeatureSelect(const double *para_pose,
             break;
         }
     }
+    sel_feature_idx.resize(num_sel_features);
     printf("logdet of selected sub H: %f\n", common::logDet(sub_mat_H));
 
     // {
@@ -363,6 +365,7 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
     double cur_gf_ratio = gf_ratio_ini;
     double pre_gf_ratio = cur_gf_ratio;
     num_use_features = static_cast<size_t>(num_all_features * cur_gf_ratio);
+    sel_feature_idx.resize(num_use_features);
 
     Eigen::Matrix<double, 6, 6> sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
     size_t num_sel_features = 0;
@@ -463,7 +466,7 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
                     size_t position = iter - all_feature_idx.begin();
                     all_feature_idx.erase(all_feature_idx.begin() + position);
                     feature_visited.erase(feature_visited.begin() + position);
-                    sel_feature_idx.push_back(fws.idx_);
+                    sel_feature_idx[num_sel_features] = fws.idx_;
                     num_sel_features++;
                     // printf("position: %lu, num: %lu\n", position, num_rnd_que);
                     break;
@@ -482,8 +485,7 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
         if (cur_cost <= pre_cost) 
         {
             std::cout << ss.str() << std::endl;
-            num_use_features = static_cast<size_t>(num_all_features * pre_gf_ratio);
-            sel_feature_idx.resize(num_use_features);
+            num_sel_features = static_cast<size_t>(num_all_features * pre_gf_ratio);
             break;
         } else
         {
@@ -492,8 +494,10 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
             cur_gf_ratio = GF_RATIO_SIGMA * cur_gf_ratio;
             if (cur_gf_ratio > 1.0) break;
             num_use_features = static_cast<size_t>(num_all_features * cur_gf_ratio);
+            sel_feature_idx.resize(num_use_features);
         }
     }
+    sel_feature_idx.resize(num_sel_features);
     printf("num of all features: %lu, sel features: %lu\n", num_all_features, num_use_features);
     // printf("logdet of selected sub H: %f\n", common::logDet(sub_mat_H));
     return pre_gf_ratio;

@@ -20,6 +20,7 @@ using namespace common;
 SaveStatistics save_statistics;
 
 int frame_cnt = 0;
+int frame_drop_cnt = 0;
 
 double time_laser_cloud_surf_last = 0;
 double time_laser_cloud_corner_last = 0;
@@ -121,7 +122,7 @@ bool with_ua_flag;
 
 pcl::PCDWriter pcd_writer;
 
-double lambda;
+double lambda = 10.0;
 double gf_ratio_cur;
 
 std::mutex m_process;
@@ -884,6 +885,7 @@ void process()
 			while (!surf_last_buf.empty())
 			{
 				surf_last_buf.pop();
+                frame_drop_cnt++;
 				std::cout << common::GREEN << "drop lidar frame in mapping for real time performance" << common::RESET << std::endl;
 			}
 			m_buf.unlock();
@@ -1053,6 +1055,7 @@ void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameteri
 void sigintHandler(int sig)
 {
     printf("press ctrl-c\n");
+    std::cout << common::YELLOW << "drop frame: " << frame_drop_cnt << common::RESET << std::endl;
     if (MLOAM_RESULT_SAVE)
     {
         save_statistics.saveMapStatistics(MLOAM_MAP_PATH,
@@ -1157,8 +1160,6 @@ int main(int argc, char **argv)
 
     pose_keyframes_6d.clear();
     pose_keyframes_3d->clear();
-
-    lambda = 10.0;
 
     signal(SIGINT, sigintHandler);
 

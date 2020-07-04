@@ -17,7 +17,7 @@ using namespace common;
 
 LidarTracker::LidarTracker()
 {
-    ROS_INFO("Tracker begin");
+    std::cout << "Tracker begin" << std::endl;
 }
 
 Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
@@ -57,24 +57,24 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         PoseLocalParameterization *local_parameterization = new PoseLocalParameterization();      
         local_parameterization->setParameter();
 
-        std::vector<double *> para_ids;
-        std::vector<ceres::ResidualBlockId> res_ids_proj;
+        // std::vector<double *> para_ids;
+        // std::vector<ceres::ResidualBlockId> res_ids_proj;
         problem.AddParameterBlock(para_pose, SIZE_POSE, local_parameterization);
-        para_ids.push_back(para_pose);
+        // para_ids.push_back(para_pose);
 
         // prepare feature data
         TicToc t_prepare;
         std::vector<PointPlaneFeature> corner_scan_features, surf_scan_features;
-        Pose pose_local;
-        pose_local.t_ = Eigen::Vector3d(para_pose[0], para_pose[1], para_pose[2]);
-        pose_local.q_ = Eigen::Quaterniond(para_pose[6], para_pose[3], para_pose[4], para_pose[5]);                  
+        Pose pose_local = Pose(Eigen::Quaterniond(para_pose[6], para_pose[3], para_pose[4], para_pose[5]),
+                               Eigen::Vector3d(para_pose[0], para_pose[1], para_pose[2]));
+        
         f_extract_.matchCornerFromScan(kdtree_corner_last, *corner_points_last, *corner_points_sharp, pose_local, corner_scan_features);
         f_extract_.matchSurfFromScan(kdtree_surf_last, *surf_points_last, *surf_points_flat, pose_local, surf_scan_features);
         
-        int corner_num = corner_scan_features.size();
-        int surf_num = surf_scan_features.size();
+        size_t corner_num = corner_scan_features.size();
+        size_t surf_num = surf_scan_features.size();
         // printf("iter:%d, use_corner:%d, use_surf:%d\n", iter_cnt, corner_num, surf_num);
-        if ((corner_num + surf_num) < 10)
+        if (corner_num + surf_num < 10)
         {
             printf("[lidar_tracker] less correspondence! *************************************************\n");
             continue;
@@ -89,14 +89,16 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
             // else
             //     s = 1.0;
             LidarScanPlaneNormFactor *f = new LidarScanPlaneNormFactor(feature.point_, feature.coeffs_, s);
-            ceres::ResidualBlockId res_id = problem.AddResidualBlock(f, loss_function, para_pose);
-            res_ids_proj.push_back(res_id);
+            // ceres::ResidualBlockId res_id = problem.AddResidualBlock(f, loss_function, para_pose);
+            // res_ids_proj.push_back(res_id);
+            problem.AddResidualBlock(f, loss_function, para_pose);
             if (CHECK_JACOBIAN)
             {
                 double **tmp_param = new double *[1];
                 tmp_param[0] = para_pose;
                 f->check(tmp_param);
                 CHECK_JACOBIAN = 0; 
+                delete[] tmp_param;
             }
         }
 
@@ -108,17 +110,19 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
             // else
             //     s = 1.0;
             LidarScanPlaneNormFactor *f = new LidarScanPlaneNormFactor(feature.point_, feature.coeffs_, s);
-            ceres::ResidualBlockId res_id = problem.AddResidualBlock(f, loss_function, para_pose);
-            res_ids_proj.push_back(res_id);
+            // ceres::ResidualBlockId res_id = problem.AddResidualBlock(f, loss_function, para_pose);
+            // res_ids_proj.push_back(res_id);
+            problem.AddResidualBlock(f, loss_function, para_pose);
         }
 
-        double cost = 0.0;
-        ceres::CRSMatrix jaco;
-        ceres::Problem::EvaluateOptions e_option;
-        e_option.parameter_blocks = para_ids;
-        e_option.residual_blocks = res_ids_proj;
-        problem.Evaluate(e_option, &cost, nullptr, nullptr, &jaco);
-        evalDegenracy(local_parameterization, jaco);
+        // double cost = 0.0;
+        // ceres::CRSMatrix jaco;
+        // ceres::Problem::EvaluateOptions e_option;
+        // e_option.parameter_blocks = para_ids;
+        // e_option.residual_blocks = res_ids_proj;
+        // problem.Evaluate(e_option, &cost, nullptr, nullptr, &jaco);
+        // problem.Evaluate(ceres::Problem::EvaluateOptions(), &cost, nullptr, nullptr, &jaco);
+        // evalDegenracy(local_parameterization, jaco);
 
         // step 3: optimization
         TicToc t_solver;

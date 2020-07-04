@@ -8,7 +8,7 @@
 
     <param name="use_sim_time" value="true" />
     <group if="$(arg bag_file_use)">
-        <node pkg="rosbag" type="play" name="rosbag" args="--clock --pause -r 0.6 $(arg bag_file)" />    
+        <node pkg="rosbag" type="play" name="rosbag" args="--clock --pause -r 0.8 $(arg bag_file)" />    
     </group>    
 
     <include file="$(find rviz_car_model)/launch/default.launch" />
@@ -32,7 +32,7 @@
                 args="-config_file=$(arg config_file)
                     -data_source=$(arg data_source)
                     -result_save=$(arg result_save)
-                    -output_path=$(arg output_path)">
+                    -output_path=$(arg output_path)" output="screen">
                 <remap from="/base_pose_gt" to="/current_odom"/>
             </node>
         </group>

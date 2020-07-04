@@ -244,6 +244,7 @@ int main(int argc, char **argv)
     else
         ss << ODOM_GF_RATIO << ".txt";
     MLOAM_ODOM_PATH = ss.str();
+
     MLOAM_GPS_PATH = OUTPUT_FOLDER + "stamped_gps.txt";
     MLOAM_GT_PATH = OUTPUT_FOLDER + "stamped_groundtruth.txt";
     EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";

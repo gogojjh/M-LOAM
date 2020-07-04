@@ -56,7 +56,7 @@
 
 #include "mloam_pcl/point_with_time.hpp"
 
-#define MAX_FEATURE_SELECT_TIME 10 // 10ms
+#define MAX_FEATURE_SELECT_TIME 7 // 10ms
 #define MAX_RANDOM_QUEUE_TIME 20
 
 class Estimator
@@ -84,9 +84,16 @@ class Estimator
     // process localmap optimization
     void optimizeMap();
 
+    // apply good feature
     void evaluateFeatJacobian(const double *para_pose_pivot,
                               const double *para_pose_other,
                               const double *para_pose_ext,
+                              const PointPlaneFeature &feature,
+                              Eigen::MatrixXd &mat_jaco);
+
+    void evaluateFeatJacobian(const Pose &pose_pivot,
+                              const Pose &pose_i,
+                              const Pose &pose_ext,
                               const PointPlaneFeature &feature,
                               Eigen::MatrixXd &mat_jaco);
 
@@ -97,6 +104,17 @@ class Estimator
                            const double *para_pose_ext,
                            const double gf_ratio = 0.5);
 
+    void goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_from_map,
+                             const PointICloud &laser_map,
+                             const PointICloud &laser_cloud,
+                             std::vector<PointPlaneFeature> &all_features,
+                             std::vector<size_t> &sel_feature_idx,
+                             const char feature_type,
+                             const Pose &pose_pivot,
+                             const Pose &pose_i,
+                             const Pose &pose_ext,
+                             const double gf_ratio = 0.5);
+
     void vector2Double();
     void double2Vector();
 
@@ -104,12 +122,11 @@ class Estimator
     void slideWindow();
 
     void evalResidual(ceres::Problem &problem,
-                      std::vector<PoseLocalParameterization *> &local_param_ids,
-                      const std::vector<double *> &para_ids,
-                      const std::vector<ceres::internal::ResidualBlock *> &res_ids_proj,
-                      const MarginalizationInfo *last_marginalization_info_,
-                      const std::vector<ceres::internal::ResidualBlock *> &res_ids_marg);
-    void evalDegenracy(std::vector<PoseLocalParameterization *> &local_param_ids, const ceres::CRSMatrix &jaco);
+                      std::vector<PoseLocalParameterization *> &local_param_ids);
+
+    void evalDegenracy(std::vector<PoseLocalParameterization *> &local_param_ids,
+                       const ceres::CRSMatrix &jaco);
+
     void evalCalib();
 
     void printParameter();

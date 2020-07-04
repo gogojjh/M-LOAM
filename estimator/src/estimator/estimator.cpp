@@ -25,6 +25,9 @@ Estimator::Estimator()
 
 Estimator::~Estimator()
 {
+    delete[] para_pose_;
+    delete[] para_td_;
+    delete[] para_ex_pose_;
     if (MULTIPLE_THREAD)
     {
         process_thread_.join();
@@ -590,7 +593,7 @@ void Estimator::optimizeMap()
         local_parameterization->setParameter();
         problem.AddParameterBlock(para_pose_[i], SIZE_POSE, local_parameterization);
         local_param_ids.push_back(local_parameterization);
-        para_ids.push_back(para_pose_[i]);
+        // para_ids.push_back(para_pose_[i]);
     }
     problem.SetParameterBlockConstant(para_pose_[0]);
 
@@ -600,7 +603,7 @@ void Estimator::optimizeMap()
         local_parameterization->setParameter();
         problem.AddParameterBlock(para_ex_pose_[i], SIZE_POSE, local_parameterization);
         local_param_ids.push_back(local_parameterization);
-        para_ids.push_back(para_ex_pose_[i]);
+        // para_ids.push_back(para_ex_pose_[i]);
         if (ESTIMATE_EXTRINSIC == 0) problem.SetParameterBlockConstant(para_ex_pose_[i]);
     }
     problem.SetParameterBlockConstant(para_ex_pose_[IDX_REF]);
@@ -622,8 +625,9 @@ void Estimator::optimizeMap()
     if ((MARGINALIZATION_FACTOR) && (last_marginalization_info_))
     {
         MarginalizationFactor *marginalization_factor = new MarginalizationFactor(last_marginalization_info_);
-        ceres::internal::ResidualBlock *res_id_marg = problem.AddResidualBlock(marginalization_factor, NULL, last_marginalization_parameter_blocks_);
-        res_ids_marg.push_back(res_id_marg);
+        // ceres::internal::ResidualBlock *res_id_marg = problem.AddResidualBlock(marginalization_factor, NULL, last_marginalization_parameter_blocks_);
+        // res_ids_marg.push_back(res_id_marg);
+        problem.AddResidualBlock(marginalization_factor, NULL, last_marginalization_parameter_blocks_);
     }
 
     // ****************************************************
@@ -634,8 +638,9 @@ void Estimator::optimizeMap()
         for (size_t n = 0; n < NUM_OF_LASER; n++)
         {
             PriorFactor *f = new PriorFactor(tbl_[n], qbl_[n], PRIOR_FACTOR_POS, PRIOR_FACTOR_ROT);
-            ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, NULL, para_ex_pose_[n]);
-            res_ids_proj.push_back(res_id);
+            // ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, NULL, para_ex_pose_[n]);
+            // res_ids_proj.push_back(res_id);
+            problem.AddResidualBlock(f, NULL, para_ex_pose_[n]);
         }
     }
 
@@ -654,9 +659,14 @@ void Estimator::optimizeMap()
                 for (const PointPlaneFeature &feature : features_frame)
                 {
                     LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
-                    ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
-                        para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[IDX_REF]);
-                    res_ids_proj.push_back(res_id);
+                    // ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
+                    //     para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[IDX_REF]);
+                    // res_ids_proj.push_back(res_id);
+                    problem.AddResidualBlock(f,
+                                             loss_function,
+                                             para_pose_[0],
+                                             para_pose_[i - pivot_idx],
+                                             para_ex_pose_[IDX_REF]);
                     if (CHECK_JACOBIAN)
                     {
                         double **tmp_param = new double *[3];
@@ -665,6 +675,7 @@ void Estimator::optimizeMap()
                         tmp_param[2] = para_ex_pose_[IDX_REF];
                         f->check(tmp_param);
                         CHECK_JACOBIAN = 0;
+                        delete[] tmp_param;
                     }
                 }
             }
@@ -688,8 +699,11 @@ void Estimator::optimizeMap()
                     for (const PointPlaneFeature &feature : cumu_surf_map_features_[n])
                     {
                         LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(feature.point_, feature.coeffs_);
-                        ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_ex_pose_[n]);
-                        res_ids_proj.push_back(res_id);
+                        // ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_ex_pose_[n]);
+                        // res_ids_proj.push_back(res_id);
+                        problem.AddResidualBlock(f,
+                                                 loss_function,
+                                                 para_ex_pose_[n]);
                     }
                 }
                 if (!MARGINALIZATION_FACTOR)
@@ -710,9 +724,14 @@ void Estimator::optimizeMap()
                 for (const PointPlaneFeature &feature : features_frame)
                 {
                     LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
-                    ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
-                        para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[IDX_REF]);
-                    res_ids_proj.push_back(res_id);
+                    // ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
+                    //     para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[IDX_REF]);
+                    // res_ids_proj.push_back(res_id);
+                    problem.AddResidualBlock(f,
+                                             loss_function,
+                                             para_pose_[0],
+                                             para_pose_[i - pivot_idx],
+                                             para_ex_pose_[IDX_REF]);
                 }
             }            
             for (size_t n = 0; n < NUM_OF_LASER; n++) 
@@ -734,8 +753,9 @@ void Estimator::optimizeMap()
                     for (const PointPlaneFeature &feature : cumu_corner_map_features_[n])
                     {
                         LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(feature.point_, feature.coeffs_);
-                        ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_ex_pose_[n]);
-                        res_ids_proj.push_back(res_id);
+                        // ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_ex_pose_[n]);
+                        // res_ids_proj.push_back(res_id);
+                        problem.AddResidualBlock(f, loss_function, para_ex_pose_[n]);
                     }
                 }
                 if (!MARGINALIZATION_FACTOR)
@@ -752,17 +772,6 @@ void Estimator::optimizeMap()
     {
         std::cout << common::YELLOW << "optimization with pure odometry" << common::RESET << std::endl;
         buildLocalMap();
-
-        sel_surf_feature_idx_.clear();
-        sel_surf_feature_idx_.resize(NUM_OF_LASER);
-        sel_corner_feature_idx_.clear();
-        sel_corner_feature_idx_.resize(NUM_OF_LASER);
-        for (size_t n = 0; n < NUM_OF_LASER; n++)
-        {
-            sel_surf_feature_idx_[n].resize(WINDOW_SIZE + 1);
-            sel_corner_feature_idx_[n].resize(WINDOW_SIZE + 1);
-        }
-
         TicToc t_add_residuals;
         if (POINT_PLANE_FACTOR)
         {
@@ -770,19 +779,18 @@ void Estimator::optimizeMap()
             {
                 for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
                 {
-                    goodFeatureSelect(surf_map_features_[n][i],
-                                      sel_surf_feature_idx_[n][i],
-                                      para_pose_[0],
-                                      para_pose_[i - pivot_idx],
-                                      para_ex_pose_[n],
-                                      ODOM_GF_RATIO);
                     for (const size_t &fid : sel_surf_feature_idx_[n][i])
                     {
                         const PointPlaneFeature &feature = surf_map_features_[n][i][fid];
                         LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
-                        ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
-                                                                                          para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]);
-                        res_ids_proj.push_back(res_id);
+                        // ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
+                        //                                                                   para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]);
+                        // res_ids_proj.push_back(res_id);
+                        problem.AddResidualBlock(f,
+                                                 loss_function,
+                                                 para_pose_[0],
+                                                 para_pose_[i - pivot_idx],
+                                                 para_ex_pose_[n]);
                     }
                 }
             }
@@ -794,28 +802,28 @@ void Estimator::optimizeMap()
             {
                 for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
                 {
-                    goodFeatureSelect(corner_map_features_[n][i],
-                                      sel_corner_feature_idx_[n][i],
-                                      para_pose_[0],
-                                      para_pose_[i - pivot_idx],
-                                      para_ex_pose_[n],
-                                      ODOM_GF_RATIO);
                     for (const size_t &fid : sel_corner_feature_idx_[n][i])
                     {
                         const PointPlaneFeature &feature = corner_map_features_[n][i][fid];
                         LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
-                        ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
-                                                                                          para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]);
-                        res_ids_proj.push_back(res_id);
+                        // ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
+                        //                                                                   para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]);
+                        // res_ids_proj.push_back(res_id);
+                        problem.AddResidualBlock(f,
+                                                 loss_function,
+                                                 para_pose_[0],
+                                                 para_pose_[i - pivot_idx],
+                                                 para_ex_pose_[n]);
                     }
                 }
             }
         }
         printf("add residuals: %fms\n", t_add_residuals.toc()); // cost time
     }
-    
+
     // *******************************
-    evalResidual(problem, local_param_ids, para_ids, res_ids_proj, last_marginalization_info_, res_ids_marg);
+    // evalResidual(problem, local_param_ids, para_ids, res_ids_proj, last_marginalization_info_, res_ids_marg);
+    evalResidual(problem, local_param_ids);
 
     TicToc t_ceres_solver;
     ceres::Solve(options, &problem, &summary);
@@ -1161,6 +1169,16 @@ void Estimator::buildLocalMap()
         corner_map_features_[n].resize(WINDOW_SIZE + 1);
     }
 
+    sel_surf_feature_idx_.clear();
+    sel_surf_feature_idx_.resize(NUM_OF_LASER);
+    sel_corner_feature_idx_.clear();
+    sel_corner_feature_idx_.resize(NUM_OF_LASER);
+    for (size_t n = 0; n < NUM_OF_LASER; n++)
+    {
+        sel_surf_feature_idx_[n].resize(WINDOW_SIZE + 1);
+        sel_corner_feature_idx_[n].resize(WINDOW_SIZE + 1);
+    }
+
     TicToc t_extract_map;
     // #pragma omp parallel for num_threads(NUM_OF_LASER)
     for (size_t n = 0; n < NUM_OF_LASER; n++)
@@ -1169,23 +1187,33 @@ void Estimator::buildLocalMap()
         kdtree_surf_points_local_map->setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_filtered_[n]));
         pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_points_local_map(new pcl::KdTreeFLANN<PointI>());
         kdtree_corner_points_local_map->setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_filtered_[n]));
+        Pose pose_ext = Pose(qbl_[n], tbl_[n]);
         int n_neigh = 5;
         for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
         {
-            f_extract_.matchSurfFromMap(kdtree_surf_points_local_map,
-                                        surf_points_local_map_filtered_[n],
-                                        surf_points_stack_[n][i], 
-                                        pose_local_[n][i], 
-                                        surf_map_features_[n][i],
-                                        n_neigh, 
-                                        true);
-            f_extract_.matchCornerFromMap(kdtree_corner_points_local_map,
-                                          corner_points_local_map_filtered_[n],
-                                          corner_points_stack_[n][i],
-                                          pose_local_[n][i],
-                                          corner_map_features_[n][i],
-                                          n_neigh, 
-                                          true);
+            Pose pose_i(Qs_[i], Ts_[i]);
+            if (POINT_PLANE_FACTOR)
+                goodFeatureMatching(kdtree_surf_points_local_map,
+                                    surf_points_local_map_filtered_[n],
+                                    surf_points_stack_[n][i],
+                                    surf_map_features_[n][i],
+                                    sel_surf_feature_idx_[n][i],
+                                    's',
+                                    pose_pivot,
+                                    pose_i,
+                                    pose_ext,
+                                    ODOM_GF_RATIO);
+            if (POINT_EDGE_FACTOR)
+                goodFeatureMatching(kdtree_corner_points_local_map,
+                                    corner_points_local_map_filtered_[n],
+                                    corner_points_stack_[n][i],
+                                    corner_map_features_[n][i],
+                                    sel_corner_feature_idx_[n][i],
+                                    'c',
+                                    pose_pivot,
+                                    pose_i,
+                                    pose_ext,
+                                    ODOM_GF_RATIO);
         }
     }
     // LOG_EVERY_N(INFO, 20) << "build map(extract map): " << t_build_map.toc() << "ms("
@@ -1200,17 +1228,18 @@ void Estimator::evaluateFeatJacobian(const double *para_pose_pivot,
                                      const PointPlaneFeature &feature,
                                      Eigen::MatrixXd &mat_jaco)
 {
-    LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
+    LidarPivotPlaneNormFactor f(feature.point_, feature.coeffs_, 1.0);
     const double **param = new const double *[3];
     param[0] = para_pose_pivot;
     param[1] = para_pose_other;
     param[2] = para_pose_ext;
+
     double *res = new double[1];
     double **jaco = new double *[3];
     jaco[0] = new double[1 * 7];
     jaco[1] = new double[1 * 7];
     jaco[2] = new double[1 * 7];
-    f->Evaluate(param, res, jaco);
+    f.Evaluate(param, res, jaco);
     
     Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor>> mat_jacobian_1(jaco[0]);
     Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor>> mat_jacobian_2(jaco[1]);
@@ -1220,6 +1249,67 @@ void Estimator::evaluateFeatJacobian(const double *para_pose_pivot,
     mat_jacobian.row(1) = mat_jacobian_2;
     mat_jacobian.row(2) = mat_jacobian_3;
     mat_jaco = mat_jacobian.topLeftCorner<3, 6>();
+
+    // delete[] param;
+    delete[] res;
+    delete[] jaco;
+}
+
+void Estimator::evaluateFeatJacobian(const Pose &pose_pivot,
+                                     const Pose &pose_i,
+                                     const Pose &pose_ext,
+                                     const PointPlaneFeature &feature,
+                                     Eigen::MatrixXd &mat_jaco)
+{
+    LidarPivotPlaneNormFactor f(feature.point_, feature.coeffs_, 1.0);
+
+    double **param = new double *[3];
+    param[0] = new double[SIZE_POSE];
+    param[0][0] = pose_pivot.t_(0);
+    param[0][1] = pose_pivot.t_(1);
+    param[0][2] = pose_pivot.t_(2);
+    param[0][3] = pose_pivot.q_.x();
+    param[0][4] = pose_pivot.q_.y();
+    param[0][5] = pose_pivot.q_.z();
+    param[0][6] = pose_pivot.q_.w();
+
+    param[1] = new double[SIZE_POSE];
+    param[1][0] = pose_i.t_(0);
+    param[1][1] = pose_i.t_(1);
+    param[1][2] = pose_i.t_(2);
+    param[1][3] = pose_i.q_.x();
+    param[1][4] = pose_i.q_.y();
+    param[1][5] = pose_i.q_.z();
+    param[1][6] = pose_i.q_.w();
+
+    param[2] = new double[SIZE_POSE];
+    param[2][0] = pose_ext.t_(0);
+    param[2][1] = pose_ext.t_(1);
+    param[2][2] = pose_ext.t_(2);
+    param[2][3] = pose_ext.q_.x();
+    param[2][4] = pose_ext.q_.y();
+    param[2][5] = pose_ext.q_.z();
+    param[2][6] = pose_ext.q_.w();
+
+    double *res = new double[1];
+    double **jaco = new double *[3];
+    jaco[0] = new double[1 * 7];
+    jaco[1] = new double[1 * 7];
+    jaco[2] = new double[1 * 7];
+    f.Evaluate(param, res, jaco);
+
+    Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor>> mat_jacobian_1(jaco[0]);
+    Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor>> mat_jacobian_2(jaco[1]);
+    Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor>> mat_jacobian_3(jaco[2]);
+    Eigen::Matrix<double, 3, 7> mat_jacobian;
+    mat_jacobian.row(0) = mat_jacobian_1;
+    mat_jacobian.row(1) = mat_jacobian_2;
+    mat_jacobian.row(2) = mat_jacobian_3;
+    mat_jaco = mat_jacobian.topLeftCorner<3, 6>();
+
+    delete[] param;
+    delete[] res;
+    delete[] jaco;
 }
 
 void Estimator::goodFeatureSelect(const std::vector<PointPlaneFeature> &all_features,
@@ -1244,6 +1334,7 @@ void Estimator::goodFeatureSelect(const std::vector<PointPlaneFeature> &all_feat
     {
         num_use_features = static_cast<size_t>(num_all_features * gf_ratio);
     }
+    sel_feature_idx.resize(num_use_features);
 
     size_t size_rnd_subset = static_cast<size_t>(1.0 * num_all_features / num_use_features);
     Eigen::Matrix<double, 6, 6> sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
@@ -1301,7 +1392,135 @@ void Estimator::goodFeatureSelect(const std::vector<PointPlaneFeature> &all_feat
                 size_t position = iter - all_feature_idx.begin();
                 all_feature_idx.erase(all_feature_idx.begin() + position);
                 feature_visited.erase(feature_visited.begin() + position);
-                sel_feature_idx.push_back(fws.idx_);
+                sel_feature_idx[num_sel_features] = fws.idx_;
+                num_sel_features++;
+                // printf("position: %lu, num: %lu\n", position, num_rnd_que);
+                break;
+            }
+        }
+        if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
+        {
+            // std::cerr << "[goodFeatureSelect]: early termination!" << std::endl;
+            break;
+        }
+    }
+    sel_feature_idx.resize(num_sel_features);
+    // printf("num of all features: %lu, sel features: %lu\n", num_all_features, num_use_features);
+}
+
+void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_from_map,
+                                    const PointICloud &laser_map,
+                                    const PointICloud &laser_cloud,
+                                    std::vector<PointPlaneFeature> &all_features,
+                                    std::vector<size_t> &sel_feature_idx,
+                                    const char feature_type,
+                                    const Pose &pose_pivot,
+                                    const Pose &pose_i,
+                                    const Pose &pose_ext,
+                                    const double gf_ratio)
+{
+    Pose pose_local(pose_pivot.T_.inverse() * pose_i.T_ * pose_ext.T_);
+
+    size_t num_all_features = laser_cloud.size();
+    all_features.resize(num_all_features);
+    std::vector<size_t> all_feature_idx(num_all_features);
+    std::vector<int> feature_visited(num_all_features, -1);
+    std::iota(all_feature_idx.begin(), all_feature_idx.end(), 0);
+
+    size_t num_use_features;
+    num_use_features = static_cast<size_t>(num_all_features * gf_ratio);
+    sel_feature_idx.resize(num_use_features);
+
+    size_t size_rnd_subset = static_cast<size_t>(1.0 * num_all_features / num_use_features);
+    Eigen::Matrix<double, 6, 6> sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
+    size_t num_sel_features = 0;
+    TicToc t_sel_feature;
+    while (true)
+    {
+        if ((num_sel_features >= num_use_features) ||
+            (all_feature_idx.size() == 0) ||
+            (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
+            break;
+        size_t num_rnd_que;
+        std::priority_queue<FeatureWithScore, std::vector<FeatureWithScore>, std::less<FeatureWithScore>> heap_subset;
+        while (heap_subset.size() < size_rnd_subset)
+        {
+            num_rnd_que = 0;
+            size_t j;
+            while (num_rnd_que < MAX_RANDOM_QUEUE_TIME)
+            {
+                j = (std::rand() % all_feature_idx.size());
+                if (feature_visited[j] < int(num_sel_features))
+                {
+                    feature_visited[j] = int(num_sel_features);
+                    break;
+                }
+                num_rnd_que++;
+            }
+            if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
+                break;
+
+            size_t que_idx = all_feature_idx[j];
+            if (all_features[que_idx].type_ == 'n')
+            {
+                int n_neigh = 5;
+                bool b_match = true;
+                if (feature_type == 's')
+                {
+                    b_match = f_extract_.matchSurfPointFromMap(kdtree_from_map,
+                                                              laser_map,
+                                                              laser_cloud.points[que_idx],
+                                                              pose_local,
+                                                              all_features[que_idx],
+                                                              que_idx,
+                                                              n_neigh,
+                                                              false);
+                }
+                else if (feature_type == 'c')
+                {
+                    b_match = f_extract_.matchCornerPointFromMap(kdtree_from_map,
+                                                                laser_map,
+                                                                laser_cloud.points[que_idx],
+                                                                pose_local,
+                                                                all_features[que_idx],
+                                                                que_idx,
+                                                                n_neigh,
+                                                                false);
+                }
+                if (!b_match)
+                {
+                    all_feature_idx.erase(all_feature_idx.begin() + j);
+                    feature_visited.erase(feature_visited.begin() + j);
+                    break;
+                }
+            }
+
+            const PointPlaneFeature &feature = all_features[que_idx];
+            Eigen::MatrixXd jaco;
+            evaluateFeatJacobian(pose_pivot,
+                                 pose_i,
+                                 pose_ext,
+                                 feature,
+                                 jaco);
+            double cur_det = common::logDet(sub_mat_H + jaco.transpose() * jaco, true);
+            heap_subset.push(FeatureWithScore(que_idx, cur_det, jaco));
+            if (heap_subset.size() >= size_rnd_subset)
+            {
+                const FeatureWithScore &fws = heap_subset.top();
+                std::vector<size_t>::iterator iter = std::find(all_feature_idx.begin(), all_feature_idx.end(), fws.idx_);
+                if (iter == all_feature_idx.end())
+                {
+                    std::cerr << "[estimator::goodFeatureMatching]: not exist feature idx !" << std::endl;
+                    break;
+                }
+
+                const Eigen::MatrixXd &jaco = fws.jaco_;
+                sub_mat_H += jaco.transpose() * jaco;
+
+                size_t position = iter - all_feature_idx.begin();
+                all_feature_idx.erase(all_feature_idx.begin() + position);
+                feature_visited.erase(feature_visited.begin() + position);
+                sel_feature_idx[num_sel_features] = fws.idx_;
                 num_sel_features++;
                 // printf("position: %lu, num: %lu\n", position, num_rnd_que);
                 break;
@@ -1313,7 +1532,8 @@ void Estimator::goodFeatureSelect(const std::vector<PointPlaneFeature> &all_feat
             break;
         }
     }
-    // printf("num of all features: %lu, sel features: %lu\n", num_all_features, num_use_features);
+    sel_feature_idx.resize(num_sel_features);
+    // printf("num of all features: %lu, seevalResiduall features: %lu\n", num_all_features, num_use_features);
 }
 
 // push new state and measurements in the sliding window
@@ -1384,31 +1604,28 @@ void Estimator::double2Vector()
 }
 
 void Estimator::evalResidual(ceres::Problem &problem,
-    std::vector<PoseLocalParameterization *> &local_param_ids,
-    const std::vector<double *> &para_ids,
-    const std::vector<ceres::internal::ResidualBlock *> &res_ids_proj,
-	const MarginalizationInfo *last_marginalization_info_,
-    const std::vector<ceres::internal::ResidualBlock *> &res_ids_marg)
+                             std::vector<PoseLocalParameterization *> &local_param_ids)
 {
 	double cost;
     ceres::CRSMatrix jaco;
     ceres::Problem::EvaluateOptions e_option;
 	if ((PRIOR_FACTOR) || (POINT_PLANE_FACTOR) || (POINT_EDGE_FACTOR))
 	{
-		e_option.parameter_blocks = para_ids;
-		e_option.residual_blocks = res_ids_proj;
-        problem.Evaluate(e_option, &cost, nullptr, nullptr, &jaco);
+		// e_option.parameter_blocks = para_ids;
+		// e_option.residual_blocks = res_ids_proj;
+        problem.Evaluate(ceres::Problem::EvaluateOptions(), &cost, nullptr, nullptr, &jaco);
         evalDegenracy(local_param_ids, jaco);
+        // std::cout << "cost: " << cost << std::endl;
 	}
 	if (MARGINALIZATION_FACTOR)
 	{
-		if (last_marginalization_info_ && !res_ids_marg.empty())
-		{
+		// if (last_marginalization_info_ && !res_ids_marg.empty())
+		// {
 			// e_option.parameter_blocks = para_ids;
 			// e_option.residual_blocks = res_ids_marg;
             // problem.Evaluate(e_option, &cost, nullptr, nullptr, &jaco);
             // printf("cost marg: %f\n", cost);
-		}
+		// }
 	}
 }
 
