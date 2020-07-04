@@ -423,7 +423,7 @@ void scan2MapOptimization()
             PoseLocalParameterization *local_parameterization = new PoseLocalParameterization();
             local_parameterization->setParameter();
             problem.AddParameterBlock(para_pose, SIZE_POSE, local_parameterization);
-            para_ids.push_back(para_pose);
+            // para_ids.push_back(para_pose);
 
             // ******************************************************
             bool ratio_change_flag = false;
@@ -501,14 +501,16 @@ void scan2MapOptimization()
                 Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
                 extractCov(laser_cloud_surf_cov->points[feature.idx_], cov_matrix);
                 LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
-                ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
-                res_ids_proj.push_back(res_id);
+                // ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
+                // res_ids_proj.push_back(res_id);
+                problem.AddResidualBlock(f, loss_function, para_pose);
                 if (CHECK_JACOBIAN)
                 {
-                    const double **tmp_param = new const double *[1];
+                    double **tmp_param = new double *[1];
                     tmp_param[0] = para_pose;
                     f->check(tmp_param);
                     CHECK_JACOBIAN = 0;
+                    delete[] tmp_param;
                 }
             }
             for (const size_t &fid : sel_corner_feature_idx)
@@ -517,8 +519,9 @@ void scan2MapOptimization()
                 Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
                 extractCov(laser_cloud_corner_cov->points[feature.idx_], cov_matrix);
                 LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
-                ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
-                res_ids_proj.push_back(res_id);
+                // ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
+                // res_ids_proj.push_back(res_id);
+                problem.AddResidualBlock(f, loss_function, para_pose);
             }
             // printf("add constraints: %fms\n", t_add_constraints.toc());
 
@@ -528,10 +531,11 @@ void scan2MapOptimization()
                 TicToc t_eval_H;
                 double cost = 0.0;
                 ceres::CRSMatrix jaco;
-                ceres::Problem::EvaluateOptions e_option;
-                e_option.parameter_blocks = para_ids;
-                e_option.residual_blocks = res_ids_proj;
-                problem.Evaluate(e_option, &cost, nullptr, nullptr, &jaco);
+                // ceres::Problem::EvaluateOptions e_option;
+                // e_option.parameter_blocks = para_ids;
+                // e_option.residual_blocks = res_ids_proj;
+                // problem.Evaluate(e_option, &cost, nullptr, nullptr, &jaco);
+                problem.Evaluate(ceres::Problem::EvaluateOptions(), &cost, nullptr, nullptr, &jaco);
 
                 Eigen::Matrix<double, 6, 6> mat_H;
                 evalHessian(jaco, mat_H);
@@ -556,8 +560,7 @@ void scan2MapOptimization()
             printf("mapping solver time: %fms\n", t_solver.toc());
 
             double2Vector();
-            if (iter_cnt != 3)
-                printf("-------------------------------------\n");
+            if (iter_cnt != 1) printf("-------------------------------------\n");
         }
         std::cout << "optimization result: " << pose_wmap_curr << std::endl;
         printf("********************************\n");

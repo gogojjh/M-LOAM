@@ -63,7 +63,7 @@ public:
 		return true;
 	}
 
-	void check(const double **param)
+	void check(double **param)
 	{
 		double *res = new double[3];
 		double **jaco = new double *[1];

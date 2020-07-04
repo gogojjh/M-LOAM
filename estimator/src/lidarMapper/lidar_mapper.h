@@ -127,15 +127,19 @@ void evaluateFeatJacobian(const double *para_pose,
                           const Eigen::Matrix3d &cov_matrix,
                           Eigen::MatrixXd &mat_jaco)
 {
-    LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
+    LidarMapPlaneNormFactor f(feature.point_, feature.coeffs_, cov_matrix);
     const double **param = new const double *[1];
     param[0] = para_pose;
+
     double *res = new double[1];
     double **jaco = new double *[1];
     jaco[0] = new double[3 * 7];
-    f->Evaluate(param, res, jaco);
+    f.Evaluate(param, res, jaco);
     Eigen::Map<Eigen::Matrix<double, 3, 7, Eigen::RowMajor> > mat_jacobian(jaco[0]);
     mat_jaco = mat_jacobian.topLeftCorner<3, 6>();
+
+    delete[] res;
+    delete[] jaco;
 }
 
 // ****************** good feature selection
@@ -153,15 +157,20 @@ void evaluateFeatJacobianMatching(const Pose &pose_local,
     pose_array[5] = pose_local.q_.z();
     pose_array[6] = pose_local.q_.w();
 
-    LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
-    const double **param = new const double *[1];
+    LidarMapPlaneNormFactor f(feature.point_, feature.coeffs_, cov_matrix);
+    double **param = new double *[1];
     param[0] = pose_array;
+
     double *res = new double[1];
     double **jaco = new double *[1];
     jaco[0] = new double[3 * 7];
-    f->Evaluate(param, res, jaco);
+    f.Evaluate(param, res, jaco);
     Eigen::Map<Eigen::Matrix<double, 3, 7, Eigen::RowMajor>> mat_jacobian(jaco[0]);
     mat_jaco = mat_jacobian.topLeftCorner<3, 6>();
+
+    delete[] param;
+    delete[] res;
+    delete[] jaco;
 }
 
 // TODO: add feature matching
