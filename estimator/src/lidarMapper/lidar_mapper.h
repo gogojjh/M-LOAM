@@ -75,6 +75,7 @@
 #include "../factor/pose_local_parameterization.h"
 #include "associate_uct.hpp"
 
+// #define MAX_BUF_LENGTH 3
 #define SURROUNDING_KF_RADIUS 50.0
 #define GLOBALMAP_KF_RADIUS 2000.0
 #define DISTANCE_KEYFRAMES 0.3

@@ -283,10 +283,10 @@ void FeatureExtract::extractCloud(const PointICloud &laser_cloud_in,
     cloud_feature.insert(pair<std::string, PointICloud>("surf_points_flat", surf_points_flat));
     cloud_feature.insert(pair<std::string, PointICloud>("surf_points_less_flat", surf_points_less_flat));
 
-    delete [] cloud_curvature;
-    delete [] cloud_sort_ind;
-    delete [] cloud_neighbor_picked;
-    delete [] cloud_label;
+    delete[] cloud_curvature;
+    delete[] cloud_sort_ind;
+    delete[] cloud_neighbor_picked;
+    delete[] cloud_label;
 }
 
 //

@@ -185,8 +185,8 @@ void Estimator::clearState()
     pose_calib_.clear();
     calib_converge_.clear();
 
-    total_measurement_pre_time_ = 0.0;
-    total_opt_odom_time_ = 0.0;
+    total_measurement_pre_time_.clear();
+    total_opt_odom_time_.clear();
 
     total_corner_feature_ = 0;
     total_surf_feature_ = 0;
@@ -219,13 +219,14 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
         PointICloud laser_cloud;
         f_extract_.calTimestamp(v_laser_cloud_in[i], laser_cloud);
 
-        PointICloud laser_cloud_segment;
+        PointICloud laser_cloud_segment, laser_cloud_outlier;
         ScanInfo scan_info(N_SCANS, SEGMENT_CLOUD);
-        img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, scan_info);
+        img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, laser_cloud_outlier, scan_info);
         ss << laser_cloud_segment.size() << " ";
 
         cloudFeature *tmp_feature_ptr(new cloudFeature);
         f_extract_.extractCloud(laser_cloud_segment, scan_info, *tmp_feature_ptr);
+        tmp_feature_ptr->insert(pair<std::string, PointICloud>("laser_cloud_outlier", laser_cloud_outlier));
         feature_frame_ptr[i] = tmp_feature_ptr;
     }
     printf("size of after segmentation: %s\n", ss.str().c_str());
@@ -239,7 +240,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
     }
     printf("meaPre time: %fms (%lu*%fms)\n", measurement_pre_time.toc(),
            v_laser_cloud_in.size(), measurement_pre_time.toc() / v_laser_cloud_in.size());
-    total_measurement_pre_time_ += measurement_pre_time.toc();
+    total_measurement_pre_time_.push_back(measurement_pre_time.toc());
 
     m_buf_.lock();
     feature_buf_.push(make_pair(t, feature_frame));
@@ -260,13 +261,14 @@ void Estimator::inputCloud(const double &t, const std::vector<PointITimeCloud> &
         PointICloud laser_cloud;
         f_extract_.calTimestamp(v_laser_cloud_in[i], laser_cloud);
 
-        PointICloud laser_cloud_segment;
+        PointICloud laser_cloud_segment, laser_cloud_outlier;
         ScanInfo scan_info(N_SCANS, SEGMENT_CLOUD);
-        img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, scan_info);
+        img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, laser_cloud_outlier, scan_info);
         ss << laser_cloud_segment.size() << " ";
 
         cloudFeature *tmp_feature_ptr(new cloudFeature);
         f_extract_.extractCloud(laser_cloud_segment, scan_info, *tmp_feature_ptr);
+        tmp_feature_ptr->insert(pair<std::string, PointICloud>("laser_cloud_outlier", laser_cloud_outlier));
         feature_frame_ptr[i] = tmp_feature_ptr;
     }
     printf("size of after segmentation: %s\n", ss.str().c_str());
@@ -281,7 +283,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointITimeCloud> &
     }
     printf("meaPre time: %fms (%lu*%fms)\n", measurement_pre_time.toc(),
            v_laser_cloud_in.size(), measurement_pre_time.toc() / v_laser_cloud_in.size());
-    total_measurement_pre_time_ += measurement_pre_time.toc();
+    total_measurement_pre_time_.push_back(measurement_pre_time.toc());
 
     m_buf_.lock();
     feature_buf_.push(make_pair(t, feature_frame));
@@ -297,16 +299,17 @@ void Estimator::inputCloud(const double &t, const PointCloud &laser_cloud_in)
     PointICloud laser_cloud;
     f_extract_.calTimestamp(laser_cloud_in, laser_cloud);
 
-    PointICloud laser_cloud_segment;
+    PointICloud laser_cloud_segment, laser_cloud_outlier;
     ScanInfo scan_info(N_SCANS, SEGMENT_CLOUD);
-    img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, scan_info);
+    img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, laser_cloud_outlier, scan_info);
     printf("size of after segmentation: %lu\n", laser_cloud_segment.size());
 
     f_extract_.extractCloud(laser_cloud_segment, scan_info, feature_frame[0]);
+    feature_frame[0].insert(pair<std::string, PointICloud>("laser_cloud_outlier", laser_cloud_outlier));
     total_corner_feature_ += feature_frame[0]["corner_points_less_sharp"].size();
     total_surf_feature_ += feature_frame[0]["surf_points_less_flat"].size();
     printf("meaPre time: %fms\n", measurement_pre_time.toc());
-    total_measurement_pre_time_ += measurement_pre_time.toc();
+    total_measurement_pre_time_.push_back(measurement_pre_time.toc());
 
     m_buf_.lock();
     feature_buf_.push(make_pair(t, feature_frame));
@@ -334,7 +337,7 @@ void Estimator::processMeasurements()
             std::cout << common::RED << "frame: " << frame_cnt_
                       << ", processMea time: " << t_process.toc() << "ms" << common::RESET << std::endl << std::endl;
             LOG_EVERY_N(INFO, 20) << "processMea time: " << t_process.toc() << "ms";
-            total_opt_odom_time_ += t_process.toc();
+            total_opt_odom_time_.push_back(t_process.toc());
 
             // printStatistics(*this, 0);
             pubOdometry(*this, cur_time_);
@@ -347,36 +350,36 @@ void Estimator::processMeasurements()
     }
 }
 
-void Estimator::undistortMeasurements()
+void Estimator::undistortMeasurements(const std::vector<Pose> &pose_undist)
 {
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
         if (ESTIMATE_EXTRINSIC == 2) // initialization
         {
-            // for (PointI &point : cur_feature_.second[n]["corner_points_sharp"]) TransformToEnd(point, point, pose_rlt_[n], true, SCAN_PERIOD);
-            // for (PointI &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_rlt_[n], true, SCAN_PERIOD);
-            for (PointI &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_rlt_[n], true, SCAN_PERIOD);
-            for (PointI &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_rlt_[n], true, SCAN_PERIOD);
-			for (PointI &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_rlt_[n], true, SCAN_PERIOD);
+            // for (PointI &point : cur_feature_.second[n]["corner_points_sharp"]) TransformToEnd(point, point, pose_undist[n], true, SCAN_PERIOD);
+            // for (PointI &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_undist[n], true, SCAN_PERIOD);
+            for (PointI &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_undist[n], true, SCAN_PERIOD);
+            for (PointI &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_undist[n], true, SCAN_PERIOD);
+			for (PointI &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_undist[n], true, SCAN_PERIOD);
         } else
         // if (ESTIMATE_EXTRINSIC == 1) // online calibration
         // {
         //     if (n != IDX_REF) continue;
-        //     // for (PointI &point : cur_feature_.second[n]["corner_points_sharp"]) TransformToEnd(point, point, pose_rlt_[n], true, SCAN_PERIOD);
-        //     // for (PointI &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_rlt_[n], true, SCAN_PERIOD);
-        //     for (PointI &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_rlt_[n], true, SCAN_PERIOD);
-        //     for (PointI &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_rlt_[n], true, SCAN_PERIOD);
-		// 	for (PointI &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_rlt_[n], true, SCAN_PERIOD);
+        //     // for (PointI &point : cur_feature_.second[n]["corner_points_sharp"]) TransformToEnd(point, point, pose_undist[n], true, SCAN_PERIOD);
+        //     // for (PointI &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_undist[n], true, SCAN_PERIOD);
+        //     for (PointI &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_undist[n], true, SCAN_PERIOD);
+        //     for (PointI &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_undist[n], true, SCAN_PERIOD);
+		// 	for (PointI &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_undist[n], true, SCAN_PERIOD);
         // } else
         // if (ESTIMATE_EXTRINSIC == 0) // pure odometry with accurate extrinsics
         {
-            Pose pose_ext(qbl_[n], tbl_[n]);
-            Pose pose_local = pose_ext.inverse() * pose_rlt_[IDX_REF] * pose_ext;
-            // for (PointI &point : cur_feature_.second[n]["corner_points_sharp"]) TransformToEnd(point, point, pose_local, true, SCAN_PERIOD);
-            // for (PointI &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_local, true, SCAN_PERIOD);
-            for (PointI &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_local, true, SCAN_PERIOD);
-            for (PointI &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_local, true, SCAN_PERIOD);
-			for (PointI &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_local, true, SCAN_PERIOD);
+            // Pose pose_ext(qbl_[n], tbl_[n]);
+            // Pose pose_undist = pose_ext.inverse() * pose_rlt_[IDX_REF] * pose_ext;
+            // for (PointI &point : cur_feature_.second[n]["corner_points_sharp"]) TransformToEnd(point, point, pose_undist, true, SCAN_PERIOD);
+            // for (PointI &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_undist, true, SCAN_PERIOD);
+            for (PointI &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_undist[IDX_REF], true, SCAN_PERIOD);
+            for (PointI &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_undist[IDX_REF], true, SCAN_PERIOD);
+			for (PointI &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_undist[IDX_REF], true, SCAN_PERIOD);
         }
     }
 }
@@ -519,25 +522,26 @@ void Estimator::process()
             cur_feature_.second[n].find("surf_points_less_flat")->second));
     }
 
+    Pose pose_laser_cur = Pose(Qs_[cir_buf_cnt_ - 1], Ts_[cir_buf_cnt_ - 1]);
+    pose_rlt_[IDX_REF] = pose_laser_prev_.inverse() * pose_laser_cur;
     if (DISTORTION)
     {
-        Pose pose_laser_cur = Pose(Qs_[cir_buf_cnt_ - 1], Ts_[cir_buf_cnt_ - 1]);
-        // Pose pose_ext;
-        // Pose pose_local;
-
-        // ofstream fpose("/tmp/pose_rlt.txt");
-        // fpose << "rlt_0: " << pose_rlt_[IDX_REF] << std::endl;
-        // pose_ext = Pose(qbl_[1], tbl_[1]);
-        // pose_local = pose_ext.inverse() * pose_rlt_[IDX_REF] * pose_ext;
-        // fpose << "rlt_1: " << pose_local << std::endl;
-
-        pose_rlt_[IDX_REF] = pose_laser_prev_.inverse() * pose_laser_cur;
-
-        // fpose << "update rlt_0: " << pose_rlt_[IDX_REF] << std::endl;
-        // pose_ext = Pose(qbl_[1], tbl_[1]);
-        // pose_local = pose_ext.inverse() * pose_rlt_[IDX_REF] * pose_ext;
-        // fpose << "update rlt_1: " << pose_local << std::endl;
-        // fpose.close();
+        // {
+        //     Pose pose_ext;
+        //     Pose pose_local;
+    
+        //     ofstream fpose("/tmp/pose_rlt.txt");
+        //     fpose << "rlt_0: " << pose_rlt_[IDX_REF] << std::endl;
+        //     pose_ext = Pose(qbl_[1], tbl_[1]);
+        //     pose_local = pose_ext.inverse() * pose_rlt_[IDX_REF] * pose_ext;
+        //     fpose << "rlt_1: " << pose_local << std::endl;
+    
+        //     fpose << "update rlt_0: " << pose_rlt_[IDX_REF] << std::endl;
+        //     pose_ext = Pose(qbl_[1], tbl_[1]);
+        //     pose_local = pose_ext.inverse() * pose_rlt_[IDX_REF] * pose_ext;
+        //     fpose << "update rlt_1: " << pose_local << std::endl;
+        //     fpose.close();
+        // }
 
         // for (size_t n = 0; n < NUM_OF_LASER; n++)
         // {
@@ -545,15 +549,23 @@ void Estimator::process()
         //     ss << "/tmp/raw_pc_" << n << ".pcd";
         //     pcl::io::savePCDFileASCII(ss.str(), cur_feature_.second[n]["laser_cloud"]);
         // }
-        undistortMeasurements();
+
+        std::vector<Pose> pose_undist = pose_rlt_;
+        for (size_t n = 0; n < NUM_OF_LASER; n++)
+        {
+            Pose pose_ext(qbl_[n], tbl_[n]);
+            pose_undist[n] = pose_ext.inverse() * pose_rlt_[IDX_REF] * pose_ext;
+        }
+        undistortMeasurements(pose_undist);
+
         // for (size_t n = 0; n < NUM_OF_LASER; n++)
         // {
         //     stringstream ss;
         //     ss << "/tmp/undistort_raw_pc_" << n << ".pcd";
         //     pcl::io::savePCDFileASCII(ss.str(), cur_feature_.second[n]["laser_cloud"]);
         // }
-        pose_laser_prev_ = pose_laser_cur;
     }
+    pose_laser_prev_ = pose_laser_cur;
 }
 
 void Estimator::optimizeMap()
@@ -1145,13 +1157,13 @@ void Estimator::buildLocalMap()
         float ratio;
         pcl::VoxelGrid<PointI> down_size_filter;
 
-        ratio = 0.4 * std::min(2.0, std::max(0.75, 1.0 / 192 * float(N_SCANS * NUM_OF_LASER * WINDOW_SIZE)));
+        ratio = 0.4 * std::min(2.0, std::max(0.75, 1.0 / 128 * float(N_SCANS * NUM_OF_LASER * WINDOW_SIZE)));
         // ratio = 0.4;
         down_size_filter.setLeafSize(ratio, ratio, ratio);
         down_size_filter.setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_[n]));
         down_size_filter.filter(surf_points_local_map_filtered_[n]);
 
-        ratio = 0.2 * std::min(2.0, std::max(0.75, 1.0 / 192 * float(N_SCANS * NUM_OF_LASER * WINDOW_SIZE)));
+        ratio = 0.2 * std::min(2.0, std::max(0.75, 1.0 / 128 * float(N_SCANS * NUM_OF_LASER * WINDOW_SIZE)));
         // ratio = 0.2;
         down_size_filter.setLeafSize(ratio, ratio, ratio);
         down_size_filter.setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_[n]));

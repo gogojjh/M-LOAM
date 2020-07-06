@@ -53,6 +53,8 @@
 #include "utility/cloud_visualizer.h"
 #include "mloam_pcl/point_with_time.hpp"
 
+#define MAX_BUF_LENGTH 5
+
 using namespace std;
 
 DEFINE_bool(result_save, true, "save or not save the results");
@@ -81,6 +83,8 @@ ros::Publisher pub_gps_odom, pub_gps_path, pub_gps;
 ros::Publisher pub_laser_gt_odom, pub_laser_gt_path;
 
 bool b_pause = false;
+
+int frame_drop_cnt = 0;
 
 void dataProcessCallback(const sensor_msgs::PointCloud2ConstPtr &cloud0_msg,
                          const sensor_msgs::PointCloud2ConstPtr &cloud1_msg,
@@ -165,7 +169,6 @@ pcl::PointCloud<pcl::PointXYZIWithTime> getCloudFromMsg(const sensor_msgs::Point
 {
     pcl::PointCloud<pcl::PointXYZIWithTime> laser_cloud;
     pcl::fromROSMsg(*cloud_msg, laser_cloud);
-    // roiCloudFilter(laser_cloud, ROI_RANGE);
     std::vector<int> indices;
     pcl::removeNaNFromPointCloud(laser_cloud, laser_cloud, indices);
     return laser_cloud;
@@ -195,6 +198,7 @@ void sync_process()
         }
         while (!all_cloud_buf[0].empty())
         {
+            frame_drop_cnt++;
             for (size_t i = 0; i < all_cloud_buf.size(); i++)
             {
                 if (!all_cloud_buf[i].empty())
@@ -202,7 +206,7 @@ void sync_process()
                     all_cloud_buf[i].pop();
                 }
             }
-            std::cout << common::GREEN << "drop lidar frame in odometry for real time performance" 
+            std::cout << common::GREEN << "drop lidar frame in odometry for real time performance"
                       << common::RESET << std::endl;
         }
         m_buf.unlock();
@@ -237,14 +241,7 @@ int main(int argc, char **argv)
 
     MLOAM_RESULT_SAVE = FLAGS_result_save;
     OUTPUT_FOLDER = FLAGS_output_path;
-    stringstream ss;
-    ss << OUTPUT_FOLDER + "stamped_mloam_odom_estimate";
-    if (ODOM_GF_RATIO == 1.0)
-        ss << ".txt";
-    else
-        ss << ODOM_GF_RATIO << ".txt";
-    MLOAM_ODOM_PATH = ss.str();
-
+    MLOAM_ODOM_PATH = OUTPUT_FOLDER + "stamped_mloam_odom_estimate" + to_string(ODOM_GF_RATIO) + ".txt";
     MLOAM_GPS_PATH = OUTPUT_FOLDER + "stamped_gps.txt";
     MLOAM_GT_PATH = OUTPUT_FOLDER + "stamped_groundtruth.txt";
     EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
@@ -269,15 +266,15 @@ int main(int argc, char **argv)
 
         std::vector<LidarSubType *> sub_lidar(5);
         NUM_OF_LASER = NUM_OF_LASER < 5 ? NUM_OF_LASER : 5;
-        for (size_t i = 0; i < NUM_OF_LASER; i++) sub_lidar[i] = new LidarSubType(nh, CLOUD_TOPIC[i], 1);
-        for (size_t i = NUM_OF_LASER; i < 5; i++) sub_lidar[i] = new LidarSubType(nh, CLOUD_TOPIC[0], 1);
+        for (size_t i = 0; i < NUM_OF_LASER; i++) sub_lidar[i] = new LidarSubType(nh, CLOUD_TOPIC[i], 5);
+        for (size_t i = NUM_OF_LASER; i < 5; i++) sub_lidar[i] = new LidarSubType(nh, CLOUD_TOPIC[0], 5);
         message_filters::Synchronizer<LidarSyncPolicy> *lidar_synchronizer =
             new message_filters::Synchronizer<LidarSyncPolicy>(
                 LidarSyncPolicy(10), *sub_lidar[0], *sub_lidar[1], *sub_lidar[2], *sub_lidar[3], *sub_lidar[4]);
         lidar_synchronizer->registerCallback(boost::bind(&dataProcessCallback, _1, _2, _3, _4, _5));
 
-        ros::Subscriber sub_gt = nh.subscribe<nav_msgs::Odometry>("/base_pose_gt", 1, gtCallback);
-        ros::Subscriber sub_gps = nh.subscribe<sensor_msgs::NavSatFix>("/novatel718d/pos", 1, gpsCallback);
+        ros::Subscriber sub_gt = nh.subscribe<nav_msgs::Odometry>("/base_pose_gt", 10, gtCallback);
+        ros::Subscriber sub_gps = nh.subscribe<sensor_msgs::NavSatFix>("/novatel718d/pos", 10, gpsCallback);
         pub_laser_gt_path = nh.advertise<nav_msgs::Path>("/laser_gt_path", 10);
         pub_gps_odom = nh.advertise<nav_msgs::Odometry>("/gps/odom", 10);
         pub_gps_path = nh.advertise<nav_msgs::Path>("/gps/path", 10);
@@ -290,13 +287,14 @@ int main(int argc, char **argv)
             loop_rate.sleep();
         }
 
+        std::cout << common::YELLOW << "odometry drop frame: " << frame_drop_cnt << common::RESET << std::endl;
         if (MLOAM_RESULT_SAVE)
         {
             std::cout << common::RED << "saving odometry results" << common::RESET << std::endl;
             save_statistics.saveSensorPath(MLOAM_GT_PATH, laser_gt_path);
             save_statistics.saveSensorPath(MLOAM_GPS_PATH, gps_path);
             save_statistics.saveOdomStatistics(EX_CALIB_EIG_PATH, EX_CALIB_RESULT_PATH, MLOAM_ODOM_PATH, estimator);
-            save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time_odometry.txt", estimator);
+            save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time_odometry" + std::to_string(ODOM_GF_RATIO) + ".txt", estimator);
         }
         sync_thread.join();
     } else
@@ -365,7 +363,6 @@ int main(int argc, char **argv)
                         ROS_BREAK();
                         return 0;
                     }
-                    // roiCloudFilter(laser_cloud_list[j], ROI_RANGE);
                     printf("%lu ", laser_cloud_list[j].size());
                 }
                 printf("\n");
@@ -477,7 +474,7 @@ int main(int argc, char **argv)
             std::cout << common::RED << "saving odometry results" << common::RESET << std::endl;
             save_statistics.saveSensorPath(MLOAM_GT_PATH, laser_gt_path);
             save_statistics.saveOdomStatistics(EX_CALIB_EIG_PATH, EX_CALIB_RESULT_PATH, MLOAM_ODOM_PATH, estimator);
-            save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time_odometry.txt", estimator);
+            save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time_odometry" + std::to_string(ODOM_GF_RATIO) + ".txt", estimator);
         }
     }
 

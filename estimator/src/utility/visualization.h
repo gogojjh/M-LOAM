@@ -39,6 +39,7 @@
 // point cloud
 extern ros::Publisher pub_laser_cloud;
 extern ros::Publisher pub_laser_cloud_proj;
+extern ros::Publisher pub_laser_outlier;
 extern ros::Publisher pub_corner_points_sharp;
 extern ros::Publisher pub_corner_points_less_sharp;
 extern ros::Publisher pub_surf_points_flat;
