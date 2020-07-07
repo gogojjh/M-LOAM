@@ -69,12 +69,21 @@ Eigen::Matrix4d getTransformMatrix(const std::vector<double>& calib)
 
 void gtCallback(const nav_msgs::OdometryConstPtr &gt_odom_msg)
 {
-    Pose pose_world_base(*gt_odom_msg);
-    Pose pose_base_ref(Eigen::Quaterniond(1, 0, 0, 0), Eigen::Vector3d(0, 0, 0));
-    Pose pose_world_ref(pose_world_base * pose_base_ref);
+    // Pose pose_world_base(*gt_odom_msg);
+    // Pose pose_base_ref(Eigen::Quaterniond(1, 0, 0, 0), Eigen::Vector3d(0, 0, 0));
+    // Pose pose_world_ref(pose_world_base * pose_base_ref);
+    // if (laser_gt_path.poses.size() == 0)
+    //     pose_world_ref_ini = pose_world_ref;
+    // Pose pose_ref_ini_cur(pose_world_ref_ini.inverse() * pose_world_ref);
+
+    Pose pose_world_stereo_gt(*gt_odom_msg);
+    Pose pose_world_base_world_stereo(Eigen::Quaterniond(0.99977, 0.0026139, -0.021008, 0.003888),
+                                      Eigen::Vector3d(0.61413, -0.3347, -0.24461));
+    Pose pose_world_base_gt(pose_world_base_world_stereo * pose_world_stereo_gt);
+
     if (laser_gt_path.poses.size() == 0)
-        pose_world_ref_ini = pose_world_ref;
-    Pose pose_ref_ini_cur(pose_world_ref_ini.inverse() * pose_world_ref);
+        pose_world_ref_ini = pose_world_base_gt;
+    Pose pose_ref_ini_cur(pose_world_ref_ini.inverse() * pose_world_base_gt);
 
     nav_msgs::Odometry laser_gt_odom;
     laser_gt_odom.header.frame_id = "/world";

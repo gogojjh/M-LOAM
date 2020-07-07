@@ -207,7 +207,7 @@ void pubOdometry(Estimator &estimator, const double &time)
             pose_laser_cur = estimator.pose_laser_cur_[IDX_REF];
         } else
         {
-            pose_laser_cur = Pose(estimator.Qs_[estimator.cir_buf_cnt_-1], estimator.Ts_[estimator.cir_buf_cnt_-1]);
+            pose_laser_cur = Pose(estimator.Qs_[estimator.cir_buf_cnt_ - 1], estimator.Ts_[estimator.cir_buf_cnt_ - 1]);
         }
         nav_msgs::Odometry laser_odom;
         laser_odom.header.stamp = ros::Time(time);

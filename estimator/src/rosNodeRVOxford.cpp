@@ -103,15 +103,17 @@ void dataProcessCallback(const sensor_msgs::PointCloud2ConstPtr &cloud0_msg,
 
 void gtCallback(const nav_msgs::OdometryConstPtr &gt_odom_msg)
 {
-    Pose pose_world_base(*gt_odom_msg);
-    Pose pose_base_ref(Eigen::Quaterniond(1, 0, 0, 0), Eigen::Vector3d(0, 0, 0));
-    Pose pose_world_ref(pose_world_base * pose_base_ref);
+    Pose pose_world_stereo_gt(*gt_odom_msg);
+    Pose pose_world_base_world_stereo(Eigen::Quaterniond(0.99977, 0.0026139, -0.021008, 0.003888),
+                                      Eigen::Vector3d(0.61413, -0.3347, -0.24461));
+    Pose pose_world_base_gt(pose_world_base_world_stereo * pose_world_stereo_gt);
+
     if (laser_gt_path.poses.size() == 0)
-        pose_world_ref_ini = pose_world_ref;
-    Pose pose_ref_ini_cur(pose_world_ref_ini.inverse() * pose_world_ref);
+        pose_world_ref_ini = pose_world_base_gt;
+    Pose pose_ref_ini_cur(pose_world_ref_ini.inverse() * pose_world_base_gt);
 
     nav_msgs::Odometry laser_gt_odom;
-    laser_gt_odom.header.frame_id = "/world_stereo";
+    laser_gt_odom.header.frame_id = "/world";
     laser_gt_odom.child_frame_id = "/gt";
     laser_gt_odom.header.stamp = gt_odom_msg->header.stamp;
     laser_gt_odom.pose.pose.orientation.x = pose_ref_ini_cur.q_.x();
@@ -124,7 +126,7 @@ void gtCallback(const nav_msgs::OdometryConstPtr &gt_odom_msg)
     publishTF(laser_gt_odom);
 
     geometry_msgs::PoseStamped laser_gt_pose;
-    laser_gt_pose.header.frame_id = "/world_stereo";
+    laser_gt_pose.header.frame_id = "/world";
     laser_gt_pose.header.stamp = gt_odom_msg->header.stamp;
     laser_gt_pose.pose = laser_gt_odom.pose.pose;
     laser_gt_path.header = laser_gt_pose.header;
@@ -417,13 +419,25 @@ int main(int argc, char **argv)
                     fscanf(gt_odom_file, "%lf %lf %lf %lf ", &orix, &oriy, &oriz, &oriw);
                     std::fclose(gt_odom_file);
 
-                    Eigen::Vector3d t_world_base(posx, posy, posz);
-                    Eigen::Quaterniond q_world_base(oriw, orix, oriy, oriz);
-                    Pose pose_world_base(q_world_base, t_world_base);
-                    Pose pose_base_ref(Eigen::Quaterniond(1, 0, 0, 0), Eigen::Vector3d(0, 0, 0));
-                    Pose pose_world_ref(pose_world_base * pose_base_ref);
-                    if (laser_gt_path.poses.size() == 0) pose_world_ref_ini = pose_world_ref;
-                    Pose pose_ref_ini_cur(pose_world_ref_ini.inverse() * pose_world_ref);
+                    // Eigen::Vector3d t_world_base(posx, posy, posz);
+                    // Eigen::Quaterniond q_world_base(oriw, orix, oriy, oriz);
+                    // Pose pose_world_base(q_world_base, t_world_base);
+                    // Pose pose_base_ref(Eigen::Quaterniond(1, 0, 0, 0), Eigen::Vector3d(0, 0, 0));
+                    // Pose pose_world_ref(pose_world_base * pose_base_ref);
+                    
+                    // if (laser_gt_path.poses.size() == 0) pose_world_ref_ini = pose_world_ref;
+                    // Pose pose_ref_ini_cur(pose_world_ref_ini.inverse() * pose_world_ref);
+
+                    Eigen::Vector3d t_world_stereo_gt(posx, posy, posz);
+                    Eigen::Quaterniond q_world_stereo_gt(oriw, orix, oriy, oriz);
+                    Pose pose_world_stereo_gt(q_world_stereo_gt, t_world_stereo_gt);
+                    Pose pose_world_base_world_stereo(Eigen::Quaterniond(0.99977, 0.0026139, -0.021008, 0.003888),
+                                                      Eigen::Vector3d(0.61413, -0.3347, -0.24461));
+                    Pose pose_world_base_gt(pose_world_base_world_stereo * pose_world_stereo_gt);
+
+                    if (laser_gt_path.poses.size() == 0)
+                        pose_world_ref_ini = pose_world_base_gt;
+                    Pose pose_ref_ini_cur(pose_world_ref_ini.inverse() * pose_world_base_gt);
 
                     nav_msgs::Odometry laser_gt_odom;
                     laser_gt_odom.header.frame_id = "/world";

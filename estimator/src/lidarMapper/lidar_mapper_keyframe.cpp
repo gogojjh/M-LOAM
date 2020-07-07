@@ -446,7 +446,7 @@ void scan2MapOptimization()
             ceres::Solver::Options options;
             options.linear_solver_type = ceres::DENSE_SCHUR;
             options.max_num_iterations = 30;
-            // options.max_solver_time_in_seconds = 0.025;
+            options.max_solver_time_in_seconds = 0.025;
             // options.num_threads = 2;
             options.minimizer_progress_to_stdout = false;
             options.check_gradients = false;
@@ -487,7 +487,7 @@ void scan2MapOptimization()
                         lambda = LAMBDA_2;
                     std::cout << common::YELLOW << "lambda: " << lambda << common::RESET << std::endl;
                     ratio_change_flag = true;
-                    gf_ratio_cur = FLAGS_gf_ratio_ini;
+                    gf_ratio_cur = std::min(1.0, FLAGS_gf_ratio_ini);
                 }
             }
 
@@ -536,6 +536,7 @@ void scan2MapOptimization()
             for (const size_t &fid : sel_surf_feature_idx)
             {
                 const PointPlaneFeature &feature = all_surf_features[fid];
+                if (feature.type_ == 'n') continue;
                 Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
                 extractCov(laser_cloud_surf_cov->points[feature.idx_], cov_matrix);
                 LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
@@ -554,6 +555,7 @@ void scan2MapOptimization()
             for (const size_t &fid : sel_corner_feature_idx)
             {
                 const PointPlaneFeature &feature = all_corner_features[fid];
+                if (feature.type_ == 'n') continue;
                 Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
                 extractCov(laser_cloud_corner_cov->points[feature.idx_], cov_matrix);
                 LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
@@ -581,8 +583,8 @@ void scan2MapOptimization()
                 cov_mapping = mat_H.inverse(); // covariance of sensor noise: A New Approach to 3D ICP Covariance Estimation/ Censi's approach
                 cov_mapping_list.push_back(cov_mapping.trace());
                 is_degenerate = local_parameterization->is_degenerate_;
-                LOG_EVERY_N(INFO, 20) << "logdet of H: " << common::logDet(mat_H * 134, true);
-                LOG_EVERY_N(INFO, 20) << "pose covariance trace: " << cov_mapping.trace();
+                LOG_EVERY_N(INFO, 1) << "logdet of H: " << common::logDet(mat_H * 134, true);
+                LOG_EVERY_N(INFO, 1) << "pose covariance trace: " << cov_mapping.trace();
                 printf("evaluate H: %fms\n", t_eval_H.toc());
             }
             else if (is_degenerate)
@@ -717,8 +719,10 @@ void pubOdometry()
 
     geometry_msgs::PoseStamped laser_after_mapped_pose;
     laser_after_mapped_pose.header = odom_aft_mapped.header;
+    laser_after_mapped_pose.header.stamp = ros::Time().fromSec(time_laser_odometry);
     laser_after_mapped_pose.pose = odom_aft_mapped.pose.pose;
-    laser_after_mapped_path.header.stamp = odom_aft_mapped.header.stamp;
+
+    laser_after_mapped_path.header.stamp = ros::Time().fromSec(time_laser_odometry);
     laser_after_mapped_path.header.frame_id = "/world";
     laser_after_mapped_path.poses.push_back(laser_after_mapped_pose);
     pub_laser_after_mapped_path.publish(laser_after_mapped_path);
@@ -1069,8 +1073,9 @@ void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameteri
 	d_eigvec_list.push_back(mat_V_f);
  	mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
 
-	LOG_EVERY_N(INFO, 100) << "D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose();
-	// std::cout << "jjiao:" << std::endl;
+    LOG_EVERY_N(INFO, 20) << "D factor: " << mat_E(0, 0)
+                          << ", D vector: " << mat_V_f.col(0).transpose();
+    // std::cout << "jjiao:" << std::endl;
 	// std::cout << "mat_E: " << mat_E << std::endl;
 	// std::cout << "mat_V_f: " << std::endl << mat_V_f << std::endl;
 	// std::cout << "mat_V_p: " << std::endl << mat_V_p << std::endl;
@@ -1174,7 +1179,7 @@ int main(int argc, char **argv)
     	ss << OUTPUT_FOLDER << "stamped_mloam_map_estimate"  + std::to_string(FLAGS_gf_ratio_ini) + ".txt";
 	else
         ss << OUTPUT_FOLDER << "stamped_mloam_map_wo_ua_estimate" + std::to_string(FLAGS_gf_ratio_ini) + ".txt";
-    gf_ratio_cur = FLAGS_gf_ratio_ini;
+    gf_ratio_cur = std::min(1.0, FLAGS_gf_ratio_ini);
     MLOAM_MAP_PATH = ss.str(); 
 
 	std::cout << "config file: " << FLAGS_config_file << std::endl;

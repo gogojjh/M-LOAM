@@ -382,9 +382,10 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
     double pre_cost = 0;
     double cur_cost = 0;
     stringstream ss;
-    TicToc t_sel_feature;
     while (true)
     {
+        TicToc t_sel_feature;
+        size_t num_rnd_que;
         while (true)
         {
             if ((num_sel_features >= num_use_features) ||
@@ -395,7 +396,6 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
             size_t size_rnd_subset = static_cast<size_t>(1.0 * num_all_features / num_use_features);
             // LOG_EVERY_N(INFO, 20) << "[goodFeatureMatching] size of matrix subset: " << size_rnd_subset;
 
-            size_t num_rnd_que;
             std::priority_queue<FeatureWithScore, std::vector<FeatureWithScore>, std::less<FeatureWithScore>> heap_subset;
             while (heap_subset.size() < size_rnd_subset)
             {
@@ -483,12 +483,17 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
                 }
             }
             if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
-            {
-                std::cerr << "[goodFeatureMatching]: early termination!" << std::endl;
                 break;
-            }
         }
         if (!ratio_change_flag) break;
+
+        if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
+        {
+            std::cerr << "[goodFeatureMatching]: early termination!" << std::endl;
+            LOG(INFO) << "early termination: " << num_rnd_que << ", " << t_sel_feature.toc();
+            num_sel_features = static_cast<size_t>(num_all_features * pre_gf_ratio);
+            break;
+        }
 
         cur_cost = common::logDet(sub_mat_H) - lambda * 1e-3 * num_use_features;
         ss << cur_cost << "(" << cur_gf_ratio << ") ";
@@ -500,7 +505,7 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
         } else
         {
             pre_cost = cur_cost;
-            pre_gf_ratio = cur_gf_ratio;
+            pre_gf_ratio = std::min(1.0, cur_gf_ratio);
             cur_gf_ratio = GF_RATIO_SIGMA * cur_gf_ratio;
             if (cur_gf_ratio > 1.0) break;
             num_use_features = static_cast<size_t>(num_all_features * cur_gf_ratio);
@@ -508,7 +513,7 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
         }
     }
     sel_feature_idx.resize(num_sel_features);
-    printf("num of all features: %lu, sel features: %lu\n", num_all_features, num_use_features);
+    printf("num of all features: %lu, sel features: %lu\n", num_all_features, num_sel_features);
     // printf("logdet of selected sub H: %f\n", common::logDet(sub_mat_H));
     return pre_gf_ratio;
 }

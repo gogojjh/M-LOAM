@@ -60,8 +60,8 @@
         args="0 0 1.6 0 0 0 world_base world 10"/> 
     <!-- <node name="static_tf_world_base_into_world_radar" pkg="tf" type="static_transform_publisher"
         args="-0.12528 -0.46314 2.0689 0.0027 -0.046 0.0038 world_base world_radar 10"/> -->
-    <node name="static_tf_world_base_into_world_stereo" pkg="tf" type="static_transform_publisher"
-        args="0.61413 -0.3347 1.5554 0.00261 -0.0210 0.0039 0.99977 world_base world_stereo 10"/>        
+    <!-- <node name="static_tf_world_base_into_world_stereo" pkg="tf" type="static_transform_publisher"
+        args="0.61413 -0.3347 1.5554 0.00261 -0.0210 0.0039 0.99977 world_base world_stereo 10"/>         -->
     <node name="static_tf_world_base_into_laser" pkg="tf" type="static_transform_publisher"
         args="0 0 0 0 0 0 world laser_0 10"/>         
     <node name="static_tf_laser_into_laser_left" pkg="tf" type="static_transform_publisher"
