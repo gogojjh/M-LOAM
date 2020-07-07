@@ -93,7 +93,7 @@ eig_thre_calib: 1000
 n_calib: 30
 
 # good feature
-odom_gf_ratio: 1.0
+odom_gf_ratio: 0.5
 
 skip_num_odom_pub: 4
 
@@ -114,8 +114,8 @@ uct_ext: !!opencv-matrix
    cols: 6
    dt: d
    data: [0, 0, 0, 0, 0, 0,
-          0.0025, 0.0025, 0.0025, 0.0025, 0.0025, 0.0025]
-         #  0, 0, 0, 0, 0, 0]
+         #  0.0025, 0.0025, 0.0025, 0.0025, 0.0025, 0.0025]
+          0, 0, 0, 0, 0, 0]
 
 uct_measurement: !!opencv-matrix
    rows: 1

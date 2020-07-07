@@ -522,10 +522,11 @@ void Estimator::process()
             cur_feature_.second[n].find("surf_points_less_flat")->second));
     }
 
-    Pose pose_laser_cur = Pose(Qs_[cir_buf_cnt_ - 1], Ts_[cir_buf_cnt_ - 1]);
-    pose_rlt_[IDX_REF] = pose_laser_prev_.inverse() * pose_laser_cur;
     if (DISTORTION)
     {
+        Pose pose_laser_cur = Pose(Qs_[cir_buf_cnt_ - 1], Ts_[cir_buf_cnt_ - 1]);
+        pose_rlt_[IDX_REF] = pose_laser_prev_.inverse() * pose_laser_cur;
+
         // {
         //     Pose pose_ext;
         //     Pose pose_local;
@@ -564,8 +565,9 @@ void Estimator::process()
         //     ss << "/tmp/undistort_raw_pc_" << n << ".pcd";
         //     pcl::io::savePCDFileASCII(ss.str(), cur_feature_.second[n]["laser_cloud"]);
         // }
+
+        pose_laser_prev_ = pose_laser_cur;
     }
-    pose_laser_prev_ = pose_laser_cur;
 }
 
 void Estimator::optimizeMap()
@@ -1157,13 +1159,13 @@ void Estimator::buildLocalMap()
         float ratio;
         pcl::VoxelGrid<PointI> down_size_filter;
 
-        ratio = 0.4 * std::min(2.0, std::max(0.75, 1.0 / 128 * float(N_SCANS * NUM_OF_LASER * WINDOW_SIZE)));
+        ratio = 0.4 * std::min(2.0, std::max(0.75, 1.0 / 192 * float(N_SCANS * NUM_OF_LASER * WINDOW_SIZE)));
         // ratio = 0.4;
         down_size_filter.setLeafSize(ratio, ratio, ratio);
         down_size_filter.setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_[n]));
         down_size_filter.filter(surf_points_local_map_filtered_[n]);
 
-        ratio = 0.2 * std::min(2.0, std::max(0.75, 1.0 / 128 * float(N_SCANS * NUM_OF_LASER * WINDOW_SIZE)));
+        ratio = 0.4 * std::min(2.0, std::max(0.75, 1.0 / 192 * float(N_SCANS * NUM_OF_LASER * WINDOW_SIZE)));
         // ratio = 0.2;
         down_size_filter.setLeafSize(ratio, ratio, ratio);
         down_size_filter.setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_[n]));

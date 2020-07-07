@@ -215,12 +215,12 @@ void laserOdometryHandler(const nav_msgs::Odometry::ConstPtr &laser_odom)
 	odom_aft_mapped.pose.pose.position.z = pose_wmap_curr_ini.t_.z();
 	pub_odom_aft_mapped_high_frec.publish(odom_aft_mapped); // publish (k-1)th oldest map * kth newest odom
 
-    geometry_msgs::PoseStamped laser_after_mapped_pose;
-    laser_after_mapped_pose.header = odom_aft_mapped.header;
-    laser_after_mapped_pose.pose = odom_aft_mapped.pose.pose;
-    laser_after_mapped_path.header = odom_aft_mapped.header;
-    laser_after_mapped_path.poses.push_back(laser_after_mapped_pose);
-    pub_laser_after_mapped_path.publish(laser_after_mapped_path);
+    // geometry_msgs::PoseStamped laser_after_mapped_pose;
+    // laser_after_mapped_pose.header = odom_aft_mapped.header;
+    // laser_after_mapped_pose.pose = odom_aft_mapped.pose.pose;
+    // laser_after_mapped_path.header = odom_aft_mapped.header;
+    // laser_after_mapped_path.poses.push_back(laser_after_mapped_pose);
+    // pub_laser_after_mapped_path.publish(laser_after_mapped_path);
 }
 
 void vector2Double()
@@ -446,7 +446,7 @@ void scan2MapOptimization()
             ceres::Solver::Options options;
             options.linear_solver_type = ceres::DENSE_SCHUR;
             options.max_num_iterations = 30;
-            // options.max_solver_time_in_seconds = 0.04;
+            // options.max_solver_time_in_seconds = 0.025;
             // options.num_threads = 2;
             options.minimizer_progress_to_stdout = false;
             options.check_gradients = false;
@@ -673,7 +673,7 @@ void saveKeyframeAndInsertGraph()
 void pubPointCloud()
 {
     // publish registrated laser cloud
-    *laser_cloud_full_res += *laser_cloud_outlier;
+    // *laser_cloud_full_res += *laser_cloud_outlier;
     for (PointI &point : *laser_cloud_full_res) pointAssociateToMap(point, point, pose_wmap_curr);
     sensor_msgs::PointCloud2 laser_cloud_full_res_msg;
     pcl::toROSMsg(*laser_cloud_full_res, laser_cloud_full_res_msg);
@@ -714,6 +714,14 @@ void pubOdometry()
         for (size_t j = 0; j < 6; j++)
             odom_aft_mapped.pose.covariance[i * 6 + j] = float(cov_mapping(i, j));
     pub_odom_aft_mapped.publish(odom_aft_mapped);
+
+    geometry_msgs::PoseStamped laser_after_mapped_pose;
+    laser_after_mapped_pose.header = odom_aft_mapped.header;
+    laser_after_mapped_pose.pose = odom_aft_mapped.pose.pose;
+    laser_after_mapped_path.header.stamp = odom_aft_mapped.header.stamp;
+    laser_after_mapped_path.header.frame_id = "/world";
+    laser_after_mapped_path.poses.push_back(laser_after_mapped_pose);
+    pub_laser_after_mapped_path.publish(laser_after_mapped_path);
     publishTF(odom_aft_mapped);
 
     if (pub_keyframes.getNumSubscribers() != 0)
@@ -759,7 +767,7 @@ void pubGlobalMap()
             down_size_filter_global_map_keyframes.filter(*global_map_keyframes_ds);
 
             PointICovCloud::Ptr laser_cloud_map(new PointICovCloud());
-            PointICovCloud::Ptr  laser_cloud_map_ds(new PointICovCloud());
+            PointICovCloud::Ptr laser_cloud_map_ds(new PointICovCloud());
             for (int i = 0; i < global_map_keyframes_ds->size(); i++)
             {
                 int key_ind = (int)global_map_keyframes_ds->points[i].intensity;
@@ -767,13 +775,13 @@ void pubGlobalMap()
                 cloudUCTAssociateToMap(*surf_cloud_keyframes_cov[key_ind], surf_trans, pose_keyframes_6d[key_ind].second, pose_ext);
                 *laser_cloud_map += surf_trans;
 
-                PointICovCloud corner_trans;
-                cloudUCTAssociateToMap(*corner_cloud_keyframes_cov[key_ind], corner_trans, pose_keyframes_6d[key_ind].second, pose_ext);
-                *laser_cloud_map += corner_trans;
+                // PointICovCloud corner_trans;
+                // cloudUCTAssociateToMap(*corner_cloud_keyframes_cov[key_ind], corner_trans, pose_keyframes_6d[key_ind].second, pose_ext);
+                // *laser_cloud_map += corner_trans;
 
-                PointICovCloud outlier_trans;
-                cloudUCTAssociateToMap(*outlier_cloud_keyframes_cov[key_ind], outlier_trans, pose_keyframes_6d[key_ind].second, pose_ext);
-                *laser_cloud_map += outlier_trans;
+                // PointICovCloud outlier_trans;
+                // cloudUCTAssociateToMap(*outlier_cloud_keyframes_cov[key_ind], outlier_trans, pose_keyframes_6d[key_ind].second, pose_ext);
+                // *laser_cloud_map += outlier_trans;
             }
             down_size_filter_global_map_cov.setInputCloud(laser_cloud_map);
             down_size_filter_global_map_cov.filter(*laser_cloud_map_ds);
