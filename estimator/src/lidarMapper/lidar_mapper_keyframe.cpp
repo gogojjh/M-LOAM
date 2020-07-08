@@ -505,6 +505,7 @@ void scan2MapOptimization()
                                                    all_surf_features,
                                                    sel_surf_feature_idx,
                                                    's',
+                                                   FLAGS_gf_method,
                                                    gf_ratio_cur,
                                                    lambda,
                                                    ratio_change_flag);
@@ -519,6 +520,7 @@ void scan2MapOptimization()
                                                    all_corner_features,
                                                    sel_corner_feature_idx,
                                                    'c',
+                                                   FLAGS_gf_method,
                                                    gf_ratio_cur,
                                                    lambda,
                                                    false);
@@ -1143,14 +1145,10 @@ void sigintHandler(int sig)
                                           d_eigvec_list,
                                           cov_mapping_list,
                                           logdet_H_list);
-        save_statistics.saveMapTimeStatistics(
-            OUTPUT_FOLDER + "time_mapping" + std::to_string((float)FLAGS_gf_ratio_ini) + ".txt",
-            OUTPUT_FOLDER + "time_mapping_match_feature" + std::to_string((float)FLAGS_gf_ratio_ini) + ".txt",
-            OUTPUT_FOLDER + "time_solver" + std::to_string((float)FLAGS_gf_ratio_ini) + ".txt",
-            total_mapping,
+        save_statistics.saveMapTimeStatistics(OUTPUT_FOLDER + "time_mloam_mapping_" + FLAGS_gf_method + "_" + std::to_string((float)FLAGS_gf_ratio_ini) + ".txt",
             total_match_feature,
             total_solver,
-            frame_cnt);
+            total_mapping);
     }
     saveGlobalMap();
     ros::shutdown();
@@ -1176,12 +1174,15 @@ int main(int argc, char **argv)
 	with_ua_flag = FLAGS_with_ua;
     printf("save result (0/1): %d to %s\n", MLOAM_RESULT_SAVE, OUTPUT_FOLDER.c_str());
 	printf("uncertainty propagation on (0/1): %d\n", with_ua_flag);
+    printf("gf method: %s, gf ratio: %f\n", FLAGS_gf_method.c_str(), FLAGS_gf_ratio_ini);
 	
 	stringstream ss;
 	if (with_ua_flag)
-    	ss << OUTPUT_FOLDER << "stamped_mloam_map_estimate"  + std::to_string(FLAGS_gf_ratio_ini) + ".txt";
+    	ss << OUTPUT_FOLDER << "stamped_mloam_map_estimate_"  + FLAGS_gf_method 
+            + "_" + std::to_string(FLAGS_gf_ratio_ini) + ".txt";
 	else
-        ss << OUTPUT_FOLDER << "stamped_mloam_map_wo_ua_estimate" + std::to_string(FLAGS_gf_ratio_ini) + ".txt";
+        ss << OUTPUT_FOLDER << "stamped_mloam_map_wo_ua_estimate" + FLAGS_gf_method
+            + "_" + std::to_string(FLAGS_gf_ratio_ini) + ".txt";
     gf_ratio_cur = std::min(1.0, FLAGS_gf_ratio_ini);
     MLOAM_MAP_PATH = ss.str(); 
 

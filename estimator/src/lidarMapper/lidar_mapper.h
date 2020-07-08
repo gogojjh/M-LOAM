@@ -90,7 +90,7 @@ DEFINE_bool(result_save, true, "save or not save the results");
 DEFINE_string(config_file, "config.yaml", "the yaml config file");
 DEFINE_string(output_path, "", "the path ouf saving results");
 DEFINE_bool(with_ua, true, "with or without the awareness of uncertainty");
-DEFINE_string(fs_method, "gd_float", "good feature selection method: gd_fix, gd_float, rnd, ds");
+DEFINE_string(gf_method, "gd_float", "good feature selection method: gd_fix, gd_float, rnd, ds");
 DEFINE_double(gf_ratio_ini, 0.2, "with or without the good features selection");
 
 FeatureExtract f_extract;
@@ -236,9 +236,10 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
                            std::vector<PointPlaneFeature> &all_features,
                            std::vector<size_t> &sel_feature_idx,
                            const char feature_type,
-                           const double gf_ratio_ini = 0.2,
+                           const string gf_method,
+                           const double gf_ratio = 0.2,
                            const double lambda = 10.0,
-                           const bool ratio_change_flag = false)
+                           bool ratio_change_flag = false)
 {
     size_t num_all_features = laser_cloud.size();
     all_features.resize(num_all_features);
@@ -248,66 +249,160 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
     std::iota(all_feature_idx.begin(), all_feature_idx.end(), 0);
 
     size_t num_use_features;
-    double cur_gf_ratio = gf_ratio_ini;
+    double cur_gf_ratio = gf_ratio;
     double pre_gf_ratio = cur_gf_ratio;
     num_use_features = static_cast<size_t>(num_all_features * cur_gf_ratio);
     sel_feature_idx.resize(num_use_features);
-
-    Eigen::Matrix<double, 6, 6> sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
     size_t num_sel_features = 0;
-    double pre_cost = 0;
-    double cur_cost = 0;
-    stringstream ss;
-    while (true)
+
+    size_t n_neigh = 5;
+    bool b_match = true;
+
+    if (gf_method == "sample")
     {
-        TicToc t_sel_feature;
+        PointICovCloud laser_cloud_ds;
+        pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_cloud;
+        down_size_filter_cloud.setLeafSize(1.0, 1.0, 1.0);
+        down_size_filter_cloud.setInputCloud(boost::make_shared<PointICovCloud>(laser_cloud));
+        down_size_filter_cloud.filter(laser_cloud_ds);
+        num_use_features = laser_cloud_ds.size();
+        sel_feature_idx.resize(num_use_features);
+        for (size_t que_idx = 0; que_idx < num_use_features; que_idx++)
+        {
+            b_match = true;
+            if (feature_type == 's')
+            {
+                b_match = f_extract.matchSurfPointFromMap(kdtree_from_map,
+                                                          laser_map,
+                                                          laser_cloud_ds.points[que_idx],
+                                                          pose_local,
+                                                          all_features[que_idx],
+                                                          que_idx,
+                                                          n_neigh,
+                                                          false);
+            }
+            else if (feature_type == 'c')
+            {
+                b_match = f_extract.matchCornerPointFromMap(kdtree_from_map,
+                                                            laser_map,
+                                                            laser_cloud_ds.points[que_idx],
+                                                            pose_local,
+                                                            all_features[que_idx],
+                                                            que_idx,
+                                                            n_neigh,
+                                                            false);
+            }
+            if (b_match)
+            {
+                sel_feature_idx[num_sel_features] = que_idx;
+                num_sel_features++;
+            }            
+        }
+    } else
+    if (gf_method == "rnd")
+    {
         size_t num_rnd_que;
+        TicToc t_sel_feature;
         while (true)
         {
-            if ((num_sel_features >= num_use_features) ||
-                (all_feature_idx.size() == 0) ||
-                (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
+            if (num_sel_features >= num_use_features || 
+                t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME ||
+                all_feature_idx.size() == 0 || 
+                num_rnd_que >= MAX_RANDOM_QUEUE_TIME)
                     break;
-
-            size_t size_rnd_subset = static_cast<size_t>(1.0 * num_all_features / num_use_features);
-            // LOG_EVERY_N(INFO, 20) << "[goodFeatureMatching] size of matrix subset: " << size_rnd_subset;
-
-            std::priority_queue<FeatureWithScore, std::vector<FeatureWithScore>, std::less<FeatureWithScore>> heap_subset;
-            while (heap_subset.size() < size_rnd_subset)
+            size_t j;
+            num_rnd_que = 0;
+            while (num_rnd_que < MAX_RANDOM_QUEUE_TIME)
             {
-                num_rnd_que = 0;
-                size_t j;
-                while (num_rnd_que < MAX_RANDOM_QUEUE_TIME)
+                j = (std::rand() % all_feature_idx.size());
+                if (feature_visited[j] == -1)
                 {
-                    j = (std::rand() % all_feature_idx.size());
-                    if (feature_visited[j] < int(num_sel_features))
-                    {
-                        feature_visited[j] = int(num_sel_features);
-                        break;
-                    }
-                    num_rnd_que++;
-                }
-                if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
+                    feature_visited[j] = 0;
                     break;
+                }
+                num_rnd_que++;
+            }
+            b_match = true;
+            size_t que_idx = all_feature_idx[j];
+            if (feature_type == 's')
+            {
+                b_match = f_extract.matchSurfPointFromMap(kdtree_from_map,
+                                                          laser_map,
+                                                          laser_cloud.points[que_idx],
+                                                          pose_local,
+                                                          all_features[que_idx],
+                                                          que_idx,
+                                                          n_neigh,
+                                                          false);
+            }
+            else if (feature_type == 'c')
+            {
+                b_match = f_extract.matchCornerPointFromMap(kdtree_from_map,
+                                                            laser_map,
+                                                            laser_cloud.points[que_idx],
+                                                            pose_local,
+                                                            all_features[que_idx],
+                                                            que_idx,
+                                                            n_neigh,
+                                                            false);
+            }
+            if (b_match)
+            {
+                sel_feature_idx[num_sel_features] = que_idx;
+                num_sel_features++;
+            } else
+            {
+                all_feature_idx.erase(all_feature_idx.begin() + j);
+                feature_visited.erase(feature_visited.begin() + j);
+            }
+        }
+    } else
+    {
+        if (gf_method == "gd_fix") ratio_change_flag = true;
 
-                size_t que_idx = all_feature_idx[j];
-                if (all_features[que_idx].type_ == 'n')
+        Eigen::Matrix<double, 6, 6> sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
+        double pre_cost = 0;
+        double cur_cost = 0;
+        stringstream ss;
+        while (true)
+        {
+            TicToc t_sel_feature;
+            size_t num_rnd_que;
+            while (true)
+            {
+                if ((num_sel_features >= num_use_features) ||
+                    (all_feature_idx.size() == 0) ||
+                    (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
+                        break;
+
+                size_t size_rnd_subset = static_cast<size_t>(1.0 * num_all_features / num_use_features);
+                // LOG_EVERY_N(INFO, 20) << "[goodFeatureMatching] size of matrix subset: " << size_rnd_subset;
+
+                std::priority_queue<FeatureWithScore, std::vector<FeatureWithScore>, std::less<FeatureWithScore>> heap_subset;
+                while (heap_subset.size() < size_rnd_subset)
                 {
-                    size_t n_neigh = 5;
-                    bool b_match = true;
-                    if (feature_type == 's')
+                    num_rnd_que = 0;
+                    size_t j;
+                    while (num_rnd_que < MAX_RANDOM_QUEUE_TIME)
                     {
-                        b_match = f_extract.matchSurfPointFromMap(kdtree_from_map,
-                                                                laser_map,
-                                                                laser_cloud.points[que_idx],
-                                                                pose_local,
-                                                                all_features[que_idx],
-                                                                que_idx,
-                                                                n_neigh,
-                                                                false);
-                    } else if (feature_type == 'c')
+                        j = (std::rand() % all_feature_idx.size());
+                        if (feature_visited[j] < int(num_sel_features))
+                        {
+                            feature_visited[j] = int(num_sel_features);
+                            break;
+                        }
+                        num_rnd_que++;
+                    }
+                    if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
+                        break;
+
+                    size_t que_idx = all_feature_idx[j];
+                    if (all_features[que_idx].type_ == 'n')
                     {
-                        b_match = f_extract.matchCornerPointFromMap(kdtree_from_map,
+                        b_match = true;
+                        if (feature_type == 's')
+                        {
+                            b_match = f_extract.matchSurfPointFromMap(kdtree_from_map,
                                                                     laser_map,
                                                                     laser_cloud.points[que_idx],
                                                                     pose_local,
@@ -315,79 +410,91 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
                                                                     que_idx,
                                                                     n_neigh,
                                                                     false);
-                    }
-                    if (b_match) 
-                    {
+                        } else if (feature_type == 'c')
+                        {
+                            b_match = f_extract.matchCornerPointFromMap(kdtree_from_map,
+                                                                        laser_map,
+                                                                        laser_cloud.points[que_idx],
+                                                                        pose_local,
+                                                                        all_features[que_idx],
+                                                                        que_idx,
+                                                                        n_neigh,
+                                                                        false);
+                        }
+                        if (b_match) 
+                        {
 
+                        }
+                        else // not found constraints or outlier constraints
+                        {
+                            all_feature_idx.erase(all_feature_idx.begin() + j);
+                            feature_visited.erase(feature_visited.begin() + j);
+                            break;
+                        }
                     }
-                    else // not found constraints or outlier constraints
+
+                    const PointPlaneFeature &feature = all_features[que_idx];
+                    Eigen::Matrix3d cov_matrix;
+                    extractCov(laser_cloud.points[que_idx], cov_matrix);
+                    Eigen::MatrixXd jaco;
+                    evaluateFeatJacobianMatching(pose_local, feature, cov_matrix, jaco);
+
+                    double cur_det = common::logDet(sub_mat_H + jaco.transpose() * jaco, true);
+                    heap_subset.push(FeatureWithScore(que_idx, cur_det, jaco));
+                    if (heap_subset.size() >= size_rnd_subset)
                     {
-                        all_feature_idx.erase(all_feature_idx.begin() + j);
-                        feature_visited.erase(feature_visited.begin() + j);
+                        const FeatureWithScore &fws = heap_subset.top();
+                        std::vector<size_t>::iterator iter = std::find(all_feature_idx.begin(), all_feature_idx.end(), fws.idx_);
+                        if (iter == all_feature_idx.end())
+                        {
+                            std::cerr << "[goodFeatureMatching]: not exist feature idx !" << std::endl;
+                            break;
+                        }
+
+                        const Eigen::MatrixXd &jaco = fws.jaco_;
+                        sub_mat_H += jaco.transpose() * jaco;
+
+                        size_t position = iter - all_feature_idx.begin();
+                        all_feature_idx.erase(all_feature_idx.begin() + position);
+                        feature_visited.erase(feature_visited.begin() + position);
+                        sel_feature_idx[num_sel_features] = fws.idx_;
+                        num_sel_features++;
+                        // printf("position: %lu, num: %lu\n", position, num_rnd_que);
                         break;
                     }
                 }
-
-                const PointPlaneFeature &feature = all_features[que_idx];
-                Eigen::Matrix3d cov_matrix;
-                extractCov(laser_cloud.points[que_idx], cov_matrix);
-                Eigen::MatrixXd jaco;
-                evaluateFeatJacobianMatching(pose_local, feature, cov_matrix, jaco);
-
-                double cur_det = common::logDet(sub_mat_H + jaco.transpose() * jaco, true);
-                heap_subset.push(FeatureWithScore(que_idx, cur_det, jaco));
-                if (heap_subset.size() >= size_rnd_subset)
-                {
-                    const FeatureWithScore &fws = heap_subset.top();
-                    std::vector<size_t>::iterator iter = std::find(all_feature_idx.begin(), all_feature_idx.end(), fws.idx_);
-                    if (iter == all_feature_idx.end())
-                    {
-                        std::cerr << "[goodFeatureMatching]: not exist feature idx !" << std::endl;
-                        break;
-                    }
-
-                    const Eigen::MatrixXd &jaco = fws.jaco_;
-                    sub_mat_H += jaco.transpose() * jaco;
-
-                    size_t position = iter - all_feature_idx.begin();
-                    all_feature_idx.erase(all_feature_idx.begin() + position);
-                    feature_visited.erase(feature_visited.begin() + position);
-                    sel_feature_idx[num_sel_features] = fws.idx_;
-                    num_sel_features++;
-                    // printf("position: %lu, num: %lu\n", position, num_rnd_que);
+                if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
                     break;
-                }
             }
+            if (!ratio_change_flag) break;
+
             if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
+            {
+                std::cerr << "[goodFeatureMatching]: early termination!" << std::endl;
+                LOG(INFO) << "early termination: " << num_rnd_que << ", " << t_sel_feature.toc();
+                num_sel_features = static_cast<size_t>(num_all_features * pre_gf_ratio);
                 break;
-        }
-        if (!ratio_change_flag) break;
+            }
 
-        if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
-        {
-            std::cerr << "[goodFeatureMatching]: early termination!" << std::endl;
-            LOG(INFO) << "early termination: " << num_rnd_que << ", " << t_sel_feature.toc();
-            num_sel_features = static_cast<size_t>(num_all_features * pre_gf_ratio);
-            break;
+            cur_cost = common::logDet(sub_mat_H) - lambda * 1e-3 * num_use_features;
+            ss << cur_cost << "(" << cur_gf_ratio << ") ";
+            if (cur_cost <= pre_cost) 
+            {
+                std::cout << ss.str() << std::endl;
+                num_sel_features = static_cast<size_t>(num_all_features * pre_gf_ratio);
+                break;
+            } else
+            {
+                pre_cost = cur_cost;
+                pre_gf_ratio = std::min(1.0, cur_gf_ratio);
+                cur_gf_ratio = GF_RATIO_SIGMA * cur_gf_ratio;
+                if (cur_gf_ratio > 1.0) break;
+                num_use_features = static_cast<size_t>(num_all_features * cur_gf_ratio);
+                sel_feature_idx.resize(num_use_features);
+            }
         }
+    } 
 
-        cur_cost = common::logDet(sub_mat_H) - lambda * 1e-3 * num_use_features;
-        ss << cur_cost << "(" << cur_gf_ratio << ") ";
-        if (cur_cost <= pre_cost) 
-        {
-            std::cout << ss.str() << std::endl;
-            num_sel_features = static_cast<size_t>(num_all_features * pre_gf_ratio);
-            break;
-        } else
-        {
-            pre_cost = cur_cost;
-            pre_gf_ratio = std::min(1.0, cur_gf_ratio);
-            cur_gf_ratio = GF_RATIO_SIGMA * cur_gf_ratio;
-            if (cur_gf_ratio > 1.0) break;
-            num_use_features = static_cast<size_t>(num_all_features * cur_gf_ratio);
-            sel_feature_idx.resize(num_use_features);
-        }
-    }
     sel_feature_idx.resize(num_sel_features);
     printf("num of all features: %lu, sel features: %lu\n", num_all_features, num_sel_features);
     // printf("logdet of selected sub H: %f\n", common::logDet(sub_mat_H));

@@ -44,12 +44,9 @@ public:
                            const std::vector<double> &logdet_H_list);
 
     void saveMapTimeStatistics(const string &map_time_filename,
-                               const string &feat_time_filename,
-                               const string &solver_time_filename,
-                               const std::vector<double> &total_time,
                                const std::vector<double> &total_feat_time,
                                const std::vector<double> &total_solver_time,
-                               const int frame_cnt);
+                               const std::vector<double> &total_mapping_time);
 };
 
 void SaveStatistics::saveSensorPath(const string &filename, const nav_msgs::Path &sensor_path)
@@ -95,13 +92,13 @@ void SaveStatistics::saveOdomStatistics(const string &calib_eig_filename,
     for (size_t i = 0; i < NUM_OF_LASER; i++)
     {
         fout << estimator.cur_time_ << ", "
-                << estimator.tbl_[i](0) << ", "
-                << estimator.tbl_[i](1) << ", "
-                << estimator.tbl_[i](2) << ", "
-                << estimator.qbl_[i].x() << ", "
-                << estimator.qbl_[i].y() << ", "
-                << estimator.qbl_[i].z() << ", "
-                << estimator.qbl_[i].w() << std::endl;
+             << estimator.tbl_[i](0) << ", "
+             << estimator.tbl_[i](1) << ", "
+             << estimator.tbl_[i](2) << ", "
+             << estimator.qbl_[i].x() << ", "
+             << estimator.qbl_[i].y() << ", "
+             << estimator.qbl_[i].z() << ", "
+             << estimator.qbl_[i].w() << std::endl;
     }
     fout.close();
 
@@ -128,18 +125,33 @@ void SaveStatistics::saveOdomTimeStatistics(const string &filename,
 {
     std::ofstream fout(filename.c_str(), std::ios::out);
     fout.precision(15);
-    fout << "frame, mean_corner_feature, mean_surf_feature, mean_opt_odom_time" << std::endl;
+    fout << "frame, mean_corner_feature, mean_surf_feature, mean_mea_pre_time, mean_matching_time, mean_solver_time, mean_marginalization_time, mean_opt_odom_time" << std::endl;
     fout << estimator.frame_cnt_
          << ", " << estimator.total_corner_feature_ / estimator.frame_cnt_
          << ", " << estimator.total_surf_feature_ / estimator.frame_cnt_
-         << ", " << std::accumulate(estimator.total_opt_odom_time_.begin(), estimator.total_opt_odom_time_.end(), 0.0) / estimator.total_opt_odom_time_.size() 
+         << ", " << std::accumulate(estimator.total_measurement_pre_time_.begin(), estimator.total_measurement_pre_time_.end(), 0.0) / estimator.total_measurement_pre_time_.size()
+         << ", " << std::accumulate(estimator.total_feat_matching_time_.begin(), estimator.total_feat_matching_time_.end(), 0.0) / estimator.total_feat_matching_time_.size()
+         << ", " << std::accumulate(estimator.total_solver_time_.begin(), estimator.total_solver_time_.end(), 0.0) / estimator.total_solver_time_.size()
+         << ", " << std::accumulate(estimator.total_marginalization_time_.begin(), estimator.total_marginalization_time_.end(), 0.0) / estimator.total_marginalization_time_.size()
+         << ", " << std::accumulate(estimator.total_whole_odom_time_.begin(), estimator.total_whole_odom_time_.end(), 0.0) / estimator.total_whole_odom_time_.size()
          << std::endl;
-    for (const double &t : estimator.total_opt_odom_time_) fout << t << std::endl;
+    for (size_t i = 0; i < estimator.total_measurement_pre_time_.size(); i++) 
+    {
+        if (i >= estimator.total_solver_time_.size() ||
+            i >= estimator.total_marginalization_time_.size() ||
+            i >= estimator.total_whole_odom_time_.size()) 
+                break;
+        fout << estimator.total_measurement_pre_time_[i] << ", "
+             << estimator.total_feat_matching_time_[i] << ", "
+             << estimator.total_solver_time_[i] << ", " 
+             << estimator.total_marginalization_time_[i] << ", "
+             << estimator.total_whole_odom_time_[i] << std::endl;
+    }
     fout.close();
 
     printf("Frame: %d, mean measurement preprocess time: %fms, mean optimize odometry time: %fms\n", estimator.frame_cnt_,
            std::accumulate(estimator.total_measurement_pre_time_.begin(), estimator.total_measurement_pre_time_.end(), 0.0) / estimator.total_measurement_pre_time_.size(),
-           std::accumulate(estimator.total_opt_odom_time_.begin(), estimator.total_opt_odom_time_.end(), 0.0) / estimator.total_opt_odom_time_.size());
+           std::accumulate(estimator.total_whole_odom_time_.begin(), estimator.total_whole_odom_time_.end(), 0.0) / estimator.total_whole_odom_time_.size());
     printf("Frame: %d, mean corner feature: %f, mean surf feature: %f\n", estimator.frame_cnt_,
            estimator.total_corner_feature_ * 1.0 / estimator.frame_cnt_, 
            estimator.total_surf_feature_ * 1.0 / estimator.frame_cnt_);
@@ -148,7 +160,7 @@ void SaveStatistics::saveOdomTimeStatistics(const string &filename,
               << ", mean measurement preprocess time: "
               << std::accumulate(estimator.total_measurement_pre_time_.begin(), estimator.total_measurement_pre_time_.end(), 0.0) / estimator.total_measurement_pre_time_.size()
               << "ms, mean optimize odometry time: "
-              << std::accumulate(estimator.total_opt_odom_time_.begin(), estimator.total_opt_odom_time_.end(), 0.0) / estimator.total_opt_odom_time_.size();
+              << std::accumulate(estimator.total_whole_odom_time_.begin(), estimator.total_whole_odom_time_.end(), 0.0) / estimator.total_whole_odom_time_.size();
 
     LOG(INFO) << "Frame: " << estimator.frame_cnt_
               << ", mean surf feature: " 
@@ -216,44 +228,34 @@ void SaveStatistics::saveMapStatistics(const string &map_filename,
 }
 
 void SaveStatistics::saveMapTimeStatistics(const string &map_time_filename,
-                                           const string &feat_time_filename,
-                                           const string &solver_time_filename,
-                                           const std::vector<double> &total_time, 
                                            const std::vector<double> &total_feat_time,
                                            const std::vector<double> &total_solver_time,
-                                           const int frame_cnt)
+                                           const std::vector<double> &total_mapping_time)
 {
     std::ofstream fout(map_time_filename.c_str(), std::ios::out);
     fout.precision(15);
-    fout << "frame, total_mapping_time, mean_mapping_time" << std::endl;
-    fout << frame_cnt << ", "
-         << std::accumulate(total_time.begin(), total_time.end(), 0.0) << ", "
-         << std::accumulate(total_time.begin(), total_time.end(), 0.0) / total_time.size() << std::endl;
-    for (const double &t : total_time) fout << t << std::endl;
+    fout << "frame, mean_feat_matching_time, mean_solver_time, mean_mapping_time" << std::endl;
+    fout << total_mapping_time.size() << ", "
+         << std::accumulate(total_feat_time.begin(), total_feat_time.end(), 0.0) / total_feat_time.size()
+         << std::accumulate(total_solver_time.begin(), total_solver_time.end(), 0.0) / total_solver_time.size() << ", "
+         << std::accumulate(total_mapping_time.begin(), total_mapping_time.end(), 0.0) / total_mapping_time.size() << std::endl;
+    for (size_t i = 0; i < total_mapping_time.size(); i++)
+    {
+        if (i >= total_feat_time.size() || 
+            i >= total_solver_time.size()) 
+                break;
+        fout << total_feat_time[i] << ", "
+             << total_solver_time[i] << ", "
+             << total_mapping_time[i] << std::endl;
+    }
     fout.close();
 
-    fout.open(feat_time_filename.c_str(), std::ios::out);
-    fout.precision(15);
-    fout << "frame, total_feat_match_time, mean_feat_match_time" << std::endl;
-    fout << frame_cnt << ", "
-         << std::accumulate(total_feat_time.begin(), total_feat_time.end(), 0.0) << ", "
-         << std::accumulate(total_feat_time.begin(), total_feat_time.end(), 0.0) / total_feat_time.size() << std::endl;
-    for (const double &t : total_feat_time) fout << t << std::endl;
-    fout.close();
+    printf("Frame: %d, mean mapping time: %fms\n",
+           total_mapping_time.size(),
+           std::accumulate(total_mapping_time.begin(), total_mapping_time.end(), 0.0) / total_mapping_time.size());
 
-    fout.open(solver_time_filename.c_str(), std::ios::out);
-    fout.precision(15);
-    fout << "frame, total_solver_time, mean_solver_time" << std::endl;
-    fout << frame_cnt << ", "
-         << std::accumulate(total_solver_time.begin(), total_solver_time.end(), 0.0) << ", "
-         << std::accumulate(total_solver_time.begin(), total_solver_time.end(), 0.0) / total_solver_time.size() << std::endl;
-    for (const double &t : total_solver_time) fout << t << std::endl;
-    fout.close();
-
-    printf("Frame: %d, mean mapping time: %fms\n", frame_cnt, std::accumulate(total_time.begin(), total_time.end(), 0.0) / total_time.size());
-
-    LOG(INFO) << "Frame: " << frame_cnt
+    LOG(INFO) << "Frame: " << total_mapping_time.size()
               << ", mean mapping time: " 
-              << std::accumulate(total_time.begin(), total_time.end(), 0.0) / total_time.size() 
+              << std::accumulate(total_mapping_time.begin(), total_mapping_time.end(), 0.0) / total_mapping_time.size() 
               << "ms";
 }

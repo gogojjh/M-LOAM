@@ -186,7 +186,10 @@ void Estimator::clearState()
     calib_converge_.clear();
 
     total_measurement_pre_time_.clear();
-    total_opt_odom_time_.clear();
+    total_feat_matching_time_.clear();   
+    total_solver_time_.clear(); 
+    total_marginalization_time_.clear(); 
+    total_whole_odom_time_.clear();
 
     total_corner_feature_ = 0;
     total_surf_feature_ = 0;
@@ -212,7 +215,9 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
  
     TicToc measurement_pre_time;
     std::vector<cloudFeature *> feature_frame_ptr(NUM_OF_LASER);
+    std::vector<cloudFeature> feature_frame(NUM_OF_LASER);
     stringstream ss;
+
     #pragma omp parallel for num_threads(NUM_OF_LASER)
     for (size_t i = 0; i < v_laser_cloud_in.size(); i++)
     {
@@ -230,7 +235,6 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
     }
     printf("size of after segmentation: %s\n", ss.str().c_str());
 
-    std::vector<cloudFeature> feature_frame(NUM_OF_LASER);
     for (size_t i = 0; i < NUM_OF_LASER; i++) 
     {
         feature_frame[i] = *feature_frame_ptr[i];
@@ -254,7 +258,9 @@ void Estimator::inputCloud(const double &t, const std::vector<PointITimeCloud> &
 
     TicToc measurement_pre_time;
     std::vector<cloudFeature *> feature_frame_ptr(NUM_OF_LASER);
+    std::vector<cloudFeature> feature_frame(NUM_OF_LASER);
     stringstream ss;
+
     #pragma omp parallel for num_threads(NUM_OF_LASER)
     for (size_t i = 0; i < v_laser_cloud_in.size(); i++)
     {
@@ -272,11 +278,9 @@ void Estimator::inputCloud(const double &t, const std::vector<PointITimeCloud> &
     }
     printf("size of after segmentation: %s\n", ss.str().c_str());
 
-    std::vector<cloudFeature> feature_frame(NUM_OF_LASER);
     for (size_t i = 0; i < NUM_OF_LASER; i++)
     {
         feature_frame[i] = *feature_frame_ptr[i];
-        // ss << feature_frame[i]["laser_cloud"].size() << " ";
         total_corner_feature_ += feature_frame[i]["corner_points_less_sharp"].size();
         total_surf_feature_ += feature_frame[i]["surf_points_less_flat"].size();
         delete feature_frame_ptr[i];
@@ -337,7 +341,7 @@ void Estimator::processMeasurements()
             std::cout << common::RED << "frame: " << frame_cnt_
                       << ", processMea time: " << t_process.toc() << "ms" << common::RESET << std::endl << std::endl;
             LOG_EVERY_N(INFO, 20) << "processMea time: " << t_process.toc() << "ms";
-            total_opt_odom_time_.push_back(t_process.toc());
+            total_whole_odom_time_.push_back(t_process.toc());
 
             // printStatistics(*this, 0);
             pubOdometry(*this, cur_time_);
@@ -844,6 +848,7 @@ void Estimator::optimizeMap()
     std::cout << summary.BriefReport() << std::endl;
     // std::cout << summary.FullReport() << std::endl;
     printf("ceres solver costs: %fms\n", t_ceres_solver.toc());
+    total_solver_time_.push_back(t_ceres_solver.toc());
 
     double2Vector();
 
@@ -1018,6 +1023,7 @@ void Estimator::optimizeMap()
         last_marginalization_info_ = marginalization_info;
         last_marginalization_parameter_blocks_ = parameter_blocks; // save parameter_blocks at the last optimization
         printf("whole marginalization costs: %fms\n", t_whole_marginalization.toc());
+        total_marginalization_time_.push_back(t_whole_marginalization.toc());
     }
 }
 
@@ -1233,6 +1239,7 @@ void Estimator::buildLocalMap()
     // LOG_EVERY_N(INFO, 20) << "build map(extract map): " << t_build_map.toc() << "ms("
     //                        << t_extract_map.toc() << ")ms";
     printf("build map (extract map): %f (%f)ms\n", t_build_map.toc(), t_extract_map.toc());
+    total_feat_matching_time_.push_back(t_extract_map.toc());
     // if (PCL_VIEWER) visualizePCL();
 }
 

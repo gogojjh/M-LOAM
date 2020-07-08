@@ -56,7 +56,7 @@
 
 #include "mloam_pcl/point_with_time.hpp"
 
-#define MAX_FEATURE_SELECT_TIME 7 // 7ms
+#define MAX_FEATURE_SELECT_TIME 5 // 7ms
 #define MAX_RANDOM_QUEUE_TIME 20
 
 class Estimator
@@ -220,7 +220,8 @@ class Estimator
 
     PlaneNormalVisualizer plane_normal_vis_;
 
-    std::vector<double> total_measurement_pre_time_, total_opt_odom_time_;
+    std::vector<double> total_measurement_pre_time_, total_feat_matching_time_, 
+      total_solver_time_, total_marginalization_time_, total_whole_odom_time_;
     int total_corner_feature_, total_surf_feature_;
 
     std::vector<nav_msgs::Path> v_laser_path_;

@@ -296,7 +296,7 @@ int main(int argc, char **argv)
             save_statistics.saveSensorPath(MLOAM_GT_PATH, laser_gt_path);
             save_statistics.saveSensorPath(MLOAM_GPS_PATH, gps_path);
             save_statistics.saveOdomStatistics(EX_CALIB_EIG_PATH, EX_CALIB_RESULT_PATH, MLOAM_ODOM_PATH, estimator);
-            save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time_odometry" + std::to_string(ODOM_GF_RATIO) + ".txt", estimator);
+            save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time_mloam_odometry_" + std::to_string(ODOM_GF_RATIO) + ".txt", estimator);
         }
         sync_thread.join();
     } else
