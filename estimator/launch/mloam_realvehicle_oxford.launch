@@ -27,6 +27,7 @@
     <arg name="result_save" default="false"/>
     <arg name="output_path" default="/home/jjiao/trajectory_results/real_vehicle/oxford/20190118_250_800/"/>
     <arg name="with_ua" default="true" /> <!-- awareness of uncertainty propagation-->    
+    <arg name="fs_method" default="gd_float" /> <!-- gd_fix, gd_float, rnd, ds -->
     <arg name="gf_ratio_ini" default="1" />    
 
     <arg name="config_file" default="$(find mloam)/config/config_realvehicle_oxford.yaml" />
@@ -36,7 +37,7 @@
                 args="-config_file=$(arg config_file)
                     -data_source=$(arg data_source)
                     -result_save=$(arg result_save)
-                    -output_path=$(arg output_path)" >
+                    -output_path=$(arg output_path)" output="screen">
                 <remap from="/base_pose_gt" to="/current_odom"/>
             </node>
         </group>
@@ -46,6 +47,7 @@
                       -result_save=$(arg result_save) 
                       -output_path=$(arg output_path)
                       -with_ua=$(arg with_ua)
+                      -fs_method=$(arg fs_method)
                       -gf_ratio_ini=$(arg gf_ratio_ini)" output="screen">
                 <remap from="/laser_odom" to="/laser_odom_0"/>
             </node>

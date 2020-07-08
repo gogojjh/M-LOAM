@@ -98,7 +98,7 @@ odom_gf_ratio: 0.5
 skip_num_odom_pub: 4
 
 ######################################################## mapping
-map_corner_res: 0.2
+map_corner_res: 0.4
 map_surf_res: 0.4
 map_eig_thre: 100
 

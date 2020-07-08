@@ -97,14 +97,13 @@ PointICloud::Ptr pose_keyframes_3d(new PointICloud());
 double para_pose[SIZE_POSE];
 Pose pose_wmap_prev, pose_wmap_curr, pose_wmap_wodom, pose_wodom_curr;
 
-// ros
-nav_msgs::Path laser_after_mapped_path;
-
 ros::Publisher pub_laser_cloud_surrounding, pub_laser_cloud_map;
 ros::Publisher pub_laser_cloud_full_res;
 ros::Publisher pub_laser_cloud_surf_last_res, pub_laser_cloud_corner_last_res;
 ros::Publisher pub_odom_aft_mapped, pub_odom_aft_mapped_high_frec, pub_laser_after_mapped_path;
 ros::Publisher pub_keyframes;
+
+nav_msgs::Path laser_after_mapped_path;
 
 // extrinsics
 mloam_msgs::Extrinsics extrinsics;
@@ -119,6 +118,7 @@ Eigen::Matrix<double, 6, 6> cov_mapping;
 std::vector<double> logdet_H_list;
 std::vector<double> cov_mapping_list;
 std::vector<double> total_match_feature;
+std::vector<double> total_solver;
 std::vector<double> total_mapping;
 
 bool is_degenerate;
@@ -149,31 +149,31 @@ void transformUpdate()
 	// std::cout << "pose_wmap_wodom: " << pose_wmap_wodom << std::endl;
 }
 
-void laserCloudSurfLastHandler(const sensor_msgs::PointCloud2ConstPtr &laser_cloud_surf_last)
+void laserCloudSurfLastHandler(const sensor_msgs::PointCloud2ConstPtr &laser_cloud_surf_last_msg)
 {
 	m_buf.lock();
-	surf_last_buf.push(laser_cloud_surf_last);
+	surf_last_buf.push(laser_cloud_surf_last_msg);
 	m_buf.unlock();
 }
 
-void laserCloudCornerLastHandler(const sensor_msgs::PointCloud2ConstPtr &laser_cloud_corner_last)
+void laserCloudCornerLastHandler(const sensor_msgs::PointCloud2ConstPtr &laser_cloud_corner_last_msg)
 {
 	m_buf.lock();
-	corner_last_buf.push(laser_cloud_corner_last);
+	corner_last_buf.push(laser_cloud_corner_last_msg);
 	m_buf.unlock();
 }
 
-void laserCloudFullResHandler(const sensor_msgs::PointCloud2ConstPtr &laser_cloud_full_res)
+void laserCloudFullResHandler(const sensor_msgs::PointCloud2ConstPtr &laser_cloud_full_res_msg)
 {
 	m_buf.lock();
-	full_res_buf.push(laser_cloud_full_res);
+	full_res_buf.push(laser_cloud_full_res_msg);
 	m_buf.unlock();
 }
 
-void laserCloudOutlierResHandler(const sensor_msgs::PointCloud2ConstPtr &laser_cloud_outlier)
+void laserCloudOutlierResHandler(const sensor_msgs::PointCloud2ConstPtr &laser_cloud_outlier_msg)
 {
     m_buf.lock();
-    outlier_buf.push(laser_cloud_outlier);
+    outlier_buf.push(laser_cloud_outlier_msg);
     m_buf.unlock();
 }
 
@@ -598,6 +598,7 @@ void scan2MapOptimization()
             std::cout << summary.BriefReport() << std::endl;
             // std::cout << summary.FullReport() << std::endl;
             printf("mapping solver time: %fms\n", t_solver.toc());
+            total_solver.push_back(t_solver.toc());
 
             double2Vector();
             printf("-------------------------------------\n");
@@ -1145,8 +1146,10 @@ void sigintHandler(int sig)
         save_statistics.saveMapTimeStatistics(
             OUTPUT_FOLDER + "time_mapping" + std::to_string((float)FLAGS_gf_ratio_ini) + ".txt",
             OUTPUT_FOLDER + "time_mapping_match_feature" + std::to_string((float)FLAGS_gf_ratio_ini) + ".txt",
+            OUTPUT_FOLDER + "time_solver" + std::to_string((float)FLAGS_gf_ratio_ini) + ".txt",
             total_mapping,
             total_match_feature,
+            total_solver,
             frame_cnt);
     }
     saveGlobalMap();
@@ -1217,7 +1220,7 @@ int main(int argc, char **argv)
 
     down_size_filter_global_map_cov.setLeafSize(MAP_CORNER_RES, MAP_SURF_RES, MAP_SURF_RES);
     down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_AFTER_MAPPING);
-    down_size_filter_global_map_keyframes.setLeafSize(1.0, 1.0, 1.0);
+    down_size_filter_global_map_keyframes.setLeafSize(2.0, 2.0, 2.0);
 
     pose_ext.resize(NUM_OF_LASER);
 

@@ -56,7 +56,7 @@
 
 #include "mloam_pcl/point_with_time.hpp"
 
-#define MAX_FEATURE_SELECT_TIME 7 // 10ms
+#define MAX_FEATURE_SELECT_TIME 7 // 7ms
 #define MAX_RANDOM_QUEUE_TIME 20
 
 class Estimator

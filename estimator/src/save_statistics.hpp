@@ -45,9 +45,11 @@ public:
 
     void saveMapTimeStatistics(const string &map_time_filename,
                                const string &feat_time_filename,
+                               const string &solver_time_filename,
                                const std::vector<double> &total_time,
                                const std::vector<double> &total_feat_time,
-                               const int &frame_cnt);
+                               const std::vector<double> &total_solver_time,
+                               const int frame_cnt);
 };
 
 void SaveStatistics::saveSensorPath(const string &filename, const nav_msgs::Path &sensor_path)
@@ -215,9 +217,11 @@ void SaveStatistics::saveMapStatistics(const string &map_filename,
 
 void SaveStatistics::saveMapTimeStatistics(const string &map_time_filename,
                                            const string &feat_time_filename,
+                                           const string &solver_time_filename,
                                            const std::vector<double> &total_time, 
                                            const std::vector<double> &total_feat_time,
-                                           const int &frame_cnt)
+                                           const std::vector<double> &total_solver_time,
+                                           const int frame_cnt)
 {
     std::ofstream fout(map_time_filename.c_str(), std::ios::out);
     fout.precision(15);
@@ -235,6 +239,15 @@ void SaveStatistics::saveMapTimeStatistics(const string &map_time_filename,
          << std::accumulate(total_feat_time.begin(), total_feat_time.end(), 0.0) << ", "
          << std::accumulate(total_feat_time.begin(), total_feat_time.end(), 0.0) / total_feat_time.size() << std::endl;
     for (const double &t : total_feat_time) fout << t << std::endl;
+    fout.close();
+
+    fout.open(solver_time_filename.c_str(), std::ios::out);
+    fout.precision(15);
+    fout << "frame, total_solver_time, mean_solver_time" << std::endl;
+    fout << frame_cnt << ", "
+         << std::accumulate(total_solver_time.begin(), total_solver_time.end(), 0.0) << ", "
+         << std::accumulate(total_solver_time.begin(), total_solver_time.end(), 0.0) / total_solver_time.size() << std::endl;
+    for (const double &t : total_solver_time) fout << t << std::endl;
     fout.close();
 
     printf("Frame: %d, mean mapping time: %fms\n", frame_cnt, std::accumulate(total_time.begin(), total_time.end(), 0.0) / total_time.size());
