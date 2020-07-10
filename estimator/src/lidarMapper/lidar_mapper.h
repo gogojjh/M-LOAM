@@ -256,17 +256,44 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
     size_t num_sel_features = 0;
 
     size_t n_neigh = 5;
-    bool b_match = true;
+    bool b_match;
 
-    if (gf_method == "sample")
+    if (gf_method == "fps")
     {
         PointICovCloud laser_cloud_ds;
-        pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_cloud;
-        down_size_filter_cloud.setLeafSize(1.0, 1.0, 1.0);
-        down_size_filter_cloud.setInputCloud(boost::make_shared<PointICovCloud>(laser_cloud));
-        down_size_filter_cloud.filter(laser_cloud_ds);
-        num_use_features = laser_cloud_ds.size();
-        sel_feature_idx.resize(num_use_features);
+        size_t k = 0;
+        feature_visited[k] = 1;
+        PointIWithCov point_old = laser_cloud.points[k]; 
+        laser_cloud_ds.push_back(point_old);
+        std::vector<float> dist(num_all_features, 1e5);
+        for (size_t i = 1; i < num_use_features; i++)
+        {
+            float best = -1;
+            size_t best_j = 1;
+            for (size_t j = 0; j < num_all_features; j++)
+            {
+                if (feature_visited[j] == 1) continue;
+                const PointIWithCov &point_new = laser_cloud.points[j];
+                float d = sqrt(common::sqrSum(point_old.x - point_new.x,
+                                              point_old.y - point_new.y,
+                                              point_old.z - point_new.z));
+                float d2 = std::min(d, dist[j]);
+                dist[j] = d2;
+                best = d2 > best ? d2 : best;
+                best_j = d2 > best ? j : best_j;
+            }
+            point_old = laser_cloud.points[best_j];
+            feature_visited[best_j] = 1;
+            laser_cloud_ds.push_back(point_old);
+        }
+
+        // pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_cloud;
+        // down_size_filter_cloud.setLeafSize(1.0, 1.0, 1.0);
+        // down_size_filter_cloud.setInputCloud(boost::make_shared<PointICovCloud>(laser_cloud));
+        // down_size_filter_cloud.filter(laser_cloud_ds);
+        // num_use_features = laser_cloud_ds.size();
+        // sel_feature_idx.resize(num_use_features);
+
         for (size_t que_idx = 0; que_idx < num_use_features; que_idx++)
         {
             b_match = true;
@@ -505,8 +532,11 @@ void writeFeature(const PointICovCloud &laser_cloud,
                   const std::vector<size_t> &sel_feature_idx,
                   const std::vector<PointPlaneFeature> &surf_map_features)
 {
+    std::string filename1 = OUTPUT_FOLDER + "/pcd/map_feature_" + "origin" + "_" + std::to_string((float)FLAGS_gf_ratio_ini) + ".pcd";
+    std::string filename2 = OUTPUT_FOLDER + "/pcd/map_feature_" + FLAGS_gf_method + "_" + std::to_string((float)FLAGS_gf_ratio_ini) + ".pcd";
+
     pcl::PCDWriter pcd_writer;
-    pcd_writer.write("/tmp/original_map_feature.pcd", laser_cloud);
+    pcd_writer.write(filename1.c_str(), laser_cloud);
 
     common::PointICloud sel_map_feature;
     for (const size_t &idx : sel_feature_idx)
@@ -521,7 +551,7 @@ void writeFeature(const PointICovCloud &laser_cloud,
     }
     sel_map_feature.height = 1;
     sel_map_feature.width = sel_map_feature.points.size();
-    pcd_writer.write("/tmp/sel_map_feature.pcd", sel_map_feature);
+    pcd_writer.write(filename2.c_str(), sel_map_feature);
 }
 
 //

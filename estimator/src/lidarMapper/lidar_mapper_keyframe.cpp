@@ -526,10 +526,11 @@ void scan2MapOptimization()
                                                    false);
                 corner_num = sel_corner_feature_idx.size();
             }
-            // if (frame_cnt % 100 == 0)
-            //     writeFeature(*laser_cloud_surf_cov, sel_surf_feature_idx, all_surf_features);
             printf("matching features time: %fms\n", t_match_features.toc());
             total_match_feature.push_back(t_match_features.toc());
+            
+            if (MLOAM_RESULT_SAVE && frame_cnt == 100)
+                writeFeature(*laser_cloud_surf_cov, sel_surf_feature_idx, all_surf_features);
             
             // printf("matching surf & corner num: %lu, %lu\n", surf_num, corner_num);
 
