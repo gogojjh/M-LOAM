@@ -128,6 +128,7 @@ pcl::PCDWriter pcd_writer;
 
 double lambda = 10.0;
 double gf_ratio_cur;
+std::string constraint_state = "wc";
 
 std::mutex m_process;
 
@@ -439,18 +440,11 @@ void scan2MapOptimization()
         printf("********************************\n");
         for (int iter_cnt = 0; iter_cnt < 2; iter_cnt++)
         {
-            ceres::Problem problem;
-            ceres::Solver::Summary summary;
-            ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1);
-
-            ceres::Solver::Options options;
-            options.linear_solver_type = ceres::DENSE_SCHUR;
-            options.max_num_iterations = 30;
-            options.max_solver_time_in_seconds = 0.025;
-            // options.num_threads = 2;
-            options.minimizer_progress_to_stdout = false;
-            options.check_gradients = false;
-            options.gradient_check_relative_precision = 1e-4;
+            double s = 1.0;
+            double mu = 5.0;
+            // ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1); 
+            ceres::LossFunctionWrapper *loss_function = 
+                new LossFunctionWrapper(new ceres::SurrogateGemanMcClureLoss(s, mu), ceres::TAKE_OWNERSHIP);
 
             vector2Double();
 
@@ -482,8 +476,10 @@ void scan2MapOptimization()
                     double normalize_logdet_H = common::logDet(mat_H * 134, true) - mat_H.rows() * std::log(1.0 * total_feat_num);
                     logdet_H_list.push_back(normalize_logdet_H);
                     if (normalize_logdet_H >= LOGDET_H_THRESHOLD)
+                        // constraint_state = "wc";
                         lambda = LAMBDA_1;
                     else 
+                        // constraint_state = "dg";
                         lambda = LAMBDA_2;
                     std::cout << common::YELLOW << "lambda: " << lambda << common::RESET << std::endl;
                     ratio_change_flag = true;
@@ -597,8 +593,24 @@ void scan2MapOptimization()
             // *********************************************************
 
             TicToc t_solver;
-            ceres::Solve(options, &problem, &summary);
-            std::cout << summary.BriefReport() << std::endl;
+            ceres::Problem problem;
+            ceres::Solver::Summary summary;
+            ceres::Solver::Options options;
+            options.linear_solver_type = ceres::DENSE_SCHUR;
+            // options.num_threads = 2;
+            options.minimizer_progress_to_stdout = false;
+            options.check_gradients = false;
+            options.gradient_check_relative_precision = 1e-4;
+            while (true)
+            {
+                options.max_solver_time_in_seconds = 0.015;
+                options.max_num_iterations = 5;
+                ceres::Solve(options, &problem, &summary);
+                std::cout << summary.BriefReport() << std::endl;
+                mu /= 1.4;
+                if (mu < 1) break;
+                loss_function->Reset(new ceres::SurrogateGemanMcClureLoss(s, mu), ceres::TAKE_OWNERSHIP);
+            }
             // std::cout << summary.FullReport() << std::endl;
             printf("mapping solver time: %fms\n", t_solver.toc());
             total_solver.push_back(t_solver.toc());

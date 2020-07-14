@@ -64,6 +64,7 @@ add_library(mloam_lib_1
     src/initial/initial_extrinsics.cpp
     src/factor/pose_local_parameterization.cpp
     src/factor/marginalization_factor.cpp
+    src/factor/impl_loss_function.cpp
 )
 target_link_libraries(mloam_lib_1
     ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
