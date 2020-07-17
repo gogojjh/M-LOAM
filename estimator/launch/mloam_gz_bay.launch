@@ -1,0 +1,84 @@
+<launch>
+
+    <arg name="bag_file_use" default="false" />
+    <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD00calib.bag" />      -->
+    <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD01corridor.bag" />  -->
+    <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD02lab.bag" />  -->
+    <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD03garden.bag" />  -->
+    <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD04building.bag" />  -->
+
+    <param name="use_sim_time" value="true" />
+    <group if="$(arg bag_file_use)">
+        <node pkg="rosbag" type="play" name="rosbag" args="--clock --pause -r 0.8 $(arg bag_file)" />
+    </group>    
+
+    <arg name="run_mloam" default="true" />
+    <arg name="run_aloam" default="false" />
+    <arg name="run_legoloam" default="false" />
+    <arg name="run_mloam_map_with_ua" default="true" /> <!-- uncertainty propagation -->    
+    
+    <arg name="mloam_result_save" default="0" />
+    <arg name="output_path" default="/home/jjiao/trajectory_results/gz_bay/gz_bay_20200417/"/>
+    <arg name="mloam_gt_path" default="stamped_groundtruth.txt" />    
+    <arg name="mloam_odom_path" default="stamped_mloam_odom_estimate.txt" />
+    <arg name="mloam_map_path" default="stamped_mloam_map_estimate.txt" /> 
+    <arg name="mloam_map_wo_ua_path" default="stamped_mloam_map_wo_ua_estimate.txt" /> 
+
+    <arg name="config_file" default="$(find mloam)/../config/config_gz_bay.yaml" />
+    <group if="$(arg run_mloam)">
+        <node pkg="mloam" type="mloam_node_rhd" name="mloam_node_rhd" 
+            args="$(arg config_file) 
+                  $(arg mloam_result_save) 
+                  $(arg output_path)" output="screen">
+            <remap from="/base_pose_gt" to="/mag_nail"/>
+        </node>
+
+        <group if="$(arg run_mloam_map_with_ua)">
+            <node pkg="mloam" type="lidar_mapper_only_surf" name="lidar_mapper_only_surf" 
+                args="$(arg config_file) $(arg mloam_result_save) $(arg output_path) 1" output="screen"/>
+        </group>
+        <group unless="$(arg run_mloam_map_with_ua)">
+            <node pkg="mloam" type="lidar_mapper_only_surf" name="lidar_mapper_only_surf" 
+                args="$(arg config_file) $(arg mloam_result_save) $(arg output_path) 0" output="screen"/>        
+        </group>
+    </group>
+
+    <!-- publish static tf -->
+    <!-- x y z yaw pitch roll -->
+    <!-- x y z qx qy qz qw -->
+    <include file="$(find rviz_car_model)/launch/default.launch" />
+    <node name="static_tf_base_sensor_into_base_link" pkg="tf" type="static_transform_publisher"
+        args="0 0 0 0 0 0 1 aft_mapped base_link 10"/>                
+    <node name="static_tf_world_base_into_world_sensor" pkg="tf" type="static_transform_publisher"
+        args="0 0 0 0 0 0 1 world_base world 10"/> 
+    <node name="static_tf_world_sensor_into_base_sensor" pkg="tf" type="static_transform_publisher"
+        args="0 0 0 0 0 0 1 world laser_0 10"/>
+    <node name="static_tf_laser_into_laser_left" pkg="tf" type="static_transform_publisher"
+        args="0 0 0 0 0 0 1 laser_0 velo_left 10"/>        
+    <node name="static_tf_laser_into_laser_right" pkg="tf" type="static_transform_publisher"
+        args="0 0 0 0 0 0 1 laser_1 velo_right 10"/>                
+
+    <!-- merge cloud -->
+    <group unless="$(arg run_mloam)">
+        <node pkg="mloam" type="test_merge_pointcloud_rhd" name="test_merge_pointcloud_rhd" output="screen" />      
+        <node name="static_tf_world_sensor_into_camera" pkg="tf" type="static_transform_publisher"
+            args="0 0 0 0 0 0 1 world camera_init 10"/>            
+    </group>
+
+    <!-- run aloam  -->
+    <group if="$(arg run_aloam)">
+        <include file="$(find aloam_velodyne)/launch/aloam_exp.launch">
+            <arg name="aloam_odom_path" default="/home/jjiao/trajectory_results/handheld/test/mloam_20200303/RHD04campus/stamped_aloam_odom_estimate.txt" />
+            <arg name="aloam_map_path" default="/home/jjiao/trajectory_results/handheld/test/mloam_20200303/RHD04campus/stamped_aloam_map_estimate.txt" />
+        </include>       
+    </group>        
+
+    <!-- run legoloam  -->
+    <group if="$(arg run_legoloam)">
+        <include file="$(find lego_loam)/launch/legoloam_exp.launch">
+            <arg name="lego_loam_odom_path" default="/home/jjiao/trajectory_results/handheld/test/mloam_20200303/RHD04campus/stamped_legoloam_odom_estimate.txt" />
+            <arg name="lego_loam_map_path" default="/home/jjiao/trajectory_results/handheld/test/mloam_20200303/RHD04campus/stamped_legoloam_map_estimate.txt" />
+        </include>
+    </group>         
+
+ </launch>
