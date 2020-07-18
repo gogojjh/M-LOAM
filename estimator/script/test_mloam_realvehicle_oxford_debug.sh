@@ -9,7 +9,7 @@ mkdir -p $result_path/gf_pcd
 roslaunch mloam mloam_realvehicle_oxford.launch \
     run_mloam:=true \
     result_save:=true \
-    gf_method:=rnd \
+    gf_method:=gd_float \
     gf_ratio_ini:=0.2 \
     gnc:=true \
     loss_mode:=gmc \
@@ -18,65 +18,65 @@ roslaunch mloam mloam_realvehicle_oxford.launch \
 sleep 5
 
 ### different sampling
-# roslaunch mloam mloam_realvehicle_oxford.launch \
-#     run_mloam:=true \
-#     result_save:=true \
-#     gf_method:=fps \
-#     gf_ratio_ini:=0.2 \
-#     gnc:=true \
-#     loss_mode:=gmc \
-#     bag_file:=$data_path \
-#     output_path:=$result_path
-# sleep 5
+roslaunch mloam mloam_realvehicle_oxford.launch \
+    run_mloam:=true \
+    result_save:=true \
+    gf_method:=rnd \
+    gf_ratio_ini:=0.2 \
+    gnc:=true \
+    loss_mode:=gmc \
+    bag_file:=$data_path \
+    output_path:=$result_path
+sleep 5
 
-# roslaunch mloam mloam_realvehicle_oxford.launch \
-#     run_mloam:=true \
-#     result_save:=true \
-#     gf_method:=gd_fix \
-#     gf_ratio_ini:=0.2 \
-#     gnc:=true \
-#     loss_mode:=gmc \
-#     bag_file:=$data_path \
-#     output_path:=$result_path
-# sleep 5
+roslaunch mloam mloam_realvehicle_oxford.launch \
+    run_mloam:=true \
+    result_save:=true \
+    gf_method:=fps \
+    gf_ratio_ini:=0.2 \
+    gnc:=true \
+    loss_mode:=gmc \
+    bag_file:=$data_path \
+    output_path:=$result_path
+sleep 5
 
-# roslaunch mloam mloam_realvehicle_oxford.launch \
-#     run_mloam:=true \
-#     result_save:=true \
-#     gf_method:=gd_float \
-#     gf_ratio_ini:=0.2 \
-#     gnc:=true \
-#     loss_mode:=gmc \
-#     bag_file:=$data_path \
-#     output_path:=$result_path
-# sleep 5
+roslaunch mloam mloam_realvehicle_oxford.launch \
+    run_mloam:=true \
+    result_save:=true \
+    gf_method:=gd_fix \
+    gf_ratio_ini:=0.2 \
+    gnc:=true \
+    loss_mode:=gmc \
+    bag_file:=$data_path \
+    output_path:=$result_path
+sleep 5
 
 ### different loss
-# roslaunch mloam mloam_realvehicle_oxford.launch \
-#     run_mloam:=true \
-#     result_save:=true \
-#     gf_method:=gd_float \
-#     gf_ratio_ini:=0.2 \
-#     gnc:=false \
-#     loss_mode:=huber \
-#     bag_file:=$data_path \
-#     output_path:=$result_path
-# sleep 5
+roslaunch mloam mloam_realvehicle_oxford.launch \
+    run_mloam:=true \
+    result_save:=true \
+    gf_method:=gd_float \
+    gf_ratio_ini:=0.2 \
+    gnc:=false \
+    loss_mode:=huber \
+    bag_file:=$data_path \
+    output_path:=$result_path
+sleep 5
 
 ### different LiDAR SLAM
-# roslaunch mloam mloam_realvehicle_oxford.launch \
-#     run_mloam:=false \
-#     run_legoloam:=true \
-#     bag_file:=$data_path \
-#     output_path:=$result_path
-# sleep 5
+roslaunch mloam mloam_realvehicle_oxford.launch \
+    run_mloam:=false \
+    run_legoloam:=true \
+    bag_file:=$data_path \
+    output_path:=$result_path
+sleep 5
 
-# roslaunch mloam mloam_realvehicle_oxford.launch \
-#     run_mloam:=false \
-#     run_aloam:=true \
-#     bag_file:=$data_path \
-#     output_path:=$result_path
-# sleep 5
+roslaunch mloam mloam_realvehicle_oxford.launch \
+    run_mloam:=false \
+    run_aloam:=true \
+    bag_file:=$data_path \
+    output_path:=$result_path
+sleep 5
 
 python2 $rpg_path/scripts/analyze_trajectory_single_mloam.py \
 --est_type \
