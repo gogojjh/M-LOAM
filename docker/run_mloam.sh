@@ -10,5 +10,10 @@ docker run \
     -v ${DATA_PATH}:/usr/app/dataset \
     -p 8050:8888 \
     --name mloam_batch_test \
-    ros:melodic-mloam /bin/bash
-
+    ros:melodic-mloam /bin/bash \
+    "cd /usr/app/catkin_ws/; \
+    catkin config \
+        --cmake-args \
+            -DCMAKE_BUILD_TYPE=Release; \
+        catkin build; \
+        source devel/setup.bash;" 

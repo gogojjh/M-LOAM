@@ -34,7 +34,7 @@ find_package(Gflags REQUIRED)
 find_package(Glog REQUIRED)
 find_package(Sophus REQUIRED)
 # find_package(libpointmatcher REQUIRED)
-find_package(G2O)
+# find_package(G2O)
 
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})

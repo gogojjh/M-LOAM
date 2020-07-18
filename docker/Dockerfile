@@ -13,6 +13,7 @@ RUN mkdir $LIBRARY
 RUN if [ "x$(nproc)" = "x1" ] ; then export USE_PROC=1 ; else export USE_PROC=$(($(nproc)/2)) ; fi && \
     # Install dependencies
       apt-get update && apt-get install -y \
+      locate \
       cmake \
       wget \
       libatlas-base-dev \
@@ -23,11 +24,15 @@ RUN if [ "x$(nproc)" = "x1" ] ; then export USE_PROC=1 ; else export USE_PROC=$(
       autoconf \
       automake \
       libtool \
+      python-pip \
+      python-tk \
       ros-${ROS_DISTRO}-cv-bridge \
       ros-${ROS_DISTRO}-image-transport \
       ros-${ROS_DISTRO}-message-filters \
       ros-${ROS_DISTRO}-tf && \
-    rm -rf /var/lib/apt/lists/* && \
+      ros-${ROS_DISTRO}-tf-conversions && \
+    pip install numpy matplotlib colorama ruamel.yaml && \
+    # rm -rf /var/lib/apt/lists/* && \
     # Build and install Ceres
     cd $LIBRARY && \
     git clone https://ceres-solver.googlesource.com/ceres-solver && \
@@ -48,6 +53,24 @@ RUN if [ "x$(nproc)" = "x1" ] ; then export USE_PROC=1 ; else export USE_PROC=$(
     make -j${USE_PROC} install && \
     cd ../.. && \
     rm -rf ./pcl && \
+    # Build and install gtsam
+    cd $LIBRARY && \
+    git clone https://github.com/borglab/gtsam && \
+    cd gtsam && \
+    mkdir build && cd build && \
+    cmake .. && \
+    make -j${USE_PROC} install && \
+    cd ../../ && \
+    rm -rf ./gtsam && \
+    # Build and install g2o
+    # cd $LIBRARY && \  
+    # git clone https://github.com/RainerKuemmerle/g2o && \
+    # cd gtsam && \
+    # mkdir build && cd build && \
+    # cmake .. && \
+    # make -j${USE_PROC} install && \
+    # cd ../../ && \
+    # rm -rf ./gtsam && \
     ### Install GFLAGS
     cd $LIBRARY && \
     git clone https://github.com/gflags/gflags && \
