@@ -29,9 +29,9 @@
     <arg name="with_ua" default="true" /> <!-- awareness of uncertainty propagation-->    
     <arg name="gf_method" default="gd_float" /> <!-- gd_fix, gd_float, rnd, fps -->
     <arg name="gf_ratio_ini" default="1" />
-    <arg name="gnc" default="false" />
-    <arg name="debug_mode" default="true" />
-    <arg name="loss_mode" default="huber" /> <!-- huber, gmc-->
+    <arg name="gnc" default="true" />
+    <arg name="debug_mode" default="false" />
+    <arg name="loss_mode" default="gmc" /> <!-- huber, gmc-->
 
     <arg name="config_file" default="$(find mloam)/config/config_realvehicle_oxford.yaml" />
     <group if="$(arg run_mloam)">

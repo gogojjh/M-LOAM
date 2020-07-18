@@ -68,6 +68,7 @@ RUN if [ "x$(nproc)" = "x1" ] ; then export USE_PROC=1 ; else export USE_PROC=$(
     # make && make install \
     # Setup catkin workspace
 
+#################################### code can be copied or cloned from git
 # Copy M-LOAM
 # COPY ../../M-LOAM/ $CATKIN_WS/src/localization/M-LOAM/
 # use the following line if you only have this dockerfile

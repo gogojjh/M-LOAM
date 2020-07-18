@@ -385,7 +385,66 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
     size_t n_neigh = 5;
     bool b_match;
 
-    if (gf_method == "fps")
+    if (gf_method == "rnd")
+    {
+        size_t num_rnd_que;
+        TicToc t_sel_feature;
+        while (true)
+        {
+            if (num_sel_features >= num_use_features ||
+                t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME ||
+                all_feature_idx.size() == 0 ||
+                num_rnd_que >= MAX_RANDOM_QUEUE_TIME)
+                break;
+            size_t j;
+            num_rnd_que = 0;
+            while (num_rnd_que < MAX_RANDOM_QUEUE_TIME)
+            {
+                j = (std::rand() % all_feature_idx.size());
+                if (feature_visited[j] == -1)
+                {
+                    feature_visited[j] = 0;
+                    break;
+                }
+                num_rnd_que++;
+            }
+            size_t que_idx = all_feature_idx[j];
+            b_match = true;
+            if (feature_type == 's')
+            {
+                b_match = f_extract.matchSurfPointFromMap(kdtree_from_map,
+                                                          laser_map,
+                                                          laser_cloud.points[que_idx],
+                                                          pose_local,
+                                                          all_features[que_idx],
+                                                          que_idx,
+                                                          n_neigh,
+                                                          false);
+            }
+            else if (feature_type == 'c')
+            {
+                b_match = f_extract.matchCornerPointFromMap(kdtree_from_map,
+                                                            laser_map,
+                                                            laser_cloud.points[que_idx],
+                                                            pose_local,
+                                                            all_features[que_idx],
+                                                            que_idx,
+                                                            n_neigh,
+                                                            false);
+            }
+            if (b_match)
+            {
+                sel_feature_idx[num_sel_features] = que_idx;
+                num_sel_features++;
+            }
+            else
+            {
+                all_feature_idx.erase(all_feature_idx.begin() + j);
+                feature_visited.erase(feature_visited.begin() + j);
+            }
+        }
+    }
+    else if (gf_method == "fps")
     {
         PointICovCloud laser_cloud_ds;
         size_t k = 0;
@@ -443,64 +502,6 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
                 sel_feature_idx[num_sel_features] = que_idx;
                 num_sel_features++;
             }            
-        }
-    } else
-    if (gf_method == "rnd")
-    {
-        size_t num_rnd_que;
-        TicToc t_sel_feature;
-        while (true)
-        {
-            if (num_sel_features >= num_use_features || 
-                t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME ||
-                all_feature_idx.size() == 0 || 
-                num_rnd_que >= MAX_RANDOM_QUEUE_TIME)
-                    break;
-            size_t j;
-            num_rnd_que = 0;
-            while (num_rnd_que < MAX_RANDOM_QUEUE_TIME)
-            {
-                j = (std::rand() % all_feature_idx.size());
-                if (feature_visited[j] == -1)
-                {
-                    feature_visited[j] = 0;
-                    break;
-                }
-                num_rnd_que++;
-            }
-            b_match = true;
-            size_t que_idx = all_feature_idx[j];
-            if (feature_type == 's')
-            {
-                b_match = f_extract.matchSurfPointFromMap(kdtree_from_map,
-                                                          laser_map,
-                                                          laser_cloud.points[que_idx],
-                                                          pose_local,
-                                                          all_features[que_idx],
-                                                          que_idx,
-                                                          n_neigh,
-                                                          false);
-            }
-            else if (feature_type == 'c')
-            {
-                b_match = f_extract.matchCornerPointFromMap(kdtree_from_map,
-                                                            laser_map,
-                                                            laser_cloud.points[que_idx],
-                                                            pose_local,
-                                                            all_features[que_idx],
-                                                            que_idx,
-                                                            n_neigh,
-                                                            false);
-            }
-            if (b_match)
-            {
-                sel_feature_idx[num_sel_features] = que_idx;
-                num_sel_features++;
-            } else
-            {
-                all_feature_idx.erase(all_feature_idx.begin() + j);
-                feature_visited.erase(feature_visited.begin() + j);
-            }
         }
     } 
     else
