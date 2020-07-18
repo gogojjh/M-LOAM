@@ -440,11 +440,18 @@ void scan2MapOptimization()
         printf("********************************\n");
         for (int iter_cnt = 0; iter_cnt < 2; iter_cnt++)
         {
-            double s = 1.0;
-            double mu = 5.0;
-            // ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1); 
-            ceres::LossFunctionWrapper *loss_function = 
-                new LossFunctionWrapper(new ceres::SurrogateGemanMcClureLoss(s, mu), ceres::TAKE_OWNERSHIP);
+            ceres::Problem problem;
+            double gmc_s = 1.0;
+            double gmc_mu = 5.0;
+            ceres::LossFunctionWrapper *loss_function;
+            if (FLAGS_loss_mode == "huber")
+            {
+                loss_function = new ceres::LossFunctionWrapper(new ceres::HuberLoss(0.1), ceres::TAKE_OWNERSHIP);
+            } 
+            else if (FLAGS_loss_mode == "gmc")
+            {
+                loss_function = new ceres::LossFunctionWrapper(new ceres::SurrogateGemanMcClureLoss(gmc_s, gmc_mu), ceres::TAKE_OWNERSHIP);
+            }
 
             vector2Double();
 
@@ -456,6 +463,7 @@ void scan2MapOptimization()
             // para_ids.push_back(para_pose);
 
             // ******************************************************
+            // evaluate the full hessian matrix
             bool ratio_change_flag = false;
             if (iter_cnt == 0)
             {
@@ -476,11 +484,14 @@ void scan2MapOptimization()
                     double normalize_logdet_H = common::logDet(mat_H * 134, true) - mat_H.rows() * std::log(1.0 * total_feat_num);
                     logdet_H_list.push_back(normalize_logdet_H);
                     if (normalize_logdet_H >= LOGDET_H_THRESHOLD)
+                    {
                         // constraint_state = "wc";
                         lambda = LAMBDA_1;
-                    else 
+                    } else 
+                    {
                         // constraint_state = "dg";
                         lambda = LAMBDA_2;
+                    }
                     std::cout << common::YELLOW << "lambda: " << lambda << common::RESET << std::endl;
                     ratio_change_flag = true;
                     gf_ratio_cur = std::min(1.0, FLAGS_gf_ratio_ini);
@@ -527,7 +538,6 @@ void scan2MapOptimization()
             
             if (MLOAM_RESULT_SAVE && frame_cnt == 100)
                 writeFeature(*laser_cloud_surf_cov, sel_surf_feature_idx, all_surf_features);
-            
             // printf("matching surf & corner num: %lu, %lu\n", surf_num, corner_num);
 
             TicToc t_add_constraints;
@@ -564,6 +574,14 @@ void scan2MapOptimization()
             }
             // printf("add constraints: %fms\n", t_add_constraints.toc());
 
+            // if (FLAGS_debug_mode && frame_cnt % 20 == 0)
+            //     evaluateLoss(all_surf_features,
+            //                  sel_surf_feature_idx,
+            //                  all_corner_features,
+            //                  sel_corner_feature_idx,
+            //                  pose_wmap_curr,
+            //                  frame_cnt);
+
             // ******************************************************
             if (iter_cnt == 0)
             {
@@ -591,9 +609,8 @@ void scan2MapOptimization()
                 local_parameterization->V_update_ = mat_P;
             }
             // *********************************************************
-
             TicToc t_solver;
-            ceres::Problem problem;
+
             ceres::Solver::Summary summary;
             ceres::Solver::Options options;
             options.linear_solver_type = ceres::DENSE_SCHUR;
@@ -601,17 +618,31 @@ void scan2MapOptimization()
             options.minimizer_progress_to_stdout = false;
             options.check_gradients = false;
             options.gradient_check_relative_precision = 1e-4;
-            while (true)
+            if (FLAGS_gnc) 
             {
-                options.max_solver_time_in_seconds = 0.015;
-                options.max_num_iterations = 5;
+                while (true)
+                {
+                    if (gmc_mu <= 2.0)
+                    {
+                        options.max_num_iterations = 10;
+                        // options.max_solver_time_in_seconds = 0.015;
+                    } else
+                    {
+                        options.max_num_iterations = 1;
+                    }
+                    ceres::Solve(options, &problem, &summary);
+                    std::cout << summary.BriefReport() << std::endl;
+                    gmc_mu /= 1.2;
+                    if (gmc_mu < 1) break;
+                    loss_function->Reset(new ceres::SurrogateGemanMcClureLoss(gmc_s, gmc_mu), ceres::TAKE_OWNERSHIP);
+                }
+            } else
+            {
+                // options.max_solver_time_in_seconds = 0.3;
+                options.max_num_iterations = 30;
                 ceres::Solve(options, &problem, &summary);
                 std::cout << summary.BriefReport() << std::endl;
-                mu /= 1.4;
-                if (mu < 1) break;
-                loss_function->Reset(new ceres::SurrogateGemanMcClureLoss(s, mu), ceres::TAKE_OWNERSHIP);
             }
-            // std::cout << summary.FullReport() << std::endl;
             printf("mapping solver time: %fms\n", t_solver.toc());
             total_solver.push_back(t_solver.toc());
 
@@ -1158,10 +1189,10 @@ void sigintHandler(int sig)
                                           d_eigvec_list,
                                           cov_mapping_list,
                                           logdet_H_list);
-        save_statistics.saveMapTimeStatistics(OUTPUT_FOLDER + "time_mloam_mapping_" + FLAGS_gf_method + "_" + std::to_string((float)FLAGS_gf_ratio_ini) + ".txt",
-            total_match_feature,
-            total_solver,
-            total_mapping);
+        save_statistics.saveMapTimeStatistics(OUTPUT_FOLDER + "time_mloam_mapping_" + FLAGS_gf_method + "_" + std::to_string(FLAGS_gf_ratio_ini) + "_" + FLAGS_loss_mode + "_" + std::to_string(int(FLAGS_gnc)) + ".txt",
+                                              total_match_feature,
+                                              total_solver,
+                                              total_mapping);
     }
     saveGlobalMap();
     ros::shutdown();
@@ -1188,15 +1219,21 @@ int main(int argc, char **argv)
     printf("save result (0/1): %d to %s\n", MLOAM_RESULT_SAVE, OUTPUT_FOLDER.c_str());
 	printf("uncertainty propagation on (0/1): %d\n", with_ua_flag);
     printf("gf method: %s, gf ratio: %f\n", FLAGS_gf_method.c_str(), FLAGS_gf_ratio_ini);
-	
-	stringstream ss;
-	if (with_ua_flag)
-    	ss << OUTPUT_FOLDER << "stamped_mloam_map_estimate_"  + FLAGS_gf_method 
-            + "_" + std::to_string(FLAGS_gf_ratio_ini) + ".txt";
-	else
-        ss << OUTPUT_FOLDER << "stamped_mloam_map_wo_ua_estimate" + FLAGS_gf_method
-            + "_" + std::to_string(FLAGS_gf_ratio_ini) + ".txt";
+
     gf_ratio_cur = std::min(1.0, FLAGS_gf_ratio_ini);
+    stringstream ss;
+	if (with_ua_flag)
+    {
+        ss << OUTPUT_FOLDER << "stamped_mloam_map_estimate_"
+           << FLAGS_gf_method << "_" << to_string(gf_ratio_cur)
+           << "_" << FLAGS_loss_mode << "_" << int(FLAGS_gnc) << ".txt";
+    }
+    else
+    {
+        ss << OUTPUT_FOLDER << "stamped_mloam_map_wo_ua_estimate"
+           << FLAGS_gf_method << "_" << to_string(gf_ratio_cur)
+           << "_" << FLAGS_loss_mode << "_" << int(FLAGS_gnc) << ".txt";
+    }
     MLOAM_MAP_PATH = ss.str(); 
 
 	std::cout << "config file: " << FLAGS_config_file << std::endl;

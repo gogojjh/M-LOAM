@@ -93,6 +93,9 @@ DEFINE_string(output_path, "", "the path ouf saving results");
 DEFINE_bool(with_ua, true, "with or without the awareness of uncertainty");
 DEFINE_string(gf_method, "gd_float", "good feature selection method: gd_fix, gd_float, rnd, ds");
 DEFINE_double(gf_ratio_ini, 0.2, "with or without the good features selection");
+DEFINE_bool(gnc, false, "graduated non-convexity");
+DEFINE_bool(debug_mode, true, "debug mode");
+DEFINE_string(loss_mode, "huber", "loss function type: huber, gm");
 
 FeatureExtract f_extract;
 
@@ -124,6 +127,129 @@ void cloudUCTAssociateToMap(const PointICovCloud &cloud_local, PointICovCloud &c
 void evalHessian(const ceres::CRSMatrix &jaco, Eigen::Matrix<double, 6, 6> &mat_H);
 
 void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameterization *local_parameterization);
+
+// ******************************* evaluate loss of problem
+void evaluateLoss(const std::vector<PointPlaneFeature> &all_surf_features,
+                  const std::vector<size_t> &sel_surf_feature_idx,
+                  const std::vector<PointPlaneFeature> &all_corner_features,
+                  const std::vector<size_t> &sel_corner_feature_idx,
+                  const Pose &pose_local,
+                  const size_t &frame_cnt)
+{
+    Eigen::MatrixXd mat_result(6400, 10);
+    mat_result.setZero();
+    size_t row_cnt = 0;
+    for (double x = -2; x <= 2; x+=0.2)
+    {
+        for (double y = -2; y <= 2; y+=0.2)
+        {
+            for (double theta = -0.5235; theta <= 0.5235; theta+=0.08)
+            {
+                double sum_null = 0;
+                double sum_huber = 0;
+                double sum_gmc = 0;
+                double pose_array[SIZE_POSE];
+                pose_array[0] = pose_local.t_(0) + x;
+                pose_array[1] = pose_local.t_(1) + y;
+                pose_array[2] = pose_local.t_(2);
+                Eigen::Quaterniond q = Eigen::AngleAxisd(theta, Eigen::Vector3d::UnitZ())
+                                     * pose_local.q_;
+                pose_array[3] = q.x();
+                pose_array[4] = q.y();
+                pose_array[5] = q.z();
+                pose_array[6] = q.w();
+                double **param = new double *[1];
+                param[0] = pose_array;
+                for (const size_t &fid : sel_surf_feature_idx)
+                {
+                    const PointPlaneFeature &feature = all_surf_features[fid];
+                    if (feature.type_ == 'n') continue;
+                    Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
+                    LidarMapPlaneNormFactor f(feature.point_, feature.coeffs_, cov_matrix);
+                    
+                    double *res = new double[1];
+                    double **jaco = new double *[1];
+                    jaco[0] = new double[3 * 7];
+                    f.Evaluate(param, res, jaco);
+
+                    ceres::LossFunction *loss_function;
+                    double r = res[0] * res[0] + res[1] * res[1] + res[2] * res[2];
+                    sum_null += r;
+                    {
+                        double rho[3];
+                        loss_function = new ceres::HuberLoss(0.1);
+                        loss_function->Evaluate(r, rho);
+                        sum_huber += rho[0];
+                    }
+                    {
+                        double rho[3];
+                        loss_function = new ceres::SurrogateGemanMcClureLoss(1.0, 3.0);
+                        loss_function->Evaluate(r, rho);
+                        sum_gmc += rho[0];
+                    }
+                    delete[] res;
+                    delete[] jaco;
+                }
+                for (const size_t &fid : sel_corner_feature_idx)
+                {
+                    const PointPlaneFeature &feature = all_corner_features[fid];
+                    if (feature.type_ == 'n') continue;
+                    Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
+                    LidarMapPlaneNormFactor f(feature.point_, feature.coeffs_, cov_matrix);
+
+                    double *res = new double[1];
+                    double **jaco = new double *[1];
+                    jaco[0] = new double[3 * 7];
+                    f.Evaluate(param, res, jaco);
+
+                    ceres::LossFunction *loss_function;
+                    double r = res[0] * res[0] + res[1] * res[1] + res[2] * res[2];
+                    sum_null += r;
+                    {
+                        double rho[3];
+                        loss_function = new ceres::HuberLoss(0.1);
+                        loss_function->Evaluate(r, rho);
+                        sum_huber += rho[0];
+                    }
+                    {
+                        double rho[3];
+                        loss_function = new ceres::SurrogateGemanMcClureLoss(1.0, 3.0);
+                        loss_function->Evaluate(r, rho);
+                        sum_gmc += rho[0];
+                    }
+                    delete[] res;
+                    delete[] jaco;
+                }
+                delete[] param;
+
+                mat_result(row_cnt, 0) = pose_array[0];
+                mat_result(row_cnt, 1) = pose_array[1];
+                mat_result(row_cnt, 2) = pose_array[2];
+                mat_result(row_cnt, 3) = pose_array[3];
+                mat_result(row_cnt, 4) = pose_array[4];
+                mat_result(row_cnt, 5) = pose_array[5];
+                mat_result(row_cnt, 6) = pose_array[6];
+                mat_result(row_cnt, 7) = sum_null;
+                mat_result(row_cnt, 8) = sum_huber;
+                mat_result(row_cnt, 9) = sum_gmc;
+                row_cnt++;
+            }
+        }
+    }
+
+    std::stringstream ss;
+    ss << OUTPUT_FOLDER << "loss_record/loss_" << frame_cnt << ".txt";
+    std::ofstream fout(ss.str().c_str(), std::ios::out);
+    fout.setf(ios::fixed, ios::floatfield);
+    fout.precision(8);
+    for (size_t i = 0; i < mat_result.rows(); i++)
+    {
+        for (size_t j = 0; j < mat_result.cols(); j++)
+            fout << mat_result(i, j) << " ";
+        fout << std::endl;
+    }
+    fout.close();
+}
 
 // ****************** good feature selection
 void evaluateFeatJacobian(const double *para_pose,
@@ -287,14 +413,6 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
             feature_visited[best_j] = 1;
             laser_cloud_ds.push_back(point_old);
         }
-
-        // pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_cloud;
-        // down_size_filter_cloud.setLeafSize(1.0, 1.0, 1.0);
-        // down_size_filter_cloud.setInputCloud(boost::make_shared<PointICovCloud>(laser_cloud));
-        // down_size_filter_cloud.filter(laser_cloud_ds);
-        // num_use_features = laser_cloud_ds.size();
-        // sel_feature_idx.resize(num_use_features);
-
         for (size_t que_idx = 0; que_idx < num_use_features; que_idx++)
         {
             b_match = true;
@@ -384,10 +502,10 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
                 feature_visited.erase(feature_visited.begin() + j);
             }
         }
-    } else
+    } 
+    else
     {
         if (gf_method == "gd_fix") ratio_change_flag = true;
-
         Eigen::Matrix<double, 6, 6> sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
         double pre_cost = 0;
         double cur_cost = 0;
@@ -533,8 +651,8 @@ void writeFeature(const PointICovCloud &laser_cloud,
                   const std::vector<size_t> &sel_feature_idx,
                   const std::vector<PointPlaneFeature> &surf_map_features)
 {
-    std::string filename1 = OUTPUT_FOLDER + "/pcd/map_feature_" + "origin" + "_" + std::to_string((float)FLAGS_gf_ratio_ini) + ".pcd";
-    std::string filename2 = OUTPUT_FOLDER + "/pcd/map_feature_" + FLAGS_gf_method + "_" + std::to_string((float)FLAGS_gf_ratio_ini) + ".pcd";
+    std::string filename1 = OUTPUT_FOLDER + "/gf_pcd/map_feature_" + "origin" + "_" + std::to_string(FLAGS_gf_ratio_ini) + ".pcd";
+    std::string filename2 = OUTPUT_FOLDER + "/gf_pcd/map_feature_" + FLAGS_gf_method + "_" + std::to_string(FLAGS_gf_ratio_ini) + ".pcd";
 
     pcl::PCDWriter pcd_writer;
     pcd_writer.write(filename1.c_str(), laser_cloud);

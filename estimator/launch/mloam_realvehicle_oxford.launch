@@ -3,7 +3,7 @@
     <arg name="bag_file_use" default="true" />
     <!-- <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-10-14-36-48-radar-oxford-10k-partial/data.bag" />  -->
     <!-- <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-18-15-20-12-radar-oxford-10k/data_filter.bag" /> -->
-    <!-- <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-18-15-20-12-radar-oxford-10k/data_loop1.bag" />     -->
+    <!-- <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-18-15-20-12-radar-oxford-10k/data_loop1.bag" /> -->
     <!-- <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-18-15-20-12-radar-oxford-10k/data_loop1back.bag" /> -->
     <!-- <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-18-15-20-12-radar-oxford-10k/data_loop1back_filter.bag" /> -->
     <!-- <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-18-15-20-12-radar-oxford-10k/data_ds_1_700.bag" /> -->
@@ -28,7 +28,10 @@
     <arg name="output_path" default="/home/jjiao/trajectory_results/real_vehicle/oxford/20190118_250_800/"/>
     <arg name="with_ua" default="true" /> <!-- awareness of uncertainty propagation-->    
     <arg name="gf_method" default="gd_float" /> <!-- gd_fix, gd_float, rnd, fps -->
-    <arg name="gf_ratio_ini" default="1" />    
+    <arg name="gf_ratio_ini" default="1" />
+    <arg name="gnc" default="false" />
+    <arg name="debug_mode" default="true" />
+    <arg name="loss_mode" default="huber" /> <!-- huber, gmc-->
 
     <arg name="config_file" default="$(find mloam)/config/config_realvehicle_oxford.yaml" />
     <group if="$(arg run_mloam)">
@@ -48,7 +51,10 @@
                       -output_path=$(arg output_path)
                       -with_ua=$(arg with_ua)
                       -gf_method=$(arg gf_method)
-                      -gf_ratio_ini=$(arg gf_ratio_ini)" output="screen">
+                      -gf_ratio_ini=$(arg gf_ratio_ini)
+                      -gnc=$(arg gnc)
+                      -debug_mode=$(arg debug_mode)
+                      -loss_mode=$(arg loss_mode)" output="screen">
                 <remap from="/laser_odom" to="/laser_odom_0"/>
             </node>
         </group>
