@@ -3,6 +3,7 @@ FROM ros:melodic-perception
 ENV CERES_VERSION="1.12.0"
 ENV PCL_VERSION="1.8.0"
 ENV CATKIN_WS=/usr/app/catkin_ws
+ENV DATA_PATH=/usr/app/dataset
 ENV LIBRARY=/usr/app/library
 
 RUN mkdir -p $CATKIN_WS/src/localization

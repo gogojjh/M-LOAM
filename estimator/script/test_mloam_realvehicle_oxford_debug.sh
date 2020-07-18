@@ -1,8 +1,9 @@
 # !/bin/bash
 
-export data_path=/Monster/dataset/oxford_radar_dataset/2019-01-18-15-20-12-radar-oxford-10k/data_ds_250_800.bag
-export rpg_path=/home/jjiao/catkin_ws/src/localization/rpg_trajectory_evaluation
+export data_path=$DATA_PATH/oxford_radar_dataset/2019-01-18-15-20-12-radar-oxford-10k/data_ds_250_800.bag
+export rpg_path=$CATKIN_WS/src/localization/rpg_trajectory_evaluation
 export result_path=$rpg_path/results/real_vehicle/oxford/20190118_debug/
+mkdir -p $result_path/gf_pcd
 
 roslaunch mloam mloam_realvehicle_oxford.launch \
     run_mloam:=true \
