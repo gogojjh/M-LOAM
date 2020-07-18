@@ -53,11 +53,12 @@
 #include "../factor/pose_local_parameterization.h"
 #include "../factor/marginalization_factor.h"
 #include "../factor/prior_factor.hpp"
+#include "../factor/impl_loss_function.hpp"
 
 #include "mloam_pcl/point_with_time.hpp"
 
 #define MAX_FEATURE_SELECT_TIME 5 // 7ms
-#define MAX_RANDOM_QUEUE_TIME 20
+#define MAX_RANDOM_QUEUE_TIME 10
 
 class Estimator
 {

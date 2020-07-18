@@ -446,7 +446,7 @@ void scan2MapOptimization()
             ceres::LossFunctionWrapper *loss_function;
             if (FLAGS_loss_mode == "huber")
             {
-                loss_function = new ceres::LossFunctionWrapper(new ceres::HuberLoss(0.1), ceres::TAKE_OWNERSHIP);
+                loss_function = new ceres::LossFunctionWrapper(new ceres::HuberLoss(0.5), ceres::TAKE_OWNERSHIP);
             } 
             else if (FLAGS_loss_mode == "gmc")
             {
@@ -549,8 +549,6 @@ void scan2MapOptimization()
                 Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
                 extractCov(laser_cloud_surf_cov->points[feature.idx_], cov_matrix);
                 LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
-                // ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
-                // res_ids_proj.push_back(res_id);
                 problem.AddResidualBlock(f, loss_function, para_pose);
                 if (CHECK_JACOBIAN)
                 {
@@ -568,8 +566,6 @@ void scan2MapOptimization()
                 Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
                 extractCov(laser_cloud_corner_cov->points[feature.idx_], cov_matrix);
                 LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
-                // ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
-                // res_ids_proj.push_back(res_id);
                 problem.AddResidualBlock(f, loss_function, para_pose);
             }
             // printf("add constraints: %fms\n", t_add_constraints.toc());
@@ -588,10 +584,6 @@ void scan2MapOptimization()
                 TicToc t_eval_H;
                 double cost = 0.0;
                 ceres::CRSMatrix jaco;
-                // ceres::Problem::EvaluateOptions e_option;
-                // e_option.parameter_blocks = para_ids;
-                // e_option.residual_blocks = res_ids_proj;
-                // problem.Evaluate(e_option, &cost, nullptr, nullptr, &jaco);
                 problem.Evaluate(ceres::Problem::EvaluateOptions(), &cost, nullptr, nullptr, &jaco);
 
                 Eigen::Matrix<double, 6, 6> mat_H;
@@ -620,25 +612,24 @@ void scan2MapOptimization()
             options.gradient_check_relative_precision = 1e-4;
             if (FLAGS_gnc) 
             {
-                while (true)
+                while (gmc_mu >= 1.0)
                 {
                     if (gmc_mu <= 2.0)
                     {
                         options.max_num_iterations = 10;
-                        // options.max_solver_time_in_seconds = 0.015;
+                        options.max_solver_time_in_seconds = 0.01;
+                        std::cout << summary.BriefReport() << std::endl;
                     } else
                     {
                         options.max_num_iterations = 1;
+                        ceres::Solve(options, &problem, &summary);
                     }
-                    ceres::Solve(options, &problem, &summary);
-                    std::cout << summary.BriefReport() << std::endl;
                     gmc_mu /= 1.2;
-                    if (gmc_mu < 1) break;
                     loss_function->Reset(new ceres::SurrogateGemanMcClureLoss(gmc_s, gmc_mu), ceres::TAKE_OWNERSHIP);
                 }
             } else
             {
-                // options.max_solver_time_in_seconds = 0.3;
+                options.max_solver_time_in_seconds = 0.03;
                 options.max_num_iterations = 30;
                 ceres::Solve(options, &problem, &summary);
                 std::cout << summary.BriefReport() << std::endl;

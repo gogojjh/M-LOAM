@@ -651,6 +651,7 @@ void writeFeature(const PointICovCloud &laser_cloud,
                   const std::vector<size_t> &sel_feature_idx,
                   const std::vector<PointPlaneFeature> &surf_map_features)
 {
+    boost::filesystem::create_directory(std::string(OUTPUT_FOLDER + "/gf_pcd").c_str());
     std::string filename1 = OUTPUT_FOLDER + "/gf_pcd/map_feature_" + "origin" + "_" + std::to_string(FLAGS_gf_ratio_ini) + ".pcd";
     std::string filename2 = OUTPUT_FOLDER + "/gf_pcd/map_feature_" + FLAGS_gf_method + "_" + std::to_string(FLAGS_gf_ratio_ini) + ".pcd";
 
@@ -663,8 +664,8 @@ void writeFeature(const PointICovCloud &laser_cloud,
         const PointPlaneFeature &feature = surf_map_features[idx];
         common::PointI point;
         point.x = feature.point_[0];
-        point.z = feature.point_[1];
-        point.y = feature.point_[2];
+        point.y = feature.point_[1];
+        point.z = feature.point_[2];
         point.intensity = feature.laser_idx_;
         sel_map_feature.points.push_back(point);
     }
