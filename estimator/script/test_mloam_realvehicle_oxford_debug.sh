@@ -16,27 +16,27 @@ roslaunch mloam mloam_realvehicle_oxford.launch \
     output_path:=$result_path
 sleep 5
 
-roslaunch mloam mloam_realvehicle_oxford.launch \
-    run_mloam:=true \
-    result_save:=true \
-    gf_method:=fps \
-    gf_ratio_ini:=0.2 \
-    gnc:=true \
-    loss_mode:=gmc \
-    bag_file:=$data_path \
-    output_path:=$result_path
-sleep 5
+# roslaunch mloam mloam_realvehicle_oxford.launch \
+#     run_mloam:=true \
+#     result_save:=true \
+#     gf_method:=fps \
+#     gf_ratio_ini:=0.2 \
+#     gnc:=true \
+#     loss_mode:=gmc \
+#     bag_file:=$data_path \
+#     output_path:=$result_path
+# sleep 5
 
-roslaunch mloam mloam_realvehicle_oxford.launch \
-    run_mloam:=true \
-    result_save:=true \
-    gf_method:=gd_fix \
-    gf_ratio_ini:=0.2 \
-    gnc:=true \
-    loss_mode:=gmc \
-    bag_file:=$data_path \
-    output_path:=$result_path
-sleep 5
+# roslaunch mloam mloam_realvehicle_oxford.launch \
+#     run_mloam:=true \
+#     result_save:=true \
+#     gf_method:=gd_fix \
+#     gf_ratio_ini:=0.2 \
+#     gnc:=true \
+#     loss_mode:=gmc \
+#     bag_file:=$data_path \
+#     output_path:=$result_path
+# sleep 5
 
 # roslaunch mloam mloam_realvehicle_oxford.launch \
 #     run_mloam:=true \
