@@ -442,7 +442,7 @@ void scan2MapOptimization()
         {
             ceres::Problem problem;
             double gmc_s = 1.0;
-            double gmc_mu = 5.0;
+            double gmc_mu = 3.0;
             ceres::LossFunctionWrapper *loss_function;
             if (FLAGS_loss_mode == "huber")
             {
@@ -614,7 +614,7 @@ void scan2MapOptimization()
             {
                 while (gmc_mu >= 1.0)
                 {
-                    if (gmc_mu <= 2.0)
+                    if (gmc_mu <= 1.5)
                     {
                         options.max_num_iterations = 10;
                         options.max_solver_time_in_seconds = 0.01;
@@ -629,7 +629,7 @@ void scan2MapOptimization()
                 }
             } else
             {
-                options.max_solver_time_in_seconds = 0.03;
+                options.max_solver_time_in_seconds = 0.04;
                 options.max_num_iterations = 30;
                 ceres::Solve(options, &problem, &summary);
                 std::cout << summary.BriefReport() << std::endl;

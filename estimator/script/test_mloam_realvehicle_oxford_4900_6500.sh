@@ -1,9 +1,10 @@
 # !/bin/bash
 
-export data_path=$DATA_PATH/oxford_radar_dataset/2019-01-18-15-20-12-radar-oxford-10k/data_ds_250_800.bag
+export data_path=$DATA_PATH/oxford_radar_dataset/2019-01-18-15-20-12-radar-oxford-10k/data_ds_4900_6500.bag
 export rpg_path=$CATKIN_WS/src/localization/rpg_trajectory_evaluation
-export result_path=$rpg_path/results/real_vehicle/oxford/20190118_debug/
+export result_path=$rpg_path/results/real_vehicle/oxford/20190118_4900_6500/
 mkdir -p $result_path/gf_pcd
+rm -r $result_path/saved_results
 
 ### ours
 roslaunch mloam mloam_realvehicle_oxford.launch \
@@ -63,7 +64,7 @@ roslaunch mloam mloam_realvehicle_oxford.launch \
     output_path:=$result_path
 sleep 5
 
-### different LiDAR SLAM
+## different LiDAR SLAM
 roslaunch mloam mloam_realvehicle_oxford.launch \
     run_mloam:=false \
     run_legoloam:=true \

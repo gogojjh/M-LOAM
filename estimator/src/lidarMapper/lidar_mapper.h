@@ -430,7 +430,7 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
     else if (gf_method == "fps")
     {
         size_t que_idx;
-        size_t k = (std::rand() % all_feature_idx.size());
+        size_t k = (std::rand() % all_feature_idx.size()); // randomly select a starting point
         feature_visited[k] = 1;
         PointIWithCov point_old = laser_cloud.points[k]; 
         b_match = f_extract.matchCornerPointFromMap(kdtree_from_map,
@@ -447,10 +447,14 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
             num_sel_features++;
         }            
 
-        std::vector<float> dist(num_all_features, 1e5);
-        for (size_t i = 1; i < num_use_features; i++)
+        TicToc t_sel_feature;
+        std::vector<float> dist(num_all_features, 1e5); // record the minimum distance of each point in set A to each point in set B
+        while (true)
         {
-            float best = -1;
+            if (num_sel_features >= num_use_features ||
+                t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
+                break;            
+            float best_d = -1;
             size_t best_j = 1;
             for (size_t j = 0; j < num_all_features; j++)
             {
@@ -461,8 +465,8 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
                                               point_old.z - point_new.z));
                 float d2 = std::min(d, dist[j]);
                 dist[j] = d2;
-                best = d2 > best ? d2 : best;
-                best_j = d2 > best ? j : best_j;
+                best_j = d2 > best_d ? j : best_j;
+                best_d = d2 > best_d ? d2 : best_d;
             }
             que_idx = best_j;
             point_old = laser_cloud.points[que_idx];
@@ -637,7 +641,7 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
     } 
 
     sel_feature_idx.resize(num_sel_features);
-    printf("num of all features: %lu, sel features: %lu\n", num_all_features, num_sel_features);
+    printf("gf_method: %s, num of all features: %lu, sel features: %lu\n", gf_method.c_str(), num_all_features, num_sel_features);
     // printf("logdet of selected sub H: %f\n", common::logDet(sub_mat_H));
     return pre_gf_ratio;
 }
