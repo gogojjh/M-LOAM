@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
-  <name>mloam_loop_fusion</name>
+  <name>mloam_loop</name>
   <version>0.0.0</version>
-  <description>loop_fusion package</description>
+  <description>mloam_loop package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag --> 
   <!-- Example:  -->
@@ -40,9 +40,6 @@
   <!-- Use test_depend for packages you need only for testing: -->
   <!--   <test_depend>gtest</test_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>camera_models</build_depend>
-  <run_depend>camera_models</run_depend>
-
 
 
   <!-- The export tag contains other, unspecified, tags -->

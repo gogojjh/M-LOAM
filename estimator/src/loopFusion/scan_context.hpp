@@ -24,8 +24,7 @@
 
 #include "nanoflann.hpp"
 #include "KDTreeVectorOfVectorsAdaptor.hpp"
-
-#include "tictoc.h"
+#include "../utility/tic_toc.h"
 
 using namespace Eigen;
 using namespace nanoflann;
@@ -51,6 +50,12 @@ void coreImportTest(void);
 float xy2theta(const float &_x, const float &_y);
 MatrixXd circshift(MatrixXd &_mat, int _num_shift);
 std::vector<float> eig2stdvec(MatrixXd _eigmat);
+
+template<typename T, typename... Args>
+std::unique_ptr<T> make_unique(Args&&... args) 
+{
+    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
 
 class SCManager
 {

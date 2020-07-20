@@ -1,4 +1,4 @@
-#include "Scancontext.hpp"
+#include "mloam_loop/scan_context.hpp"
 
 // namespace SC2
 // {
@@ -181,7 +181,7 @@ MatrixXd SCManager::makeScancontext(pcl::PointCloud<SCPointType> &_scan_down)
             if (desc(row_idx, col_idx) == NO_POINT)
                 desc(row_idx, col_idx) = 0;
 
-    t_making_desc.toc("PolarContext making");
+    // t_making_desc.toc("PolarContext making");
 
     return desc;
 } // SCManager::makeScancontext
@@ -259,7 +259,7 @@ std::pair<int, float> SCManager::detectLoopClosureID(void)
         polarcontext_tree_.reset();
         polarcontext_tree_ = std::make_unique<InvKeyTree>(PC_NUM_RING /* dim */, polarcontext_invkeys_to_search_, 10 /* max leaf */);
         // tree_ptr_->index->buildIndex(); // inernally called in the constructor of InvKeyTree (for detail, refer the nanoflann and KDtreeVectorOfVectorsAdaptor)
-        t_tree_construction.toc("Tree construction");
+        // t_tree_construction.toc("Tree construction");
     }
     tree_making_period_conter = tree_making_period_conter + 1;
 
@@ -275,7 +275,7 @@ std::pair<int, float> SCManager::detectLoopClosureID(void)
     nanoflann::KNNResultSet<float> knnsearch_result(NUM_CANDIDATES_FROM_TREE);
     knnsearch_result.init(&candidate_indexes[0], &out_dists_sqr[0]);
     polarcontext_tree_->index->findNeighbors(knnsearch_result, &curr_key[0] /* query */, nanoflann::SearchParams(10));
-    t_tree_search.toc("Tree search");
+    // t_tree_search.toc("Tree search");
 
     /* 
      *  step 2: pairwise distance (find optimal columnwise best-fit using cosine distance)
@@ -297,7 +297,7 @@ std::pair<int, float> SCManager::detectLoopClosureID(void)
             nn_idx = candidate_indexes[candidate_iter_idx];
         }
     }
-    t_calc_dist.toc("Distance calc");
+    // t_calc_dist.toc("Distance calc");
 
     /* 
      * loop threshold check

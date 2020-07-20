@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 2.8.3)
 project(mloam)
 
 set(CMAKE_BUILD_TYPE "Release")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O3 -fPIC")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -O3 -fPIC")
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 find_package(catkin REQUIRED COMPONENTS
@@ -75,6 +76,15 @@ add_library(mloam_lib_2
     src/estimator/estimator.cpp
 )
 target_link_libraries(mloam_lib_2
+    ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
+    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
+)
+
+add_library(mloam_lib_3
+    src/loopFusion/scan_context.cpp
+)
+
+target_link_libraries(mloam_lib_3
     ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
 )
