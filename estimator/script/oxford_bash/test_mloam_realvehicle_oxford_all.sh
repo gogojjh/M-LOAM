@@ -1,7 +1,7 @@
 # !/bin/bash
 
-bash test_mloam_realvehicle_oxford_1_800.sh
-sleep 10
+# bash test_mloam_realvehicle_oxford_1_800.sh
+# sleep 10
 
 bash test_mloam_realvehicle_oxford_800_2000.sh
 sleep 10

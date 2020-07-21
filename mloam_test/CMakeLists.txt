@@ -32,7 +32,6 @@ find_package(PCL REQUIRED)
 find_package(Ceres REQUIRED)
 find_package(Gflags REQUIRED)
 find_package(Glog REQUIRED)
-# find_package(Sophus REQUIRED)
 # find_package(libpointmatcher REQUIRED)
 # find_package(G2O)
 
