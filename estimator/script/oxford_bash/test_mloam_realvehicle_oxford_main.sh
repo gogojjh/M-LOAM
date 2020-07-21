@@ -90,6 +90,7 @@ python2 $rpg_path/scripts/analyze_trajectory_single_mloam.py \
 --recalculate_errors \
 --est_type \
     M-LOAM-gd-float-0.2-gmc-gnc \
+    M-LOAM-gd-float-1.0-gmc-gnc \
     M-LOAM-rnd-0.2-gmc-gnc M-LOAM-fps-0.2-gmc-gnc \
     M-LOAM-gd-fix-0.2-gmc-gnc \
     M-LOAM-gd-float-0.2-huber \
