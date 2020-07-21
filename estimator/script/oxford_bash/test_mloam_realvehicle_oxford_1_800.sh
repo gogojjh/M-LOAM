@@ -5,5 +5,4 @@ export rpg_path=$CATKIN_WS/src/localization/rpg_trajectory_evaluation
 export result_path=$rpg_path/results/real_vehicle/oxford/20190118_1_800/
 mkdir -p $result_path/gf_pcd
 
-
 bash test_mloam_realvehicle_oxford_main.sh
