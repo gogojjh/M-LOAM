@@ -16,6 +16,7 @@ RUN if [ "x$(nproc)" = "x1" ] ; then export USE_PROC=1 ; else export USE_PROC=$(
       locate \
       cmake \
       wget \
+      vim \
       libatlas-base-dev \
       libeigen3-dev \
       libgoogle-glog-dev \
@@ -30,7 +31,9 @@ RUN if [ "x$(nproc)" = "x1" ] ; then export USE_PROC=1 ; else export USE_PROC=$(
       ros-${ROS_DISTRO}-image-transport \
       ros-${ROS_DISTRO}-message-filters \
       ros-${ROS_DISTRO}-tf && \
-      ros-${ROS_DISTRO}-tf-conversions && \
+      ros-${ROS_DISTRO}-tf-conversions && 
+      ros-$(ROS_DISTRO)-joint-state-publisher && \
+      ros-$(ROS_DISTRO)-robot-state-publisher && \
     pip install numpy matplotlib colorama ruamel.yaml && \
     # rm -rf /var/lib/apt/lists/* && \
     # Build and install Ceres
