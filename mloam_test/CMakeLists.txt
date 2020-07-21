@@ -32,7 +32,7 @@ find_package(PCL REQUIRED)
 find_package(Ceres REQUIRED)
 find_package(Gflags REQUIRED)
 find_package(Glog REQUIRED)
-find_package(Sophus REQUIRED)
+# find_package(Sophus REQUIRED)
 # find_package(libpointmatcher REQUIRED)
 # find_package(G2O)
 
@@ -110,13 +110,13 @@ target_link_libraries(test_merge_pointcloud_oxford
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
 )
 
-add_executable(ceres_robust_curve_fitting 
-    src/ceres_robust_curve_fitting.cpp src/impl_loss_function.cpp)
-target_link_libraries(ceres_robust_curve_fitting ${catkin_LIBRARIES} 
-	${CERES_LIBRARIES} ${GLOG_LIBRARIES})
+# add_executable(ceres_robust_curve_fitting 
+#     src/ceres_robust_curve_fitting.cpp src/impl_loss_function.cpp)
+# target_link_libraries(ceres_robust_curve_fitting ${catkin_LIBRARIES} 
+# 	${CERES_LIBRARIES} ${GLOG_LIBRARIES})
 
-add_executable(ceres_simple_bundle_adjustment
-    src/ceres_simple_bundle_adjustment.cpp src/impl_loss_function.cpp)
-target_link_libraries(ceres_simple_bundle_adjustment ${catkin_LIBRARIES} 
-	${CERES_LIBRARIES} ${GLOG_LIBRARIES})
+# add_executable(ceres_simple_bundle_adjustment
+#     src/ceres_simple_bundle_adjustment.cpp src/impl_loss_function.cpp)
+# target_link_libraries(ceres_simple_bundle_adjustment ${catkin_LIBRARIES} 
+# 	${CERES_LIBRARIES} ${GLOG_LIBRARIES})
 
