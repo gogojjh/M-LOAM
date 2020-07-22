@@ -3,8 +3,7 @@
 ## ours
 roslaunch mloam mloam_realvehicle_oxford.launch \
     run_mloam:=true \
-    run_mloam_mapping:=false \
-    result_save:=false \
+    result_save:=true \
     gf_method:=gd_float \
     gf_ratio_ini:=0.2 \
     gnc:=true \
@@ -98,3 +97,11 @@ roslaunch mloam mloam_realvehicle_oxford.launch \
 #     A-LOAM LEGO-LOAM \
 # --compare \
 #     $result_path
+
+python2 $rpg_path/scripts/analyze_trajectory_single_mloam.py \
+--recalculate_errors \
+--est_type \
+    M-LOAM-gd-float-0.2-gmc-gnc \
+    LEGO-LOAM \
+--compare \
+    $result_path
