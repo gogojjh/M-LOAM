@@ -188,6 +188,7 @@ void evaluateLoss(const std::vector<PointPlaneFeature> &all_surf_features,
                         sum_gmc += rho[0];
                     }
                     delete[] res;
+                    delete[] jaco[0];
                     delete[] jaco;
                 }
                 for (const size_t &fid : sel_corner_feature_idx)
@@ -218,8 +219,10 @@ void evaluateLoss(const std::vector<PointPlaneFeature> &all_surf_features,
                         sum_gmc += rho[0];
                     }
                     delete[] res;
+                    delete[] jaco[0];
                     delete[] jaco;
                 }
+                delete[] param[0];
                 delete[] param;
 
                 mat_result(row_cnt, 0) = pose_array[0];
@@ -268,8 +271,11 @@ void evaluateFeatJacobian(const double *para_pose,
     Eigen::Map<Eigen::Matrix<double, 3, 7, Eigen::RowMajor> > mat_jacobian(jaco[0]);
     mat_jaco = mat_jacobian.topLeftCorner<3, 6>();
 
-    delete[] res;
+    delete[] jaco[0];
     delete[] jaco;
+    delete[] res;
+    delete[] param[0];
+    delete[] param;
 }
 
 // ****************** good feature selection
@@ -298,9 +304,11 @@ void evaluateFeatJacobianMatching(const Pose &pose_local,
     Eigen::Map<Eigen::Matrix<double, 3, 7, Eigen::RowMajor>> mat_jacobian(jaco[0]);
     mat_jaco = mat_jacobian.topLeftCorner<3, 6>();
 
-    delete[] param;
-    delete[] res;
+    delete[] jaco[0];
     delete[] jaco;
+    delete[] res;
+    delete[] param[0];
+    delete[] param;
 }
 
 void evalFullHessian(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_from_map,
