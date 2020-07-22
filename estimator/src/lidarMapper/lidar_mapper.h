@@ -284,18 +284,18 @@ void evaluateFeatJacobianMatching(const Pose &pose_local,
                                   const Eigen::Matrix3d &cov_matrix,
                                   Eigen::MatrixXd &mat_jaco)
 {
-    double pose_array[SIZE_POSE];
-    pose_array[0] = pose_local.t_(0);
-    pose_array[1] = pose_local.t_(1);
-    pose_array[2] = pose_local.t_(2);
-    pose_array[3] = pose_local.q_.x();
-    pose_array[4] = pose_local.q_.y();
-    pose_array[5] = pose_local.q_.z();
-    pose_array[6] = pose_local.q_.w();
 
     LidarMapPlaneNormFactor f(feature.point_, feature.coeffs_, cov_matrix);
+    
     double **param = new double *[1];
-    param[0] = pose_array;
+    param[0] = new double [SIZE_POSE];
+    param[0][0] = pose_local.t_(0);
+    param[0][1] = pose_local.t_(1);
+    param[0][2] = pose_local.t_(2);
+    param[0][3] = pose_local.q_.x();
+    param[0][4] = pose_local.q_.y();
+    param[0][5] = pose_local.q_.z();
+    param[0][6] = pose_local.q_.w();
 
     double *res = new double[1];
     double **jaco = new double *[1];

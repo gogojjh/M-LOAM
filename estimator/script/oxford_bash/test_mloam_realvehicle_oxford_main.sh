@@ -98,10 +98,3 @@ roslaunch mloam mloam_realvehicle_oxford.launch \
 # --compare \
 #     $result_path
 
-python2 $rpg_path/scripts/analyze_trajectory_single_mloam.py \
---recalculate_errors \
---est_type \
-    M-LOAM-gd-float-0.2-gmc-gnc \
-    LEGO-LOAM \
---compare \
-    $result_path

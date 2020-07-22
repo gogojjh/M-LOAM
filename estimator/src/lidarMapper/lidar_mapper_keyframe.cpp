@@ -436,7 +436,7 @@ void scan2MapOptimization()
         TicToc t_opt, t_tree;
         kdtree_surf_from_map->setInputCloud(laser_cloud_surf_from_map_cov_ds);
         kdtree_corner_from_map->setInputCloud(laser_cloud_corner_from_map_cov_ds);
-        printf("build tree time %fms\n", t_tree.toc());
+        printf("build time %fms\n", t_tree.toc());
         printf("********************************\n");
         for (int iter_cnt = 0; iter_cnt < 2; iter_cnt++)
         {
