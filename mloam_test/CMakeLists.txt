@@ -109,6 +109,14 @@ target_link_libraries(test_merge_pointcloud_oxford
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
 )
 
+add_executable(test_jacobian_memory 
+	src/test_jacobian_memory.cpp ../estimator/src/estimator/pose.cpp)
+target_link_libraries(test_jacobian_memory
+    ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
+    ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} 
+    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
+)
+
 # add_executable(ceres_robust_curve_fitting 
 #     src/ceres_robust_curve_fitting.cpp src/impl_loss_function.cpp)
 # target_link_libraries(ceres_robust_curve_fitting ${catkin_LIBRARIES} 

@@ -180,6 +180,8 @@ class Estimator
     std::vector<CircularBuffer<common::PointICloud> > surf_points_stack_, corner_points_stack_;
     std::vector<CircularBuffer<int> > surf_points_stack_size_, corner_points_stack_size_;
 
+    pcl::VoxelGrid<PointI> down_size_filter_corner_, down_size_filter_surf_;
+
     std::vector<common::PointICloud> surf_points_local_map_, surf_points_local_map_filtered_;
     std::vector<common::PointICloud> surf_points_pivot_map_;
     std::vector<common::PointICloud> corner_points_local_map_, corner_points_local_map_filtered_;

@@ -70,6 +70,9 @@ void Estimator::setParameter()
     corner_points_stack_.resize(NUM_OF_LASER);
     corner_points_stack_size_.resize(NUM_OF_LASER);
 
+    down_size_filter_corner_.setLeafSize(0.2, 0.2, 0.2);
+    down_size_filter_surf_.setLeafSize(0.4, 0.4, 0.4);
+
     pose_local_.resize(NUM_OF_LASER);
     for (size_t i = 0; i < NUM_OF_LASER; i++)
     {
@@ -240,8 +243,8 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
         feature_frame[i] = *feature_frame_ptr[i];
         total_corner_feature_ += feature_frame[i]["corner_points_less_sharp"].size();
         total_surf_feature_ += feature_frame[i]["surf_points_less_flat"].size();
-        delete feature_frame_ptr[i];
     }
+    for (auto &frame_ptr : feature_frame_ptr) delete frame_ptr;    
     printf("meaPre time: %fms (%lu*%fms)\n", measurement_pre_time.toc(),
            v_laser_cloud_in.size(), measurement_pre_time.toc() / v_laser_cloud_in.size());
     total_measurement_pre_time_.push_back(measurement_pre_time.toc());
@@ -261,7 +264,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointITimeCloud> &
     std::vector<cloudFeature> feature_frame(NUM_OF_LASER);
     stringstream ss;
 
-    #pragma omp parallel for num_threads(NUM_OF_LASER)
+    // #pragma omp parallel for num_threads(NUM_OF_LASER)
     for (size_t i = 0; i < v_laser_cloud_in.size(); i++)
     {
         PointICloud laser_cloud;
@@ -283,8 +286,8 @@ void Estimator::inputCloud(const double &t, const std::vector<PointITimeCloud> &
         feature_frame[i] = *feature_frame_ptr[i];
         total_corner_feature_ += feature_frame[i]["corner_points_less_sharp"].size();
         total_surf_feature_ += feature_frame[i]["surf_points_less_flat"].size();
-        delete feature_frame_ptr[i];
     }
+    for (auto &frame_ptr : feature_frame_ptr) delete frame_ptr;
     printf("meaPre time: %fms (%lu*%fms)\n", measurement_pre_time.toc(),
            v_laser_cloud_in.size(), measurement_pre_time.toc() / v_laser_cloud_in.size());
     total_measurement_pre_time_.push_back(measurement_pre_time.toc());
@@ -463,19 +466,16 @@ void Estimator::process()
     Qs_[cir_buf_cnt_] = pose_laser_cur_[IDX_REF].q_;
     Ts_[cir_buf_cnt_] = pose_laser_cur_[IDX_REF].t_;
     Header_[cir_buf_cnt_].stamp = ros::Time(cur_feature_.first);
-    pcl::VoxelGrid<PointI> down_size_filter_corner, down_size_filter_surf;
-    down_size_filter_corner.setLeafSize(0.2, 0.2, 0.2);
-    down_size_filter_surf.setLeafSize(0.4, 0.4, 0.4);
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
         PointICloud &corner_points = cur_feature_.second[n]["corner_points_less_sharp"];
-        down_size_filter_corner.setInputCloud(boost::make_shared<PointICloud>(corner_points));
-        down_size_filter_corner.filter(corner_points_stack_[n][cir_buf_cnt_]);
+        down_size_filter_corner_.setInputCloud(boost::make_shared<PointICloud>(corner_points));
+        down_size_filter_corner_.filter(corner_points_stack_[n][cir_buf_cnt_]);
         corner_points_stack_size_[n][cir_buf_cnt_] = corner_points_stack_[n][cir_buf_cnt_].size();
 
         PointICloud &surf_points = cur_feature_.second[n]["surf_points_less_flat"];
-        down_size_filter_surf.setInputCloud(boost::make_shared<PointICloud>(surf_points));
-        down_size_filter_surf.filter(surf_points_stack_[n][cir_buf_cnt_]);
+        down_size_filter_surf_.setInputCloud(boost::make_shared<PointICloud>(surf_points));
+        down_size_filter_surf_.filter(surf_points_stack_[n][cir_buf_cnt_]);
         surf_points_stack_size_[n][cir_buf_cnt_] = surf_points_stack_[n][cir_buf_cnt_].size();
     }
     // printSlideWindow();
@@ -529,7 +529,8 @@ void Estimator::process()
     if (DISTORTION)
     {
         Pose pose_laser_cur = Pose(Qs_[cir_buf_cnt_ - 1], Ts_[cir_buf_cnt_ - 1]);
-        pose_rlt_[IDX_REF] = pose_laser_prev_.inverse() * pose_laser_cur;
+        std::vector<Pose> pose_undist = pose_rlt_;
+        pose_undist[IDX_REF] = pose_laser_prev_.inverse() * pose_laser_cur;
 
         // {
         //     Pose pose_ext;
@@ -555,7 +556,6 @@ void Estimator::process()
         //     pcl::io::savePCDFileASCII(ss.str(), cur_feature_.second[n]["laser_cloud"]);
         // }
 
-        std::vector<Pose> pose_undist = pose_rlt_;
         for (size_t n = 0; n < NUM_OF_LASER; n++)
         {
             Pose pose_ext(qbl_[n], tbl_[n]);
@@ -694,6 +694,9 @@ void Estimator::optimizeMap()
                         tmp_param[2] = para_ex_pose_[IDX_REF];
                         f->check(tmp_param);
                         CHECK_JACOBIAN = 0;
+                        delete[] tmp_param[0];
+                        delete[] tmp_param[1];
+                        delete[] tmp_param[2];
                         delete[] tmp_param;
                     }
                 }
@@ -839,7 +842,7 @@ void Estimator::optimizeMap()
         }
         printf("add residuals: %fms\n", t_add_residuals.toc()); // cost time
     }
-
+    
     // *******************************
     // evalResidual(problem, local_param_ids, para_ids, res_ids_proj, last_marginalization_info_, res_ids_marg);
     evalResidual(problem, local_param_ids);
@@ -1026,6 +1029,10 @@ void Estimator::optimizeMap()
         printf("whole marginalization costs: %fms\n", t_whole_marginalization.toc());
         total_marginalization_time_.push_back(t_whole_marginalization.toc());
     }
+
+    for (auto &para : para_ids) delete para;
+    for (auto &res : res_ids_proj) delete res;
+    for (auto &res : res_ids_marg) delete res;
 }
 
 /****************************************************************************************/
@@ -1067,15 +1074,12 @@ void Estimator::buildCalibMap()
             }
         }
 
-        pcl::VoxelGrid<PointI> down_size_filter;
         if (n == IDX_REF)
         {
-            down_size_filter.setLeafSize(0.4, 0.4, 0.4);
-            down_size_filter.setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_[IDX_REF]));
-            down_size_filter.filter(surf_points_local_map_filtered_[IDX_REF]);
-            down_size_filter.setLeafSize(0.2, 0.2, 0.2);
-            down_size_filter.setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_[IDX_REF]));
-            down_size_filter.filter(corner_points_local_map_filtered_[IDX_REF]);
+            down_size_filter_surf_.setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_[IDX_REF]));
+            down_size_filter_surf_.filter(surf_points_local_map_filtered_[IDX_REF]);
+            down_size_filter_corner_.setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_[IDX_REF]));
+            down_size_filter_corner_.filter(corner_points_local_map_filtered_[IDX_REF]);
         } 
     }
 
@@ -1180,7 +1184,7 @@ void Estimator::buildLocalMap()
     }
 
     // calculate features and correspondences from p+1 to j
-    surf_map_features_.clear(); 
+    surf_map_features_.clear();
     surf_map_features_.resize(NUM_OF_LASER);
     corner_map_features_.clear();
     corner_map_features_.resize(NUM_OF_LASER);
@@ -1251,10 +1255,34 @@ void Estimator::evaluateFeatJacobian(const double *para_pose_pivot,
                                      Eigen::MatrixXd &mat_jaco)
 {
     LidarPivotPlaneNormFactor f(feature.point_, feature.coeffs_, 1.0);
-    const double **param = new const double *[3];
-    param[0] = para_pose_pivot;
-    param[1] = para_pose_other;
-    param[2] = para_pose_ext;
+    double **param = new double *[3];
+
+    param[0] = new double[SIZE_POSE];
+    param[0][0] = para_pose_pivot[0];
+    param[0][1] = para_pose_pivot[1];
+    param[0][2] = para_pose_pivot[2];
+    param[0][3] = para_pose_pivot[3];
+    param[0][4] = para_pose_pivot[4];
+    param[0][5] = para_pose_pivot[5];
+    param[0][6] = para_pose_pivot[6];
+
+    param[1] = new double[SIZE_POSE];
+    param[1][0] = para_pose_other[0];
+    param[1][1] = para_pose_other[1];
+    param[1][2] = para_pose_other[2];
+    param[1][3] = para_pose_other[3];
+    param[1][4] = para_pose_other[4];
+    param[1][5] = para_pose_other[5];
+    param[1][6] = para_pose_other[6];
+
+    param[2] = new double[SIZE_POSE];
+    param[2][0] = para_pose_ext[0];
+    param[2][1] = para_pose_ext[1];
+    param[2][2] = para_pose_ext[2];
+    param[2][3] = para_pose_ext[3];
+    param[2][4] = para_pose_ext[4];
+    param[2][5] = para_pose_ext[5];
+    param[2][6] = para_pose_ext[6];    
 
     double *res = new double[1];
     double **jaco = new double *[3];
@@ -1272,9 +1300,15 @@ void Estimator::evaluateFeatJacobian(const double *para_pose_pivot,
     mat_jacobian.row(2) = mat_jacobian_3;
     mat_jaco = mat_jacobian.topLeftCorner<3, 6>();
 
-    // delete[] param;
-    delete[] res;
+    delete[] jaco[0];
+    delete[] jaco[1];
+    delete[] jaco[2];
     delete[] jaco;
+    delete[] res;
+    delete[] param[0];
+    delete[] param[1];
+    delete[] param[2];
+    delete[] param;
 }
 
 void Estimator::evaluateFeatJacobian(const Pose &pose_pivot,
@@ -1286,6 +1320,7 @@ void Estimator::evaluateFeatJacobian(const Pose &pose_pivot,
     LidarPivotPlaneNormFactor f(feature.point_, feature.coeffs_, 1.0);
 
     double **param = new double *[3];
+
     param[0] = new double[SIZE_POSE];
     param[0][0] = pose_pivot.t_(0);
     param[0][1] = pose_pivot.t_(1);
@@ -1329,9 +1364,15 @@ void Estimator::evaluateFeatJacobian(const Pose &pose_pivot,
     mat_jacobian.row(2) = mat_jacobian_3;
     mat_jaco = mat_jacobian.topLeftCorner<3, 6>();
 
-    delete[] param;
-    delete[] res;
+    delete[] jaco[0];
+    delete[] jaco[1];
+    delete[] jaco[2];
     delete[] jaco;
+    delete[] res;
+    delete[] param[0];
+    delete[] param[1];
+    delete[] param[2];
+    delete[] param;
 }
 
 void Estimator::goodFeatureSelect(const std::vector<PointPlaneFeature> &all_features,
@@ -1523,7 +1564,8 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
                                  pose_i,
                                  pose_ext,
                                  feature,
-                                 jaco);
+                                 jaco);        
+
             double cur_det = common::logDet(sub_mat_H + jaco.transpose() * jaco, true);
             heap_subset.push(FeatureWithScore(que_idx, cur_det, jaco));
             if (heap_subset.size() >= size_rnd_subset)
@@ -1535,9 +1577,7 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
                     std::cerr << "[estimator::goodFeatureMatching]: not exist feature idx !" << std::endl;
                     break;
                 }
-
-                const Eigen::MatrixXd &jaco = fws.jaco_;
-                sub_mat_H += jaco.transpose() * jaco;
+                sub_mat_H += fws.jaco_.transpose() * fws.jaco_;
 
                 size_t position = iter - all_feature_idx.begin();
                 all_feature_idx.erase(all_feature_idx.begin() + position);

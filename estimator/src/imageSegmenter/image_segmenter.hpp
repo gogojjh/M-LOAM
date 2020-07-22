@@ -127,15 +127,15 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
     cloud_matrix.resize(vertical_scans_ * horizon_scans_);
     projectCloud(laser_cloud_in, cloud_matrix, range_mat);
 
-    uint16_t *all_pushed_indx = new uint16_t[vertical_scans_ * horizon_scans_];
-    uint16_t *all_pushed_indy = new uint16_t[vertical_scans_ * horizon_scans_];
+    std::vector<uint16_t> all_pushed_indx(vertical_scans_ * horizon_scans_);
+    std::vector<uint16_t> all_pushed_indy(vertical_scans_ * horizon_scans_);
 
-    uint16_t *queue_indx = new uint16_t[vertical_scans_ * horizon_scans_];
-    uint16_t *queue_indy = new uint16_t[vertical_scans_ * horizon_scans_];
+    std::vector<uint16_t> queue_indx(vertical_scans_ * horizon_scans_);
+    std::vector<uint16_t> queue_indy(vertical_scans_ * horizon_scans_);
 
-    int *queue_indx_last_negi = new int[vertical_scans_ * horizon_scans_];
-    int *queue_indy_last_negi = new int[vertical_scans_ * horizon_scans_];
-    float *queue_last_dis = new float[vertical_scans_ * horizon_scans_];
+    std::vector<int> queue_indx_last_negi(vertical_scans_ * horizon_scans_);
+    std::vector<int> queue_indy_last_negi(vertical_scans_ * horizon_scans_);
+    std::vector<float> queue_last_dis(vertical_scans_ * horizon_scans_);
 
     // remote FLT_MAX points
     for (size_t i = 0; i < vertical_scans_; i++)
@@ -333,13 +333,5 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
         scan_info.scan_end_ind_[i] = laser_cloud_out.size() - 6;
     }
     assert(laser_cloud_out.size() == scan_info.ground_flag_.size());
-
-    delete[] all_pushed_indx;
-    delete[] all_pushed_indy;
-    delete[] queue_indx;
-    delete[] queue_indy;
-    delete[] queue_indx_last_negi;
-    delete[] queue_indy_last_negi;
-    delete[] queue_last_dis;
 }
 

@@ -60,8 +60,7 @@ public:
 	void check(double **param)
     {
 		double *res = new double[1];
-        //  double **jaco = new double *[1];
-        double **jaco = new double *[3];
+        double **jaco = new double *[1];
         jaco[0] = new double[1 * 7];
         Evaluate(param, res, jaco);
         std::cout << "[LidarPivotTargetPlaneNormFactor] check begins" << std::endl;
@@ -69,6 +68,10 @@ public:
 
         std::cout << *res << std::endl;
         std::cout << Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> >(jaco[0]) << std::endl;
+
+		delete[] jaco[0];
+		delete[] jaco;
+		delete[] res;		
 
 		Eigen::Quaterniond Q_ext(param[0][6], param[0][3], param[0][4], param[0][5]);
 		Eigen::Vector3d t_ext(param[0][0], param[0][1], param[0][2]);

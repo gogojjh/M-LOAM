@@ -556,6 +556,7 @@ void scan2MapOptimization()
                     tmp_param[0] = para_pose;
                     f->check(tmp_param);
                     CHECK_JACOBIAN = 0;
+                    delete[] tmp_param[0];
                     delete[] tmp_param;
                 }
             }

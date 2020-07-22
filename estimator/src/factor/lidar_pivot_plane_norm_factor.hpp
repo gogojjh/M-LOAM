@@ -117,6 +117,12 @@ public:
         std::cout << Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> >(jaco[1]) << std::endl;
         std::cout << Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> >(jaco[2]) << std::endl;
 
+		delete[] jaco[0];
+		delete[] jaco[1];
+		delete[] jaco[2];
+		delete[] jaco;
+		delete[] res;
+
 		Eigen::Quaterniond Q_pivot(param[0][6], param[0][3], param[0][4], param[0][5]);
 		Eigen::Vector3d t_pivot(param[0][0], param[0][1], param[0][2]);
 		Eigen::Quaterniond Q_i(param[1][6], param[1][3], param[1][4], param[1][5]);

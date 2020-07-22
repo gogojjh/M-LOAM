@@ -126,8 +126,9 @@ void FeatureExtract::extractCloud(const PointICloud &laser_cloud_in,
     size_t cloud_size = laser_cloud->size();
     float *cloud_curvature = new float[cloud_size];
     int *cloud_sort_ind = new int[cloud_size];
-    int *cloud_neighbor_picked = new int[cloud_size];
-    int *cloud_label = new int[cloud_size];
+    
+    std::vector<int> cloud_neighbor_picked(cloud_size, 0);
+    std::vector<int> cloud_label(cloud_size, 0);
     for (size_t i = 5; i < cloud_size - 5; i++)
     {
         float diff_x = laser_cloud->points[i - 5].x + laser_cloud->points[i - 4].x + laser_cloud->points[i - 3].x + laser_cloud->points[i - 2].x + laser_cloud->points[i - 1].x - 10 * laser_cloud->points[i].x + laser_cloud->points[i + 1].x + laser_cloud->points[i + 2].x + laser_cloud->points[i + 3].x + laser_cloud->points[i + 4].x + laser_cloud->points[i + 5].x;
@@ -135,8 +136,6 @@ void FeatureExtract::extractCloud(const PointICloud &laser_cloud_in,
         float diff_z = laser_cloud->points[i - 5].z + laser_cloud->points[i - 4].z + laser_cloud->points[i - 3].z + laser_cloud->points[i - 2].z + laser_cloud->points[i - 1].z - 10 * laser_cloud->points[i].z + laser_cloud->points[i + 1].z + laser_cloud->points[i + 2].z + laser_cloud->points[i + 3].z + laser_cloud->points[i + 4].z + laser_cloud->points[i + 5].z;
         cloud_curvature[i] = sqrSum(diff_x, diff_y, diff_z);
         cloud_sort_ind[i] = i;
-        cloud_neighbor_picked[i] = 0;
-        cloud_label[i] = 0;
     }
 
     // step 3: 挑选点，排除容易被斜面挡住的点以及离群点，有些点容易被斜面挡住，而离群点可能出现带有偶然性，这些情况都可能导致前后两次扫描不能被同时看到
@@ -285,8 +284,8 @@ void FeatureExtract::extractCloud(const PointICloud &laser_cloud_in,
 
     delete[] cloud_curvature;
     delete[] cloud_sort_ind;
-    delete[] cloud_neighbor_picked;
-    delete[] cloud_label;
+    // delete[] cloud_neighbor_picked;
+    // delete[] cloud_label;
 }
 
 //
