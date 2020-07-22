@@ -89,6 +89,7 @@ int SKIP_NUM_ODOM_PUB;
 // mapping
 float MAP_CORNER_RES;
 float MAP_SURF_RES;
+float MAP_OUTLIER_RES;
 float MAP_EIG_THRE;
 float MAP_GF_RATIO;
 float LAMBDA_1;
@@ -248,6 +249,7 @@ void readParameters(std::string config_file)
     // mapping 
     MAP_CORNER_RES = fsSettings["map_corner_res"];
     MAP_SURF_RES = fsSettings["map_surf_res"];
+    MAP_OUTLIER_RES = fsSettings["map_outlier_res"];
     MAP_EIG_THRE = fsSettings["map_eig_thre"];
     MAP_GF_RATIO = fsSettings["map_gf_ratio"];
 

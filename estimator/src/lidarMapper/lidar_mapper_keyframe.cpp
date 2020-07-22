@@ -77,8 +77,10 @@ std::vector<PointICovCloud::Ptr> outlier_cloud_keyframes_cov;
 // downsampling voxel grid
 pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_surf;
 pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_corner;
+pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_outlier;
 pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_surf_map_cov;
 pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_corner_map_cov;
+pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_outlier_map_cov;
 pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_global_map_cov;
 
 pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_surrounding_keyframes;
@@ -352,16 +354,17 @@ void downsampleCurrentScan()
     down_size_filter_surf.setInputCloud(laser_cloud_surf_last);
     down_size_filter_surf.filter(*laser_cloud_surf_last_ds);
 
-    laser_cloud_outlier_ds->clear();
-    down_size_filter_surf.setInputCloud(laser_cloud_outlier);
-    down_size_filter_surf.filter(*laser_cloud_outlier_ds);
-
     laser_cloud_corner_last_ds->clear();
     down_size_filter_corner.setInputCloud(laser_cloud_corner_last);
     down_size_filter_corner.filter(*laser_cloud_corner_last_ds);
 
+    laser_cloud_outlier_ds->clear();
+    down_size_filter_outlier.setInputCloud(laser_cloud_outlier);
+    down_size_filter_outlier.filter(*laser_cloud_outlier_ds);
+
     laser_cloud_surf_cov->clear();
     laser_cloud_corner_cov->clear();
+    laser_cloud_outlier_cov->clear();
 
     // propagate the extrinsic uncertainty on points
     for (PointI &point_ori : *laser_cloud_surf_last_ds)
@@ -708,6 +711,7 @@ void saveKeyframeAndInsertGraph()
     surf_cloud_keyframes_cov.push_back(surf_keyframe_cov);
     corner_cloud_keyframes_cov.push_back(corner_keyframe_cov);
     outlier_cloud_keyframes_cov.push_back(outlier_keyframe_cov);
+
     printf("current keyframes size: %lu\n", pose_keyframes_3d->size());
 }
 
@@ -994,7 +998,6 @@ void process()
 			ext_buf.pop();
 
 			while (!surf_last_buf.empty())
-            // while (surf_last_buf.size() > MAX_BUF_LENGTH)
             {
 				surf_last_buf.pop();
                 frame_drop_cnt++;
@@ -1050,14 +1053,18 @@ void process()
 	}
 }
 
-void cloudUCTAssociateToMap(const PointICovCloud &cloud_local, PointICovCloud &cloud_global,
-                            const Pose &pose_global, const vector<Pose> &pose_ext)
+void cloudUCTAssociateToMap(const PointICovCloud &cloud_local, 
+                            PointICovCloud &cloud_global,
+                            const Pose &pose_global, 
+                            const vector<Pose> &pose_ext)
 {
     std::vector<Pose> pose_compound(NUM_OF_LASER);
     for (size_t n = 0; n < NUM_OF_LASER; n++)
         compoundPoseWithCov(pose_global, pose_ext[n], pose_compound[n]);
 
     cloud_global.clear();
+    cloud_global.resize(cloud_local.size());
+    size_t cloud_size = 0;
     for (const PointIWithCov &point_ori : cloud_local)
     {
         int ind = (int)point_ori.intensity;
@@ -1075,8 +1082,10 @@ void cloudUCTAssociateToMap(const PointICovCloud &cloud_local, PointICovCloud &c
         }
         pointAssociateToMap(point_ori, point_cov, pose_global);
         updateCov(point_cov, cov_point);
-        cloud_global.push_back(point_cov);
+        cloud_global[cloud_size] = point_cov;
+        cloud_size++;
     }
+    cloud_global.resize(cloud_size);
 }
 
 void evalHessian(const ceres::CRSMatrix &jaco, Eigen::Matrix<double, 6, 6> &mat_H)
@@ -1192,13 +1201,13 @@ void sigintHandler(int sig)
 
 int main(int argc, char **argv)
 {
-	if (argc < 5)
-	{
-		printf("please intput: rosrun mloam lidar_mapper [args] \n"
-			   "for example: "
-			   "rosrun mloam lidar_mapper config_file 1 output_path 1 \n");
-		return 1;
-	}
+	// if (argc < 5)
+	// {
+	// 	printf("please intput: rosrun mloam lidar_mapper [args] \n"
+	// 		   "for example: "
+	// 		   "rosrun mloam lidar_mapper config_file 1 output_path 1 \n");
+	// 	return 1;
+	// }
 	google::InitGoogleLogging(argv[0]);
 	google::ParseCommandLineFlags(&argc, &argv, true);
 
@@ -1236,7 +1245,7 @@ int main(int argc, char **argv)
     ros::Subscriber sub_laser_cloud_outlier = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud_outlier", 2, laserCloudOutlierResHandler);
     ros::Subscriber sub_laser_cloud_surf_last = nh.subscribe<sensor_msgs::PointCloud2>("/surf_points_less_flat", 2, laserCloudSurfLastHandler);
 	ros::Subscriber sub_laser_cloud_corner_last = nh.subscribe<sensor_msgs::PointCloud2>("/corner_points_less_sharp", 2, laserCloudCornerLastHandler);
-	ros::Subscriber sub_laser_odometry = nh.subscribe<nav_msgs::Odometry>("/laser_odom", 5, laserOdometryHandler);
+	ros::Subscriber sub_laser_odometry = nh.subscribe<nav_msgs::Odometry>("/laser_odom_0", 5, laserOdometryHandler);
 	ros::Subscriber sub_extrinsic = nh.subscribe<mloam_msgs::Extrinsics>("/extrinsics", 5, extrinsicsHandler);
 
 	pub_laser_cloud_surrounding = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surround", 2);
@@ -1254,11 +1263,15 @@ int main(int argc, char **argv)
     down_size_filter_surf.setTraceThreshold(TRACE_THRESHOLD_AFTER_MAPPING);
     down_size_filter_corner.setLeafSize(MAP_CORNER_RES, MAP_CORNER_RES, MAP_CORNER_RES);
     down_size_filter_corner.setTraceThreshold(TRACE_THRESHOLD_AFTER_MAPPING);
+    down_size_filter_outlier.setLeafSize(MAP_OUTLIER_RES, MAP_OUTLIER_RES, MAP_OUTLIER_RES);
+    down_size_filter_outlier.setTraceThreshold(TRACE_THRESHOLD_AFTER_MAPPING);    
 
     down_size_filter_surf_map_cov.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
     down_size_filter_surf_map_cov.setTraceThreshold(TRACE_THRESHOLD_AFTER_MAPPING);
     down_size_filter_corner_map_cov.setLeafSize(MAP_CORNER_RES, MAP_CORNER_RES, MAP_CORNER_RES);
     down_size_filter_corner_map_cov.setTraceThreshold(TRACE_THRESHOLD_AFTER_MAPPING);
+    down_size_filter_outlier_map_cov.setLeafSize(MAP_OUTLIER_RES, MAP_OUTLIER_RES, MAP_OUTLIER_RES);
+    down_size_filter_outlier_map_cov.setTraceThreshold(TRACE_THRESHOLD_AFTER_MAPPING);    
     down_size_filter_surrounding_keyframes.setLeafSize(1.0, 1.0, 1.0);
 
     down_size_filter_global_map_cov.setLeafSize(MAP_CORNER_RES, MAP_SURF_RES, MAP_SURF_RES);

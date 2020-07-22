@@ -54,26 +54,26 @@ catkin_package(
 
 ######################################################## float libraries
 add_library(mloam_lib_1
-    src/imageSegmenter/image_segmenter.cpp
     src/featureExtract/feature_extract.cpp
-    src/lidarTracker/lidar_tracker.cpp
-    src/utility/visualization.cpp
     src/utility/utility.cpp
-    src/utility/cloud_visualizer.cpp
     src/estimator/parameters.cpp
     src/estimator/pose.cpp
-    src/initial/initial_extrinsics.cpp
     src/factor/pose_local_parameterization.cpp
-    src/factor/marginalization_factor.cpp
     src/factor/impl_loss_function.cpp
 )
 target_link_libraries(mloam_lib_1
-    ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
+    ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
 )
 
 add_library(mloam_lib_2
     src/estimator/estimator.cpp
+    src/imageSegmenter/image_segmenter.cpp
+    src/lidarTracker/lidar_tracker.cpp
+    src/utility/cloud_visualizer.cpp
+    src/utility/visualization.cpp
+    src/initial/initial_extrinsics.cpp
+    src/factor/marginalization_factor.cpp
 )
 target_link_libraries(mloam_lib_2
     ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 

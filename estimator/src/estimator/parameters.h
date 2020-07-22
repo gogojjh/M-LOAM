@@ -116,6 +116,7 @@ extern int SKIP_NUM_ODOM_PUB;
 // mapping
 extern float MAP_CORNER_RES;
 extern float MAP_SURF_RES;
+extern float MAP_OUTLIER_RES;
 extern float MAP_EIG_THRE;
 extern float MAP_GF_RATIO;
 extern float LAMBDA_1;

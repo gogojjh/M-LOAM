@@ -93,9 +93,9 @@ DEFINE_string(output_path, "", "the path ouf saving results");
 DEFINE_bool(with_ua, true, "with or without the awareness of uncertainty");
 DEFINE_string(gf_method, "gd_float", "good feature selection method: gd_fix, gd_float, rnd, ds");
 DEFINE_double(gf_ratio_ini, 0.2, "with or without the good features selection");
-DEFINE_bool(gnc, false, "graduated non-convexity");
-DEFINE_bool(debug_mode, true, "debug mode");
-DEFINE_string(loss_mode, "huber", "loss function type: huber, gm");
+DEFINE_string(loss_mode, "gmc", "loss function type: huber, gmc");
+DEFINE_bool(gnc, true, "graduated non-convexity");
+DEFINE_bool(debug_mode, false, "debug mode");
 
 FeatureExtract f_extract;
 
@@ -148,18 +148,18 @@ void evaluateLoss(const std::vector<PointPlaneFeature> &all_surf_features,
                 double sum_null = 0;
                 double sum_huber = 0;
                 double sum_gmc = 0;
-                double pose_array[SIZE_POSE];
-                pose_array[0] = pose_local.t_(0) + x;
-                pose_array[1] = pose_local.t_(1) + y;
-                pose_array[2] = pose_local.t_(2);
+
+                double **param = new double *[1];
+                param[0] = new double [SIZE_POSE];
+                param[0][0] = pose_local.t_(0) + x;
+                param[0][1] = pose_local.t_(1) + y;
+                param[0][2] = pose_local.t_(2);
                 Eigen::Quaterniond q = Eigen::AngleAxisd(theta, Eigen::Vector3d::UnitZ())
                                      * pose_local.q_;
-                pose_array[3] = q.x();
-                pose_array[4] = q.y();
-                pose_array[5] = q.z();
-                pose_array[6] = q.w();
-                double **param = new double *[1];
-                param[0] = pose_array;
+                param[0][3] = q.x();
+                param[0][4] = q.y();
+                param[0][5] = q.z();
+                param[0][6] = q.w();
                 for (const size_t &fid : sel_surf_feature_idx)
                 {
                     const PointPlaneFeature &feature = all_surf_features[fid];
@@ -187,9 +187,9 @@ void evaluateLoss(const std::vector<PointPlaneFeature> &all_surf_features,
                         loss_function->Evaluate(r, rho);
                         sum_gmc += rho[0];
                     }
-                    delete[] res;
                     delete[] jaco[0];
                     delete[] jaco;
+                    delete[] res;
                 }
                 for (const size_t &fid : sel_corner_feature_idx)
                 {
@@ -218,20 +218,20 @@ void evaluateLoss(const std::vector<PointPlaneFeature> &all_surf_features,
                         loss_function->Evaluate(r, rho);
                         sum_gmc += rho[0];
                     }
-                    delete[] res;
                     delete[] jaco[0];
                     delete[] jaco;
+                    delete[] res;
                 }
                 delete[] param[0];
                 delete[] param;
 
-                mat_result(row_cnt, 0) = pose_array[0];
-                mat_result(row_cnt, 1) = pose_array[1];
-                mat_result(row_cnt, 2) = pose_array[2];
-                mat_result(row_cnt, 3) = pose_array[3];
-                mat_result(row_cnt, 4) = pose_array[4];
-                mat_result(row_cnt, 5) = pose_array[5];
-                mat_result(row_cnt, 6) = pose_array[6];
+                mat_result(row_cnt, 0) = param[0][0];
+                mat_result(row_cnt, 1) = param[0][1];
+                mat_result(row_cnt, 2) = param[0][2];
+                mat_result(row_cnt, 3) = param[0][3];
+                mat_result(row_cnt, 4) = param[0][4];
+                mat_result(row_cnt, 5) = param[0][5];
+                mat_result(row_cnt, 6) = param[0][6];
                 mat_result(row_cnt, 7) = sum_null;
                 mat_result(row_cnt, 8) = sum_huber;
                 mat_result(row_cnt, 9) = sum_gmc;

@@ -55,7 +55,7 @@
                       -gnc=$(arg gnc)
                       -debug_mode=$(arg debug_mode)
                       -loss_mode=$(arg loss_mode)" output="screen">
-                <remap from="/laser_odom" to="/laser_odom_0"/>
+                <!-- <remap from="/laser_odom" to="/laser_odom_0"/> -->
             </node>
         </group>
     </group>
@@ -66,10 +66,6 @@
     <!-- <include file="$(find rviz_car_model)/launch/default.launch" /> -->
     <node name="static_tf_world_base_into_world_sensor" pkg="tf" type="static_transform_publisher"
         args="0 0 1.6 0 0 0 world_base world 10"/> 
-    <!-- <node name="static_tf_world_base_into_world_radar" pkg="tf" type="static_transform_publisher"
-        args="-0.12528 -0.46314 2.0689 0.0027 -0.046 0.0038 world_base world_radar 10"/> -->
-    <!-- <node name="static_tf_world_base_into_world_stereo" pkg="tf" type="static_transform_publisher"
-        args="0.61413 -0.3347 1.5554 0.00261 -0.0210 0.0039 0.99977 world_base world_stereo 10"/>         -->
     <node name="static_tf_world_base_into_laser" pkg="tf" type="static_transform_publisher"
         args="0 0 0 0 0 0 world laser_0 10"/>         
     <node name="static_tf_laser_into_laser_left" pkg="tf" type="static_transform_publisher"

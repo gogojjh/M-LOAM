@@ -171,9 +171,9 @@ void evalPointUncertainty(const PointType &pi, Eigen::Matrix3d &cov_point, const
     // Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
     Eigen::Matrix<double, 4, 3> D;
     D << 1, 0, 0,
-        0, 1, 0,
-        0, 0, 1,
-        0, 0, 0;
+         0, 1, 0,
+         0, 0, 1,
+         0, 0, 0;
     Eigen::Matrix<double, 4, 9> G = Eigen::Matrix<double, 4, 9>::Zero();
     G.block<4, 6>(0, 0) = pointToFS(T * point_curr);
     G.block<4, 3>(0, 6) = T * D;
@@ -199,9 +199,9 @@ void evalPointUncertainty(const PointType &pi, Eigen::Matrix3d &cov_point, const
     // Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
     Eigen::Matrix<double, 4, 3> D;
     D << 1, 0, 0,
-        0, 1, 0,
-        0, 0, 1,
-        0, 0, 0;
+         0, 1, 0,
+         0, 0, 1,
+         0, 0, 0;
     Eigen::Matrix<double, 4, 9> G = Eigen::Matrix<double, 4, 9>::Zero();
     G.block<4, 6>(0, 0) = pointToFS(T * point_curr);
     G.block<4, 3>(0, 6) = T * D;
