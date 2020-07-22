@@ -40,8 +40,8 @@
                 args="-config_file=$(arg config_file)
                     -data_source=$(arg data_source)
                     -result_save=$(arg result_save)
-                    -output_path=$(arg output_path)" >
-                <remap from="/base_pose_gt" to="/current_odom" output="screen"/>
+                    -output_path=$(arg output_path)" output="screen">
+                <remap from="/base_pose_gt" to="/current_odom" />
             </node>
         </group>
         <group if="$(arg run_mloam_mapping)">
