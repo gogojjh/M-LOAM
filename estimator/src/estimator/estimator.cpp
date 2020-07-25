@@ -589,7 +589,7 @@ void Estimator::optimizeMap()
     // loss_function = new ceres::CauchyLoss(1.0);
     // ceres: set options and solve the non-linear equation
     ceres::Solver::Options options;
-    options.linear_solver_type = ceres::DENSE_SCHUR;
+    options.linear_solver_type = ceres::DENSE_QR;
     // options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
     // options.num_threads = 1;
     // options.trust_region_strategy_type = ceres::DOGLEG;
@@ -1299,7 +1299,7 @@ void Estimator::evaluateFeatJacobian(const double *para_pose_pivot,
     mat_jacobian.row(1) = mat_jacobian_2;
     mat_jacobian.row(2) = mat_jacobian_3;
     mat_jaco = mat_jacobian.topLeftCorner<3, 6>();
-
+    
     delete[] jaco[0];
     delete[] jaco[1];
     delete[] jaco[2];
@@ -1375,7 +1375,7 @@ void Estimator::evaluateFeatJacobian(const Pose &pose_pivot,
     delete[] param;
 }
 
-void Estimator::goodFeatureSelect(const std::vector<PointPlaneFeature> &all_features,
+void Estimator::goodFeatureSelect(std::vector<PointPlaneFeature> &all_features,
                                   std::vector<size_t> &sel_feature_idx,
                                   const double *para_pose_pivot,
                                   const double *para_pose_other,
@@ -1436,7 +1436,7 @@ void Estimator::goodFeatureSelect(const std::vector<PointPlaneFeature> &all_feat
                                  para_pose_ext,
                                  feature,
                                  jaco);
-
+            
             double cur_det = common::logDet(sub_mat_H + jaco.transpose() * jaco, true);
             heap_subset.push(FeatureWithScore(que_idx, cur_det, jaco));
             if (heap_subset.size() >= size_rnd_subset)
@@ -1550,7 +1550,11 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
                                                                 n_neigh,
                                                                 false);
                 }
-                if (!b_match)
+                if (b_match)
+                {
+
+                } 
+                else
                 {
                     all_feature_idx.erase(all_feature_idx.begin() + j);
                     feature_visited.erase(feature_visited.begin() + j);
@@ -1564,7 +1568,7 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
                                  pose_i,
                                  pose_ext,
                                  feature,
-                                 jaco);        
+                                 jaco);
 
             double cur_det = common::logDet(sub_mat_H + jaco.transpose() * jaco, true);
             heap_subset.push(FeatureWithScore(que_idx, cur_det, jaco));

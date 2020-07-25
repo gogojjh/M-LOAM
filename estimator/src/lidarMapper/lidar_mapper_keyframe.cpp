@@ -353,17 +353,16 @@ void downsampleCurrentScan()
     laser_cloud_surf_last_ds->clear();
     down_size_filter_surf.setInputCloud(laser_cloud_surf_last);
     down_size_filter_surf.filter(*laser_cloud_surf_last_ds);
+    laser_cloud_surf_cov->clear();
 
     laser_cloud_corner_last_ds->clear();
     down_size_filter_corner.setInputCloud(laser_cloud_corner_last);
     down_size_filter_corner.filter(*laser_cloud_corner_last_ds);
+    laser_cloud_corner_cov->clear();
 
     laser_cloud_outlier_ds->clear();
     down_size_filter_outlier.setInputCloud(laser_cloud_outlier);
     down_size_filter_outlier.filter(*laser_cloud_outlier_ds);
-
-    laser_cloud_surf_cov->clear();
-    laser_cloud_corner_cov->clear();
     laser_cloud_outlier_cov->clear();
 
     // propagate the extrinsic uncertainty on points
@@ -405,24 +404,24 @@ void downsampleCurrentScan()
         laser_cloud_corner_cov->push_back(point_cov);
     }
 
-    for (PointI &point_ori : *laser_cloud_outlier_ds)
-    {
-        int idx = int(point_ori.intensity); // indicate the lidar id
-        PointI point_sel;
-        Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
-        if (!with_ua_flag)
-        {
-            cov_point = COV_MEASUREMENT; // add extrinsic perturbation
-        }
-        else
-        {
-            pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
-            evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
-            if (cov_point.trace() > TRACE_THRESHOLD_BEFORE_MAPPING) continue;
-        }
-        PointIWithCov point_cov(point_ori, cov_point.cast<float>());
-        laser_cloud_outlier_cov->push_back(point_cov);
-    }    
+    // for (PointI &point_ori : *laser_cloud_outlier_ds)
+    // {
+    //     int idx = int(point_ori.intensity); // indicate the lidar id
+    //     PointI point_sel;
+    //     Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
+    //     if (!with_ua_flag)
+    //     {
+    //         cov_point = COV_MEASUREMENT; // add extrinsic perturbation
+    //     }
+    //     else
+    //     {
+    //         pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
+    //         evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
+    //         if (cov_point.trace() > TRACE_THRESHOLD_BEFORE_MAPPING) continue;
+    //     }
+    //     PointIWithCov point_cov(point_ori, cov_point.cast<float>());
+    //     laser_cloud_outlier_cov->push_back(point_cov);
+    // }    
 
     std::cout << "input surf num: " << laser_cloud_surf_cov->size()
               << " corner num: " << laser_cloud_corner_cov->size() << std::endl;
@@ -445,7 +444,7 @@ void scan2MapOptimization()
         {
             ceres::Problem problem;
             double gmc_s = 1.0;
-            double gmc_mu = 3.0;
+            double gmc_mu = 5.0;
             ceres::LossFunctionWrapper *loss_function;
             if (FLAGS_loss_mode == "huber")
             {
@@ -496,7 +495,9 @@ void scan2MapOptimization()
                         lambda = LAMBDA_2;
                     }
                     std::cout << common::YELLOW << "lambda: " << lambda << common::RESET << std::endl;
+                    // TODO
                     ratio_change_flag = true;
+                    // ratio_change_flag = false; 
                     gf_ratio_cur = std::min(1.0, FLAGS_gf_ratio_ini);
                 }
             }
@@ -518,7 +519,7 @@ void scan2MapOptimization()
                                                    FLAGS_gf_method,
                                                    gf_ratio_cur,
                                                    lambda,
-                                                   ratio_change_flag);
+                                                   false);
                 surf_num = sel_surf_feature_idx.size();
             }
             if (POINT_EDGE_FACTOR)
@@ -605,11 +606,11 @@ void scan2MapOptimization()
                 local_parameterization->V_update_ = mat_P;
             }
             // *********************************************************
+            
             TicToc t_solver;
-
             ceres::Solver::Summary summary;
             ceres::Solver::Options options;
-            options.linear_solver_type = ceres::DENSE_SCHUR;
+            options.linear_solver_type = ceres::DENSE_QR;
             // options.num_threads = 2;
             options.minimizer_progress_to_stdout = false;
             options.check_gradients = false;
@@ -622,13 +623,14 @@ void scan2MapOptimization()
                     {
                         options.max_num_iterations = 10;
                         options.max_solver_time_in_seconds = 0.01;
+                        ceres::Solve(options, &problem, &summary);
                         std::cout << summary.BriefReport() << std::endl;
                     } else
                     {
                         options.max_num_iterations = 1;
                         ceres::Solve(options, &problem, &summary);
                     }
-                    gmc_mu /= 1.2;
+                    gmc_mu /= 1.4;
                     loss_function->Reset(new ceres::SurrogateGemanMcClureLoss(gmc_s, gmc_mu), ceres::TAKE_OWNERSHIP);
                 }
             } else
@@ -822,13 +824,13 @@ void pubGlobalMap()
                 cloudUCTAssociateToMap(*surf_cloud_keyframes_cov[key_ind], surf_trans, pose_keyframes_6d[key_ind].second, pose_ext);
                 *laser_cloud_map += surf_trans;
 
-                // PointICovCloud corner_trans;
-                // cloudUCTAssociateToMap(*corner_cloud_keyframes_cov[key_ind], corner_trans, pose_keyframes_6d[key_ind].second, pose_ext);
-                // *laser_cloud_map += corner_trans;
+                PointICovCloud corner_trans;
+                cloudUCTAssociateToMap(*corner_cloud_keyframes_cov[key_ind], corner_trans, pose_keyframes_6d[key_ind].second, pose_ext);
+                *laser_cloud_map += corner_trans;
 
-                // PointICovCloud outlier_trans;
-                // cloudUCTAssociateToMap(*outlier_cloud_keyframes_cov[key_ind], outlier_trans, pose_keyframes_6d[key_ind].second, pose_ext);
-                // *laser_cloud_map += outlier_trans;
+                PointICovCloud outlier_trans;
+                cloudUCTAssociateToMap(*outlier_cloud_keyframes_cov[key_ind], outlier_trans, pose_keyframes_6d[key_ind].second, pose_ext);
+                *laser_cloud_map += outlier_trans;
             }
             down_size_filter_global_map_cov.setInputCloud(laser_cloud_map);
             down_size_filter_global_map_cov.filter(*laser_cloud_map_ds);

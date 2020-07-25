@@ -21,6 +21,7 @@
     <arg name="run_mloam_odom" default="true" />
     <arg name="run_mloam_mapping" default="true" />    
     <arg name="run_aloam" default="false" />
+    <arg name="run_floam" default="false" />
     <arg name="run_legoloam" default="false" />
 
     <arg name="data_source" default="bag"/>
@@ -86,6 +87,13 @@
     <!-- run aloam  -->
     <group if="$(arg run_aloam)">
         <include file="$(find aloam_velodyne)/launch/aloam_exp.launch">
+            <arg name="output_path" default="$(arg output_path)"/>
+        </include>       
+   </group>        
+
+    <!-- run floam  -->
+    <group if="$(arg run_floam)">
+        <include file="$(find floam)/launch/floam_exp.launch">
             <arg name="output_path" default="$(arg output_path)"/>
         </include>       
    </group>        

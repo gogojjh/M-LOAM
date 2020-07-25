@@ -659,35 +659,35 @@ bool FeatureExtract::matchCornerPointFromMap(const typename pcl::KdTreeFLANN<Poi
             float ld_2 = 0.0;
             float ld_p1 = -(w1.x() * point_sel.x + w1.y() * point_sel.y + w1.z() * point_sel.z - ld_1);
             float ld_p2 = -(w2.x() * point_sel.x + w2.y() * point_sel.y + w2.z() * point_sel.z - ld_2);
-            float s = 1 - 0.9f * fabs(ld_1);
-            bool is_in_laser_fov = false;
-            if (CHECK_FOV)
-            {
-                PointType point_on_z_axis, point_on_z_axis_trans;
-                point_on_z_axis.x = 0.0;
-                point_on_z_axis.y = 0.0;
-                point_on_z_axis.z = 10.0;
-                pointAssociateToMap(point_on_z_axis, point_on_z_axis_trans, pose_local);
-                float squared_side1 = sqrSum(pose_local.t_(0) - point_sel.x,
-                                                pose_local.t_(1) - point_sel.y,
-                                                pose_local.t_(2) - point_sel.z);
-                float squared_side2 = sqrSum(point_on_z_axis_trans.x - point_sel.x,
-                                                point_on_z_axis_trans.y - point_sel.y,
-                                                point_on_z_axis_trans.z - point_sel.z);
+            // float s = 1 - 0.9f * fabs(ld_1);
+            // bool is_in_laser_fov = false;
+            // if (CHECK_FOV)
+            // {
+            //     PointType point_on_z_axis, point_on_z_axis_trans;
+            //     point_on_z_axis.x = 0.0;
+            //     point_on_z_axis.y = 0.0;
+            //     point_on_z_axis.z = 10.0;
+            //     pointAssociateToMap(point_on_z_axis, point_on_z_axis_trans, pose_local);
+            //     float squared_side1 = sqrSum(pose_local.t_(0) - point_sel.x,
+            //                                     pose_local.t_(1) - point_sel.y,
+            //                                     pose_local.t_(2) - point_sel.z);
+            //     float squared_side2 = sqrSum(point_on_z_axis_trans.x - point_sel.x,
+            //                                     point_on_z_axis_trans.y - point_sel.y,
+            //                                     point_on_z_axis_trans.z - point_sel.z);
 
-                float check1 = 100.0f + squared_side1 - squared_side2 - 10.0f * sqrt(3.0f) * sqrt(squared_side1);
-                float check2 = 100.0f + squared_side1 - squared_side2 + 10.0f * sqrt(3.0f) * sqrt(squared_side1);
-                // within +-60 degree
-                if (check1 < 0 && check2 > 0)
-                    is_in_laser_fov = true;
-            }
-            else
-            {
-                is_in_laser_fov = true;
-            }
-            s = 1; // TODO
-            if (s > 0.1 && is_in_laser_fov)
-            {
+            //     float check1 = 100.0f + squared_side1 - squared_side2 - 10.0f * sqrt(3.0f) * sqrt(squared_side1);
+            //     float check2 = 100.0f + squared_side1 - squared_side2 + 10.0f * sqrt(3.0f) * sqrt(squared_side1);
+            //     // within +-60 degree
+            //     if (check1 < 0 && check2 > 0)
+            //         is_in_laser_fov = true;
+            // }
+            // else
+            // {
+            //     is_in_laser_fov = true;
+            // }
+            // s = 1; // TODO
+            // if (s > 0.1 && is_in_laser_fov)
+            // {
                 // Eigen::Vector4d coeff1(w1.x(), w1.y(), w1.z(), ld_p1);
                 // Eigen::Vector4d coeff2(w2.x(), w2.y(), w2.z(), ld_p2);
 
@@ -702,15 +702,14 @@ bool FeatureExtract::matchCornerPointFromMap(const typename pcl::KdTreeFLANN<Poi
                 // feature2.coeffs_ = coeff2 * 0.5;
                 // feature2.laser_idx_ = (size_t)point_ori.intensity;
                 // feature2.type_ = 'c';
-
-                Eigen::Vector4d coeff1(w1.x(), w1.y(), w1.z(), ld_p1);
-                feature.idx_ = idx;
-                feature.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
-                feature.coeffs_ = coeff1;
-                feature.laser_idx_ = (size_t)point_ori.intensity;
-                feature.type_ = 'c';
-                return true;
-            }
+            // }
+            Eigen::Vector4d coeff1(w1.x(), w1.y(), w1.z(), ld_p1);
+            feature.idx_ = idx;
+            feature.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
+            feature.coeffs_ = coeff1;
+            feature.laser_idx_ = (size_t)point_ori.intensity;
+            feature.type_ = 'c';
+            return true;
         }
     }
     return false;
@@ -768,36 +767,36 @@ bool FeatureExtract::matchSurfPointFromMap(const typename pcl::KdTreeFLANN<Point
         if (plane_valid)
         {
             // pd2 (distance) smaller, s larger
-            float pd2 = norm(0) * point_sel.x + norm(1) * point_sel.y + norm(2) * point_sel.z + negative_OA_dot_norm;
-            float s = 1 - 0.9f * fabs(pd2) / sqrt(sqrSum(point_sel.x, point_sel.y, point_sel.z));
-            bool is_in_laser_fov = false;
-            if (CHECK_FOV)
-            {
-                PointType transform_pos;
-                PointType point_on_z_axis, point_on_z_axis_trans;
-                point_on_z_axis.x = 0.0;
-                point_on_z_axis.y = 0.0;
-                point_on_z_axis.z = 10.0;
-                pointAssociateToMap(point_on_z_axis, point_on_z_axis_trans, pose_local);
-                float squared_side1 = sqrSum(pose_local.t_(0) - point_sel.x,
-                                                pose_local.t_(1) - point_sel.y,
-                                                pose_local.t_(2) - point_sel.z);
-                float squared_side2 = sqrSum(point_on_z_axis_trans.x - point_sel.x,
-                                                point_on_z_axis_trans.y - point_sel.y,
-                                                point_on_z_axis_trans.z - point_sel.z);
-                float check1 = 100.0f + squared_side1 - squared_side2 - 10.0f * sqrt(3.0f) * sqrt(squared_side1);
-                float check2 = 100.0f + squared_side1 - squared_side2 + 10.0f * sqrt(3.0f) * sqrt(squared_side1);
-                // within +-60 degree
-                if (check1 < 0 && check2 > 0)
-                    is_in_laser_fov = true;
-            }
-            else
-            {
-                is_in_laser_fov = true;
-            }
-            s = 1; // TODO
-            if (s > 0.1 && is_in_laser_fov)
-            {
+            // float pd2 = norm(0) * point_sel.x + norm(1) * point_sel.y + norm(2) * point_sel.z + negative_OA_dot_norm;
+            // float s = 1 - 0.9f * fabs(pd2) / sqrt(sqrSum(point_sel.x, point_sel.y, point_sel.z));
+            // bool is_in_laser_fov = false;
+            // if (CHECK_FOV)
+            // {
+            //     PointType transform_pos;
+            //     PointType point_on_z_axis, point_on_z_axis_trans;
+            //     point_on_z_axis.x = 0.0;
+            //     point_on_z_axis.y = 0.0;
+            //     point_on_z_axis.z = 10.0;
+            //     pointAssociateToMap(point_on_z_axis, point_on_z_axis_trans, pose_local);
+            //     float squared_side1 = sqrSum(pose_local.t_(0) - point_sel.x,
+            //                                     pose_local.t_(1) - point_sel.y,
+            //                                     pose_local.t_(2) - point_sel.z);
+            //     float squared_side2 = sqrSum(point_on_z_axis_trans.x - point_sel.x,
+            //                                     point_on_z_axis_trans.y - point_sel.y,
+            //                                     point_on_z_axis_trans.z - point_sel.z);
+            //     float check1 = 100.0f + squared_side1 - squared_side2 - 10.0f * sqrt(3.0f) * sqrt(squared_side1);
+            //     float check2 = 100.0f + squared_side1 - squared_side2 + 10.0f * sqrt(3.0f) * sqrt(squared_side1);
+            //     // within +-60 degree
+            //     if (check1 < 0 && check2 > 0)
+            //         is_in_laser_fov = true;
+            // }
+            // else
+            // {
+            //     is_in_laser_fov = true;
+            // }
+            // s = 1; // TODO
+            // if (s > 0.1 && is_in_laser_fov)
+            // {
                 Eigen::Vector4d coeff(norm(0), norm(1), norm(2), negative_OA_dot_norm);
                 feature.idx_ = idx;
                 feature.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
@@ -805,7 +804,7 @@ bool FeatureExtract::matchSurfPointFromMap(const typename pcl::KdTreeFLANN<Point
                 feature.laser_idx_ = (size_t)point_ori.intensity;
                 feature.type_ = 's';
                 return true;
-            }
+            // }
         }
     }
     return false;

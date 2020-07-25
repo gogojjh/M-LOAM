@@ -158,11 +158,11 @@ class PointPlaneFeature
 {
 public:
     PointPlaneFeature() : idx_(0), laser_idx_(0), type_('n') {}
-    
     size_t idx_;
     size_t laser_idx_;
     Eigen::Vector3d point_;
     Eigen::Vector4d coeffs_;
+    Eigen::MatrixXd jaco_;
     char type_;
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW

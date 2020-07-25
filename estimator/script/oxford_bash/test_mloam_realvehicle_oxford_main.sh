@@ -10,7 +10,7 @@ roslaunch mloam mloam_realvehicle_oxford.launch \
     loss_mode:=gmc \
     bag_file:=$data_path \
     output_path:=$result_path
-# sleep 5
+sleep 5
 
 # ### different feature ratio
 # roslaunch mloam mloam_realvehicle_oxford.launch \
@@ -78,6 +78,13 @@ roslaunch mloam mloam_realvehicle_oxford.launch \
 #     output_path:=$result_path
 # sleep 5
 
+roslaunch mloam mloam_realvehicle_oxford.launch \
+    run_mloam:=false \
+    run_floam:=true \
+    bag_file:=$data_path \
+    output_path:=$result_path
+sleep 5
+
 # roslaunch mloam mloam_realvehicle_oxford.launch \
 #     run_mloam:=false \
 #     run_legoloam:=true \
@@ -94,7 +101,7 @@ roslaunch mloam mloam_realvehicle_oxford.launch \
 #     M-LOAM-rnd-0.2-gmc-gnc M-LOAM-fps-0.2-gmc-gnc \
 #     M-LOAM-gd-fix-0.2-gmc-gnc \
 #     M-LOAM-gd-float-0.2-huber \
-#     A-LOAM LEGO-LOAM \
+#     A-LOAM F-LOAM LEGO-LOAM \
 # --compare \
 #     $result_path
 
