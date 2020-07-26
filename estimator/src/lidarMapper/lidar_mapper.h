@@ -81,7 +81,7 @@
 #define GLOBALMAP_KF_RADIUS 1000.0
 #define DISTANCE_KEYFRAMES 1.0
 #define ORIENTATION_KEYFRAMES 3
-#define MAX_FEATURE_SELECT_TIME 20 // 10ms
+#define MAX_FEATURE_SELECT_TIME 30 // 10ms
 #define MAX_RANDOM_QUEUE_TIME 20
 #define LOGDET_H_THRESHOLD 64 // TODO
 #define GF_RATIO_SIGMA 1.20
@@ -528,13 +528,10 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
                     (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
                         break;
 
-                // TODO:
-                // float epsilon = 0.1;
-                // float g = std::log(1 / 0.1); // 2.3026
-                size_t size_rnd_subset = static_cast<size_t>(1.0 * num_all_features / num_use_features);
+                size_t size_rnd_subset = static_cast<size_t>(2.3 * num_all_features / num_use_features); // 1.0/2.3
                 // LOG_EVERY_N(INFO, 20) << "[goodFeatureMatching] size of matrix subset: " << size_rnd_subset;
-
                 std::priority_queue<FeatureWithScore, std::vector<FeatureWithScore>, std::less<FeatureWithScore>> heap_subset;
+
                 while (true)
                 {
                     num_rnd_que = 0;
@@ -585,7 +582,7 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
                         {
                             all_feature_idx.erase(all_feature_idx.begin() + j);
                             feature_visited.erase(feature_visited.begin() + j);
-                            break;
+                            continue;
                         }
                     }
 
@@ -626,10 +623,11 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
                 if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
                     break;
             }
+
             if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
             {
                 std::cerr << "[goodFeatureMatching]: early termination!" << std::endl;
-                LOG(INFO) << "early termination: " << num_rnd_que << ", " << t_sel_feature.toc();
+                LOG(INFO) << "early termination: feature_type " << feature_type << ", " << num_rnd_que << ", " << t_sel_feature.toc();
                 num_sel_features = static_cast<size_t>(num_all_features * pre_gf_ratio);
                 break;
             }

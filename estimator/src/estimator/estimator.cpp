@@ -1399,7 +1399,7 @@ void Estimator::goodFeatureSelect(const std::vector<PointPlaneFeature> &all_feat
     }
     sel_feature_idx.resize(num_use_features);
 
-    size_t size_rnd_subset = static_cast<size_t>(2.3026 * num_all_features / num_use_features);
+    size_t size_rnd_subset = static_cast<size_t>(1.0 * num_all_features / num_use_features);
     Eigen::Matrix<double, 6, 6> sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
     size_t num_sel_features = 0;
     TicToc t_sel_feature;
@@ -1408,7 +1408,7 @@ void Estimator::goodFeatureSelect(const std::vector<PointPlaneFeature> &all_feat
         if ((num_sel_features >= num_use_features) ||
             (all_feature_idx.size() == 0) ||
             (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
-            break;
+                break;
         size_t num_rnd_que;
         std::priority_queue<FeatureWithScore, std::vector<FeatureWithScore>, std::less<FeatureWithScore>> heap_subset;
         while (heap_subset.size() < size_rnd_subset)
@@ -1506,7 +1506,7 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
             break;
         size_t num_rnd_que;
         std::priority_queue<FeatureWithScore, std::vector<FeatureWithScore>, std::less<FeatureWithScore>> heap_subset;
-        while (heap_subset.size() < size_rnd_subset)
+        while (true)
         {
             num_rnd_que = 0;
             size_t j;
@@ -1558,7 +1558,7 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
                 {
                     all_feature_idx.erase(all_feature_idx.begin() + j);
                     feature_visited.erase(feature_visited.begin() + j);
-                    break;
+                    continue;
                 }
             }
 

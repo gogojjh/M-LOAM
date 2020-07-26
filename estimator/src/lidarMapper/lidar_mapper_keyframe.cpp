@@ -444,7 +444,7 @@ void scan2MapOptimization()
         {
             ceres::Problem problem;
             double gmc_s = 1.0;
-            double gmc_mu = 3.0;
+            double gmc_mu = 5.0;
             ceres::LossFunctionWrapper *loss_function;
             if (FLAGS_loss_mode == "huber")
             {
@@ -495,7 +495,7 @@ void scan2MapOptimization()
                         lambda = LAMBDA_2;
                     }
                     std::cout << common::YELLOW << "lambda: " << lambda << common::RESET << std::endl;
-                    ratio_change_flag = false; 
+                    ratio_change_flag = true; 
                     gf_ratio_cur = std::min(1.0, FLAGS_gf_ratio_ini);
                 }
             }
@@ -615,26 +615,28 @@ void scan2MapOptimization()
             options.gradient_check_relative_precision = 1e-4;
             if (FLAGS_gnc) 
             {
-                while (gmc_mu >= 1.0)
+                while (gmc_mu >= 2.0)
                 {
-                    if (gmc_mu <= 1.5)
-                    {
-                        options.max_num_iterations = 1;
-                        options.max_solver_time_in_seconds = 0.01;
-                        ceres::Solve(options, &problem, &summary);
-                        std::cout << summary.BriefReport() << std::endl;
-                    } else
-                    {
-                        options.max_num_iterations = 1;
-                        ceres::Solve(options, &problem, &summary);
-                    }
+                    // if (gmc_mu <= 2.0)
+                    // {
+                    //     options.max_num_iterations = 10;
+                    //     options.max_solver_time_in_seconds = 0.01;
+                    //     ceres::Solve(options, &problem, &summary);
+                    //     std::cout << summary.BriefReport() << std::endl;
+                    // } else
+                    // {
+                    //     options.max_num_iterations = 1;
+                    //     ceres::Solve(options, &problem, &summary);
+                    // }
+                    options.max_num_iterations = 1;
+                    ceres::Solve(options, &problem, &summary);                    
                     gmc_mu /= 1.2;
                     loss_function->Reset(new ceres::SurrogateGemanMcClureLoss(gmc_s, gmc_mu), ceres::TAKE_OWNERSHIP);
                 }
             } else
             {
+                options.max_num_iterations = 6;
                 options.max_solver_time_in_seconds = 0.04;
-                options.max_num_iterations = 30;
                 ceres::Solve(options, &problem, &summary);
                 std::cout << summary.BriefReport() << std::endl;
             }
