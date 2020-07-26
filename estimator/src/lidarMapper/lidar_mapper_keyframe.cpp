@@ -444,7 +444,7 @@ void scan2MapOptimization()
         {
             ceres::Problem problem;
             double gmc_s = 1.0;
-            double gmc_mu = 5.0;
+            double gmc_mu = 3.0;
             ceres::LossFunctionWrapper *loss_function;
             if (FLAGS_loss_mode == "huber")
             {
@@ -495,9 +495,7 @@ void scan2MapOptimization()
                         lambda = LAMBDA_2;
                     }
                     std::cout << common::YELLOW << "lambda: " << lambda << common::RESET << std::endl;
-                    // TODO
-                    ratio_change_flag = true;
-                    // ratio_change_flag = false; 
+                    ratio_change_flag = false; 
                     gf_ratio_cur = std::min(1.0, FLAGS_gf_ratio_ini);
                 }
             }
@@ -519,7 +517,7 @@ void scan2MapOptimization()
                                                    FLAGS_gf_method,
                                                    gf_ratio_cur,
                                                    lambda,
-                                                   false);
+                                                   ratio_change_flag);
                 surf_num = sel_surf_feature_idx.size();
             }
             if (POINT_EDGE_FACTOR)
@@ -610,7 +608,7 @@ void scan2MapOptimization()
             TicToc t_solver;
             ceres::Solver::Summary summary;
             ceres::Solver::Options options;
-            options.linear_solver_type = ceres::DENSE_QR;
+            options.linear_solver_type = ceres::DENSE_SCHUR;
             // options.num_threads = 2;
             options.minimizer_progress_to_stdout = false;
             options.check_gradients = false;
@@ -621,7 +619,7 @@ void scan2MapOptimization()
                 {
                     if (gmc_mu <= 1.5)
                     {
-                        options.max_num_iterations = 10;
+                        options.max_num_iterations = 1;
                         options.max_solver_time_in_seconds = 0.01;
                         ceres::Solve(options, &problem, &summary);
                         std::cout << summary.BriefReport() << std::endl;
@@ -630,7 +628,7 @@ void scan2MapOptimization()
                         options.max_num_iterations = 1;
                         ceres::Solve(options, &problem, &summary);
                     }
-                    gmc_mu /= 1.4;
+                    gmc_mu /= 1.2;
                     loss_function->Reset(new ceres::SurrogateGemanMcClureLoss(gmc_s, gmc_mu), ceres::TAKE_OWNERSHIP);
                 }
             } else

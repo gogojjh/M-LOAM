@@ -531,7 +531,7 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
                 // TODO:
                 // float epsilon = 0.1;
                 // float g = std::log(1 / 0.1); // 2.3026
-                size_t size_rnd_subset = static_cast<size_t>(2.3 * num_all_features / num_use_features);
+                size_t size_rnd_subset = static_cast<size_t>(1.0 * num_all_features / num_use_features);
                 // LOG_EVERY_N(INFO, 20) << "[goodFeatureMatching] size of matrix subset: " << size_rnd_subset;
 
                 std::priority_queue<FeatureWithScore, std::vector<FeatureWithScore>, std::less<FeatureWithScore>> heap_subset;

@@ -98,7 +98,7 @@ class Estimator
                               const PointPlaneFeature &feature,
                               Eigen::MatrixXd &mat_jaco);
                               
-    void goodFeatureSelect(std::vector<PointPlaneFeature> &all_features,
+    void goodFeatureSelect(const std::vector<PointPlaneFeature> &all_features,
                            std::vector<size_t> &sel_feature_idx,
                            const double *para_pose_pivot,
                            const double *para_pose_other,

@@ -589,7 +589,7 @@ void Estimator::optimizeMap()
     // loss_function = new ceres::CauchyLoss(1.0);
     // ceres: set options and solve the non-linear equation
     ceres::Solver::Options options;
-    options.linear_solver_type = ceres::DENSE_QR;
+    options.linear_solver_type = ceres::DENSE_SCHUR;
     // options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
     // options.num_threads = 1;
     // options.trust_region_strategy_type = ceres::DOGLEG;
@@ -1375,7 +1375,7 @@ void Estimator::evaluateFeatJacobian(const Pose &pose_pivot,
     delete[] param;
 }
 
-void Estimator::goodFeatureSelect(std::vector<PointPlaneFeature> &all_features,
+void Estimator::goodFeatureSelect(const std::vector<PointPlaneFeature> &all_features,
                                   std::vector<size_t> &sel_feature_idx,
                                   const double *para_pose_pivot,
                                   const double *para_pose_other,
@@ -1399,7 +1399,7 @@ void Estimator::goodFeatureSelect(std::vector<PointPlaneFeature> &all_features,
     }
     sel_feature_idx.resize(num_use_features);
 
-    size_t size_rnd_subset = static_cast<size_t>(1.0 * num_all_features / num_use_features);
+    size_t size_rnd_subset = static_cast<size_t>(2.3026 * num_all_features / num_use_features);
     Eigen::Matrix<double, 6, 6> sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
     size_t num_sel_features = 0;
     TicToc t_sel_feature;
