@@ -35,12 +35,12 @@ public:
     void saveMapStatistics(const string &map_filename,
                            const string &map_factor_filename,
                            const string &map_eig_filename,
-                           const string &map_pose_uct_filename,
+                           const string &map_sp_filename,
                            const string &map_logdet_filename,
                            const nav_msgs::Path &laser_aft_mapped_path,
                            const std::vector<Eigen::Matrix<double, 1, 6>> &d_factor_list,
                            const std::vector<Eigen::Matrix<double, 6, 6>> &d_eigvec_list,
-                           const std::vector<double> &cov_mapping_list,
+                           const std::vector<std::vector<double> > &mapping_sp_list,
                            const std::vector<double> &logdet_H_list);
 
     void saveMapTimeStatistics(const string &map_time_filename,
@@ -172,12 +172,12 @@ void SaveStatistics::saveOdomTimeStatistics(const string &filename,
 void SaveStatistics::saveMapStatistics(const string &map_filename,
                                        const string &map_factor_filename,
                                        const string &map_eig_filename,
-                                       const string &map_pose_uct_filename,
+                                       const string &map_sp_filename,
                                        const string &map_logdet_filename,
                                        const nav_msgs::Path &laser_aft_mapped_path,
                                        const std::vector<Eigen::Matrix<double, 1, 6>> &d_factor_list,
                                        const std::vector<Eigen::Matrix<double, 6, 6>> &d_eigvec_list,
-                                       const std::vector<double> &cov_mapping_list,
+                                       const std::vector<std::vector<double> > &mapping_sp_list,
                                        const std::vector<double> &logdet_H_list)
 {
     printf("Saving mapping statistics\n");
@@ -212,11 +212,22 @@ void SaveStatistics::saveMapStatistics(const string &map_filename,
         fout << d_eigvec_list[i] << std::endl;
     fout.close();
 
-    fout.open(map_pose_uct_filename.c_str(), std::ios::out);
-    fout << "cov_mapping_uncertainty" << std::endl;
+    fout.open(map_sp_filename.c_str(), std::ios::out);
+    fout << "mapping spectral property: trace, logdet, minimun eigenvalue (first row as the mean)" << std::endl;
     fout.precision(8);
-    for (size_t i = 0; i < cov_mapping_list.size(); i++)
-        fout << cov_mapping_list[i] << std::endl;
+    double m_trace = 0, m_logdet = 0, m_eig = 0;
+    for (size_t i = 0; i < mapping_sp_list.size(); i++)
+    {
+        m_trace += mapping_sp_list[i][0] / mapping_sp_list.size();
+        m_logdet += mapping_sp_list[i][1] / mapping_sp_list.size();
+        m_eig += mapping_sp_list[i][2] / mapping_sp_list.size();
+    }
+    fout << m_trace << ", " << m_logdet << ", " << m_eig << std::endl;
+    for (size_t i = 0; i < mapping_sp_list.size(); i++)
+    {
+        for (const double data : mapping_sp_list[i]) fout << data << ", ";
+        fout << std::endl;
+    }    
     fout.close();
 
     fout.open(map_logdet_filename.c_str(), std::ios::out);

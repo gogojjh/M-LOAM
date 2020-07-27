@@ -81,7 +81,7 @@
 #define GLOBALMAP_KF_RADIUS 1000.0
 #define DISTANCE_KEYFRAMES 1.0
 #define ORIENTATION_KEYFRAMES 3
-#define MAX_FEATURE_SELECT_TIME 30 // 10ms
+#define MAX_FEATURE_SELECT_TIME 20 // 10ms
 #define MAX_RANDOM_QUEUE_TIME 20
 #define LOGDET_H_THRESHOLD 64 // TODO
 #define GF_RATIO_SIGMA 1.20
@@ -91,10 +91,10 @@ DEFINE_bool(result_save, true, "save or not save the results");
 DEFINE_string(config_file, "config.yaml", "the yaml config file");
 DEFINE_string(output_path, "", "the path ouf saving results");
 DEFINE_bool(with_ua, true, "with or without the awareness of uncertainty");
-DEFINE_string(gf_method, "gd_float", "good feature selection method: gd_fix, gd_float, rnd, ds");
-DEFINE_double(gf_ratio_ini, 0.2, "with or without the good features selection");
+DEFINE_string(gf_method, "wo-gf", "good feature selection method: wo-tf, gd-fix, gd-float, rnd, ds");
+DEFINE_double(gf_ratio_ini, 1.0, "with or without the good features selection");
 DEFINE_string(loss_mode, "gmc", "loss function type: huber, gmc");
-DEFINE_bool(gnc, true, "graduated non-convexity");
+DEFINE_bool(gnc, false, "graduated non-convexity");
 DEFINE_bool(debug_mode, false, "debug mode");
 
 FeatureExtract f_extract;
@@ -364,17 +364,15 @@ void evalFullHessian(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_from_map
     // fout.close();
 }
 
-double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_from_map,
-                           const PointICovCloud &laser_map,
-                           const PointICovCloud &laser_cloud,
-                           const Pose &pose_local,
-                           std::vector<PointPlaneFeature> &all_features,
-                           std::vector<size_t> &sel_feature_idx,
-                           const char feature_type,
-                           const string gf_method,
-                           const double gf_ratio = 0.2,
-                           const double lambda = 10.0,
-                           bool ratio_change_flag = false)
+void goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_from_map,
+                         const PointICovCloud &laser_map,
+                         const PointICovCloud &laser_cloud,
+                         const Pose &pose_local,
+                         std::vector<PointPlaneFeature> &all_features,
+                         std::vector<size_t> &sel_feature_idx,
+                         const char feature_type,
+                         const string gf_method,
+                         const double gf_ratio)
 {
     size_t num_all_features = laser_cloud.size();
     all_features.resize(num_all_features);
@@ -384,15 +382,48 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
     std::iota(all_feature_idx.begin(), all_feature_idx.end(), 0);
 
     size_t num_use_features;
-    double cur_gf_ratio = gf_ratio;
-    double pre_gf_ratio = cur_gf_ratio;
-    num_use_features = static_cast<size_t>(num_all_features * cur_gf_ratio);
+    num_use_features = static_cast<size_t>(num_all_features * gf_ratio);
     sel_feature_idx.resize(num_use_features);
     size_t num_sel_features = 0;
 
     size_t n_neigh = 5;
     bool b_match;
-    if (gf_method == "rnd")
+    if (gf_ratio == 1.0)
+    {
+        for (size_t j = 0; j < all_feature_idx.size(); j++)
+        {
+            size_t que_idx = all_feature_idx[j];
+            b_match = false;
+            if (feature_type == 's')
+            {
+                b_match = f_extract.matchSurfPointFromMap(kdtree_from_map,
+                                                          laser_map,
+                                                          laser_cloud.points[que_idx],
+                                                          pose_local,
+                                                          all_features[que_idx],
+                                                          que_idx,
+                                                          n_neigh,
+                                                          false);
+            }
+            else if (feature_type == 'c')
+            {
+                b_match = f_extract.matchCornerPointFromMap(kdtree_from_map,
+                                                            laser_map,
+                                                            laser_cloud.points[que_idx],
+                                                            pose_local,
+                                                            all_features[que_idx],
+                                                            que_idx,
+                                                            n_neigh,
+                                                            false);
+            }
+            if (b_match)
+            {
+                sel_feature_idx[num_sel_features] = que_idx;
+                num_sel_features++;
+            }
+        }
+    }  
+    else if (gf_method == "rnd")
     {
         size_t num_rnd_que;
         TicToc t_sel_feature;
@@ -510,12 +541,9 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
             }            
         }
     } 
-    else
+    else if (gf_method == "gd_fix" || gf_method == "gd_float")
     {
-        if (gf_method == "gd_fix") ratio_change_flag = false;
         Eigen::Matrix<double, 6, 6> sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
-        double pre_cost = 0;
-        double cur_cost = 0;
         stringstream ss;
         while (true)
         {
@@ -528,7 +556,7 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
                     (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
                         break;
 
-                size_t size_rnd_subset = static_cast<size_t>(2.3 * num_all_features / num_use_features); // 1.0/2.3
+                size_t size_rnd_subset = static_cast<size_t>(1.0 * num_all_features / num_use_features); // 1.0/2.3
                 // LOG_EVERY_N(INFO, 20) << "[goodFeatureMatching] size of matrix subset: " << size_rnd_subset;
                 std::priority_queue<FeatureWithScore, std::vector<FeatureWithScore>, std::less<FeatureWithScore>> heap_subset;
 
@@ -628,35 +656,37 @@ double goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_fr
             {
                 std::cerr << "[goodFeatureMatching]: early termination!" << std::endl;
                 LOG(INFO) << "early termination: feature_type " << feature_type << ", " << num_rnd_que << ", " << t_sel_feature.toc();
-                num_sel_features = static_cast<size_t>(num_all_features * pre_gf_ratio);
+                // num_sel_features = static_cast<size_t>(num_all_features * gf_ratio);
                 break;
             }
 
-            if (!ratio_change_flag) break;
+            break;
 
-            cur_cost = common::logDet(sub_mat_H) - lambda * 1e-3 * num_use_features;
-            ss << cur_cost << "(" << cur_gf_ratio << ") ";
-            if (cur_cost <= pre_cost) 
-            {
-                std::cout << ss.str() << std::endl;
-                num_sel_features = static_cast<size_t>(num_all_features * pre_gf_ratio);
-                break;
-            } else
-            {
-                pre_cost = cur_cost;
-                pre_gf_ratio = std::min(1.0, cur_gf_ratio);
-                cur_gf_ratio = GF_RATIO_SIGMA * cur_gf_ratio;
-                if (cur_gf_ratio > 1.0) break;
-                num_use_features = static_cast<size_t>(num_all_features * cur_gf_ratio);
-                sel_feature_idx.resize(num_use_features);
-            }
+            // if (!ratio_change_flag) break;
+
+            // cur_cost = common::logDet(sub_mat_H) - lambda * 1e-3 * num_use_features;
+            // ss << cur_cost << "(" << cur_gf_ratio << ") ";
+            // if (cur_cost <= pre_cost) 
+            // {
+            //     std::cout << ss.str() << std::endl;
+            //     num_sel_features = static_cast<size_t>(num_all_features * pre_gf_ratio);
+            //     break;
+            // } else
+            // {
+            //     pre_cost = cur_cost;
+            //     pre_gf_ratio = std::min(1.0, cur_gf_ratio);
+            //     cur_gf_ratio = GF_RATIO_SIGMA * cur_gf_ratio;
+            //     if (cur_gf_ratio > 1.0) break;
+            //     num_use_features = static_cast<size_t>(num_all_features * cur_gf_ratio);
+            //     sel_feature_idx.resize(num_use_features);
+            // }
         }
     } 
 
     sel_feature_idx.resize(num_sel_features);
     printf("gf_method: %s, num of all features: %lu, sel features: %lu\n", gf_method.c_str(), num_all_features, num_sel_features);
     // printf("logdet of selected sub H: %f\n", common::logDet(sub_mat_H));
-    return pre_gf_ratio;
+    // return pre_gf_ratio;
 }
 
 void writeFeature(const PointICovCloud &laser_cloud,

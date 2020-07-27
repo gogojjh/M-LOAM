@@ -243,11 +243,11 @@ int main(int argc, char **argv)
 
     MLOAM_RESULT_SAVE = FLAGS_result_save;
     OUTPUT_FOLDER = FLAGS_output_path;
-    MLOAM_ODOM_PATH = OUTPUT_FOLDER + "stamped_mloam_odom_estimate_" + to_string(ODOM_GF_RATIO) + ".txt";
-    MLOAM_GPS_PATH = OUTPUT_FOLDER + "stamped_gps.txt";
-    MLOAM_GT_PATH = OUTPUT_FOLDER + "stamped_groundtruth.txt";
-    EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
-    EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "calib_eig.txt";
+    MLOAM_ODOM_PATH = OUTPUT_FOLDER + "traj/stamped_mloam_odom_estimate_" + to_string(ODOM_GF_RATIO) + ".txt";
+    MLOAM_GPS_PATH = OUTPUT_FOLDER + "traj/stamped_gps.txt";
+    MLOAM_GT_PATH = OUTPUT_FOLDER + "traj/stamped_groundtruth.txt";
+    EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "others/extrinsic_parameter.txt";
+    EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "others/calib_eig.txt";
     printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
     size_t START_IDX = FLAGS_start_idx;
     size_t END_IDX = FLAGS_end_idx;

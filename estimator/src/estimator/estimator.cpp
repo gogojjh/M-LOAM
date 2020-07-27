@@ -298,31 +298,31 @@ void Estimator::inputCloud(const double &t, const std::vector<PointITimeCloud> &
     if (!MULTIPLE_THREAD) processMeasurements();
 }
 
-void Estimator::inputCloud(const double &t, const PointCloud &laser_cloud_in)
-{
-    TicToc measurement_pre_time;
-    std::vector<cloudFeature> feature_frame(1);
+// void Estimator::inputCloud(const double &t, const PointCloud &laser_cloud_in)
+// {
+//     TicToc measurement_pre_time;
+//     std::vector<cloudFeature> feature_frame(1);
 
-    PointICloud laser_cloud;
-    f_extract_.calTimestamp(laser_cloud_in, laser_cloud);
+//     PointICloud laser_cloud;
+//     f_extract_.calTimestamp(laser_cloud_in, laser_cloud);
 
-    PointICloud laser_cloud_segment, laser_cloud_outlier;
-    ScanInfo scan_info(N_SCANS, SEGMENT_CLOUD);
-    img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, laser_cloud_outlier, scan_info);
-    printf("size of after segmentation: %lu\n", laser_cloud_segment.size());
+//     PointICloud laser_cloud_segment, laser_cloud_outlier;
+//     ScanInfo scan_info(N_SCANS, SEGMENT_CLOUD);
+//     img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, laser_cloud_outlier, scan_info);
+//     printf("size of after segmentation: %lu\n", laser_cloud_segment.size());
 
-    f_extract_.extractCloud(laser_cloud_segment, scan_info, feature_frame[0]);
-    feature_frame[0].insert(pair<std::string, PointICloud>("laser_cloud_outlier", laser_cloud_outlier));
-    total_corner_feature_ += feature_frame[0]["corner_points_less_sharp"].size();
-    total_surf_feature_ += feature_frame[0]["surf_points_less_flat"].size();
-    printf("meaPre time: %fms\n", measurement_pre_time.toc());
-    total_measurement_pre_time_.push_back(measurement_pre_time.toc());
+//     f_extract_.extractCloud(laser_cloud_segment, scan_info, feature_frame[0]);
+//     feature_frame[0].insert(pair<std::string, PointICloud>("laser_cloud_outlier", laser_cloud_outlier));
+//     total_corner_feature_ += feature_frame[0]["corner_points_less_sharp"].size();
+//     total_surf_feature_ += feature_frame[0]["surf_points_less_flat"].size();
+//     printf("meaPre time: %fms\n", measurement_pre_time.toc());
+//     total_measurement_pre_time_.push_back(measurement_pre_time.toc());
 
-    m_buf_.lock();
-    feature_buf_.push(make_pair(t, feature_frame));
-    m_buf_.unlock();
-    if (!MULTIPLE_THREAD) processMeasurements();
-}
+//     m_buf_.lock();
+//     feature_buf_.push(make_pair(t, feature_frame));
+//     m_buf_.unlock();
+//     if (!MULTIPLE_THREAD) processMeasurements();
+// }
 
 void Estimator::processMeasurements()
 {

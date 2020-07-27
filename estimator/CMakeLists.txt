@@ -102,6 +102,9 @@ target_link_libraries(mloam_node_rhd mloam_lib_1 mloam_lib_2)
 add_executable(mloam_node_rv_oxford src/rosNodeRVOxford.cpp)
 target_link_libraries(mloam_node_rv_oxford mloam_lib_1 mloam_lib_2)
 
+add_executable(mloam_node_rv_kitti src/rosNodeRVKITTI.cpp)
+target_link_libraries(mloam_node_rv_kitti mloam_lib_1 mloam_lib_2)
+
 #add_executable(lidar_mapper src/lidarMapper/lidar_mapper.cpp)
 #target_link_libraries(lidar_mapper mloam_lib_1)
 

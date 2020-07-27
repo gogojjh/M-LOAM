@@ -93,6 +93,9 @@ target_link_libraries(test_merge_pointcloud_rhd ${catkin_LIBRARIES} ${PCL_LIBRAR
 # add_executable(test_generate_full_map test_generate_full_map.cpp)
 # target_link_libraries(test_generate_full_map poseIO mloam_lib_1)
 
+add_executable(test_rnd src/test_rnd.cpp)
+target_link_libraries(test_rnd)
+
 add_executable(test_generate_bag_from_data_oxford 
 	src/test_generate_bag_from_data_oxford.cpp ../estimator/src/estimator/pose.cpp)
 target_link_libraries(test_generate_bag_from_data_oxford

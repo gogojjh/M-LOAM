@@ -51,8 +51,8 @@ void roiCloudFilter(pcl::PointCloud<PointType> &laser_cloud, const double &roi_r
 // a: last frame; c: frame for points capturing
 // p^a = T(s)*p^c
 template <typename PointType>
-void TransformToStart(const PointType &pi, PointType &po, const Pose &pose,
-                      const bool &b_distortion, const float &scan_period = 0.1)
+inline void TransformToStart(const PointType &pi, PointType &po, const Pose &pose,
+                             const bool &b_distortion, const float &scan_period = 0.1)
 {
     if (!pcl::traits::has_field<PointType, pcl::fields::intensity>::value)
     {
@@ -78,8 +78,8 @@ void TransformToStart(const PointType &pi, PointType &po, const Pose &pose,
 // a: last frame; b: current frame; c: frame for points capturing
 // p^a = T(s)*p^c, p^b = T^(-1)*T(s)*p^c
 template <typename PointType>
-void TransformToEnd(const PointType &pi, PointType &po, const Pose &pose,
-                    const bool &b_distortion, const float &scan_period = 0.1)
+inline void TransformToEnd(const PointType &pi, PointType &po, const Pose &pose,
+                           const bool &b_distortion, const float &scan_period = 0.1)
 {
     if (!pcl::traits::has_field<PointType, pcl::fields::intensity>::value)
     {
@@ -97,7 +97,7 @@ void TransformToEnd(const PointType &pi, PointType &po, const Pose &pose,
 }
 
 template <typename PointType>
-void pointAssociateToMap(const PointType &pi, PointType &po, const Pose &pose)
+inline void pointAssociateToMap(const PointType &pi, PointType &po, const Pose &pose)
 {
     if (!pcl::traits::has_field<PointType, pcl::fields::intensity>::value)
     {
@@ -114,7 +114,7 @@ void pointAssociateToMap(const PointType &pi, PointType &po, const Pose &pose)
 }
 
 template <typename PointType>
-void pointAssociateTobeMapped(const PointType &pi, PointType &po, const Pose &pose)
+inline void pointAssociateTobeMapped(const PointType &pi, PointType &po, const Pose &pose)
 {
     if (!pcl::traits::has_field<PointType, pcl::fields::intensity>::value)
     {
@@ -131,7 +131,7 @@ void pointAssociateTobeMapped(const PointType &pi, PointType &po, const Pose &po
 }
 
 template <typename T>
-void CRSMatrix2EigenMatrix(const ceres::CRSMatrix &crs_matrix, Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> &eigen_matrix)
+inline void CRSMatrix2EigenMatrix(const ceres::CRSMatrix &crs_matrix, Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> &eigen_matrix)
 {
     eigen_matrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>::Zero(crs_matrix.num_rows, crs_matrix.num_cols);
     for (auto row = 0; row < crs_matrix.num_rows; row++)
@@ -147,7 +147,7 @@ void CRSMatrix2EigenMatrix(const ceres::CRSMatrix &crs_matrix, Eigen::Matrix<T, 
 }
 
 template <typename T>
-void CRSMatrix2EigenMatrix(const ceres::CRSMatrix &crs_matrix, Eigen::SparseMatrix<T, Eigen::RowMajor> &eigen_matrix)
+inline void CRSMatrix2EigenMatrix(const ceres::CRSMatrix &crs_matrix, Eigen::SparseMatrix<T, Eigen::RowMajor> &eigen_matrix)
 {
     eigen_matrix.resize(crs_matrix.num_rows, crs_matrix.num_cols);
     for (auto row = 0; row < crs_matrix.num_rows; row++)

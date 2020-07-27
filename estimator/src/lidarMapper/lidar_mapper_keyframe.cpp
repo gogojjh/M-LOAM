@@ -118,7 +118,7 @@ Eigen::Matrix<double, 6, 6> mat_P;
 Eigen::Matrix<double, 6, 6> cov_mapping;
 
 std::vector<double> logdet_H_list;
-std::vector<double> cov_mapping_list;
+std::vector<std::vector<double> > mapping_sp_list;
 std::vector<double> total_match_feature;
 std::vector<double> total_solver;
 std::vector<double> total_mapping;
@@ -485,18 +485,57 @@ void scan2MapOptimization()
                     }
                     double normalize_logdet_H = common::logDet(mat_H * 134, true) - mat_H.rows() * std::log(1.0 * total_feat_num);
                     logdet_H_list.push_back(normalize_logdet_H);
-                    if (normalize_logdet_H >= LOGDET_H_THRESHOLD)
+
+                    if (FLAGS_gf_method == "wo_gf") 
                     {
-                        // constraint_state = "wc";
-                        lambda = LAMBDA_1;
-                    } else 
-                    {
-                        // constraint_state = "dg";
-                        lambda = LAMBDA_2;
+                        gf_ratio_cur = 1.0;
                     }
-                    std::cout << common::YELLOW << "lambda: " << lambda << common::RESET << std::endl;
-                    ratio_change_flag = true; 
-                    gf_ratio_cur = std::min(1.0, FLAGS_gf_ratio_ini);
+                    if (FLAGS_gf_method == "gd_fix") 
+                    {
+                        gf_ratio_cur = FLAGS_gf_ratio_ini;
+                    } 
+                    else if (FLAGS_gf_method == "rnd" || FLAGS_gf_method == "fps" || FLAGS_gf_method == "gd_float") 
+                    {
+                        if (normalize_logdet_H >= 72)
+                        {
+                            gf_ratio_cur = FLAGS_gf_ratio_ini;
+                        } 
+                        else if (normalize_logdet_H <= 65)
+                        {
+                            gf_ratio_cur = 1.0;
+                        }
+                        else 
+                        {
+                            gf_ratio_cur = FLAGS_gf_ratio_ini + (1.0 - FLAGS_gf_ratio_ini) * (72 - normalize_logdet_H) / 7.0;
+                        }
+                    } 
+
+                    // else if (normalize_logdet_H >= 70)
+                    // {
+                    //     gf_ratio_cur = 0.4;
+                    // }
+                    // else if (normalize_logdet_H >= 67.5)
+                    // {
+                    //     gf_ratio_cur = 0.6;
+                    // }
+                    // else if (normalize_logdet_H >= 65)
+                    // {
+                    //     gf_ratio_cur = 0.8;
+                    // }
+
+                    // if (normalize_logdet_H >= LOGDET_H_THRESHOLD)
+                    // {
+                    //     // constraint_state = "wc";
+                    //     lambda = LAMBDA_1;
+                    // } else 
+                    // {
+                    //     // constraint_state = "dg";
+                    //     lambda = LAMBDA_2;
+                    // }
+                    // std::cout << common::YELLOW << "lambda: " << lambda << common::RESET << std::endl;
+                    // ratio_change_flag = true; 
+                    // gf_ratio_cur = std::min(1.0, FLAGS_gf_ratio_ini);
+                    std::cout << common::YELLOW << "current lambda: " << normalize_logdet_H << ", gf_ratio: " << gf_ratio_cur << common::RESET << std::endl;
                 }
             }
 
@@ -507,32 +546,28 @@ void scan2MapOptimization()
             TicToc t_match_features;
             if (POINT_PLANE_FACTOR)
             {
-                gf_ratio_cur = goodFeatureMatching(kdtree_surf_from_map,
-                                                   *laser_cloud_surf_from_map_cov_ds,
-                                                   *laser_cloud_surf_cov,
-                                                   pose_wmap_curr,
-                                                   all_surf_features,
-                                                   sel_surf_feature_idx,
-                                                   's',
-                                                   FLAGS_gf_method,
-                                                   gf_ratio_cur,
-                                                   lambda,
-                                                   ratio_change_flag);
+                goodFeatureMatching(kdtree_surf_from_map,
+                                    *laser_cloud_surf_from_map_cov_ds,
+                                    *laser_cloud_surf_cov,
+                                    pose_wmap_curr,
+                                    all_surf_features,
+                                    sel_surf_feature_idx,
+                                    's',
+                                    FLAGS_gf_method,
+                                    gf_ratio_cur);
                 surf_num = sel_surf_feature_idx.size();
             }
             if (POINT_EDGE_FACTOR)
             {
-                gf_ratio_cur = goodFeatureMatching(kdtree_corner_from_map,
-                                                   *laser_cloud_corner_from_map_cov_ds,
-                                                   *laser_cloud_corner_cov,
-                                                   pose_wmap_curr,
-                                                   all_corner_features,
-                                                   sel_corner_feature_idx,
-                                                   'c',
-                                                   FLAGS_gf_method,
-                                                   gf_ratio_cur,
-                                                   lambda,
-                                                   false);
+                goodFeatureMatching(kdtree_corner_from_map,
+                                    *laser_cloud_corner_from_map_cov_ds,
+                                    *laser_cloud_corner_cov,
+                                    pose_wmap_curr,
+                                    all_corner_features,
+                                    sel_corner_feature_idx,
+                                    'c',
+                                    FLAGS_gf_method,
+                                    gf_ratio_cur);
                 corner_num = sel_corner_feature_idx.size();
             }
             printf("matching features time: %fms\n", t_match_features.toc());
@@ -592,11 +627,19 @@ void scan2MapOptimization()
                 Eigen::Matrix<double, 6, 6> mat_H;
                 evalHessian(jaco, mat_H);
                 evalDegenracy(mat_H, local_parameterization);
-                cov_mapping = mat_H.inverse(); // covariance of sensor noise: A New Approach to 3D ICP Covariance Estimation/ Censi's approach
-                cov_mapping_list.push_back(cov_mapping.trace());
                 is_degenerate = local_parameterization->is_degenerate_;
-                LOG_EVERY_N(INFO, 1) << "logdet of H: " << common::logDet(mat_H * 134, true);
-                LOG_EVERY_N(INFO, 1) << "pose covariance trace: " << cov_mapping.trace();
+                
+                cov_mapping = mat_H.inverse(); // covariance of least-sqares problem
+                double tr = cov_mapping.trace();
+                double logd = common::logDet(mat_H * 134, true);
+                Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6> > esolver(mat_H * 134);
+                Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real();	
+                double mini_ev = mat_E(0, 0);
+
+                std::vector<double> sp{tr, logd, mini_ev};
+                mapping_sp_list.push_back(sp);
+
+                LOG_EVERY_N(INFO, 1) << "trace: " << tr << ", logdet: " << logd << ", min_ev: " << mini_ev;
                 printf("evaluate H: %fms\n", t_eval_H.toc());
             }
             else if (is_degenerate)
@@ -628,14 +671,14 @@ void scan2MapOptimization()
                     //     options.max_num_iterations = 1;
                     //     ceres::Solve(options, &problem, &summary);
                     // }
-                    options.max_num_iterations = 1;
+                    options.max_num_iterations = 2;
                     ceres::Solve(options, &problem, &summary);                    
                     gmc_mu /= 1.2;
                     loss_function->Reset(new ceres::SurrogateGemanMcClureLoss(gmc_s, gmc_mu), ceres::TAKE_OWNERSHIP);
                 }
             } else
             {
-                options.max_num_iterations = 6;
+                options.max_num_iterations = 12;
                 options.max_solver_time_in_seconds = 0.04;
                 ceres::Solve(options, &problem, &summary);
                 std::cout << summary.BriefReport() << std::endl;
@@ -1183,16 +1226,16 @@ void sigintHandler(int sig)
     if (MLOAM_RESULT_SAVE)
     {
         save_statistics.saveMapStatistics(MLOAM_MAP_PATH,
-                                          OUTPUT_FOLDER + "mapping_factor.txt",
-                                          OUTPUT_FOLDER + "mapping_d_eigvec.txt",
-                                          OUTPUT_FOLDER + "mapping_pose_uncertainty.txt",
-                                          OUTPUT_FOLDER + "mapping_logdet_H.txt",
+                                          OUTPUT_FOLDER + "others/mapping_factor.txt",
+                                          OUTPUT_FOLDER + "others/mapping_d_eigvec.txt",
+                                          OUTPUT_FOLDER + "others/mapping_sp_" + FLAGS_gf_method + "_" + std::to_string(FLAGS_gf_ratio_ini) + ".txt",
+                                          OUTPUT_FOLDER + "others/mapping_logdet_H.txt",
                                           laser_after_mapped_path,
                                           d_factor_list,
                                           d_eigvec_list,
-                                          cov_mapping_list,
+                                          mapping_sp_list,
                                           logdet_H_list);
-        save_statistics.saveMapTimeStatistics(OUTPUT_FOLDER + "time_mloam_mapping_" + FLAGS_gf_method + "_" + std::to_string(FLAGS_gf_ratio_ini) + "_" + FLAGS_loss_mode + "_" + std::to_string(int(FLAGS_gnc)) + ".txt",
+        save_statistics.saveMapTimeStatistics(OUTPUT_FOLDER + "time/time_mloam_mapping_" + FLAGS_gf_method + "_" + std::to_string(FLAGS_gf_ratio_ini) + "_" + FLAGS_loss_mode + "_" + std::to_string(int(FLAGS_gnc)) + ".txt",
                                               total_match_feature,
                                               total_solver,
                                               total_mapping);
@@ -1227,14 +1270,14 @@ int main(int argc, char **argv)
     stringstream ss;
 	if (with_ua_flag)
     {
-        ss << OUTPUT_FOLDER << "stamped_mloam_map_estimate_"
-           << FLAGS_gf_method << "_" << to_string(gf_ratio_cur)
+        ss << OUTPUT_FOLDER << "traj/stamped_mloam_map_estimate_"
+           << FLAGS_gf_method << "_" << to_string(FLAGS_gf_ratio_ini)
            << "_" << FLAGS_loss_mode << "_" << int(FLAGS_gnc) << ".txt";
     }
     else
     {
-        ss << OUTPUT_FOLDER << "stamped_mloam_map_wo_ua_estimate"
-           << FLAGS_gf_method << "_" << to_string(gf_ratio_cur)
+        ss << OUTPUT_FOLDER << "traj/stamped_mloam_map_wo_ua_estimate"
+           << FLAGS_gf_method << "_" << to_string(FLAGS_gf_ratio_ini)
            << "_" << FLAGS_loss_mode << "_" << int(FLAGS_gnc) << ".txt";
     }
     MLOAM_MAP_PATH = ss.str(); 
@@ -1247,7 +1290,7 @@ int main(int argc, char **argv)
     ros::Subscriber sub_laser_cloud_outlier = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud_outlier", 2, laserCloudOutlierResHandler);
     ros::Subscriber sub_laser_cloud_surf_last = nh.subscribe<sensor_msgs::PointCloud2>("/surf_points_less_flat", 2, laserCloudSurfLastHandler);
 	ros::Subscriber sub_laser_cloud_corner_last = nh.subscribe<sensor_msgs::PointCloud2>("/corner_points_less_sharp", 2, laserCloudCornerLastHandler);
-	ros::Subscriber sub_laser_odometry = nh.subscribe<nav_msgs::Odometry>("/laser_odom_0", 5, laserOdometryHandler);
+	ros::Subscriber sub_laser_odometry = nh.subscribe<nav_msgs::Odometry>("/laser_odom", 5, laserOdometryHandler);
 	ros::Subscriber sub_extrinsic = nh.subscribe<mloam_msgs::Extrinsics>("/extrinsics", 5, extrinsicsHandler);
 
 	pub_laser_cloud_surrounding = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surround", 2);

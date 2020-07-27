@@ -6,7 +6,7 @@
 #include "../estimator/pose.h"
 
 // ****************** Barfoot's method on associating uncertainty on SE3
-Eigen::Matrix<double, 6, 6> adjointMatrix(const Eigen::Matrix4d &T)
+inline Eigen::Matrix<double, 6, 6> adjointMatrix(const Eigen::Matrix4d &T)
 {
     Eigen::Matrix<double, 6, 6> AdT = Eigen::Matrix<double, 6, 6>::Zero();
     AdT.topLeftCorner<3, 3>() = T.topLeftCorner<3, 3>();
@@ -15,13 +15,13 @@ Eigen::Matrix<double, 6, 6> adjointMatrix(const Eigen::Matrix4d &T)
     return AdT;
 }
 
-Eigen::Matrix3d covop1(const Eigen::Matrix3d &B)
+inline Eigen::Matrix3d covop1(const Eigen::Matrix3d &B)
 {
     Eigen::Matrix3d A = -B.trace() * Eigen::Matrix3d::Identity() + B;
     return A;
 }
 
-Eigen::Matrix3d covop2(const Eigen::Matrix3d &B, const Eigen::Matrix3d &C)
+inline Eigen::Matrix3d covop2(const Eigen::Matrix3d &B, const Eigen::Matrix3d &C)
 {
     Eigen::Matrix3d A = covop1(B) * covop1(C) * covop1(C * B);
     return A;
@@ -29,9 +29,9 @@ Eigen::Matrix3d covop2(const Eigen::Matrix3d &B, const Eigen::Matrix3d &C)
 
 // fixed: topLeftCorner<3, 3>()
 // dynamic: topLeftCorner(3, 3)
-void compoundPoseWithCov(const Pose &pose_1, const Eigen::Matrix<double, 6, 6> &cov_1,
-                         const Pose &pose_2, const Eigen::Matrix<double, 6, 6> &cov_2,
-                         Pose &pose_cp, Eigen::Matrix<double, 6, 6> &cov_cp, const int &method = 2)
+inline void compoundPoseWithCov(const Pose &pose_1, const Eigen::Matrix<double, 6, 6> &cov_1,
+                                const Pose &pose_2, const Eigen::Matrix<double, 6, 6> &cov_2,
+                                Pose &pose_cp, Eigen::Matrix<double, 6, 6> &cov_cp, const int &method = 2)
 {
     pose_cp.q_ = pose_1.q_ * pose_2.q_;
     pose_cp.t_ = pose_1.q_ * pose_2.t_ + pose_1.t_;
@@ -85,8 +85,8 @@ void compoundPoseWithCov(const Pose &pose_1, const Eigen::Matrix<double, 6, 6> &
 
 // fixed: topLeftCorner<3, 3>()
 // dynamic: topLeftCorner(3, 3)
-void compoundPoseWithCov(const Pose &pose_1, const Pose &pose_2,
-                         Pose &pose_cp, const int &method = 2)
+inline void compoundPoseWithCov(const Pose &pose_1, const Pose &pose_2,
+                                Pose &pose_cp, const int &method = 2)
 {
     Eigen::Matrix<double, 6, 6> cov_1 = pose_1.cov_;
     Eigen::Matrix<double, 6, 6> cov_2 = pose_2.cov_;
@@ -144,7 +144,7 @@ void compoundPoseWithCov(const Pose &pose_1, const Pose &pose_2,
 }
 
 // pointToFS turns a 4x1 homogeneous point into a special 4x6 matrix
-Eigen::Matrix<double, 4, 6> pointToFS(const Eigen::Vector4d &point)
+inline Eigen::Matrix<double, 4, 6> pointToFS(const Eigen::Vector4d &point)
 {
     Eigen::Matrix<double, 4, 6> G = Eigen::Matrix<double, 4, 6>::Zero();
     G.block<3, 3>(0, 0) = point(3) * Eigen::Matrix3d::Identity();
@@ -159,7 +159,7 @@ Eigen::Matrix<double, 4, 6> pointToFS(const Eigen::Vector4d &point)
  * cov_pose: associated covariance of the pose
  */
 template <typename PointType>
-void evalPointUncertainty(const PointType &pi, Eigen::Matrix3d &cov_point, const Pose &pose, const Eigen::Matrix<double, 6, 6> &cov_pose)
+inline void evalPointUncertainty(const PointType &pi, Eigen::Matrix3d &cov_point, const Pose &pose, const Eigen::Matrix<double, 6, 6> &cov_pose)
 {
     // THETA: diag(P, Phi, Z) includes the translation, rotation, measurement uncertainty
     Eigen::Matrix<double, 9, 9> cov_input = Eigen::Matrix<double, 9, 9>::Zero();
@@ -187,7 +187,7 @@ void evalPointUncertainty(const PointType &pi, Eigen::Matrix3d &cov_point, const
 }
 
 template <typename PointType>
-void evalPointUncertainty(const PointType &pi, Eigen::Matrix3d &cov_point, const Pose &pose)
+inline void evalPointUncertainty(const PointType &pi, Eigen::Matrix3d &cov_point, const Pose &pose)
 {
     // THETA: diag(P, Phi, Z) includes the translation, rotation, measurement uncertainty
     Eigen::Matrix<double, 9, 9> cov_input = Eigen::Matrix<double, 9, 9>::Zero();
