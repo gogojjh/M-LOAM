@@ -443,7 +443,7 @@ void scan2MapOptimization()
         {
             ceres::Problem problem;
             double gmc_s = 1.0;
-            double gmc_mu = 6.0;
+            double gmc_mu = 10.0;
             ceres::LossFunctionWrapper *loss_function;
             if (FLAGS_loss_mode == "huber")
             {
@@ -482,7 +482,7 @@ void scan2MapOptimization()
                         evalFullHessian(kdtree_corner_from_map, *laser_cloud_corner_from_map_cov_ds,
                                         *laser_cloud_corner_cov, pose_wmap_curr, 'c', mat_H, total_feat_num);
                     }
-                    double normalize_logdet_H = common::logDet(mat_H * 134, true) - mat_H.rows() * std::log(1.0 * total_feat_num);
+                    double normalize_logdet_H = common::logDet(mat_H, true) - mat_H.rows() * std::log(1.0 * total_feat_num);
                     logdet_H_list.push_back(normalize_logdet_H);
 
                     if (FLAGS_gf_method == "wo_gf") 
@@ -495,11 +495,11 @@ void scan2MapOptimization()
                     } 
                     else if (FLAGS_gf_method == "gd_float") 
                     {
-                        if (normalize_logdet_H > 70)
+                        if (normalize_logdet_H > 40)
                         {
                             gf_ratio_cur = FLAGS_gf_ratio_ini;
                         } 
-                        else if (normalize_logdet_H <= 70)
+                        else if (normalize_logdet_H <= 40)
                         {
                             gf_ratio_cur = 0.8;
                         }
@@ -630,16 +630,16 @@ void scan2MapOptimization()
                 
                 cov_mapping = mat_H.inverse(); // covariance of least-sqares problem
                 double tr = cov_mapping.trace();
-                double logd = common::logDet(mat_H * 134, true);
-                Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6> > esolver(mat_H * 134);
+                double logd = common::logDet(mat_H, true);
+                Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6> > esolver(mat_H);
                 Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real();	
                 double mini_ev = mat_E(0, 0);
 
                 std::vector<double> sp{tr, logd, mini_ev};
                 mapping_sp_list.push_back(sp);
 
-                LOG_EVERY_N(INFO, 1) << "trace: " << tr << ", logdet: " << logd 
-                                     << ", min_ev: " << mini_ev << "(" << mat_E(0, 1) << ")";
+                LOG_EVERY_N(INFO, 20) << "trace: " << tr << ", logdet: " << logd 
+                                      << ", min_ev: " << mini_ev;
                 printf("evaluate H: %fms\n", t_eval_H.toc());
             }
             else if (is_degenerate)
@@ -656,28 +656,28 @@ void scan2MapOptimization()
             options.minimizer_progress_to_stdout = false;
             options.check_gradients = false;
             options.gradient_check_relative_precision = 1e-4;
-            if (FLAGS_gnc) 
+            if (FLAGS_gnc)
             {
-                while (gmc_mu >= 2.5)
+                while (gmc_mu >= 2)
                 {
-                    if (gmc_mu <= 3.0)
+                    if (gmc_mu <= 3)
                     {
-                        options.max_num_iterations = 15;
-                        options.max_solver_time_in_seconds = 0.015;
+                        options.max_num_iterations = 20;
+                        options.max_solver_time_in_seconds = 0.02;
                         ceres::Solve(options, &problem, &summary);
                         std::cout << summary.BriefReport() << std::endl;
-                    } else
+                    }
+                    else
                     {
                         options.max_num_iterations = 1;
                         ceres::Solve(options, &problem, &summary);
                     }
-                    ceres::Solve(options, &problem, &summary);                    
-                    gmc_mu /= 1.2;
+                    gmc_mu /= 1.4;
                     loss_function->Reset(new ceres::SurrogateGemanMcClureLoss(gmc_s, gmc_mu), ceres::TAKE_OWNERSHIP);
                 }
-            } else
+            }
+            else
             {
-
                 options.max_num_iterations = 30;
                 options.max_solver_time_in_seconds = 0.03;
                 ceres::Solve(options, &problem, &summary);

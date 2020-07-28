@@ -84,9 +84,6 @@
 #define ORIENTATION_KEYFRAMES 3
 #define MAX_FEATURE_SELECT_TIME 20 // 10ms
 #define MAX_RANDOM_QUEUE_TIME 20
-#define LOGDET_H_THRESHOLD 64 // TODO
-#define GF_RATIO_SIGMA 1.20
-#define LAMBDA_SCALAR 0.003 // TODO
 
 DEFINE_bool(result_save, true, "save or not save the results");
 DEFINE_string(config_file, "config.yaml", "the yaml config file");
@@ -387,8 +384,8 @@ void goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_from
     sel_feature_idx.resize(num_use_features);
     size_t num_sel_features = 0;
 
-    srand((unsigned)time(NULL));
-    
+    // srand((unsigned)time(NULL));
+
     size_t n_neigh = 5;
     bool b_match;
     if (gf_ratio == 1.0)

@@ -68,7 +68,7 @@ int main(int argc, char** argv)
     std::string timestamp_path = "sequences/" + sequence_number + "/times.txt";
     std::ifstream timestamp_file(dataset_folder + timestamp_path, std::ifstream::in);
 
-    std::string ground_truth_path = "results/" + sequence_number + ".txt";
+    std::string ground_truth_path = "poses" + sequence_number + ".txt";
     std::ifstream ground_truth_file(dataset_folder + ground_truth_path, std::ifstream::in);
 
     rosbag::Bag bag_out;
@@ -131,7 +131,7 @@ int main(int argc, char** argv)
 
         // read lidar point cloud
         std::stringstream lidar_data_path;
-        lidar_data_path << dataset_folder << "velodyne/sequences/" + sequence_number + "/velodyne/" 
+        lidar_data_path << dataset_folder << "sequences/" + sequence_number + "/velodyne/" 
                         << std::setfill('0') << std::setw(6) << line_num << ".bin";
         std::vector<float> lidar_data = read_lidar_data(lidar_data_path.str());
         std::cout << "totally " << lidar_data.size() / 4.0 << " points in this lidar frame \n";
