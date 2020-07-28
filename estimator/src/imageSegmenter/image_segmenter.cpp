@@ -38,12 +38,12 @@ void ImageSegmenter::setParameter(const int &vertical_scans,
         ang_bottom_ = 30.0 + 0.67;
         ground_scan_id_ = 20;
     }
-    // else if (vertical_scans_ == 64)
-    // {
-    //     std::cout << common::RED << "[ImageSegmenter::setParameter] TBD" << common::RESET << std::endl;
-    //     ang_res_y_ = 1 / 0.5;
-    //     ang_bottom_ = 15.0 + 0.1;
-    // }
+    else if (vertical_scans_ == 64)
+    {
+        ang_res_x_ = 360.0 / horizon_scans_;
+        ang_res_y_ = FLT_MAX;
+        ground_scan_id_ = 8; // 8-64 is ground
+    }
     segment_alphax_ = ang_res_x_ / 180.0 * M_PI;
     segment_alphay_ = ang_res_y_ / 180.0 * M_PI;
     segment_valid_point_num_ = segment_valid_point_num;

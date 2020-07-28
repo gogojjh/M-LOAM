@@ -95,10 +95,10 @@ void dataProcessCallback(const sensor_msgs::PointCloud2ConstPtr &cloud_msg)
 
 void gtCallback(const nav_msgs::OdometryConstPtr &gt_odom_msg)
 {
-    Pose pose_world_stereo_gt(*gt_odom_msg);
-    Pose pose_world_base_world_stereo(Eigen::Quaterniond(1, 0, 0, 0),
-                                      Eigen::Vector3d(0, 0, 0));
-    Pose pose_world_base_gt(pose_world_base_world_stereo * pose_world_stereo_gt);
+    Pose pose_world_imu_gt(*gt_odom_msg);
+    Pose pose_world_base_world_imu(Eigen::Quaterniond(1, 0, 0, 0),
+                                   Eigen::Vector3d(0, 0, 0));
+    Pose pose_world_base_gt(pose_world_base_world_imu * pose_world_imu_gt);
 
     if (laser_gt_path.poses.size() == 0)
         pose_world_ref_ini = pose_world_base_gt;

@@ -222,7 +222,7 @@ void SaveStatistics::saveMapStatistics(const string &map_filename,
         m_logdet += mapping_sp_list[i][1] / mapping_sp_list.size();
         m_eig += mapping_sp_list[i][2] / mapping_sp_list.size();
     }
-    fout << m_trace << ", " << m_logdet << ", " << m_eig << std::endl;
+    fout << m_trace << ", " << m_logdet << ", " << m_eig << ", " << std::endl;
     for (size_t i = 0; i < mapping_sp_list.size(); i++)
     {
         for (const double data : mapping_sp_list[i]) fout << data << ", ";

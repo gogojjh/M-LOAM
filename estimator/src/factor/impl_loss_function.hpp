@@ -101,12 +101,12 @@ namespace ceres
 class CERES_EXPORT GemanMcClureLoss : public LossFunction 
 {
 public:
-    explicit GemanMcClureLoss(double a) : a_(a), b_(a * a) {}
+    explicit GemanMcClureLoss(double c) : c_(c), c2_(c * c) {}
     void Evaluate(double, double*) const override;
 
 private:
-    const double a_;
-    const double b_;
+    const double c_;
+    const double c2_;
 };
 
 // SurrogateGemanMcClureLoss.
@@ -122,12 +122,12 @@ private:
 class CERES_EXPORT SurrogateGemanMcClureLoss : public LossFunction 
 {
 public:
-    explicit SurrogateGemanMcClureLoss(double a, double mu) : a_(a), b_(a * a), mu_(mu) {}
+    explicit SurrogateGemanMcClureLoss(double c, double mu) : c_(c), c2_(c * c), mu_(mu) {}
     void Evaluate(double, double*) const override;
 
 private:
-    const double a_;
-    const double b_;
+    const double c_;
+    const double c2_;
     const double mu_;
 };
 

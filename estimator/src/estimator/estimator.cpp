@@ -1398,6 +1398,7 @@ void Estimator::goodFeatureSelect(const std::vector<PointPlaneFeature> &all_feat
         num_use_features = static_cast<size_t>(num_all_features * gf_ratio);
     }
     sel_feature_idx.resize(num_use_features);
+    srand((unsigned)time(NULL));
 
     size_t size_rnd_subset = static_cast<size_t>(1.0 * num_all_features / num_use_features);
     Eigen::Matrix<double, 6, 6> sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
@@ -1493,6 +1494,8 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
     size_t num_use_features;
     num_use_features = static_cast<size_t>(num_all_features * gf_ratio);
     sel_feature_idx.resize(num_use_features);
+
+    srand((unsigned)time(NULL));
 
     size_t size_rnd_subset = static_cast<size_t>(1.0 * num_all_features / num_use_features);
     Eigen::Matrix<double, 6, 6> sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;

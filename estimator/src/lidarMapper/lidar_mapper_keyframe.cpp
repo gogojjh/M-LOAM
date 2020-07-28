@@ -130,7 +130,6 @@ pcl::PCDWriter pcd_writer;
 
 double lambda = 10.0;
 double gf_ratio_cur;
-std::string constraint_state = "wc";
 
 std::mutex m_process;
 
@@ -404,24 +403,24 @@ void downsampleCurrentScan()
         laser_cloud_corner_cov->push_back(point_cov);
     }
 
-    // for (PointI &point_ori : *laser_cloud_outlier_ds)
-    // {
-    //     int idx = int(point_ori.intensity); // indicate the lidar id
-    //     PointI point_sel;
-    //     Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
-    //     if (!with_ua_flag)
-    //     {
-    //         cov_point = COV_MEASUREMENT; // add extrinsic perturbation
-    //     }
-    //     else
-    //     {
-    //         pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
-    //         evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
-    //         if (cov_point.trace() > TRACE_THRESHOLD_BEFORE_MAPPING) continue;
-    //     }
-    //     PointIWithCov point_cov(point_ori, cov_point.cast<float>());
-    //     laser_cloud_outlier_cov->push_back(point_cov);
-    // }    
+    for (PointI &point_ori : *laser_cloud_outlier_ds)
+    {
+        int idx = int(point_ori.intensity); // indicate the lidar id
+        PointI point_sel;
+        Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
+        if (!with_ua_flag)
+        {
+            cov_point = COV_MEASUREMENT; // add extrinsic perturbation
+        }
+        else
+        {
+            pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
+            evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
+            if (cov_point.trace() > TRACE_THRESHOLD_BEFORE_MAPPING) continue;
+        }
+        PointIWithCov point_cov(point_ori, cov_point.cast<float>());
+        laser_cloud_outlier_cov->push_back(point_cov);
+    }    
 
     std::cout << "input surf num: " << laser_cloud_surf_cov->size()
               << " corner num: " << laser_cloud_corner_cov->size() << std::endl;
@@ -444,7 +443,7 @@ void scan2MapOptimization()
         {
             ceres::Problem problem;
             double gmc_s = 1.0;
-            double gmc_mu = 5.0;
+            double gmc_mu = 6.0;
             ceres::LossFunctionWrapper *loss_function;
             if (FLAGS_loss_mode == "huber")
             {
@@ -490,24 +489,24 @@ void scan2MapOptimization()
                     {
                         gf_ratio_cur = 1.0;
                     }
-                    if (FLAGS_gf_method == "gd_fix") 
+                    if (FLAGS_gf_method == "rnd" || FLAGS_gf_method == "fps" || FLAGS_gf_method == "gd_fix") 
                     {
                         gf_ratio_cur = FLAGS_gf_ratio_ini;
                     } 
-                    else if (FLAGS_gf_method == "rnd" || FLAGS_gf_method == "fps" || FLAGS_gf_method == "gd_float") 
+                    else if (FLAGS_gf_method == "gd_float") 
                     {
-                        if (normalize_logdet_H >= 72)
+                        if (normalize_logdet_H > 70)
                         {
                             gf_ratio_cur = FLAGS_gf_ratio_ini;
                         } 
-                        else if (normalize_logdet_H <= 65)
+                        else if (normalize_logdet_H <= 70)
                         {
-                            gf_ratio_cur = 1.0;
+                            gf_ratio_cur = 0.8;
                         }
-                        else 
-                        {
-                            gf_ratio_cur = FLAGS_gf_ratio_ini + (1.0 - FLAGS_gf_ratio_ini) * (72 - normalize_logdet_H) / 7.0;
-                        }
+                        // else 
+                        // {
+                        //     gf_ratio_cur = FLAGS_gf_ratio_ini + (1.0 - FLAGS_gf_ratio_ini) * (72 - normalize_logdet_H) / 7.0;
+                        // }
                     } 
 
                     // else if (normalize_logdet_H >= 70)
@@ -639,7 +638,8 @@ void scan2MapOptimization()
                 std::vector<double> sp{tr, logd, mini_ev};
                 mapping_sp_list.push_back(sp);
 
-                LOG_EVERY_N(INFO, 1) << "trace: " << tr << ", logdet: " << logd << ", min_ev: " << mini_ev;
+                LOG_EVERY_N(INFO, 1) << "trace: " << tr << ", logdet: " << logd 
+                                     << ", min_ev: " << mini_ev << "(" << mat_E(0, 1) << ")";
                 printf("evaluate H: %fms\n", t_eval_H.toc());
             }
             else if (is_degenerate)
@@ -658,28 +658,28 @@ void scan2MapOptimization()
             options.gradient_check_relative_precision = 1e-4;
             if (FLAGS_gnc) 
             {
-                while (gmc_mu >= 2.0)
+                while (gmc_mu >= 2.5)
                 {
-                    // if (gmc_mu <= 2.0)
-                    // {
-                    //     options.max_num_iterations = 10;
-                    //     options.max_solver_time_in_seconds = 0.01;
-                    //     ceres::Solve(options, &problem, &summary);
-                    //     std::cout << summary.BriefReport() << std::endl;
-                    // } else
-                    // {
-                    //     options.max_num_iterations = 1;
-                    //     ceres::Solve(options, &problem, &summary);
-                    // }
-                    options.max_num_iterations = 2;
+                    if (gmc_mu <= 3.0)
+                    {
+                        options.max_num_iterations = 15;
+                        options.max_solver_time_in_seconds = 0.015;
+                        ceres::Solve(options, &problem, &summary);
+                        std::cout << summary.BriefReport() << std::endl;
+                    } else
+                    {
+                        options.max_num_iterations = 1;
+                        ceres::Solve(options, &problem, &summary);
+                    }
                     ceres::Solve(options, &problem, &summary);                    
                     gmc_mu /= 1.2;
                     loss_function->Reset(new ceres::SurrogateGemanMcClureLoss(gmc_s, gmc_mu), ceres::TAKE_OWNERSHIP);
                 }
             } else
             {
-                options.max_num_iterations = 12;
-                options.max_solver_time_in_seconds = 0.04;
+
+                options.max_num_iterations = 30;
+                options.max_solver_time_in_seconds = 0.03;
                 ceres::Solve(options, &problem, &summary);
                 std::cout << summary.BriefReport() << std::endl;
             }

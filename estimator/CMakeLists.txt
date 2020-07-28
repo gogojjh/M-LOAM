@@ -90,6 +90,9 @@ target_link_libraries(mloam_lib_3
 )
 
 ######## --------------------- EXECUTABLE --------------------- ########
+add_executable(kittiHelper src/kittiHelper.cpp)
+target_link_libraries(kittiHelper ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
+
 #add_executable(mloam_node_sr src/rosNodeSR.cpp)
 #target_link_libraries(mloam_node_sr mloam_lib_1 mloam_lib_2)
 

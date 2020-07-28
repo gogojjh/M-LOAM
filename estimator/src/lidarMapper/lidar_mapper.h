@@ -32,6 +32,7 @@
 #include <utility>
 #include <omp.h>
 #include <signal.h>
+#include <time.h>
 
 #include <ros/ros.h>
 #include <sensor_msgs/Imu.h>
@@ -386,6 +387,8 @@ void goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_from
     sel_feature_idx.resize(num_use_features);
     size_t num_sel_features = 0;
 
+    srand((unsigned)time(NULL));
+    
     size_t n_neigh = 5;
     bool b_match;
     if (gf_ratio == 1.0)

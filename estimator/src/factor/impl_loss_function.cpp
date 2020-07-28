@@ -37,20 +37,21 @@
 #include <cstddef>
 #include <limits>
 
-namespace ceres {
+namespace ceres 
+{
+    void GemanMcClureLoss::Evaluate(double s, double rho[3]) const
+    {
+        const double sum = c2_ + s;
+        rho[0] = c2_ * s / sum;
+        rho[1] = std::max(std::numeric_limits<double>::min(), c2_ * c2_ / (sum * sum));
+        rho[2] = - 2 * c2_ * c2_ / (sum * sum * sum);
+    }
 
-void GemanMcClureLoss::Evaluate(double s, double rho[3]) const {
-    const double sum = b_ + s;
-    rho[0] = b_ * s / sum;
-    rho[1] = std::max(std::numeric_limits<double>::min(), b_ * b_ / (sum * sum));
-    rho[2] = - 2 * b_ * b_ / (sum * sum * sum);
-}
-
-void SurrogateGemanMcClureLoss::Evaluate(double s, double rho[3]) const {
-    const double sum = mu_ * b_ + s;
-    rho[0] = mu_ * b_ * s / sum;
-    rho[1] = std::max(std::numeric_limits<double>::min(), mu_ * mu_ * b_ * b_ / (sum * sum));
-    rho[2] = - 2 * mu_ * mu_ * b_ * b_ / (sum * sum * sum);
-}
-
+    void SurrogateGemanMcClureLoss::Evaluate(double s, double rho[3]) const
+    {
+        const double sum = mu_ * c2_ + s;
+        rho[0] = mu_ * c2_ * s / sum;
+        rho[1] = std::max(std::numeric_limits<double>::min(), mu_ * mu_ * c2_ * c2_ / (sum * sum));
+        rho[2] = - 2 * mu_ * mu_ * c2_ * c2_ / (sum * sum * sum);
+    }
 }

@@ -95,10 +95,22 @@ void ImageSegmenter::projectCloud(const typename pcl::PointCloud<PointType> &las
         vertical_angle = atan2(point.z, sqrt(point.x * point.x + point.y * point.y)) * 180 / M_PI;
         horizon_angle = atan2(point.x, point.y) * 180 / M_PI;
 
-        row_id = static_cast<size_t>((vertical_angle + ang_bottom_) / ang_res_y_);
+        if (vertical_scans_ == 64 && ang_res_y_ == FLT_MAX) // VLP-64
+        {
+            if (vertical_angle >= -8.83)
+                row_id = static_cast<size_t>((2 - vertical_angle) * 3.0 + 0.5);
+            else
+                row_id = static_cast<size_t>(vertical_scans_ / 2) + static_cast<size_t>((-8.83 - vertical_angle) * 2.0 + 0.5);
+            if (vertical_angle > 2 || vertical_angle < -24.33 || row_id > 50 || row_id < 0) 
+                continue;
+        } else
+        {
+            row_id = static_cast<size_t>((vertical_angle + ang_bottom_) / ang_res_y_);
+            if (row_id < 0 || row_id >= vertical_scans_) 
+                continue;
+        }
+       
         column_id = -round((horizon_angle - 90.0) / ang_res_x_) + horizon_scans_ / 2;
-        if (row_id < 0 || row_id >= vertical_scans_)
-            continue;
         if (column_id >= horizon_scans_)
             column_id -= horizon_scans_;
         if (column_id < 0 || column_id >= horizon_scans_)
@@ -148,24 +160,51 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
     size_t lower_ind, upper_ind;
     float vertical_angle;
     float diff_x, diff_y, diff_z;
-    for (size_t i = 0; i < ground_scan_id_; i++)
+
+    if (vertical_scans_ == 64)
     {
-        for (size_t j = 0; j < horizon_scans_; j++)
+        for (size_t i = ground_scan_id_; i < vertical_scans_; i++)
         {
-            if (range_mat(i, j) == FLT_MAX || range_mat(i + 1, j) == FLT_MAX)
-                continue;
-            lower_ind = j + i * horizon_scans_;
-            upper_ind = j + (i + 1) * horizon_scans_;
-            const PointType &point1 = cloud_matrix.points[lower_ind];
-            const PointType &point2 = cloud_matrix.points[upper_ind];
-            diff_x = point1.x - point2.x;
-            diff_y = point1.y - point2.y;
-            diff_z = point1.z - point2.z;
-            vertical_angle = atan2(diff_z, sqrt(diff_x * diff_x + diff_y * diff_y)) * 180 / M_PI;
-            if (abs(vertical_angle) <= 10) // 10deg
+            for (size_t j = 0; j < horizon_scans_; j++)
             {
-                label_mat(i, j) = label_count;
-                label_mat(i+1, j) = label_count;
+                if (range_mat(i, j) == FLT_MAX || range_mat(i + 1, j) == FLT_MAX)
+                    continue;
+                lower_ind = j + i * horizon_scans_;
+                upper_ind = j + (i + 1) * horizon_scans_;
+                const PointType &point1 = cloud_matrix.points[lower_ind];
+                const PointType &point2 = cloud_matrix.points[upper_ind];
+                diff_x = point1.x - point2.x;
+                diff_y = point1.y - point2.y;
+                diff_z = point1.z - point2.z;
+                vertical_angle = atan2(diff_z, sqrt(diff_x * diff_x + diff_y * diff_y)) * 180 / M_PI;
+                if (abs(vertical_angle) <= 10) // 10deg
+                {
+                    label_mat(i, j) = label_count;
+                    label_mat(i + 1, j) = label_count;
+                }
+            }
+        }
+    } else
+    {
+        for (size_t i = 0; i < ground_scan_id_; i++)
+        {
+            for (size_t j = 0; j < horizon_scans_; j++)
+            {
+                if (range_mat(i, j) == FLT_MAX || range_mat(i + 1, j) == FLT_MAX)
+                    continue;
+                lower_ind = j + i * horizon_scans_;
+                upper_ind = j + (i + 1) * horizon_scans_;
+                const PointType &point1 = cloud_matrix.points[lower_ind];
+                const PointType &point2 = cloud_matrix.points[upper_ind];
+                diff_x = point1.x - point2.x;
+                diff_y = point1.y - point2.y;
+                diff_z = point1.z - point2.z;
+                vertical_angle = atan2(diff_z, sqrt(diff_x * diff_x + diff_y * diff_y)) * 180 / M_PI;
+                if (abs(vertical_angle) <= 10) // 10deg
+                {
+                    label_mat(i, j) = label_count;
+                    label_mat(i+1, j) = label_count;
+                }
             }
         }
     }

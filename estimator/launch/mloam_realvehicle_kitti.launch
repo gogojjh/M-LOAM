@@ -35,7 +35,7 @@
                     -data_source=$(arg data_source)
                     -result_save=$(arg result_save)
                     -output_path=$(arg output_path)" output="screen">
-                <remap from="/base_pose_gt" to="/current_odom" />
+                <remap from="/base_pose_gt" to="/odometry_gt" />
             </node>
         </group>
         <group if="$(arg run_mloam_mapping)">
@@ -58,13 +58,13 @@
     <!-- x y z yaw pitch roll -->
     <!-- x y z qx qy qz qw -->
     <node name="static_tf_world_base_into_world_sensor" pkg="tf" type="static_transform_publisher"
-        args="0 0 1.6 0 0 0 world_base world 10"/> 
+        args="0.81 -0.31 0.80 0 0 0 world_base world 10"/> 
     <node name="static_tf_world_base_into_laser" pkg="tf" type="static_transform_publisher"
         args="0 0 0 0 0 0 world laser 10"/>         
     <node name="static_tf_laser_into_laser" pkg="tf" type="static_transform_publisher"
         args="0 0 0 0 0 0 1 laser velo 10"/>        
     <node name="static_tf_base_sensor_into_base_link" pkg="tf" type="static_transform_publisher"
-        args="0 0 -1.6 0 0 0 aft_mapped base_link 10"/>                          
+        args="-0.81 0.31 -0.80 0 0 0 aft_mapped base_link 10"/>                          
 
     <!-- run aloam  -->
     <group if="$(arg run_aloam)">
