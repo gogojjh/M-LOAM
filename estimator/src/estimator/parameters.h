@@ -162,7 +162,7 @@ public:
     size_t laser_idx_;
     Eigen::Vector3d point_;
     Eigen::Vector4d coeffs_;
-    // Eigen::MatrixXd jaco_;
+    Eigen::MatrixXd jaco_;
     char type_;
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -178,7 +178,7 @@ public:
     {
         return this->score_ < fws.score_;
     }
-
+    
     size_t idx_;
     double score_;
     Eigen::MatrixXd jaco_;
