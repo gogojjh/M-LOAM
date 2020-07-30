@@ -131,6 +131,8 @@ pcl::PCDWriter pcd_writer;
 double lambda = 10.0;
 double gf_ratio_cur;
 
+ActiveFeatureSelection afs;
+
 std::mutex m_process;
 
 // set current pose after odom
@@ -443,16 +445,17 @@ void scan2MapOptimization()
         {
             ceres::Problem problem;
             double gmc_s = 1.0;
-            double gmc_mu = 10.0;
+            double gmc_mu = 5.0;
             ceres::LossFunctionWrapper *loss_function;
             if (FLAGS_loss_mode == "huber")
             {
-                loss_function = new ceres::LossFunctionWrapper(new ceres::HuberLoss(0.5), ceres::TAKE_OWNERSHIP);
+                loss_function = new ceres::LossFunctionWrapper(new ceres::HuberLoss(1), ceres::TAKE_OWNERSHIP);
             } 
             else if (FLAGS_loss_mode == "gmc")
             {
                 loss_function = new ceres::LossFunctionWrapper(new ceres::SurrogateGemanMcClureLoss(gmc_s, gmc_mu), ceres::TAKE_OWNERSHIP);
             }
+            afs.loss_function_ = loss_function;
 
             vector2Double();
 
@@ -474,13 +477,13 @@ void scan2MapOptimization()
                     Eigen::Matrix<double, 6, 6> mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
                     if (POINT_PLANE_FACTOR)
                     {
-                        evalFullHessian(kdtree_surf_from_map, *laser_cloud_surf_from_map_cov_ds,
-                                        *laser_cloud_surf_cov, pose_wmap_curr, 's', mat_H, total_feat_num);
+                        afs.evalFullHessian(kdtree_surf_from_map, *laser_cloud_surf_from_map_cov_ds,
+                                            *laser_cloud_surf_cov, pose_wmap_curr, 's', mat_H, total_feat_num);
                     }
                     if (POINT_EDGE_FACTOR)
                     {
-                        evalFullHessian(kdtree_corner_from_map, *laser_cloud_corner_from_map_cov_ds,
-                                        *laser_cloud_corner_cov, pose_wmap_curr, 'c', mat_H, total_feat_num);
+                        afs.evalFullHessian(kdtree_corner_from_map, *laser_cloud_corner_from_map_cov_ds,
+                                            *laser_cloud_corner_cov, pose_wmap_curr, 'c', mat_H, total_feat_num);
                     }
                     double normalize_logdet_H = common::logDet(mat_H, true) - mat_H.rows() * std::log(1.0 * total_feat_num);
                     logdet_H_list.push_back(normalize_logdet_H);
@@ -495,11 +498,11 @@ void scan2MapOptimization()
                     } 
                     else if (FLAGS_gf_method == "gd_float") 
                     {
-                        if (normalize_logdet_H > 40)
+                        if (normalize_logdet_H > 35)
                         {
                             gf_ratio_cur = FLAGS_gf_ratio_ini;
                         } 
-                        else if (normalize_logdet_H <= 40)
+                        else if (normalize_logdet_H <= 35)
                         {
                             gf_ratio_cur = 0.8;
                         }
@@ -535,6 +538,7 @@ void scan2MapOptimization()
                     // ratio_change_flag = true; 
                     // gf_ratio_cur = std::min(1.0, FLAGS_gf_ratio_ini);
                     std::cout << common::YELLOW << "current lambda: " << normalize_logdet_H << ", gf_ratio: " << gf_ratio_cur << common::RESET << std::endl;
+                    LOG_EVERY_N(INFO, 1) << "normalize_logd: " << normalize_logdet_H;
                 }
             }
 
@@ -545,35 +549,35 @@ void scan2MapOptimization()
             TicToc t_match_features;
             if (POINT_PLANE_FACTOR)
             {
-                goodFeatureMatching(kdtree_surf_from_map,
-                                    *laser_cloud_surf_from_map_cov_ds,
-                                    *laser_cloud_surf_cov,
-                                    pose_wmap_curr,
-                                    all_surf_features,
-                                    sel_surf_feature_idx,
-                                    's',
-                                    FLAGS_gf_method,
-                                    gf_ratio_cur);
+                afs.goodFeatureMatching(kdtree_surf_from_map,
+                                        *laser_cloud_surf_from_map_cov_ds,
+                                        *laser_cloud_surf_cov,
+                                        pose_wmap_curr,
+                                        all_surf_features,
+                                        sel_surf_feature_idx,
+                                        's',
+                                        FLAGS_gf_method,
+                                        gf_ratio_cur);
                 surf_num = sel_surf_feature_idx.size();
             }
             if (POINT_EDGE_FACTOR)
             {
-                goodFeatureMatching(kdtree_corner_from_map,
-                                    *laser_cloud_corner_from_map_cov_ds,
-                                    *laser_cloud_corner_cov,
-                                    pose_wmap_curr,
-                                    all_corner_features,
-                                    sel_corner_feature_idx,
-                                    'c',
-                                    FLAGS_gf_method,
-                                    gf_ratio_cur);
+                afs.goodFeatureMatching(kdtree_corner_from_map,
+                                        *laser_cloud_corner_from_map_cov_ds,
+                                        *laser_cloud_corner_cov,
+                                        pose_wmap_curr,
+                                        all_corner_features,
+                                        sel_corner_feature_idx,
+                                        'c',
+                                        FLAGS_gf_method,
+                                        gf_ratio_cur);
                 corner_num = sel_corner_feature_idx.size();
             }
             printf("matching features time: %fms\n", t_match_features.toc());
             total_match_feature.push_back(t_match_features.toc());
             
             if (MLOAM_RESULT_SAVE && frame_cnt == 100)
-                writeFeature(*laser_cloud_surf_cov, sel_surf_feature_idx, all_surf_features);
+                afs.writeFeature(*laser_cloud_surf_cov, sel_surf_feature_idx, all_surf_features);
             // printf("matching surf & corner num: %lu, %lu\n", surf_num, corner_num);
 
             TicToc t_add_constraints;
@@ -608,12 +612,12 @@ void scan2MapOptimization()
             // printf("add constraints: %fms\n", t_add_constraints.toc());
 
             // if (FLAGS_debug_mode && frame_cnt % 20 == 0)
-            //     evaluateLoss(all_surf_features,
-            //                  sel_surf_feature_idx,
-            //                  all_corner_features,
-            //                  sel_corner_feature_idx,
-            //                  pose_wmap_curr,
-            //                  frame_cnt);
+            //     afs.evaluateLoss(all_surf_features,
+            //                      sel_surf_feature_idx,
+            //                      all_corner_features,
+            //                      sel_corner_feature_idx,
+            //                      pose_wmap_curr,
+            //                      frame_cnt);
 
             // ******************************************************
             if (iter_cnt == 0)
@@ -625,7 +629,7 @@ void scan2MapOptimization()
 
                 Eigen::Matrix<double, 6, 6> mat_H;
                 evalHessian(jaco, mat_H);
-                evalDegenracy(mat_H, local_parameterization);
+                evalDegenracy(mat_H / 134, local_parameterization); // the hessian matrix should be normized to evaluate degeneracy
                 is_degenerate = local_parameterization->is_degenerate_;
                 
                 cov_mapping = mat_H.inverse(); // covariance of least-sqares problem
@@ -638,8 +642,7 @@ void scan2MapOptimization()
                 std::vector<double> sp{tr, logd, mini_ev};
                 mapping_sp_list.push_back(sp);
 
-                LOG_EVERY_N(INFO, 20) << "trace: " << tr << ", logdet: " << logd 
-                                      << ", min_ev: " << mini_ev;
+                LOG_EVERY_N(INFO, 20) << "trace: " << tr << ", logdet: " << logd << ", min_ev: " << mini_ev;
                 printf("evaluate H: %fms\n", t_eval_H.toc());
             }
             else if (is_degenerate)
@@ -1141,7 +1144,7 @@ void evalHessian(const ceres::CRSMatrix &jaco, Eigen::Matrix<double, 6, 6> &mat_
 	CRSMatrix2EigenMatrix(jaco, mat_J);
 	Eigen::SparseMatrix<double, Eigen::RowMajor> mat_Jt = mat_J.transpose();
 	Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J;
-	mat_H = mat_JtJ.block(0, 0, 6, 6) / 134;
+	mat_H = mat_JtJ.block(0, 0, 6, 6);
 }
 
 void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameterization *local_parameterization)
@@ -1166,8 +1169,7 @@ void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameteri
 	d_eigvec_list.push_back(mat_V_f);
  	mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
 
-    LOG_EVERY_N(INFO, 20) << "D factor: " << mat_E(0, 0)
-                          << ", D vector: " << mat_V_f.col(0).transpose();
+    LOG_EVERY_N(INFO, 20) << "D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose();
     // std::cout << "jjiao:" << std::endl;
 	// std::cout << "mat_E: " << mat_E << std::endl;
 	// std::cout << "mat_V_f: " << std::endl << mat_V_f << std::endl;

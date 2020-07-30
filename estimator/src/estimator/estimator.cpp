@@ -1417,7 +1417,7 @@ void Estimator::goodFeatureSelect(const std::vector<PointPlaneFeature> &all_feat
             size_t j;
             while (num_rnd_que < MAX_RANDOM_QUEUE_TIME)
             {
-                j = (std::rand() % all_feature_idx.size());
+                j = rgi_.geneRandUniform(0, all_feature_idx.size() - 1);
                 if (feature_visited[j] < int(num_sel_features))
                 {
                     feature_visited[j] = int(num_sel_features);
@@ -1503,7 +1503,7 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
         if ((num_sel_features >= num_use_features) ||
             (all_feature_idx.size() == 0) ||
             (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
-            break;
+                break;
         size_t num_rnd_que;
         std::priority_queue<FeatureWithScore, std::vector<FeatureWithScore>, std::less<FeatureWithScore>> heap_subset;
         while (true)
@@ -1512,7 +1512,7 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
             size_t j;
             while (num_rnd_que < MAX_RANDOM_QUEUE_TIME)
             {
-                j = (std::rand() % all_feature_idx.size());
+                j = rgi_.geneRandUniform(0, all_feature_idx.size() - 1);
                 if (feature_visited[j] < int(num_sel_features))
                 {
                     feature_visited[j] = int(num_sel_features);

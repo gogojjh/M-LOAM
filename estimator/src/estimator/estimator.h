@@ -37,10 +37,12 @@
 #include <pcl/search/impl/flann_search.hpp>
 #include <pcl/filters/extract_indices.h>
 
-#include "parameters.h"
 #include "common/common.hpp"
 #include "common/color.hpp"
 #include "common/types/type.h"
+#include "common/random_generator.hpp"
+
+#include "parameters.h"
 #include "../imageSegmenter/image_segmenter.hpp"
 #include "../featureExtract/feature_extract.hpp"
 #include "../lidarTracker/lidar_tracker.h"
@@ -231,6 +233,8 @@ class Estimator
     std::vector<nav_msgs::Path> v_laser_path_;
 
     pcl::PCDWriter pcd_writer_;
+
+    common::RandomGeneratorInt<size_t> rgi_;
 };
 
 

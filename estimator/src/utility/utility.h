@@ -24,6 +24,7 @@
 
 #include "common/common.hpp"
 #include "common/types/type.h"
+#include "common/random_generator.hpp"
 
 #include "../estimator/parameters.h"
 #include "../estimator/pose.h"
