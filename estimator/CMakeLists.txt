@@ -48,7 +48,7 @@ link_directories(${PCL_LIBRARY_DIRS})
 
 catkin_package(
 #   INCLUDE_DIRS include
-  CATKIN_DEPENDS mloam_msgs mloam_pcl
+  CATKIN_DEPENDS mloam_common mloam_msgs mloam_pcl
   DEPENDS PCL
 )
 
@@ -76,15 +76,6 @@ add_library(mloam_lib_2
     src/factor/marginalization_factor.cpp
 )
 target_link_libraries(mloam_lib_2
-    ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
-    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
-)
-
-add_library(mloam_lib_3
-    src/loopFusion/scan_context.cpp
-)
-
-target_link_libraries(mloam_lib_3
     ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
 )

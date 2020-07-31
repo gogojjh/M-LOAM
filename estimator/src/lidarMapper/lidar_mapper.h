@@ -60,6 +60,7 @@
 #include "common/color.hpp"
 
 #include "mloam_msgs/Extrinsics.h"
+#include "mloam_msgs/Keyframes.h"
 
 #include "mloam_pcl/point_with_cov.hpp"
 #include "mloam_pcl/voxel_grid_covariance_mloam.h"

@@ -20,15 +20,8 @@
 #include <iomanip>
 
 #include <nav_msgs/Odometry.h>
-#include <geometry_msgs/Pose.h>
 
 #include <eigen3/Eigen/Dense>
-#include <eigen3/Eigen/StdVector>
-
-#include "sophus/so3.hpp"
-#include "sophus/se3.hpp"
-
-#include "common/types/type.h"
 
 using namespace std;
 
@@ -61,7 +54,5 @@ public:
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW // TODO: the Eigen bugs in initializing the class
 };
-
-void computeMeanPose(const std::vector<std::pair<double, Pose> > &pose_array, Pose &pose_mean, Eigen::Matrix<double, 6, 6> &pose_cov);
 
 //

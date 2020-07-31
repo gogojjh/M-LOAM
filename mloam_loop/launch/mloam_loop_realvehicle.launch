@@ -1,0 +1,16 @@
+<launch>
+
+    <arg name="run_mloam_loop" default="true" />
+    <arg name="result_save" default="false"/>
+    <arg name="output_path" default="/home/jjiao/trajectory_results/real_vehicle/oxford/xxxxxxx/"/>
+
+    <arg name="config_file" default="$(find mloam_loop)/config/config_loop_realvehicle.yaml" />
+    <group if="$(arg run_mloam_loop)">
+        <node pkg="mloam_loop" type="loop_closure_node" name="loop_closure_node"
+            args="-config_file=$(arg config_file)
+                  -result_save=$(arg result_save) 
+                  -output_path=$(arg output_path)" output="screen">
+        </node>
+    </group>
+
+ </launch>

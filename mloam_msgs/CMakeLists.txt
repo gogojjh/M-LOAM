@@ -13,6 +13,7 @@ add_message_files(
   DIRECTORY msg
   FILES
   Extrinsics.msg
+  Keyframes.msg
 )
 
 generate_messages(

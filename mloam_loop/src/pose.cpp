@@ -11,7 +11,7 @@
  * Author: Jianhao JIAO (jiaojh1994@gmail.com)
  *******************************************************/
 
-#include "pose.h"
+#include "mloam_loop/pose.h"
 
 Pose::Pose()
 {
@@ -118,51 +118,3 @@ ostream & operator << (ostream &out, const Pose &pose)
     return out;
 }
 
-Eigen::Matrix<double, 6, 1> Pose::se3() const 
-{
-    Sophus::SE3d SE3_qt(q_, t_);
-    Eigen::Matrix<double, 6, 1> xi = SE3_qt.log();
-    // Sophus::SE3::hat(xi)
-    // Sophus::SE3::vee(Sophus::SE3::hat(xi)) == xi
-    return xi;
-}
-
-// quaternion averaging: https://wiki.unity3d.com/index.php/Averaging_Quaternions_and_Vectors
-// ceres: pose graph optimization: https://ceres-solver.googlesource.com/ceres-solver/+/master/examples/slam/pose_graph_3d
-// review of rotation averaging: Rotation Averaging IJCV
-// TODO: Solution 2: using pose graph optimization T_mean = argmin_{T} \sum||(T-T_mean)||^{2}
-void computeMeanPose(const std::vector<std::pair<double, Pose> > &pose_array, 
-                     Pose &pose_mean, Eigen::Matrix<double, 6, 6> &pose_cov)
-{
-    // Solution 1: approximation if the separate quaternions are relatively close to each other.
-    // Solution 2: compute the mean in se3
-    pose_cov.setZero();
-    if (pose_array.size() == 1)
-    {
-        pose_mean = pose_array[0].second;
-        return;
-    }
-
-    double weight_total = 0;
-    Eigen::Matrix<double, 6, 1> xi_total = Eigen::Matrix<double, 6, 1>::Zero();
-    for (auto iter = pose_array.begin(); iter != pose_array.end(); iter ++)
-    {
-        weight_total += iter->first;
-        xi_total += iter->first * iter->second.se3();
-        std::cout << iter->first << ", " << iter->second << std::endl;
-    }
-    Eigen::Matrix<double, 6, 1> xi_mean = xi_total / weight_total;
-    pose_mean = Pose(Sophus::SE3d::exp(xi_mean).matrix());
-
-    for (auto iter = pose_array.begin(); iter != pose_array.end(); iter++)
-    {
-        Eigen::Matrix<double, 6, 1> xi = iter->second.se3();
-        pose_cov += iter->first * iter->first * (xi - xi_mean) * (xi - xi_mean).transpose();
-    }
-    pose_cov /= (pose_array.size() - 1);
-
-    std::cout << "calib mean: " << pose_mean << std::endl;
-    std::cout << "calib cov: " << std::endl << pose_cov << std::endl;
-}
-
-// 

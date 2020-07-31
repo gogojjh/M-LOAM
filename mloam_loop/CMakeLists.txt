@@ -16,6 +16,9 @@ find_package(catkin REQUIRED COMPONENTS
 	cv_bridge
 	image_transport
 	message_generation
+
+	mloam_common
+	mloam_msgs
 )
 
 find_package(Eigen3 REQUIRED)
@@ -35,7 +38,11 @@ include_directories(
 )
 link_directories(${PCL_LIBRARY_DIRS})
 
-catkin_package()
+catkin_package(
+  INCLUDE_DIRS include
+  CATKIN_DEPENDS mloam_common mloam_msgs
+  DEPENDS PCL
+)
 
 #add_executable(loop_fusion_node
 #    src/pose_graph_node.cpp
@@ -53,13 +60,24 @@ catkin_package()
 #    src/ThirdParty/VocabularyBinary.cpp
 #    )
 #
-#target_link_libraries(loop_fusion_node ${catkin_LIBRARIES}  ${OpenCV_LIBS} ${CERES_LIBRARIES}) 
+#target_link_libraries(loop_fusion_node ${catkin_LIBRARIES} ${OpenCV_LIBS} ${CERES_LIBRARIES}) 
 
-add_library(scan_context
-    src/scan_context.cpp
+#add_library(scan_context
+#    src/scan_context.cpp
+#)
+
+#target_link_libraries(scan_context 
+#    ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
+#    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
+#)
+
+add_executable(loop_closure_node
+	src/loop_closure_node.cpp
+	src/parameters.cpp
+	src/pose.cpp
 )
 
-target_link_libraries(scan_context 
+target_link_libraries(loop_closure_node
     ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
 )

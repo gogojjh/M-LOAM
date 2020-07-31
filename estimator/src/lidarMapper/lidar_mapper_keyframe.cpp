@@ -103,7 +103,7 @@ ros::Publisher pub_laser_cloud_surrounding, pub_laser_cloud_map;
 ros::Publisher pub_laser_cloud_full_res;
 ros::Publisher pub_laser_cloud_surf_last_res, pub_laser_cloud_corner_last_res;
 ros::Publisher pub_odom_aft_mapped, pub_odom_aft_mapped_high_frec, pub_laser_after_mapped_path;
-ros::Publisher pub_keyframes;
+ros::Publisher pub_keyframes, pub_keyframes_6d;
 
 nav_msgs::Path laser_after_mapped_path;
 
@@ -115,7 +115,6 @@ std::vector<Eigen::Matrix<double, 1, 6> > d_factor_list;
 std::vector<Eigen::Matrix<double, 6, 6> > d_eigvec_list;
 
 Eigen::Matrix<double, 6, 6> mat_P;
-Eigen::Matrix<double, 6, 6> cov_mapping;
 
 std::vector<double> logdet_H_list;
 std::vector<std::vector<double> > mapping_sp_list;
@@ -242,6 +241,7 @@ void double2Vector()
 {
 	pose_wmap_curr.t_ = Eigen::Vector3d(para_pose[0], para_pose[1], para_pose[2]);
 	pose_wmap_curr.q_ = Eigen::Quaterniond(para_pose[6], para_pose[3], para_pose[4], para_pose[5]);
+    pose_wmap_curr.update();
 }
 
 void extractSurroundingKeyFrames()
@@ -629,13 +629,14 @@ void scan2MapOptimization()
 
                 Eigen::Matrix<double, 6, 6> mat_H;
                 evalHessian(jaco, mat_H);
-                evalDegenracy(mat_H / 134, local_parameterization); // the hessian matrix should be normized to evaluate degeneracy
+                evalDegenracy(mat_H, local_parameterization); // the hessian matrix should be normized to evaluate degeneracy
                 is_degenerate = local_parameterization->is_degenerate_;
+                Eigen::Matrix<double, 6, 6> cov_mapping = mat_H.inverse();
+                pose_wmap_curr.cov_ = cov_mapping;
                 
-                cov_mapping = mat_H.inverse(); // covariance of least-sqares problem
                 double tr = cov_mapping.trace();
-                double logd = common::logDet(mat_H, true);
-                Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6> > esolver(mat_H);
+                double logd = common::logDet(mat_H * 134, true);
+                Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6> > esolver(mat_H * 134);
                 Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real();	
                 double mini_ev = mat_E(0, 0);
 
@@ -761,6 +762,11 @@ void saveKeyframeAndInsertGraph()
     outlier_cloud_keyframes_cov.push_back(outlier_keyframe_cov);
 
     printf("current keyframes size: %lu\n", pose_keyframes_3d->size());
+    // for (size_t i = 0; i < 6; i++)
+    // {
+    //     for (size_t j = 0; j < 6; j++) std::cout << pose_wmap_curr.cov_(i, j) << " ";
+    //     std::cout << std::endl;
+    // }
 }
 
 void pubPointCloud()
@@ -805,7 +811,7 @@ void pubOdometry()
     odom_aft_mapped.pose.pose.position.z = pose_wmap_curr.t_.z();
     for (size_t i = 0; i < 6; i++)
         for (size_t j = 0; j < 6; j++)
-            odom_aft_mapped.pose.covariance[i * 6 + j] = float(cov_mapping(i, j));
+            odom_aft_mapped.pose.covariance[i * 6 + j] = float(pose_wmap_curr.cov_(i, j));
     pub_odom_aft_mapped.publish(odom_aft_mapped);
 
     geometry_msgs::PoseStamped laser_after_mapped_pose;
@@ -819,6 +825,7 @@ void pubOdometry()
     pub_laser_after_mapped_path.publish(laser_after_mapped_path);
     publishTF(odom_aft_mapped);
 
+    // publish 3d keyframes
     if (pub_keyframes.getNumSubscribers() != 0)
     {
         sensor_msgs::PointCloud2 keyframes_msg;
@@ -826,6 +833,33 @@ void pubOdometry()
         keyframes_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
         keyframes_msg.header.frame_id = "/world";
         pub_keyframes.publish(keyframes_msg);
+    }
+
+    // publish 6d keyframes with covariance
+    if (pub_keyframes_6d.getNumSubscribers() != 0)
+    {
+        mloam_msgs::Keyframes laser_keyframes_6d;
+        laser_keyframes_6d.header.stamp = ros::Time().fromSec(time_laser_odometry);
+        laser_keyframes_6d.header.frame_id = "/world";
+        for (size_t i = 0; i < pose_keyframes_6d.size(); i++)
+        {
+            geometry_msgs::PoseWithCovarianceStamped laser_keyframes_pose;
+            laser_keyframes_pose.header.seq = i;
+            laser_keyframes_pose.header.stamp = ros::Time().fromSec(pose_keyframes_6d[i].first);
+            laser_keyframes_pose.header.frame_id = "/world";
+            laser_keyframes_pose.pose.pose.orientation.x = pose_keyframes_6d[i].second.q_.x();
+            laser_keyframes_pose.pose.pose.orientation.y = pose_keyframes_6d[i].second.q_.y();
+            laser_keyframes_pose.pose.pose.orientation.z = pose_keyframes_6d[i].second.q_.z();
+            laser_keyframes_pose.pose.pose.orientation.w = pose_keyframes_6d[i].second.q_.w();
+            laser_keyframes_pose.pose.pose.position.x = pose_keyframes_6d[i].second.t_.x();
+            laser_keyframes_pose.pose.pose.position.y = pose_keyframes_6d[i].second.t_.y();
+            laser_keyframes_pose.pose.pose.position.z = pose_keyframes_6d[i].second.t_.z();
+            for (size_t i = 0; i < pose_wmap_curr.cov_.rows(); i++)
+                for (size_t j = 0; j < pose_wmap_curr.cov_.cols(); j++)
+                    laser_keyframes_pose.pose.covariance[i * 6 + j] = float(pose_keyframes_6d[i].second.cov_(i, j));
+            laser_keyframes_6d.poses.push_back(laser_keyframes_pose);
+        }
+        pub_keyframes_6d.publish(laser_keyframes_6d);
     }
 }
 
@@ -941,7 +975,8 @@ void process()
 	{
 		if (!ros::ok()) break;
 		while (!surf_last_buf.empty() && !corner_last_buf.empty() &&
-			   !full_res_buf.empty() && !ext_buf.empty() && !odometry_buf.empty())
+			   !full_res_buf.empty() && !outlier_buf.empty() &&
+               !ext_buf.empty() && !odometry_buf.empty())
 		{
 			//***************************************************************************
 			// step 1: pop up subscribed data
@@ -961,6 +996,14 @@ void process()
 				m_buf.unlock();
 				break;
 			}
+
+			while (!outlier_buf.empty() && outlier_buf.front()->header.stamp.toSec() < surf_last_buf.front()->header.stamp.toSec())
+				outlier_buf.pop();
+			if (outlier_buf.empty())
+			{
+				m_buf.unlock();
+				break;
+			}            
 
 			while (!odometry_buf.empty() && odometry_buf.front()->header.stamp.toSec() < surf_last_buf.front()->header.stamp.toSec())
 				odometry_buf.pop();
@@ -1089,7 +1132,7 @@ void process()
             clearCloud();
 
             std::cout << common::RED << "frame: " << frame_cnt
-                      << ", whole mapping time " << t_whole_mapping.toc() << "ms" << common::RESET << std::endl;
+                      << ", whole mapping time: " << t_whole_mapping.toc() << "ms" << common::RESET << std::endl;
             LOG_EVERY_N(INFO, 20) << "whole mapping time " << t_whole_mapping.toc() << "ms";
             total_mapping.push_back(t_whole_mapping.toc());
 
@@ -1144,7 +1187,7 @@ void evalHessian(const ceres::CRSMatrix &jaco, Eigen::Matrix<double, 6, 6> &mat_
 	CRSMatrix2EigenMatrix(jaco, mat_J);
 	Eigen::SparseMatrix<double, Eigen::RowMajor> mat_Jt = mat_J.transpose();
 	Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J;
-	mat_H = mat_JtJ.block(0, 0, 6, 6);
+	mat_H = mat_JtJ.block(0, 0, 6, 6) / 134;  // normalized the hessian matrix for pair uncertainty evaluation
 }
 
 void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameterization *local_parameterization)
@@ -1223,7 +1266,7 @@ void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameteri
 
 void sigintHandler(int sig)
 {
-    printf("press ctrl-c\n");
+    printf("[lidar_mapper] press ctrl-c\n");
     std::cout << common::YELLOW << "mapping drop frame: " << frame_drop_cnt << common::RESET << std::endl;
     if (MLOAM_RESULT_SAVE)
     {
@@ -1295,16 +1338,17 @@ int main(int argc, char **argv)
 	ros::Subscriber sub_laser_odometry = nh.subscribe<nav_msgs::Odometry>("/laser_odom", 5, laserOdometryHandler);
 	ros::Subscriber sub_extrinsic = nh.subscribe<mloam_msgs::Extrinsics>("/extrinsics", 5, extrinsicsHandler);
 
-	pub_laser_cloud_surrounding = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surround", 2);
-	pub_laser_cloud_map = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_map", 2);
 	pub_laser_cloud_full_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_registered", 2);
 	pub_laser_cloud_surf_last_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surf_registered", 2);
 	pub_laser_cloud_corner_last_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_corner_registered", 2);
+	pub_laser_cloud_surrounding = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surround", 2);
+	pub_laser_cloud_map = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_map", 2);
 
 	pub_odom_aft_mapped = nh.advertise<nav_msgs::Odometry>("/laser_map", 5); // raw pose from odometry in the world
 	pub_odom_aft_mapped_high_frec = nh.advertise<nav_msgs::Odometry>("/laser_map_high_frec", 5); // optimized pose in the world
 	pub_laser_after_mapped_path = nh.advertise<nav_msgs::Path>("/laser_map_path", 5);
-    pub_keyframes = nh.advertise<sensor_msgs::PointCloud2>("/laser_keyframes", 2);
+    pub_keyframes = nh.advertise<sensor_msgs::PointCloud2>("/laser_map_keyframes", 5);
+    pub_keyframes_6d = nh.advertise<mloam_msgs::Keyframes>("/laser_map_keyframes_6d", 5);
 
     down_size_filter_surf.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
     down_size_filter_surf.setTraceThreshold(TRACE_THRESHOLD_AFTER_MAPPING);

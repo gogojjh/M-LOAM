@@ -6,15 +6,13 @@
 
   <!-- One maintainer tag required, multiple allowed, one person per tag --> 
   <!-- Example:  -->
-  <!-- <maintainer email="jane.doe@example.com">Jane Doe</maintainer> -->
-  <maintainer email="tony-ws@todo.todo">tony-ws</maintainer>
+  <maintainer email="jiaojh1994@gmail.todo">Jianhao JIAO</maintainer>
 
 
   <!-- One license tag required, multiple allowed, one license per tag -->
   <!-- Commonly used license strings: -->
   <!--   BSD, MIT, Boost Software License, GPLv2, GPLv3, LGPLv2.1, LGPLv3 -->
   <license>TODO</license>
-
 
   <!-- Url tags are optional, but mutiple are allowed, one per tag -->
   <!-- Optional attribute type can be: website, bugtracker, or repository -->
@@ -40,7 +38,17 @@
   <!-- Use test_depend for packages you need only for testing: -->
   <!--   <test_depend>gtest</test_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
-
+  <build_depend>roscpp</build_depend>
+  <build_depend>image_transport</build_depend>
+  <build_depend>libgoogle-glog-dev</build_depend>  
+  <build_depend>mloam_common</build_depend>
+  <build_depend>mloam_msgs</build_depend>
+  
+  <run_depend>roscpp</run_depend>
+  <run_depend>image_transport</run_depend>
+  <run_depend>libgoogle-glog-dev</run_depend>
+  <run_depend>mloam_common</run_depend>
+  <run_depend>mloam_msgs</run_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
