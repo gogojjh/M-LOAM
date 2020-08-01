@@ -714,11 +714,13 @@ void saveKeyframeAndInsertGraph()
     if (sqrt((pose_point_cur.x - pose_point_prev.x) * (pose_point_cur.x - pose_point_prev.x)
            + (pose_point_cur.y - pose_point_prev.y) * (pose_point_cur.y - pose_point_prev.y) 
            + (pose_point_cur.z - pose_point_prev.z) * (pose_point_cur.z - pose_point_prev.z)) > DISTANCE_KEYFRAMES ||
-        pose_ori_cur.angularDistance(pose_ori_prev) / M_PI * 180 > ORIENTATION_KEYFRAMES)
+        pose_ori_cur.angularDistance(pose_ori_prev) / M_PI * 180 > ORIENTATION_KEYFRAMES || 
+        pose_keyframes_6d.size() == 0)
     {
         save_new_keyframe = true;
     }
-    if (!save_new_keyframe && pose_keyframes_6d.size() != 0) return;
+
+    if (!save_new_keyframe) return;
     pose_point_prev = pose_point_cur;
     pose_ori_prev = pose_ori_cur;
 
@@ -826,7 +828,7 @@ void pubOdometry()
     publishTF(odom_aft_mapped);
 
     // publish 3d keyframes
-    if (pub_keyframes.getNumSubscribers() != 0)
+    if (pub_keyframes.getNumSubscribers() != 0 && save_new_keyframe)
     {
         sensor_msgs::PointCloud2 keyframes_msg;
         pcl::toROSMsg(*pose_keyframes_3d, keyframes_msg);
@@ -836,7 +838,7 @@ void pubOdometry()
     }
 
     // publish 6d keyframes with covariance
-    if (pub_keyframes_6d.getNumSubscribers() != 0)
+    if (pub_keyframes_6d.getNumSubscribers() != 0 && save_new_keyframe)
     {
         mloam_msgs::Keyframes laser_keyframes_6d;
         laser_keyframes_6d.header.stamp = ros::Time().fromSec(time_laser_odometry);
@@ -1149,8 +1151,9 @@ void cloudUCTAssociateToMap(const PointICovCloud &cloud_local,
                             const Pose &pose_global, 
                             const vector<Pose> &pose_ext)
 {
+    // the compound pose: pose_global * pose_ext with uncertainty
     std::vector<Pose> pose_compound(NUM_OF_LASER);
-    for (size_t n = 0; n < NUM_OF_LASER; n++)
+    for (size_t n = 0; n < NUM_OF_LASER; n++) 
         compoundPoseWithCov(pose_global, pose_ext[n], pose_compound[n]);
 
     cloud_global.clear();
@@ -1164,11 +1167,12 @@ void cloudUCTAssociateToMap(const PointICovCloud &cloud_local,
         if (!with_ua_flag) 
         {
             cov_point = COV_MEASUREMENT;
-        } else
+        } 
+        else
         {
             pointAssociateToMap(point_ori, point_sel, pose_ext[ind].inverse());
             evalPointUncertainty(point_sel, cov_point, pose_compound[ind]);
-            if (cov_point(0, 0) + cov_point(1, 1) + cov_point(2, 2) > TRACE_THRESHOLD_AFTER_MAPPING) 
+            if (cov_point.trace() > TRACE_THRESHOLD_AFTER_MAPPING) 
                 continue;
         }
         pointAssociateToMap(point_ori, point_cov, pose_global);

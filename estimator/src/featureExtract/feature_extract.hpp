@@ -435,8 +435,8 @@ void FeatureExtract::matchCornerFromMap(const typename pcl::KdTreeFLANN<PointTyp
                 {
                     is_in_laser_fov = true;
                 }
-                // TODO:
-                if (s > 0.1 && is_in_laser_fov)
+                // if (s > 0.1 && is_in_laser_fov)
+                if (is_in_laser_fov)
                 {
                     Eigen::Vector4d coeff1(w1.x(), w1.y(), w1.z(), ld_p1);
                     Eigen::Vector4d coeff2(w2.x(), w2.y(), w2.z(), ld_p2);
@@ -578,8 +578,8 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
                 {
                     is_in_laser_fov = true;
                 }
-                // TODO:
-                if (s > 0.1 && is_in_laser_fov)
+                // if (s > 0.1 && is_in_laser_fov)
+                if (is_in_laser_fov)
                 {
                     Eigen::Vector4d coeff(norm(0), norm(1), norm(2), negative_OA_dot_norm);
                     PointPlaneFeature feature;

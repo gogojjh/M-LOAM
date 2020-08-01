@@ -75,9 +75,21 @@ add_executable(loop_closure_node
 	src/loop_closure_node.cpp
 	src/parameters.cpp
 	src/pose.cpp
+	src/scan_context.cpp
 )
 
 target_link_libraries(loop_closure_node
+    ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
+    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
+)
+
+add_executable(test_scan_context
+	src/test_scan_context.cpp
+	src/parameters.cpp
+	src/scan_context.cpp
+)
+
+target_link_libraries(test_scan_context
     ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
 )

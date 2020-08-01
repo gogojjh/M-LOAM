@@ -41,13 +41,11 @@ using SCPointType = pcl::PointXYZI; // using xyz only. but a user can exchange t
 using KeyMat = std::vector<std::vector<float>>;
 using InvKeyTree = KDTreeVectorOfVectorsAdaptor<KeyMat, float>;
 
-// namespace SC2
-// {
-
 void coreImportTest(void);
-
-// sc param-independent helper functions
 float xy2theta(const float &_x, const float &_y);
+float rad2deg(const float radians);
+float deg2rad(const float degrees);
+
 MatrixXd circshift(MatrixXd &_mat, int _num_shift);
 std::vector<float> eig2stdvec(MatrixXd _eigmat);
 
@@ -60,9 +58,54 @@ std::unique_ptr<T> make_unique(Args&&... args)
 class SCManager
 {
 public:
-    SCManager() = default; // reserving data space (of std::vector) could be considered. but the descriptor is lightweight so don't care.
+    SCManager()
+    {
 
-    Eigen::MatrixXd makeScancontext(pcl::PointCloud<SCPointType> &_scan_down);
+    }
+
+    void setParameter(double lidar_height,
+                      int pc_num_ring,
+                      int pc_num_sector,
+                      double pc_max_radius,
+                      double pc_unit_sectorangle,
+                      double pc_unit_ringgap,
+                      int num_exclude_recent,
+                      int num_candidates_from_tree,
+                      double search_ratio,
+                      double sc_dist_thres,
+                      int tree_making_period) 
+    {                    
+        LIDAR_HEIGHT = lidar_height;
+        PC_NUM_RING = pc_num_ring;
+        PC_NUM_SECTOR = pc_num_sector;
+        PC_MAX_RADIUS = pc_max_radius;
+        PC_UNIT_SECTORANGLE = pc_unit_sectorangle;
+        PC_UNIT_RINGGAP = pc_unit_ringgap;
+        NUM_EXCLUDE_RECENT = num_exclude_recent;
+        NUM_CANDIDATES_FROM_TREE = num_candidates_from_tree;
+        SEARCH_RATIO = search_ratio;
+        SC_DIST_THRES = sc_dist_thres;
+        TREE_MAKING_PERIOD = tree_making_period;
+
+        std::cout << "[SCManager param]: "
+                  << "lidar_height: " << LIDAR_HEIGHT << ", " 
+                  << "pc_num_ring: " << PC_NUM_RING << ", " 
+                  << "pc_num_sector: " << PC_NUM_SECTOR << ", " 
+                  << "pc_max_radius: " << PC_MAX_RADIUS << ", " 
+                  << "pc_unit_sectorangle: " << PC_UNIT_SECTORANGLE << ", " 
+                  << "pc_unit_ringgap: " << PC_UNIT_RINGGAP << ", " 
+                  << "num_exclude_recent: " << NUM_EXCLUDE_RECENT << ", " 
+                  << "num_candidates_from_tree: " << NUM_CANDIDATES_FROM_TREE << ", " 
+                  << "search_ratio: " << SEARCH_RATIO << ", " 
+                  << "sc_dist_thres: " << SC_DIST_THRES << ", " 
+                  << "tree_making_period: " << TREE_MAKING_PERIOD << std::endl;
+
+        tree_making_period_conter_ = 0;
+
+        init_color();
+    }        
+
+    Eigen::MatrixXd makeScancontext(pcl::PointCloud<SCPointType> & _scan_down);
     Eigen::MatrixXd makeRingkeyFromScancontext(Eigen::MatrixXd &_desc);
     Eigen::MatrixXd makeSectorkeyFromScancontext(Eigen::MatrixXd &_desc);
 
@@ -74,28 +117,31 @@ public:
     void makeAndSaveScancontextAndKeys(pcl::PointCloud<SCPointType> &_scan_down);
     std::pair<int, float> detectLoopClosureID(void); // int: nearest node index, float: relative yaw
 
+    void init_color();
+    cv::Mat getLastScanContextImage();
+
 public:
     // hyper parameters ()
-    const double LIDAR_HEIGHT = 2.0; // lidar height : add this for simply directly using lidar scan in the lidar local coord (not robot base coord) / if you use robot-coord-transformed lidar scans, just set this as 0.
+    double LIDAR_HEIGHT; // lidar height : add this for simply directly using lidar scan in the lidar local coord (not robot base coord) / if you use robot-coord-transformed lidar scans, just set this as 0.
 
-    const int PC_NUM_RING = 20;        // 20 in the original paper (IROS 18)
-    const int PC_NUM_SECTOR = 60;      // 60 in the original paper (IROS 18)
-    const double PC_MAX_RADIUS = 80.0; // 80 meter max in the original paper (IROS 18)
-    const double PC_UNIT_SECTORANGLE = 360.0 / double(PC_NUM_SECTOR);
-    const double PC_UNIT_RINGGAP = PC_MAX_RADIUS / double(PC_NUM_RING);
+    int PC_NUM_RING;        // 20 in the original paper (IROS 18)
+    int PC_NUM_SECTOR;      // 60 in the original paper (IROS 18)
+    double PC_MAX_RADIUS;   // 80 meter max in the original paper (IROS 18)
+    double PC_UNIT_SECTORANGLE;
+    double PC_UNIT_RINGGAP;
 
     // tree
-    const int NUM_EXCLUDE_RECENT = 50;       // simply just keyframe gap, but node position distance-based exclusion is ok.
-    const int NUM_CANDIDATES_FROM_TREE = 10; // 10 is enough. (refer the IROS 18 paper)
+    int NUM_EXCLUDE_RECENT;       // simply just keyframe gap, but node position distance-based exclusion is ok.
+    int NUM_CANDIDATES_FROM_TREE; // 10 is enough. (refer the IROS 18 paper)
 
     // loop thres
-    const double SEARCH_RATIO = 0.1; // for fast comparison, no Brute-force, but search 10 % is okay. // but may well work for same-direction-revisits, not for reverse-revisits
-    // const double SC_DIST_THRES = 0.13; // empirically 0.1-0.2 is fine (rare false-alarms) for 20x60 polar context (but for 0.15 <, DCS or ICP fit score check (e.g., in LeGO-LOAM) should be required for robustness)
-    const double SC_DIST_THRES = 0.5; // 0.4-0.6 is good choice for using with robust kernel (e.g., Cauchy, DCS) + icp fitness threshold
+    double SEARCH_RATIO; // for fast comparison, no Brute-force, but search 10 % is okay. // but may well work for same-direction-revisits, not for reverse-revisits
+    // double SC_DIST_THRES = 0.13; // empirically 0.1-0.2 is fine (rare false-alarms) for 20x60 polar context (but for 0.15 <, DCS or ICP fit score check (e.g., in LeGO-LOAM) should be required for robustness)
+    double SC_DIST_THRES; // 0.4-0.6 is good choice for using with robust kernel (e.g., Cauchy, DCS) + icp fitness threshold
 
     // config
-    const int TREE_MAKING_PERIOD_ = 50; // i.e., remaking tree frequency, to avoid non-mandatory every remaking, to save time cost
-    int tree_making_period_conter = 0;
+    int TREE_MAKING_PERIOD; // i.e., remaking tree frequency, to avoid non-mandatory every remaking, to save time cost
+    int tree_making_period_conter_;
 
     // data
     std::vector<double> polarcontexts_timestamp_; // optional.
@@ -106,6 +152,8 @@ public:
     KeyMat polarcontext_invkeys_mat_;
     KeyMat polarcontext_invkeys_to_search_;
     std::unique_ptr<InvKeyTree> polarcontext_tree_;
+
+    std::vector<cv::Vec3b> color_projection_;
 
 }; // SCManager
 

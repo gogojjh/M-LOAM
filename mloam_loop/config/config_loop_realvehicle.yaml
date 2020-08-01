@@ -1,5 +1,24 @@
 %YAML:1.0
 
+loop_keyframe_interval: 3
+loop_history_search_num: 15
+loop_opti_cost_threshold: 41
+
+# scan context
+lidar_height: 2.0
+
+pc_num_ring: 20
+pc_num_sector: 60
+pc_max_radius: 80.0
+
+num_exclude_recent: 50
+num_candidates_from_tree: 50 # 10 or 50
+
+search_ratio: 0.1
+sc_dist_thres: 0.5
+
+tree_making_period: 10
+
 # # Multiple thread support
 # multiple_thread: 0
 

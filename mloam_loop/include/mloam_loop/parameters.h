@@ -40,6 +40,26 @@ using namespace std;
 extern int RESULT_SAVE;
 extern std::string OUTPUT_FOLDER;
 
+extern int LOOP_KEYFRAME_INTERVAL;
+extern int LOOP_HISTORY_SEARCH_NUM;
+extern double LOOP_OPTI_COST_THRESHOLD;
+
+// scan context
+extern double LIDAR_HEIGHT;
+
+extern int PC_NUM_RING;
+extern int PC_NUM_SECTOR;
+extern double PC_MAX_RADIUS;
+extern double PC_UNIT_SECTORANGLE;
+extern double PC_UNIT_RINGGAP;
+
+extern int NUM_EXCLUDE_RECENT;
+extern int NUM_CANDIDATES_FROM_TREE;
+
+extern double SEARCH_RATIO;
+extern double SC_DIST_THRES;
+extern int TREE_MAKING_PERIOD;
+
 void readParameters(std::string config_file);
 
 enum SIZE_PARAMETERIZATION
