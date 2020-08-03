@@ -36,14 +36,16 @@
 #include <pcl/common/transforms.h>
 #include <pcl_ros/point_cloud.h>
 
-#include "common/color.hpp"
 
+#include "common/color.hpp"
 #include "mloam_msgs/Keyframes.h"
 
 #include "mloam_loop/tic_toc.h"
 #include "mloam_loop/parameters.h"
 #include "mloam_loop/pose.h"
 #include "mloam_loop/scan_context.hpp"
+#include "mloam_loop/feature_extract.hpp"
+#include "mloam_loop/lidar_map_plane_norm_factor.hpp"
 
 //my library
 // #include "iscOptimizationClass.h"
@@ -102,7 +104,7 @@ std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloud_keyframes;
 std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> outlier_keyframes;
 
 // loop result
-int cur_kf_idx = 0; 
+size_t cur_kf_idx = 0; 
 int loop_kf_idx = 0;
 float yaw_diff_rad = 0.0;
 
@@ -116,13 +118,19 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud_corner_from_map_ds(new pcl::Poi
 pcl::VoxelGrid<pcl::PointXYZI> down_size_filter_surf_map;
 pcl::VoxelGrid<pcl::PointXYZI> down_size_filter_corner_map;
 
+pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr kdtree_surf_from_map(new pcl::KdTreeFLANN<pcl::PointXYZI>());
+pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr kdtree_corner_from_map(new pcl::KdTreeFLANN<pcl::PointXYZI>());
+
 // others
 size_t frame_cnt = 0; // frame num
 size_t frame_drop_cnt = 0; // drop keyframes for real-time performance
 size_t frame_skip_cnt = 0; // skip performing loop detection
 
-// scancontext
+// scan context
 SCManager sc_manager;
+
+// feature extract
+FeatureExtract f_extract;
 
 void laserCloudSurfLastHandler(const sensor_msgs::PointCloud2ConstPtr &laser_cloud_surf_last_msg)
 {
@@ -186,24 +194,23 @@ void addNewKeyframes(const mloam_msgs::Keyframes &keyframes_msg)
     corner_keyframes.push_back(laser_cloud_corner_last);
     cloud_keyframes.push_back(laser_cloud_full_res);
     outlier_keyframes.push_back(laser_cloud_outlier);
-
-    cur_kf_idx = laser_keyframes_6d.size();
-    std::cout << "keyframe size: " << cur_kf_idx << std::endl;
 }
 
 bool loopDetection()
 {
     pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud(new pcl::PointCloud<pcl::PointXYZI>());
-    *laser_cloud += *cloud_keyframes[cur_kf_idx];
-    *laser_cloud += *outlier_keyframes[cur_kf_idx];
+    *laser_cloud += *cloud_keyframes.back();
+    *laser_cloud += *outlier_keyframes.back();
     sc_manager.makeAndSaveScancontextAndKeys(*laser_cloud);
+    cur_kf_idx = sc_manager.getDataBaseSize() - 1;
+    std::cout << "keyframe size: " << cur_kf_idx << std::endl;    
 
     // 1. check if skip enough frame
     frame_skip_cnt++;
     if (frame_skip_cnt <= LOOP_KEYFRAME_INTERVAL) return false;
 
     // 2. apply scan context-based global localization
-    auto detect_result = sc_manager.detectLoopClosureID();
+    auto detect_result = sc_manager.detectLoopClosureID(cur_kf_idx);
     // std::cout << "match id: " << detect_result.first 
     //           << ", yaw: " << detect_result.second << std::endl;   
     loop_kf_idx = detect_result.first;
@@ -252,11 +259,26 @@ bool loopDetection()
     return true;
 }
 
+bool checkTemporalConsistency()
+{
+    
+}
+
+bool checkGeometricConsistency(std::pair<double, Pose> loop_opti_result)
+{
+    if (loop_opti_result.first > LOOP_OPTI_COST_THRESHOLD)
+    {
+        return false;
+    } 
+    else
+    {
+        return true;
+    }
+}
+
 // find relative transformation from map to local
 std::pair<double, Pose> performLoopOptimization()
 {
-    // optimize laser_cloud_surf <-> laser_clous_surf_from_map_ds
-    // optimize laser_cloud_corner <-> laser_clous_corner_from_map_ds
     size_t laser_cloud_surf_from_map_num = laser_cloud_surf_from_map_ds->size();
     size_t laser_cloud_corner_from_map_num = laser_cloud_corner_from_map_ds->size();
     printf("[loop_closure] map surf num: %lu, corner num: %lu\n", laser_cloud_surf_from_map_num, laser_cloud_corner_from_map_num);
@@ -283,22 +305,20 @@ std::pair<double, Pose> performLoopOptimization()
         size_t surf_num = 0, corner_num = 0;
         TicToc t_match_features;
         int n_neigh = 5;
-        f_extract_.matchSurfFromMap(kdtree_surf_points_local_map,
-                                    *laser_cloud_surf_from_map_ds,
-                                    *laser_cloud_surf,
-                                    pose_local,
-                                    all_surf_features,
-                                    n_neigh,
-                                    false);
+        f_extract.matchSurfFromMap(kdtree_surf_from_map,
+                                   *laser_cloud_surf_from_map_ds,
+                                   *laser_cloud_surf,
+                                   pose_local,
+                                   all_surf_features,
+                                   n_neigh);
         surf_num = all_surf_features.size();
 
-        f_extract_.matchCornerFromMap(kdtree_corner_points_local_map,
-                                      *laser_cloud_corner_from_map_ds,
-                                      *laser_cloud_corner,
-                                      pose_local,
-                                      all_corner_features,
-                                      n_neigh,
-                                      false);
+        f_extract.matchCornerFromMap(kdtree_corner_from_map,
+                                     *laser_cloud_corner_from_map_ds,
+                                     *laser_cloud_corner,
+                                     pose_local,
+                                     all_corner_features,
+                                     n_neigh);
         corner_num = all_corner_features.size();
         printf("matching features time: %fms\n", t_match_features.toc());
 
@@ -335,8 +355,8 @@ std::pair<double, Pose> performLoopOptimization()
         pose_local.q_ = Eigen::Quaterniond(para_pose[6], para_pose[3], para_pose[4], para_pose[5]);
         pose_local.update();
     }
-    std::pair<double, Pose> loop_opti_result = make_pair(total_cost, pose_local);
-    std::cout << "relative transformation: " << pose_local << std::endl;  
+    std::pair<double, Pose> loop_opti_result = make_pair(opti_cost, pose_local);
+    std::cout << "opti_cost: " << opti_cost << ", relative transformation: " << pose_local << std::endl;  
     return loop_opti_result;
 }
 
@@ -468,15 +488,22 @@ void process()
             if (detect_loop)
             {
                 printf("find loop: cur_kf_idx: %d, loop_kf_idx: %d\n", cur_kf_idx, loop_kf_idx);
-                // consistencyVerfication();
-
+                
+                bool tc_flag = checkTemporalConsistency();
+                if (!tc_flag) 
+                {
+                    printf("loop reject with temporal verificiation\n");
+                    continue;
+                }
+                
                 auto loop_opti_result = performLoopOptimization();
-                if (loop_opti_result.first > LOOP_OPTI_COST_THRESHOLD)
+                bool gc_flag = checkGeometricConsistency(loop_opti_result);
+                if (!gc_flag)
                 {
                     printf("loop reject with geometry verificiation\n");
                     continue;
                 } 
-                Pose pose_rlt = loop_opti_result.second;
+                Pose pose_rlt = loop_opti_result.second; // the relative transformation from map to keyframe
 
                 // addPoseGraph();
                 // poseGraphOptimization();

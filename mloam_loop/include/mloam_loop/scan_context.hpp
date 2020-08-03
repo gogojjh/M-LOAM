@@ -115,10 +115,11 @@ public:
 
     // User-side API
     void makeAndSaveScancontextAndKeys(pcl::PointCloud<SCPointType> &_scan_down);
-    std::pair<int, float> detectLoopClosureID(void); // int: nearest node index, float: relative yaw
+    std::pair<int, float> detectLoopClosureID(size_t &query_idx); // int: nearest node index, float: relative yaw
 
     void init_color();
     cv::Mat getLastScanContextImage();
+    size_t getDataBaseSize();
 
 public:
     // hyper parameters ()

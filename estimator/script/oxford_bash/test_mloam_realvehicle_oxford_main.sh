@@ -7,7 +7,7 @@
 #     gf_method:=gd_float \
 #     gf_ratio_ini:=0.2 \
 #     loss_mode:=gmc \
-#     gnc:=true \
+#     gnc:=false \
 #     bag_file:=$data_path \
 #     output_path:=$result_path
 # sleep 5
@@ -17,7 +17,7 @@ roslaunch mloam mloam_realvehicle_oxford.launch \
     result_save:=true \
     gf_method:=gd_float \
     gf_ratio_ini:=0.2 \
-    loss_mode:=gmc \
+    loss_mode:=huber \
     gnc:=false \
     bag_file:=$data_path \
     output_path:=$result_path
@@ -126,11 +126,10 @@ roslaunch mloam mloam_realvehicle_oxford.launch \
 # --compare \
 #     $result_path/traj
 
-python2 $rpg_path/scripts/analyze_trajectory_single_mloam.py \
---recalculate_errors \
---est_type \
-    M-LOAM-gd-float-0.2-gmc-gnc \
-    M-LOAM-gd-float-0.2-gmc \
-    M-LOAM-gd-float-0.2-huber \
---compare \
-    $result_path/traj
+# python2 $rpg_path/scripts/analyze_trajectory_single_mloam.py \
+# --recalculate_errors \
+# --est_type \
+#     M-LOAM-gd-float-0.2-huber \
+#     M-LOAM-gd-float-0.2-gmc \
+# --compare \
+#     $result_path/traj

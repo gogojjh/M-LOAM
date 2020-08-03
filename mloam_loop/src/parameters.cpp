@@ -18,6 +18,8 @@ std::string OUTPUT_FOLDER;
 int LOOP_KEYFRAME_INTERVAL;
 int LOOP_HISTORY_SEARCH_NUM;
 double LOOP_OPTI_COST_THRESHOLD;
+double LOOP_TEMPORAL_CONSISTENCY_THRESHOLD;
+double LOOP_GEOMETRIC_CONSISTENCY_THRESHOLD;
 
 // scan context
 double LIDAR_HEIGHT;
@@ -68,6 +70,8 @@ void readParameters(std::string config_file)
     LOOP_KEYFRAME_INTERVAL = fsSettings["loop_keyframe_interval"];
     LOOP_HISTORY_SEARCH_NUM = fsSettings["loop_history_search_num"];
     LOOP_OPTI_COST_THRESHOLD = fsSettings["loop_opti_cost_threshold"];
+    LOOP_TEMPORAL_CONSISTENCY_THRESHOLD = fsSettings["loop_temporal_consistency_threshold"];
+    LOOP_GEOMETRIC_CONSISTENCY_THRESHOLD = fsSettings["loop_geometric_consistency_threshold"];
 
     // scan context
     LIDAR_HEIGHT = fsSettings["lidar_height"];

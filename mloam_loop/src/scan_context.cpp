@@ -214,11 +214,11 @@ void SCManager::makeAndSaveScancontextAndKeys(pcl::PointCloud<SCPointType> &scan
     // cout << polarcontext_vkeys_.size() << endl;
 } 
 
-std::pair<int, float> SCManager::detectLoopClosureID(void)
+std::pair<int, float> SCManager::detectLoopClosureID(size_t &query_idx)
 {
     int loop_id{-1}; // init with -1, -1 means no loop (== LeGO-LOAM's variable "closestHistoryFrameID")
-    auto curr_key = polarcontext_invkeys_mat_.back(); // current observation (query)
-    auto curr_desc = polarcontexts_.back();           // current observation (query)
+    auto curr_key = polarcontext_invkeys_mat_[query_idx]; // current observation (query)
+    auto curr_desc = polarcontexts_[query_idx];           // current observation (query)
 
     /* 
      * step 1: candidates from ringkey tree_
@@ -352,5 +352,8 @@ cv::Mat SCManager::getLastScanContextImage()
     return scan_context_img;
 }
 
-
+size_t SCManager::getDataBaseSize()
+{
+    return polarcontext_invkeys_mat_.size();
+}
 

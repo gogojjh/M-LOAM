@@ -3,6 +3,8 @@
 loop_keyframe_interval: 3
 loop_history_search_num: 15
 loop_opti_cost_threshold: 41
+loop_temporal_consistency_threshold: 10
+loop_geometric_consistency_threshold: 50 
 
 # scan context
 lidar_height: 2.0
@@ -11,7 +13,7 @@ pc_num_ring: 20
 pc_num_sector: 60
 pc_max_radius: 80.0
 
-num_exclude_recent: 50
+num_exclude_recent: 50 # not find candidate within previous num_exclude_recent frames
 num_candidates_from_tree: 50 # 10 or 50
 
 search_ratio: 0.1

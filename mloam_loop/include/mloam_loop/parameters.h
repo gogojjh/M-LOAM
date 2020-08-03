@@ -43,6 +43,8 @@ extern std::string OUTPUT_FOLDER;
 extern int LOOP_KEYFRAME_INTERVAL;
 extern int LOOP_HISTORY_SEARCH_NUM;
 extern double LOOP_OPTI_COST_THRESHOLD;
+extern double LOOP_TEMPORAL_CONSISTENCY_THRESHOLD;
+extern double LOOP_GEOMETRIC_CONSISTENCY_THRESHOLD;
 
 // scan context
 extern double LIDAR_HEIGHT;

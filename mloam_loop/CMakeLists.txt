@@ -76,6 +76,7 @@ add_executable(loop_closure_node
 	src/parameters.cpp
 	src/pose.cpp
 	src/scan_context.cpp
+	src/feature_extract.cpp
 )
 
 target_link_libraries(loop_closure_node
