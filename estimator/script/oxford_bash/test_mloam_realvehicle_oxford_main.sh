@@ -14,7 +14,7 @@
 
 roslaunch mloam mloam_realvehicle_oxford.launch \
     run_mloam:=true \
-    result_save:=false \
+    result_save:=true \
     gf_method:=gd_float \
     gf_ratio_ini:=0.2 \
     loss_mode:=huber \

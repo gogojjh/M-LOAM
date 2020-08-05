@@ -145,14 +145,6 @@ void laserKeyframeHandler(const mloam_msgs::KeyframesConstPtr &laser_key_frames_
 
 void pubLoopInfo()
 {
-    // cv::Mat sc_img = sc_manager.getScanContextImage(frame_cnt);
-    // cv_bridge::CvImage last_scan_context_msg;
-    // last_scan_context_msg.header.frame_id = "/laser";
-    // last_scan_context_msg.header.stamp = ros::Time().fromSec(time_laser_keyframes);
-    // last_scan_context_msg.encoding = sensor_msgs::image_encodings::RGB8;
-    // last_scan_context_msg.image = sc_img;
-    // pub_scan_context.publish(last_scan_context_msg.toImageMsg());
-
     // iscloam::LoopInfo loop;
     // loop.header.stamp = pointcloud_time;
     // loop.header.frame_id = "/laser";

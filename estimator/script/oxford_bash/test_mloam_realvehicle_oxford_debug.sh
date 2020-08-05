@@ -6,7 +6,7 @@ export result_path=$rpg_path/results/real_vehicle/oxford/20190118_debug/
 mkdir -p $result_path/gf_pcd
 mkdir -p $result_path/traj
 mkdir -p $result_path/time
-mkdir -p $result_path/posegraph
+mkdir -p $result_path/pose_graph
 mkdir -p $result_path/others
 
 bash test_mloam_realvehicle_oxford_main.sh

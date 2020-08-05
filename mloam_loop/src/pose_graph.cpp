@@ -14,7 +14,7 @@
 PoseGraph::PoseGraph()
 {
     posegraph_visualization = new CameraPoseVisualization(1.0, 0.0, 0.0, 1.0);
-    posegraph_visualization->setScale(0.3);
+    posegraph_visualization->setScale(0.1);
     posegraph_visualization->setLineWidth(0.1);
     
     skip_cnt_ = 0;
@@ -42,6 +42,9 @@ void PoseGraph::registerPub(ros::NodeHandle &nh)
 {
     pub_pg_path_ = nh.advertise<nav_msgs::Path>("pose_graph_path", 1000);
     pub_pose_graph_ = nh.advertise<visualization_msgs::MarkerArray>("pose_graph", 1000);
+    pub_sc_ = nh.advertise<sensor_msgs::Image>("scan_context", 5);
+    pub_cloud_ = nh.advertise<sensor_msgs::PointCloud2>("kf_cloud", 5);
+    pub_loop_map_ = nh.advertise<sensor_msgs::PointCloud2>("loop_map", 5);
 }
 
 void PoseGraph::setParameter()
@@ -67,17 +70,17 @@ void PoseGraph::setPGOTread()
 
 void PoseGraph::addKeyFrameIntoDB(KeyFrame *keyframe)
 {
+    pcl::PointCloud<pcl::PointXYZI>::Ptr raw_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+    *raw_cloud += *keyframe->full_cloud_;
+    *raw_cloud += *keyframe->outlier_cloud_;
+    sc_manager_.makeAndSaveScancontextAndKeys(*raw_cloud);
     // if (VISUALIZE_IMAGE)
     // {
     //     cv::Mat tmp1_image = sc_manager_.getScanContextImage(que_index);
     //     cv::Mat tmp2_image = sc_manager_.getScanContextImage(detect);
     //     putText(tmp2_image, "loop score:" + to_string(qr.score_), cv::Point2f(10, 50), CV_FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255));
-    //     cv::hconcat(loop_result, tmp1_image, tmp2_image);
+    //     cv::vconcat(loop_result, tmp1_image, tmp2_image);
     // }
-    pcl::PointCloud<pcl::PointXYZI>::Ptr raw_cloud(new pcl::PointCloud<pcl::PointXYZI>());
-    *raw_cloud += *keyframe->full_cloud_;
-    *raw_cloud += *keyframe->outlier_cloud_;
-    sc_manager_.makeAndSaveScancontextAndKeys(*raw_cloud);
 }
 
 void PoseGraph::addKeyFrame(KeyFrame *cur_kf, bool flag_detect_loop)
@@ -90,46 +93,46 @@ void PoseGraph::addKeyFrame(KeyFrame *cur_kf, bool flag_detect_loop)
         TicToc t_loop_detect;
         std::pair<int, double> ld_result = detectLoop(cur_kf, cur_kf->index_);
         printf("loop_detection: %fms\n", t_loop_detect.toc());
-        // if (ld_result.first != -1)
-        // {           
-        //     int loop_index = ld_result.first;
-        //     double yaw_diff_rad = ld_result.second;
-        //     printf("find a loop candidate: %d <-> %d, yaw_ini: %f\n", cur_kf->index_, loop_index, yaw_diff_rad);
+        if (ld_result.first != -1)
+        {           
+            int loop_index = ld_result.first;
+            double yaw_diff_rad = ld_result.second;
+            printf("find a loop candidate: %d <-> %d, yaw_ini: %f\n", cur_kf->index_, loop_index, yaw_diff_rad);
 
-        //     // check temporal consistency
-        //     TicToc t_check_tc;
-        //     std::pair<bool, int> tc_result = checkTemporalConsistency(cur_kf->index_, loop_index);
-        //     printf("check temporal consistency: %fms\n", t_check_tc.toc());
-        //     if (!tc_result.first)
-        //     {
-        //         printf("loop reject with temporal verificiation\n");
-        //     }
-        //     else 
-        //     {
-        //         skip_cnt_ = 0; // not perform frequent geometric verification
+            // check temporal consistency
+            TicToc t_check_tc;
+            std::pair<bool, int> tc_result = checkTemporalConsistency(cur_kf->index_, loop_index);
+            printf("check temporal consistency: %fms\n", t_check_tc.toc());
+            if (!tc_result.first)
+            {
+                printf("loop reject with temporal verificiation\n");
+            }
+            else 
+            {
+                skip_cnt_ = 0; // not perform frequent geometric verification
 
-        //         // check geometric consistency
-        //         TicToc t_check_gc;
-        //         std::pair<bool, Pose> loop_opti_result = checkGeometricConsistency(cur_kf->index_, loop_index);
-        //         printf("check geoometryc consistency %fms\n", t_check_gc.toc());
-        //         if (!loop_opti_result.first)
-        //         {
-        //             printf("loop reject with geometry verificiation\n");
-        //         }
-        //         else 
-        //         {
-        //             // perform pose graph optimization
-        //             Pose loop_info = loop_opti_result.second;
-        //             cur_kf->updateLoopInfo(loop_index, loop_info);
-        //             if (earliest_loop_index_ > loop_index || earliest_loop_index_ == -1)
-        //                 earliest_loop_index_ = loop_index;
+                // check geometric consistency
+                TicToc t_check_gc;
+                std::pair<bool, Pose> loop_opti_result = checkGeometricConsistency(cur_kf, cur_kf->index_, loop_index);
+                printf("check geoometryc consistency %fms\n", t_check_gc.toc());
+                if (!loop_opti_result.first)
+                {
+                    printf("loop reject with geometry verificiation\n");
+                }
+                else 
+                {
+                    // perform pose graph optimization
+                    Pose loop_info = loop_opti_result.second;
+                    cur_kf->updateLoopInfo(loop_index, loop_info);
+                    if (earliest_loop_index_ > loop_index || earliest_loop_index_ == -1)
+                        earliest_loop_index_ = loop_index;
 
-        //             m_optimize_buf.lock();
-        //             optimize_buf_.push(cur_kf->index_);
-        //             m_optimize_buf.unlock();
-        //         }
-        //     }
-        // }
+                    // m_optimize_buf.lock();
+                    // optimize_buf_.push(cur_kf->index_);
+                    // m_optimize_buf.unlock();
+                }
+            }
+        }
     }
     else
     {
@@ -143,7 +146,7 @@ void PoseGraph::addKeyFrame(KeyFrame *cur_kf, bool flag_detect_loop)
     cur_kf->getPose(pose_w);
     geometry_msgs::PoseStamped pose_stamped;
     pose_stamped.header.stamp = ros::Time(cur_kf->time_stamp_);
-    pose_stamped.header.frame_id = "world";
+    pose_stamped.header.frame_id = "/world";
     pose_stamped.pose.position.x = pose_w.t_(0) + VISUALIZATION_SHIFT_X;
     pose_stamped.pose.position.y = pose_w.t_(1) + VISUALIZATION_SHIFT_Y;
     pose_stamped.pose.position.z = pose_w.t_(2);
@@ -219,7 +222,7 @@ void PoseGraph::loadKeyFrame(KeyFrame *cur_kf, bool flag_detect_loop)
     cur_kf->getPose(pose_w);
     geometry_msgs::PoseStamped pose_stamped;
     pose_stamped.header.stamp = ros::Time(cur_kf->time_stamp_);
-    pose_stamped.header.frame_id = "world";
+    pose_stamped.header.frame_id = "/world";
     pose_stamped.pose.position.x = pose_w.t_(0) + VISUALIZATION_SHIFT_X;
     pose_stamped.pose.position.y = pose_w.t_(1) + VISUALIZATION_SHIFT_Y;
     pose_stamped.pose.position.z = pose_w.t_(2);
@@ -272,6 +275,7 @@ std::pair<int, double> PoseGraph::detectLoop(const KeyFrame *keyframe, const int
 
     // apply scan context-based global localization
     QueryResult qr = sc_manager_.detectLoopClosureID(que_index);
+    std::cout << qr;
     std::pair<int, double> detect_result;
     detect_result.first = qr.match_index_;
     detect_result.second = qr.yaw_diff_rad_;
@@ -290,27 +294,22 @@ std::pair<int, double> PoseGraph::detectLoop(const KeyFrame *keyframe, const int
                 break;
             }
         }
-
         // check if the candidate loop is to far
         if ((t_que - t_match).norm() > LOOP_DISTANCE_THRESHOLD)
         {
             detect_result.first = -1;
         }
-        if (VISUALIZE_IMAGE)
-        {
-            cv::Mat tmp1_image = sc_manager_.getScanContextImage(que_index);
-            cv::Mat tmp2_image = sc_manager_.getScanContextImage(match_index);
-            putText(tmp2_image, "loop score:" + to_string(qr.score_), cv::Point2f(10, 50), CV_FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255));
-            cv::hconcat(loop_result, tmp1_image, tmp2_image);
-        }
+        // if (VISUALIZE_IMAGE)
+        // {
+        //     cv::Mat tmp1_image = sc_manager_.getScanContextImage(que_index);
+        //     cv::Mat tmp2_image = sc_manager_.getScanContextImage(match_index);
+        //     putText(tmp2_image, "loop score:" + to_string(qr.score_), cv::Point2f(10, 50), CV_FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255));
+        //     loop_result = tmp1_image.clone();
+        //     cv::vconcat(loop_result, tmp2_image, loop_result);
+        //     cv::imshow("loop_result", loop_result);
+        //     cv::waitKey(20);
+        // }
     }
-    /*
-    if (VISUALIZE_IMAGE)
-    {
-        cv::imshow("loop_result", loop_result);
-        cv::waitKey(20);
-    }
-*/
     return detect_result;
 }
 
@@ -318,8 +317,8 @@ std::pair<bool, int> PoseGraph::checkTemporalConsistency(const int &que_index,
                                                          const int &match_index)
 {
     bool tc_flag = true;
-    std::vector<int> all_match_index;
-    all_match_index.push_back(match_index);
+    // std::vector<int> all_match_index;
+    // all_match_index.push_back(match_index);
     for (int reque_index = que_index - 5; reque_index < que_index; reque_index++)
     {
         QueryResult qr = sc_manager_.detectLoopClosureID(reque_index);
@@ -328,13 +327,12 @@ std::pair<bool, int> PoseGraph::checkTemporalConsistency(const int &que_index,
         redetect_result.second = qr.yaw_diff_rad_;
         int rematch_index = redetect_result.first;
         // std::cout << "reque_index: " << reque_index << std::endl;
-        // if (rematch_index != -1) std::cout << ref_filename[rematch_index] << std::endl;
         if ((rematch_index == -1) || (abs(match_index - rematch_index) > LOOP_TEMPORAL_CONSISTENCY_THRESHOLD))
         {
             tc_flag = false;
             break;
         }
-        all_match_index.push_back(rematch_index);
+        // all_match_index.push_back(rematch_index);
     }
     // if (tc_flag)
     // {
@@ -344,23 +342,21 @@ std::pair<bool, int> PoseGraph::checkTemporalConsistency(const int &que_index,
     return make_pair(tc_flag, match_index);
 }
 
-std::pair<double, Pose> PoseGraph::checkGeometricConsistency(KeyFrame *keyframe_cur,
+std::pair<double, Pose> PoseGraph::checkGeometricConsistency(KeyFrame *cur_kf,
                                                              const int &que_index,
                                                              const int &match_index)
 {
     // assert(que_index < 0);
     // assert(match_index < 0);
+    KeyFrame *old_kf = getKeyFrame(match_index);
 
     // construct the keyframe point cloud
     pcl::PointCloud<pcl::PointXYZI> surf_trans, corner_trans;
     laser_cloud_surf_->clear();
     laser_cloud_corner_->clear();
-    pcl::transformPointCloud(*keyframe_cur->surf_cloud_, surf_trans,
-                             keyframe_cur->pose_w_.T_.cast<float>());
+    pcl::transformPointCloud(*cur_kf->surf_cloud_, surf_trans, old_kf->pose_w_.T_.cast<float>());
     *laser_cloud_surf_ += surf_trans;
-
-    pcl::transformPointCloud(*keyframe_cur->corner_cloud_, corner_trans,
-                             keyframe_cur->pose_w_.T_.cast<float>());
+    pcl::transformPointCloud(*cur_kf->corner_cloud_, corner_trans, old_kf->pose_w_.T_.cast<float>());
     *laser_cloud_corner_ += corner_trans;
 
     // construct the model point cloud
@@ -370,13 +366,10 @@ std::pair<double, Pose> PoseGraph::checkGeometricConsistency(KeyFrame *keyframe_
     {
         if (match_index + j < 0 || match_index + j > que_index)
             continue;
-        KeyFrame *old_kf = getKeyFrame(match_index + j);
-        pcl::transformPointCloud(*old_kf->surf_cloud_, surf_trans,
-                                 old_kf->pose_w_.T_.cast<float>());
+        KeyFrame *tmp_kf = getKeyFrame(match_index + j);
+        pcl::transformPointCloud(*tmp_kf->surf_cloud_, surf_trans, tmp_kf->pose_w_.T_.cast<float>());
         *laser_cloud_surf_from_map_ += surf_trans;
-
-        pcl::transformPointCloud(*old_kf->corner_cloud_, corner_trans,
-                                 old_kf->pose_w_.T_.cast<float>());
+        pcl::transformPointCloud(*tmp_kf->corner_cloud_, corner_trans, tmp_kf->pose_w_.T_.cast<float>());
         *laser_cloud_corner_from_map_ += corner_trans;
     }
     down_size_filter_surf_map_.setInputCloud(laser_cloud_surf_from_map_);
@@ -390,7 +383,7 @@ std::pair<double, Pose> PoseGraph::checkGeometricConsistency(KeyFrame *keyframe_
     printf("[loop_closure] map surf num: %lu, corner num: %lu\n", laser_cloud_surf_from_map_num, laser_cloud_corner_from_map_num);
     kdtree_surf_from_map_->setInputCloud(laser_cloud_surf_from_map_ds_);
     kdtree_corner_from_map_->setInputCloud(laser_cloud_corner_from_map_ds_);
-    double opti_cost = 300;
+    double opti_cost = 1e6;
 
     Pose pose_relative; // initialize an identity pose
     TicToc t_optimization;
@@ -399,7 +392,6 @@ std::pair<double, Pose> PoseGraph::checkGeometricConsistency(KeyFrame *keyframe_
         double *para_pose = new double[SIZE_POSE];
         ceres::Problem problem;
         ceres::LossFunctionWrapper *loss_function = new ceres::LossFunctionWrapper(new ceres::HuberLoss(1), ceres::TAKE_OWNERSHIP);
-
         para_pose[0] = pose_relative.t_(0);
         para_pose[1] = pose_relative.t_(1);
         para_pose[2] = pose_relative.t_(2);
@@ -419,7 +411,6 @@ std::pair<double, Pose> PoseGraph::checkGeometricConsistency(KeyFrame *keyframe_
                                    all_surf_features,
                                    n_neigh);
         surf_num = all_surf_features.size();
-
         f_extract_.matchCornerFromMap(kdtree_corner_from_map_,
                                      *laser_cloud_corner_from_map_ds_,
                                      *laser_cloud_corner_,
@@ -451,15 +442,15 @@ std::pair<double, Pose> PoseGraph::checkGeometricConsistency(KeyFrame *keyframe_
         options.minimizer_progress_to_stdout = false;
         options.check_gradients = false;
         options.gradient_check_relative_precision = 1e-4;
-        options.max_num_iterations = 30;
+        options.max_num_iterations = 15;
         options.max_solver_time_in_seconds = 0.03;
         ceres::Solve(options, &problem, &summary);
         std::cout << summary.BriefReport() << std::endl;
         opti_cost = std::min((double)summary.final_cost, opti_cost);
         printf("solver time: %fms\n", t_solver.toc());
 
-        pose_relative.t_ = Eigen::Vector3d(para_pose[0], para_pose[1], para_pose[2]);
         pose_relative.q_ = Eigen::Quaterniond(para_pose[6], para_pose[3], para_pose[4], para_pose[5]);
+        pose_relative.t_ = Eigen::Vector3d(para_pose[0], para_pose[1], para_pose[2]);
         pose_relative.update();
     }
     std::cout << "opti_cost: " << opti_cost << ", relative transformation: " << pose_relative << std::endl;
@@ -788,7 +779,7 @@ void PoseGraph::updatePath()
 
         geometry_msgs::PoseStamped pose_stamped;
         pose_stamped.header.stamp = ros::Time((*it)->time_stamp_);
-        pose_stamped.header.frame_id = "world";
+        pose_stamped.header.frame_id = "/world";
         pose_stamped.pose.position.x = pose_w.t_(0) + VISUALIZATION_SHIFT_X;
         pose_stamped.pose.position.y = pose_w.t_(1) + VISUALIZATION_SHIFT_Y;
         pose_stamped.pose.position.z = pose_w.t_(2);
@@ -862,6 +853,26 @@ void PoseGraph::publish()
 {
     pub_pg_path_.publish(pg_path_);
     posegraph_visualization->publish_by(pub_pose_graph_, pg_path_.header);
+
+    if (VISUALIZE_IMAGE)
+    {
+        KeyFrame *keyframe = keyframelist_.back();
+        cv::Mat sc_img = sc_manager_.getScanContextImage(keyframe->index_);
+        cv_bridge::CvImage sc_msg;
+        sc_msg.header.frame_id = "/world";
+        sc_msg.header.stamp = ros::Time().fromSec(keyframe->time_stamp_);
+        sc_msg.encoding = sensor_msgs::image_encodings::RGB8;
+        sc_msg.image = sc_img;
+        pub_sc_.publish(sc_msg.toImageMsg());
+
+        sensor_msgs::PointCloud2 msg_cloud;
+        msg_cloud.header.frame_id = "/world";
+        msg_cloud.header.stamp = ros::Time().fromSec(keyframe->time_stamp_);   
+        pcl::toROSMsg(*laser_cloud_surf_, msg_cloud);
+        pub_cloud_.publish(msg_cloud);
+        pcl::toROSMsg(*laser_cloud_surf_from_map_ds_, msg_cloud);
+        pub_loop_map_.publish(msg_cloud);
+    }
 }
 
 int PoseGraph::getKeyFrameSize()

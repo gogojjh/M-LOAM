@@ -29,6 +29,7 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_cloud.h>
 #include <pcl/common/transforms.h>
+#include <pcl_conversions/pcl_conversions.h>
 
 #include "utility/utility.h"
 #include "utility/CameraPoseVisualization.h"
@@ -66,7 +67,7 @@ public:
 
 private:
 	std::pair<int, double> detectLoop(const KeyFrame* keyframe, const int que_index);
-	std::pair<double, Pose> checkGeometricConsistency(KeyFrame *keyframe_cur, const int &que_index, const int &match_index);
+	std::pair<double, Pose> checkGeometricConsistency(KeyFrame *cur_kf, const int &que_index, const int &match_index);
 	std::pair<bool, int> checkTemporalConsistency(const int &que_index, const int &match_index); 
 	void addKeyFrameIntoDB(KeyFrame *keyframe);
 	void optimizePoseGraph();
@@ -101,8 +102,11 @@ private:
 	pcl::PCDWriter pcd_writer_;
 
 	// ros publisher
+	ros::Publisher pub_sc_;
 	ros::Publisher pub_pg_path_;
 	ros::Publisher pub_pose_graph_;
+	ros::Publisher pub_cloud_;
+	ros::Publisher pub_loop_map_;
 };
 
 template <typename T> inline

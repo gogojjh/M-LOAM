@@ -9,13 +9,13 @@ std::ostream &operator<<(std::ostream &out, const QueryResult &qr)
     {
         out << "[Not loop] "
             << "loop_id: " << qr.match_index_
-            << " score: " << qr.score_ << " yaw_diff: " << qr.yaw_diff_rad_ << std::endl;
+            << ", score: " << qr.score_ << ", yaw_diff: " << qr.yaw_diff_rad_ << std::endl;
     }
     else
     {
         out << "[Found loop] "
             << "loop_id: " << qr.match_index_
-            << " score: " << qr.score_ << " yaw_diff: " << qr.yaw_diff_rad_ << std::endl;
+            << ", score: " << qr.score_ << ", yaw_diff: " << qr.yaw_diff_rad_ << std::endl;
     }
     return out;
 }
@@ -303,15 +303,15 @@ QueryResult SCManager::detectLoopClosureID(const int &que_index)
      */
     if (min_dist < SC_DIST_THRES)
     {
-        std::cout.precision(3);
         loop_id = nn_idx;
+        // std::cout.precision(3);
         // cout << "[Loop found] Nearest distance: " << min_dist << " btn, sc size: " 
         //      << polarcontexts_.size() - 1 << ", loop_idx: " << nn_idx << "." << endl;
         // cout << "[Loop found] yaw diff: " << nn_align * PC_UNIT_SECTORANGLE << " deg." << endl;
     }
     else
     {
-        std::cout.precision(3);
+        // std::cout.precision(3);
         // cout << "[Not loop] Nearest distance: " << min_dist << " btn, sc size: "
         //      << polarcontexts_.size() - 1 << ", loop_idx: " << nn_idx << "." << endl;
         // cout << "[Not loop] yaw diff: " << nn_align * PC_UNIT_SECTORANGLE << " deg." << endl;

@@ -12,7 +12,7 @@
     <param name="use_sim_time" value="true" />
     <group if="$(arg bag_file_use)">
         <node pkg="rosbag" type="play" name="rosbag" 
-            args="--clock -r 0.7 $(arg bag_file)" required="true"/>    
+            args="--clock -r 1 $(arg bag_file)" required="true"/>    
     </group>    
 
     <include file="$(find rviz_car_model)/launch/default.launch" />

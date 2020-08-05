@@ -118,9 +118,9 @@ void CameraPoseVisualization::add_lidar_pose(const Eigen::Vector3d& p, const Eig
     marker.pose.orientation.x = q.x();
     marker.pose.orientation.y = q.y();
     marker.pose.orientation.z = q.z();
-    marker.scale.x = 1.5;
-    marker.scale.y = 1.5;
-    marker.scale.z = 1.5;
+    marker.scale.x = 1.0;
+    marker.scale.y = 1.0;
+    marker.scale.z = 1.0;
     marker.color.a = 1.0;
     marker.color.r = 0.0;
     marker.color.g = 1.0;
