@@ -25,6 +25,7 @@ using namespace std;
 
 extern int RESULT_SAVE;
 extern std::string OUTPUT_FOLDER;
+extern std::string MLOAM_LOOP_PATH;
 
 extern int LOOP_SKIP_INTERVAL;
 extern int LOOP_HISTORY_SEARCH_NUM;

@@ -13,9 +13,9 @@
 
 PoseGraph::PoseGraph()
 {
-    posegraph_visualization = new CameraPoseVisualization(1.0, 0.0, 1.0, 1.0);
-    posegraph_visualization->setScale(0.1);
-    posegraph_visualization->setLineWidth(0.01);
+    posegraph_visualization = new CameraPoseVisualization(1.0, 0.0, 0.0, 1.0);
+    posegraph_visualization->setScale(0.3);
+    posegraph_visualization->setLineWidth(0.1);
     
     skip_cnt_ = 0;
     earliest_loop_index_ = -1;
@@ -61,7 +61,7 @@ void PoseGraph::setParameter()
 
 void PoseGraph::setPGOTread()
 {
-    printf("set new pose graph thread, perfrom 6 DoF pose graph optimization\n");
+    printf("[PoseGraph] set new pose graph thread, perfrom 6 DoF pose graph optimization\n");
     t_optimization = std::thread(&PoseGraph::optimizePoseGraph, this);
 }
 
@@ -82,6 +82,7 @@ void PoseGraph::addKeyFrameIntoDB(KeyFrame *keyframe)
 
 void PoseGraph::addKeyFrame(KeyFrame *cur_kf, bool flag_detect_loop)
 {
+    cur_kf->index_ = global_index_;
     global_index_++;
     if (flag_detect_loop)
     {
@@ -152,6 +153,53 @@ void PoseGraph::addKeyFrame(KeyFrame *cur_kf, bool flag_detect_loop)
     pose_stamped.pose.orientation.w = pose_w.q_.w();
     pg_path_.poses.push_back(pose_stamped);
     pg_path_.header = pose_stamped.header;
+    posegraph_visualization->add_lidar_pose(pose_w.t_, pose_w.q_);
+
+    if (RESULT_SAVE)
+    {
+        ofstream loop_path_file(MLOAM_LOOP_PATH, ios::app);
+        loop_path_file.setf(ios::fixed, ios::floatfield);
+        loop_path_file.precision(15);
+        loop_path_file << cur_kf->time_stamp_ << " ";
+        loop_path_file.precision(8);
+        loop_path_file << pose_w.t_[0] << " "
+                       << pose_w.t_[1] << " "
+                       << pose_w.t_[2] << " "
+                       << pose_w.q_.x() << " "
+                       << pose_w.q_.y() << " "
+                       << pose_w.q_.z() << " "
+                       << pose_w.q_.w() << " " << std::endl;
+        loop_path_file.close();
+    }
+
+    //draw local connection
+    if (SHOW_S_EDGE)
+    {
+        list<KeyFrame *>::reverse_iterator rit = keyframelist_.rbegin();
+        for (int i = 0; i < 4; i++)
+        {
+            if (rit == keyframelist_.rend())
+                break;
+            Pose connected_pose;
+            (*rit)->getPose(connected_pose);
+            posegraph_visualization->add_edge(pose_w.t_, connected_pose.t_);
+            rit++;
+        }
+    }    
+    if (SHOW_L_EDGE)
+    {
+        if (cur_kf->has_loop_)
+        {
+            //printf("has loop \n");
+            KeyFrame *connected_KF = getKeyFrame(cur_kf->loop_index_);
+            Pose connected_pose; 
+            connected_KF->getPose(connected_pose);
+            Pose pose_0;
+            cur_kf->getPose(pose_0);
+            //printf("add loop into visual \n");
+            posegraph_visualization->add_loopedge(pose_0.t_, connected_pose.t_ + Vector3d(VISUALIZATION_SHIFT_X, VISUALIZATION_SHIFT_Y, 0));
+        }
+    }
 
     keyframelist_.push_back(cur_kf);
     publish();
@@ -181,35 +229,31 @@ void PoseGraph::loadKeyFrame(KeyFrame *cur_kf, bool flag_detect_loop)
     pose_stamped.pose.orientation.w = pose_w.q_.w();
     pg_path_.poses.push_back(pose_stamped);
     pg_path_.header = pose_stamped.header;
+    posegraph_visualization->add_lidar_pose(pose_w.t_, pose_w.q_);
 
-    // TODO:
-    // draw local connection
-    // if (SHOW_S_EDGE)
-    // {
-    //     list<KeyFrame*>::reverse_iterator rit = keyframelist.rbegin();
-    //     for (int i = 0; i < 1; i++)
-    //     {
-    //         if (rit == keyframelist.rend())
-    //             break;
-    //         Vector3d conncected_P;
-    //         Matrix3d connected_R;
-    //         if((*rit)->sequence == cur_kf->sequence)
-    //         {
-    //             (*rit)->getPose(conncected_P, connected_R);
-    //             posegraph_visualization->add_edge(P, conncected_P);
-    //         }
-    //         rit++;
-    //     }
-    // }
+    if (SHOW_S_EDGE)
+    {
+        list<KeyFrame *>::reverse_iterator rit = keyframelist_.rbegin();
+        for (int i = 0; i < 4; i++)
+        {
+            if (rit == keyframelist_.rend())
+                break;
+            Pose connected_pose;
+            (*rit)->getPose(connected_pose);
+            posegraph_visualization->add_edge(pose_w.t_, connected_pose.t_);
+            rit++;
+        }
+    }
 
     /*
     if (cur_kf->has_loop)
     {
-        KeyFrame* connected_KF = getKeyFrame(cur_kf->loop_index);
-        Vector3d connected_P;
-        Matrix3d connected_R;
-        connected_KF->getPose(connected_P,  connected_R);
-        posegraph_visualization->add_loopedge(P, connected_P, SHIFT);
+        //printf("has loop \n");
+        KeyFrame *connected_KF = getKeyFrame(cur_kf->loop_index);
+        Pose connected_pose; 
+        connected_KF->getPose(connected_pose);
+        //printf("add loop into visual \n");
+        posegraph_visualization->add_loopedge(pose_w.t_, connected_pose.t_ + Vector3d(VISUALIZATION_SHIFT_X, VISUALIZATION_SHIFT_Y, 0));
     }
     */
 
@@ -388,14 +432,14 @@ std::pair<double, Pose> PoseGraph::checkGeometricConsistency(KeyFrame *keyframe_
         for (const PointPlaneFeature &feature : all_surf_features)
         {
             Eigen::Matrix3d cov_matrix;
-            cov_matrix.setIdentity();
+            cov_matrix.Zero();
             LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
             problem.AddResidualBlock(f, loss_function, para_pose);
         }
         for (const PointPlaneFeature &feature : all_corner_features)
         {
             Eigen::Matrix3d cov_matrix;
-            cov_matrix.setIdentity();
+            cov_matrix.Zero();
             LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
             problem.AddResidualBlock(f, loss_function, para_pose);
         }
@@ -601,17 +645,18 @@ void PoseGraph::savePoseGraph()
     m_keyframelist.lock();
     TicToc t_save_pose_graph;
     FILE *pFile;
-    printf("pose graph path: %s\n", POSE_GRAPH_SAVE_PATH.c_str());
-    printf("pose graph saving... \n");
+    printf("[PoseGraph] pose graph path: %s\n", POSE_GRAPH_SAVE_PATH.c_str());
+    printf("[PoseGraph] pose graph saving %lu keyframes\n", keyframelist_.size());
     string file_path = POSE_GRAPH_SAVE_PATH + "pose_graph.txt";
-    pFile = fopen (file_path.c_str(),"w");
-    //fprintf(pFile, "index time_stamp Tx Ty Tz Qw Qx Qy Qz loop_index loop_info\n");
+    pFile = fopen(file_path.c_str(),"w");
+    // fprintf(pFile, "index time_stamp px py pz qx qy qz qw loop_index loop_info\n");
     list<KeyFrame*>::iterator it;
     for (it = keyframelist_.begin(); it != keyframelist_.end(); it++)
     {
         std::string pcd_path;
         if (LOOP_SAVE_PCD)
         {
+            // printf("index: %lu, surf cloud size: %lu\n", (*it)->index_, (*it)->surf_cloud_->size());
             pcd_path = POSE_GRAPH_SAVE_PATH + to_string((*it)->index_) + "_surf_cloud.pcd";
             pcd_writer_.write(pcd_path, *(*it)->surf_cloud_);
             pcd_path = POSE_GRAPH_SAVE_PATH + to_string((*it)->index_) + "_corner_cloud.pcd";
@@ -632,7 +677,7 @@ void PoseGraph::savePoseGraph()
                 loop_info.q_.x(), loop_info.q_.y(), loop_info.q_.z(), loop_info.q_.w());
     }
     fclose(pFile);
-    printf("save pose graph time: %fs\n", t_save_pose_graph.toc() / 1000);
+    printf("[PoseGraph] save pose graph time: %fs\n", t_save_pose_graph.toc() / 1000);
     m_keyframelist.unlock();
 }
 
@@ -641,12 +686,12 @@ void PoseGraph::loadPoseGraph()
     TicToc t_load_posegraph;
     FILE * pFile;
     string file_path = POSE_GRAPH_SAVE_PATH + "pose_graph.txt";
-    printf("lode pose graph from: %s \n", file_path.c_str());
-    printf("pose graph loading...\n");
-    pFile = fopen (file_path.c_str(),"r");
+    printf("[PoseGraph] load pose graph from: %s \n", file_path.c_str());
+    printf("[PoseGraph] pose graph loading...\n");
+    pFile = fopen(file_path.c_str(),"r");
     if (pFile == NULL)
     {
-        printf("lode previous pose graph error: wrong previous pose graph path or no previous pose graph \n the system will start with new pose graph \n");
+        printf("[PoseGraph] lode previous pose graph error: wrong previous pose graph path or no previous pose graph \n the system will start with new pose graph \n");
         return;
     }
     int index;
@@ -665,13 +710,13 @@ void PoseGraph::loadPoseGraph()
                   &loop_info_tx, &loop_info_ty, &loop_info_tz,
                   &loop_info_qx, &loop_info_qy, &loop_info_qz, &loop_info_qw) != EOF)
     {
-        printf("I read: %d %f %f %f %f %f %f %f %f %d %f %f %f %f %f %f %f",
-               index, time_stamp,
-               pose_w_tx, pose_w_ty, pose_w_tz,
-               pose_w_qx, pose_w_qy, pose_w_qz, pose_w_qw,
-               loop_index,
-               loop_info_tx, loop_info_ty, loop_info_tz,
-               loop_info_qx, loop_info_qy, loop_info_qz, loop_info_qw);
+        // printf("I read: %d %f %f %f %f %f %f %f %f %d %f %f %f %f %f %f %f\n",
+        //        index, time_stamp,
+        //        pose_w_tx, pose_w_ty, pose_w_tz,
+        //        pose_w_qx, pose_w_qy, pose_w_qz, pose_w_qw,
+        //        loop_index,
+        //        loop_info_tx, loop_info_ty, loop_info_tz,
+        //        loop_info_qx, loop_info_qy, loop_info_qz, loop_info_qw);
         pcl::PointCloud<pcl::PointXYZI>::Ptr surf_cloud(new pcl::PointCloud<pcl::PointXYZI>());
         pcl::PointCloud<pcl::PointXYZI>::Ptr corner_cloud(new pcl::PointCloud<pcl::PointXYZI>());
         pcl::PointCloud<pcl::PointXYZI>::Ptr full_cloud(new pcl::PointCloud<pcl::PointXYZI>());
@@ -720,7 +765,7 @@ void PoseGraph::loadPoseGraph()
         cnt++;
     }
     fclose (pFile);
-    printf("load pose graph time: %f s\n", t_load_posegraph.toc()/1000);
+    printf("[PoseGraph] load pose graph time: %f s\n", t_load_posegraph.toc() / 1000);
 }
 
 void PoseGraph::updatePath()
@@ -730,11 +775,11 @@ void PoseGraph::updatePath()
     pg_path_.poses.clear();
     posegraph_visualization->reset();
 
-    // if (SAVE_LOOP_PATH)
-    // {
-    //     ofstream loop_path_file_tmp(VINS_RESULT_PATH, ios::out);
-    //     loop_path_file_tmp.close();
-    // }
+    if (RESULT_SAVE)
+    {
+        ofstream loop_path_file_tmp(MLOAM_LOOP_PATH, ios::out);
+        loop_path_file_tmp.close();
+    }
 
     for (it = keyframelist_.begin(); it != keyframelist_.end(); it++)
     {
@@ -753,25 +798,61 @@ void PoseGraph::updatePath()
         pose_stamped.pose.orientation.w = pose_w.q_.w();
         pg_path_.poses.push_back(pose_stamped);
         pg_path_.header = pose_stamped.header;
+        posegraph_visualization->add_lidar_pose(pose_w.t_, pose_w.q_);
 
-        // if (SAVE_LOOP_PATH)
-        // {
-        //     ofstream loop_path_file(VINS_RESULT_PATH, ios::app);
-        //     loop_path_file.setf(ios::fixed, ios::floatfield);
-        //     loop_path_file.precision(0);
-        //     loop_path_file << (*it)->time_stamp * 1e9 << ",";
-        //     loop_path_file.precision(5);
-        //     loop_path_file << P.x() << ","
-        //                    << P.y() << ","
-        //                    << P.z() << ","
-        //                    << Q.w() << ","
-        //                    << Q.x() << ","
-        //                    << Q.y() << ","
-        //                    << Q.z() << ","
-        //                    << endl;
-        //     loop_path_file.close();
-        // }
+        if (RESULT_SAVE)
+        {
+            ofstream loop_path_file(MLOAM_LOOP_PATH, ios::app);
+            loop_path_file.setf(ios::fixed, ios::floatfield);
+            loop_path_file.precision(15);
+            loop_path_file << (*it)->time_stamp_ << " ";
+            loop_path_file.precision(8);
+            loop_path_file << pose_w.t_[0] << " "
+                           << pose_w.t_[2] << " "
+                           << pose_w.t_[3] << " "
+                           << pose_w.q_.x() << " "
+                           << pose_w.q_.y() << " "
+                           << pose_w.q_.z() << " "
+                           << pose_w.q_.w() << " "
+                           << endl;
+            loop_path_file.close();
+        }
 
+        if (SHOW_S_EDGE)
+        {
+            list<KeyFrame *>::reverse_iterator rit = keyframelist_.rbegin();
+            list<KeyFrame *>::reverse_iterator lrit;
+            for (; rit != keyframelist_.rend(); rit++)
+            {
+                if ((*rit)->index_ == (*it)->index_)
+                {
+                    lrit = rit;
+                    lrit++;
+                    for (int i = 0; i < 4; i++)
+                    {
+                        if (lrit == keyframelist_.rend())
+                            break;
+                        Pose connected_pose;
+                        (*lrit)->getPose(connected_pose);
+                        posegraph_visualization->add_edge(pose_w.t_, connected_pose.t_);
+                        lrit++;
+                    }
+                    break;
+                }
+            }
+        }
+        if (SHOW_L_EDGE)
+        {
+            if ((*it)->has_loop_)
+            {
+                KeyFrame *connected_KF = getKeyFrame((*it)->loop_index_);
+                Pose connected_pose;
+                connected_KF->getPose(connected_pose);
+                Pose pose_0;
+                (*it)->getPose(pose_0);
+                posegraph_visualization->add_loopedge(pose_0.t_, connected_pose.t_ + Vector3d(VISUALIZATION_SHIFT_X, VISUALIZATION_SHIFT_Y, 0));
+            }
+        }
     }
     publish();
     m_keyframelist.unlock();
@@ -781,4 +862,9 @@ void PoseGraph::publish()
 {
     pub_pg_path_.publish(pg_path_);
     posegraph_visualization->publish_by(pub_pose_graph_, pg_path_.header);
+}
+
+int PoseGraph::getKeyFrameSize()
+{
+    return keyframelist_.size();
 }

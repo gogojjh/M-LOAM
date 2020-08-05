@@ -41,9 +41,8 @@
 #include "feature_extract.hpp"
 #include "lidar_map_plane_norm_factor.hpp"
 
-#define SHOW_S_EDGE false
-#define SHOW_L_EDGE false
-#define SAVE_LOOP_PATH false
+#define SHOW_S_EDGE true
+#define SHOW_L_EDGE true
 
 class PoseGraph
 {
@@ -59,6 +58,7 @@ public:
 	void savePoseGraph();
 	void loadPoseGraph();
 	void publish();
+	int getKeyFrameSize();
 	int skip_cnt_;
 
 	nav_msgs::Path pg_path_;

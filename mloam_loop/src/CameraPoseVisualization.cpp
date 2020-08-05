@@ -58,30 +58,27 @@ void CameraPoseVisualization::setScale(double s) {
 void CameraPoseVisualization::setLineWidth(double width) {
     m_line_width = width;
 }
-void CameraPoseVisualization::add_edge(const Eigen::Vector3d& p0, const Eigen::Vector3d& p1){
+void CameraPoseVisualization::add_edge(const Eigen::Vector3d& p0, const Eigen::Vector3d& p1)
+{
     visualization_msgs::Marker marker;
 
     marker.ns = m_marker_ns;
     marker.id = m_markers.size() + 1;
     marker.type = visualization_msgs::Marker::LINE_LIST;
     marker.action = visualization_msgs::Marker::ADD;
-    marker.scale.x = 0.01;
-
+    marker.scale.x = 0.1;
     marker.color.b = 1.0f;
     marker.color.a = 1.0;
-
     geometry_msgs::Point point0, point1;
-
     Eigen2Point(p0, point0);
     Eigen2Point(p1, point1);
-
     marker.points.push_back(point0);
     marker.points.push_back(point1);
-
     m_markers.push_back(marker);
 }
 
-void CameraPoseVisualization::add_loopedge(const Eigen::Vector3d& p0, const Eigen::Vector3d& p1){
+void CameraPoseVisualization::add_loopedge(const Eigen::Vector3d& p0, const Eigen::Vector3d& p1)
+{
     //m_markers.clear();
     visualization_msgs::Marker marker;
 
@@ -94,25 +91,45 @@ void CameraPoseVisualization::add_loopedge(const Eigen::Vector3d& p0, const Eige
     marker.action = visualization_msgs::Marker::ADD;
     marker.lifetime = ros::Duration();
     //marker.scale.x = 0.4;
-    marker.scale.x = 0.02;
+    marker.scale.x = 0.15;
     marker.color.r = 1.0f;
     //marker.color.g = 1.0f;
     //marker.color.b = 1.0f;
     marker.color.a = 1.0;
-
     geometry_msgs::Point point0, point1;
-
     Eigen2Point(p0, point0);
     Eigen2Point(p1, point1);
-
     marker.points.push_back(point0);
     marker.points.push_back(point1);
-
     m_markers.push_back(marker);
 }
 
+void CameraPoseVisualization::add_lidar_pose(const Eigen::Vector3d& p, const Eigen::Quaterniond &q)
+{
+    visualization_msgs::Marker marker;
+    marker.ns = m_marker_ns;
+    marker.id = m_markers.size() + 1;
+    marker.type = visualization_msgs::Marker::SPHERE;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.pose.position.x = p[0];
+    marker.pose.position.y = p[1];
+    marker.pose.position.z = p[2];
+    marker.pose.orientation.w = q.w();
+    marker.pose.orientation.x = q.x();
+    marker.pose.orientation.y = q.y();
+    marker.pose.orientation.z = q.z();
+    marker.scale.x = 1.5;
+    marker.scale.y = 1.5;
+    marker.scale.z = 1.5;
+    marker.color.a = 1.0;
+    marker.color.r = 0.0;
+    marker.color.g = 1.0;
+    marker.color.b = 0.0;
+    m_markers.push_back(marker);
+}
 
-void CameraPoseVisualization::add_pose(const Eigen::Vector3d& p, const Eigen::Quaterniond& q) {
+void CameraPoseVisualization::add_pose(const Eigen::Vector3d& p, const Eigen::Quaterniond& q) 
+{
     visualization_msgs::Marker marker;
 
     marker.ns = m_marker_ns;
@@ -128,7 +145,6 @@ void CameraPoseVisualization::add_pose(const Eigen::Vector3d& p, const Eigen::Qu
     marker.pose.orientation.x = 0.0;
     marker.pose.orientation.y = 0.0;
     marker.pose.orientation.z = 0.0;
-
 
     geometry_msgs::Point pt_lt, pt_lb, pt_rt, pt_rb, pt_oc, pt_lt0, pt_lt1, pt_lt2;
 
@@ -198,13 +214,15 @@ void CameraPoseVisualization::add_pose(const Eigen::Vector3d& p, const Eigen::Qu
     m_markers.push_back(marker);
 }
 
-void CameraPoseVisualization::reset() {
+void CameraPoseVisualization::reset() 
+{
 	m_markers.clear();
     //image.points.clear();
     //image.colors.clear();
 }
 
-void CameraPoseVisualization::publish_by( ros::Publisher &pub, const std_msgs::Header &header ) {
+void CameraPoseVisualization::publish_by(ros::Publisher &pub, const std_msgs::Header &header) 
+{
 	visualization_msgs::MarkerArray markerArray_msg;
 	//int k = (int)m_markers.size();
   /*
@@ -215,9 +233,9 @@ void CameraPoseVisualization::publish_by( ros::Publisher &pub, const std_msgs::H
     markerArray_msg.markers.push_back(m_markers[k]);
   }
   */
-
-  
-	for(auto& marker : m_markers) {
+ 
+	for(auto& marker : m_markers) 
+    {
 		marker.header = header;
 		markerArray_msg.markers.push_back(marker);
 	}

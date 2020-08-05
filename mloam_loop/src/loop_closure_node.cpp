@@ -54,7 +54,9 @@ DEFINE_string(output_path, "", "the path ouf saving results");
 // loading parameter
 int RESULT_SAVE;
 std::string OUTPUT_FOLDER;
+std::string MLOAM_LOOP_PATH;
 
+// setting in config.yaml
 int LOOP_SKIP_INTERVAL;
 int LOOP_HISTORY_SEARCH_NUM;
 double LOOP_DISTANCE_THRESHOLD;
@@ -64,10 +66,6 @@ double LOOP_GEOMETRIC_CONSISTENCY_THRESHOLD;
 int VISUALIZE_IMAGE;
 int LOAD_PREVIOUS_POSE_GRAPH;
 int LOOP_SAVE_PCD;
-
-std::string POSE_GRAPH_SAVE_PATH;
-int VISUALIZATION_SHIFT_X;
-int VISUALIZATION_SHIFT_Y;
 
 double LIDAR_HEIGHT;
 int PC_NUM_RING;
@@ -80,6 +78,11 @@ int NUM_CANDIDATES_FROM_TREE;
 double SEARCH_RATIO;
 double SC_DIST_THRES;
 int TREE_MAKING_PERIOD;
+
+// setting in the main procedure
+std::string POSE_GRAPH_SAVE_PATH;
+int VISUALIZATION_SHIFT_X;
+int VISUALIZATION_SHIFT_Y;
 
 std::mutex m_buf, m_process;
 
@@ -267,10 +270,10 @@ void process()
                                               0);
 
             m_process.lock();
-
             posegraph.skip_cnt_++;
             if (posegraph.skip_cnt_ >= LOOP_SKIP_INTERVAL)
             {
+                printf("start loop detection: %d\n", posegraph.skip_cnt_);
                 posegraph.addKeyFrame(keyframe, 1);
             }
             else
@@ -280,16 +283,7 @@ void process()
             }
             m_process.unlock();
             frame_cnt++;            
-
-            if (frame_cnt >= 10)
-            {
-                m_process.lock();
-                posegraph.savePoseGraph();
-                m_process.unlock();
-                ros::shutdown();
-            }
-
-            std::cout << common::RED << "keyframe size: " << frame_cnt << common::RESET << std::endl;
+            std::cout << common::RED << "keyframe size: " << posegraph.getKeyFrameSize() << common::RESET << std::endl << std::endl;
         }
         std::chrono::milliseconds dura(5);
         std::this_thread::sleep_for(dura);
@@ -302,22 +296,10 @@ void sigintHandler(int sig)
     // std::cout << common::YELLOW << "mapping drop frame: " << frame_drop_cnt << common::RESET << std::endl;
     if (RESULT_SAVE)
     {
-        // save_statistics.saveMapStatistics(MLOAM_MAP_PATH,
-        //                                   OUTPUT_FOLDER + "others/mapping_factor.txt",
-        //                                   OUTPUT_FOLDER + "others/mapping_d_eigvec.txt",
-        //                                   OUTPUT_FOLDER + "others/mapping_sp_" + FLAGS_gf_method + "_" + std::to_string(FLAGS_gf_ratio_ini) + ".txt",
-        //                                   OUTPUT_FOLDER + "others/mapping_logdet_H.txt",
-        //                                   laser_after_mapped_path,
-        //                                   d_factor_list,
-        //                                   d_eigvec_list,
-        //                                   mapping_sp_list,
-        //                                   logdet_H_list);
-        // save_statistics.saveMapTimeStatistics(OUTPUT_FOLDER + "time/time_mloam_mapping_" + FLAGS_gf_method + "_" + std::to_string(FLAGS_gf_ratio_ini) + "_" + FLAGS_loss_mode + "_" + std::to_string(int(FLAGS_gnc)) + ".txt",
-        //                                       total_match_feature,
-        //                                       total_solver,
-        //                                       total_mapping);
+        m_process.lock();
+        posegraph.savePoseGraph();
+        m_process.unlock();
     }
-    // saveGlobalMap();
     ros::shutdown();
 }
 
@@ -340,6 +322,7 @@ int main(int argc, char **argv)
 
     RESULT_SAVE = FLAGS_result_save;
     OUTPUT_FOLDER = FLAGS_output_path;
+    MLOAM_LOOP_PATH = OUTPUT_FOLDER + "traj/stamped_mloam_loop_estimate.txt";
     POSE_GRAPH_SAVE_PATH = OUTPUT_FOLDER + "pose_graph/";
     printf("[loop_closure_node] save result (0/1): %d to %s\n", RESULT_SAVE, OUTPUT_FOLDER.c_str());
     printf("config_file: %s\n", FLAGS_config_file.c_str());
@@ -359,6 +342,7 @@ int main(int argc, char **argv)
 
     VISUALIZE_IMAGE = fsSettings["visualize_image"];
     LOAD_PREVIOUS_POSE_GRAPH = fsSettings["load_previous_pose_graph"];
+    LOOP_SAVE_PCD = fsSettings["loop_save_pcd"];
 
     // scan context
     LIDAR_HEIGHT = fsSettings["lidar_height"];
@@ -378,15 +362,15 @@ int main(int argc, char **argv)
     posegraph.setPGOTread();
     if (LOAD_PREVIOUS_POSE_GRAPH)
     {
-        printf("load pose graph\n");
+        // printf("Load pose graph\n");
         m_process.lock();
-        // posegraph.loadPoseGraph();
+        posegraph.loadPoseGraph();
         m_process.unlock();
-        printf("load pose graph finish\n");
+        // printf("Load pose graph finish\n");
     }
     else
     {
-        printf("no previous pose graph\n");
+        printf("Not load pose graph\n");
     }
 
     // *******************************

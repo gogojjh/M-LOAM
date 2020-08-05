@@ -33,7 +33,7 @@ KeyFrame::KeyFrame(const double &time_stamp,
 	outlier_cloud_ = outlier_cloud;
 	has_loop_ = false;
 	loop_index_ = -1;
-	loop_info_ = Pose(Eigen::Quaterniond::Identity(), Eigen::Vector3d::Identity());
+	loop_info_ = Pose(Eigen::Quaterniond::Identity(), Eigen::Vector3d::Zero());
 	sequence_ = sequence;
 }
 

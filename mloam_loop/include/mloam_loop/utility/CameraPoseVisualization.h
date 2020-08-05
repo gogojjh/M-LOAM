@@ -28,6 +28,7 @@ public:
 	void setScale(double s);
 	void setLineWidth(double width);
 
+	void add_lidar_pose(const Eigen::Vector3d &p, const Eigen::Quaterniond &q);
 	void add_pose(const Eigen::Vector3d& p, const Eigen::Quaterniond& q);
 	void reset();
 
