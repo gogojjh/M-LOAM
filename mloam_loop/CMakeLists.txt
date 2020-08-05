@@ -73,10 +73,12 @@ catkin_package(
 
 add_executable(loop_closure_node
 	src/loop_closure_node.cpp
-	src/parameters.cpp
-	src/pose.cpp
+	src/pose_graph.cpp
+	src/keyframe.cpp
 	src/scan_context.cpp
 	src/feature_extract.cpp
+	src/pose.cpp
+	src/CameraPoseVisualization.cpp	
 )
 
 target_link_libraries(loop_closure_node
@@ -84,13 +86,12 @@ target_link_libraries(loop_closure_node
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
 )
 
-add_executable(test_scan_context
-	src/test_scan_context.cpp
-	src/parameters.cpp
-	src/scan_context.cpp
-)
+#add_executable(test_scan_context
+#	test/test_scan_context.cpp
+#	src/scan_context.cpp
+#)
 
-target_link_libraries(test_scan_context
-    ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
-    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
-)
+#target_link_libraries(test_scan_context
+#    ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
+#    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
+#)

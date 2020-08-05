@@ -30,52 +30,58 @@
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_listener.h>
 
+#include <opencv2/opencv.hpp>
+
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/common/transforms.h>
 #include <pcl_ros/point_cloud.h>
 
-
 #include "common/color.hpp"
 #include "mloam_msgs/Keyframes.h"
 
-#include "mloam_loop/tic_toc.h"
-#include "mloam_loop/parameters.h"
+#include "mloam_loop/utility/tic_toc.h"
+#include "mloam_loop/pose_graph.h"
 #include "mloam_loop/pose.h"
-#include "mloam_loop/scan_context.hpp"
-#include "mloam_loop/feature_extract.hpp"
-#include "mloam_loop/lidar_map_plane_norm_factor.hpp"
-
-//my library
-// #include "iscOptimizationClass.h"
-// #include <iscloam/LoopInfo.h>
-
-// ros::Publisher odom_pub;
-// //ros::Publisher map_pub;
-// ros::Publisher path_pub;
-// ros::Publisher loop_map_pub;
-// ros::Publisher loop_candidate_pub;
-
-// ISCOptimizationClass iscOptimization;
-
-// double scan_period= 0.1;
-
-// Eigen::Isometry3d w_odom_curr= Eigen::Isometry3d::Identity();
-// nav_msgs::Path path_optimized;
-// int current_frame_id;
-// std::vector<int> matched_frame_id;
-//receive odomtry
+#include "mloam_loop/parameters.hpp"
+#include "mloam_loop/keyframe.h"
 
 DEFINE_bool(result_save, true, "save or not save the results");
 DEFINE_string(config_file, "config.yaml", "the yaml config file");
 DEFINE_string(output_path, "", "the path ouf saving results");
 
-std::mutex m_buf, m_process;
+// loading parameter
+int RESULT_SAVE;
+std::string OUTPUT_FOLDER;
 
-// ros
-ros::Publisher pub_laser_loop_keyframes_6d;
-ros::Publisher pub_scan_context;
+int LOOP_SKIP_INTERVAL;
+int LOOP_HISTORY_SEARCH_NUM;
+double LOOP_DISTANCE_THRESHOLD;
+double LOOP_OPTI_COST_THRESHOLD;
+double LOOP_TEMPORAL_CONSISTENCY_THRESHOLD;
+double LOOP_GEOMETRIC_CONSISTENCY_THRESHOLD;
+int VISUALIZE_IMAGE;
+int LOAD_PREVIOUS_POSE_GRAPH;
+int LOOP_SAVE_PCD;
+
+std::string POSE_GRAPH_SAVE_PATH;
+int VISUALIZATION_SHIFT_X;
+int VISUALIZATION_SHIFT_Y;
+
+double LIDAR_HEIGHT;
+int PC_NUM_RING;
+int PC_NUM_SECTOR;
+double PC_MAX_RADIUS;
+double PC_UNIT_SECTORANGLE;
+double PC_UNIT_RINGGAP;
+int NUM_EXCLUDE_RECENT;
+int NUM_CANDIDATES_FROM_TREE;
+double SEARCH_RATIO;
+double SC_DIST_THRES;
+int TREE_MAKING_PERIOD;
+
+std::mutex m_buf, m_process;
 
 // input point cloud data
 double time_laser_cloud_surf_last;
@@ -95,42 +101,9 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud_corner_last(new pcl::PointCloud
 pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud_full_res(new pcl::PointCloud<pcl::PointXYZI>());
 pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud_outlier(new pcl::PointCloud<pcl::PointXYZI>());
 
-// store keyframes 
-pcl::PointCloud<pcl::PointXYZI>::Ptr laser_keyframes_3d(new pcl::PointCloud<pcl::PointXYZI>());
-std::vector<std::pair<double, Pose> > laser_keyframes_6d;
-std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> surf_keyframes;
-std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> corner_keyframes;
-std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloud_keyframes;
-std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> outlier_keyframes;
+int frame_cnt = 0;
 
-// loop result
-size_t cur_kf_idx = 0; 
-int loop_kf_idx = 0;
-float yaw_diff_rad = 0.0;
-
-// store map and current cloud
-pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud_surf(new pcl::PointCloud<pcl::PointXYZI>());
-pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud_corner(new pcl::PointCloud<pcl::PointXYZI>());
-pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud_surf_from_map(new pcl::PointCloud<pcl::PointXYZI>());
-pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud_corner_from_map(new pcl::PointCloud<pcl::PointXYZI>());
-pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud_surf_from_map_ds(new pcl::PointCloud<pcl::PointXYZI>());
-pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud_corner_from_map_ds(new pcl::PointCloud<pcl::PointXYZI>());
-pcl::VoxelGrid<pcl::PointXYZI> down_size_filter_surf_map;
-pcl::VoxelGrid<pcl::PointXYZI> down_size_filter_corner_map;
-
-pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr kdtree_surf_from_map(new pcl::KdTreeFLANN<pcl::PointXYZI>());
-pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr kdtree_corner_from_map(new pcl::KdTreeFLANN<pcl::PointXYZI>());
-
-// others
-size_t frame_cnt = 0; // frame num
-size_t frame_drop_cnt = 0; // drop keyframes for real-time performance
-size_t frame_skip_cnt = 0; // skip performing loop detection
-
-// scan context
-SCManager sc_manager;
-
-// feature extract
-FeatureExtract f_extract;
+PoseGraph posegraph;
 
 void laserCloudSurfLastHandler(const sensor_msgs::PointCloud2ConstPtr &laser_cloud_surf_last_msg)
 {
@@ -167,208 +140,15 @@ void laserKeyframeHandler(const mloam_msgs::KeyframesConstPtr &laser_key_frames_
     m_buf.unlock();
 }
 
-void addNewKeyframes(const mloam_msgs::Keyframes &keyframes_msg)
-{
-    double time_keyframe = keyframes_msg.header.stamp.toSec();
-    Eigen::Quaterniond q(keyframes_msg.poses.back().pose.pose.orientation.w,
-                         keyframes_msg.poses.back().pose.pose.orientation.x,
-                         keyframes_msg.poses.back().pose.pose.orientation.y,
-                         keyframes_msg.poses.back().pose.pose.orientation.z);
-    Eigen::Vector3d t(keyframes_msg.poses.back().pose.pose.position.x,
-                      keyframes_msg.poses.back().pose.pose.position.y,
-                      keyframes_msg.poses.back().pose.pose.position.z);
-    Pose pose(q, t);
-    for (size_t i = 0; i < 6; i++)
-        for (size_t j = 0; j < 6; j++)
-            pose.cov_(i, j) = double(keyframes_msg.poses.back().pose.covariance[i * 6 + j]);
-
-    pcl::PointXYZI pose_3d;
-    pose_3d.x = pose.t_[0];
-    pose_3d.y = pose.t_[1];
-    pose_3d.z = pose.t_[2];
-    pose_3d.intensity = laser_keyframes_3d->size();
-    laser_keyframes_3d->push_back(pose_3d);
-    laser_keyframes_6d.push_back(std::make_pair(time_keyframe, pose));
-
-    surf_keyframes.push_back(laser_cloud_surf_last);
-    corner_keyframes.push_back(laser_cloud_corner_last);
-    cloud_keyframes.push_back(laser_cloud_full_res);
-    outlier_keyframes.push_back(laser_cloud_outlier);
-}
-
-bool loopDetection()
-{
-    pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud(new pcl::PointCloud<pcl::PointXYZI>());
-    *laser_cloud += *cloud_keyframes.back();
-    *laser_cloud += *outlier_keyframes.back();
-    sc_manager.makeAndSaveScancontextAndKeys(*laser_cloud);
-    cur_kf_idx = sc_manager.getDataBaseSize() - 1;
-    std::cout << "keyframe size: " << cur_kf_idx << std::endl;    
-
-    // 1. check if skip enough frame
-    frame_skip_cnt++;
-    if (frame_skip_cnt <= LOOP_KEYFRAME_INTERVAL) return false;
-
-    // 2. apply scan context-based global localization
-    auto detect_result = sc_manager.detectLoopClosureID(cur_kf_idx);
-    // std::cout << "match id: " << detect_result.first 
-    //           << ", yaw: " << detect_result.second << std::endl;   
-    loop_kf_idx = detect_result.first;
-    yaw_diff_rad = detect_result.second;
-    if (loop_kf_idx == -1) return false;
-
-    // TODO: check if the loop_kf is too far from the cur_kf
-
-    // 3. construct the current point cloud
-    pcl::PointCloud<pcl::PointXYZI> surf_trans, corner_trans;
-
-    laser_cloud_surf->clear();
-    laser_cloud_corner->clear();
-    pcl::transformPointCloud(*surf_keyframes[cur_kf_idx],
-                             surf_trans,
-                             laser_keyframes_6d[cur_kf_idx].second.T_.cast<float>());
-    *laser_cloud_surf += surf_trans;
-
-    pcl::transformPointCloud(*corner_keyframes[cur_kf_idx],
-                             corner_trans,
-                             laser_keyframes_6d[cur_kf_idx].second.T_.cast<float>());
-    *laser_cloud_corner += corner_trans;
-
-    // construct the model point cloud
-    laser_cloud_surf_from_map->clear();
-    laser_cloud_corner_from_map->clear();
-    for (int j = -LOOP_HISTORY_SEARCH_NUM; j <= LOOP_HISTORY_SEARCH_NUM; j++)
-    {
-        if (loop_kf_idx + j < 0 || loop_kf_idx + j > cur_kf_idx) continue;
-        pcl::transformPointCloud(*surf_keyframes[loop_kf_idx + j],
-                                 surf_trans,
-                                 laser_keyframes_6d[loop_kf_idx + j].second.T_.cast<float>());
-        *laser_cloud_surf_from_map += surf_trans;
-
-        pcl::transformPointCloud(*corner_keyframes[loop_kf_idx + j],
-                                 corner_trans,
-                                 laser_keyframes_6d[loop_kf_idx + j].second.T_.cast<float>());
-        *laser_cloud_corner_from_map += corner_trans;
-    }
-    down_size_filter_surf_map.setInputCloud(laser_cloud_surf_from_map);
-    down_size_filter_surf_map.filter(*laser_cloud_surf_from_map_ds);
-    down_size_filter_corner_map.setInputCloud(laser_cloud_corner_from_map);
-    down_size_filter_corner_map.filter(*laser_cloud_corner_from_map_ds);
-
-    frame_skip_cnt = 0;
-    return true;
-}
-
-bool checkTemporalConsistency()
-{
-    
-}
-
-bool checkGeometricConsistency(std::pair<double, Pose> loop_opti_result)
-{
-    if (loop_opti_result.first > LOOP_OPTI_COST_THRESHOLD)
-    {
-        return false;
-    } 
-    else
-    {
-        return true;
-    }
-}
-
-// find relative transformation from map to local
-std::pair<double, Pose> performLoopOptimization()
-{
-    size_t laser_cloud_surf_from_map_num = laser_cloud_surf_from_map_ds->size();
-    size_t laser_cloud_corner_from_map_num = laser_cloud_corner_from_map_ds->size();
-    printf("[loop_closure] map surf num: %lu, corner num: %lu\n", laser_cloud_surf_from_map_num, laser_cloud_corner_from_map_num);
-    kdtree_surf_from_map->setInputCloud(laser_cloud_surf_from_map_ds);
-    kdtree_corner_from_map->setInputCloud(laser_cloud_corner_from_map_ds);
-    double opti_cost = 300;
-
-    Pose pose_local;
-    for (int iter_cnt = 0; iter_cnt < 2; iter_cnt++)
-    {
-        double *para_pose = new double[SIZE_POSE];
-        ceres::Problem problem;
-        ceres::LossFunctionWrapper *loss_function = new ceres::LossFunctionWrapper(new ceres::HuberLoss(1), ceres::TAKE_OWNERSHIP);
-
-        para_pose[0] = pose_local.t_(0);
-        para_pose[1] = pose_local.t_(1);
-        para_pose[2] = pose_local.t_(2);
-        para_pose[3] = pose_local.q_.x();
-        para_pose[4] = pose_local.q_.y();
-        para_pose[5] = pose_local.q_.z();
-        para_pose[6] = pose_local.q_.w();
-
-        std::vector<PointPlaneFeature> all_surf_features, all_corner_features;
-        size_t surf_num = 0, corner_num = 0;
-        TicToc t_match_features;
-        int n_neigh = 5;
-        f_extract.matchSurfFromMap(kdtree_surf_from_map,
-                                   *laser_cloud_surf_from_map_ds,
-                                   *laser_cloud_surf,
-                                   pose_local,
-                                   all_surf_features,
-                                   n_neigh);
-        surf_num = all_surf_features.size();
-
-        f_extract.matchCornerFromMap(kdtree_corner_from_map,
-                                     *laser_cloud_corner_from_map_ds,
-                                     *laser_cloud_corner,
-                                     pose_local,
-                                     all_corner_features,
-                                     n_neigh);
-        corner_num = all_corner_features.size();
-        printf("matching features time: %fms\n", t_match_features.toc());
-
-        for (const PointPlaneFeature &feature : all_surf_features)
-        {
-            Eigen::Matrix3d cov_matrix;
-            cov_matrix.setIdentity();
-            LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
-            problem.AddResidualBlock(f, loss_function, para_pose);
-        }
-        for (const PointPlaneFeature &feature : all_corner_features)
-        {
-            Eigen::Matrix3d cov_matrix;
-            cov_matrix.setIdentity();
-            LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
-            problem.AddResidualBlock(f, loss_function, para_pose);
-        }
-
-        TicToc t_solver;
-        ceres::Solver::Summary summary;
-        ceres::Solver::Options options;
-        options.linear_solver_type = ceres::DENSE_SCHUR;
-        options.minimizer_progress_to_stdout = false;
-        options.check_gradients = false;
-        options.gradient_check_relative_precision = 1e-4;
-        options.max_num_iterations = 30;
-        options.max_solver_time_in_seconds = 0.03;
-        ceres::Solve(options, &problem, &summary);
-        std::cout << summary.BriefReport() << std::endl;
-        opti_cost = std::min((double)summary.final_cost, opti_cost);   
-        printf("solver time: %fms\n", t_solver.toc());
-
-        pose_local.t_ = Eigen::Vector3d(para_pose[0], para_pose[1], para_pose[2]);
-        pose_local.q_ = Eigen::Quaterniond(para_pose[6], para_pose[3], para_pose[4], para_pose[5]);
-        pose_local.update();
-    }
-    std::pair<double, Pose> loop_opti_result = make_pair(opti_cost, pose_local);
-    std::cout << "opti_cost: " << opti_cost << ", relative transformation: " << pose_local << std::endl;  
-    return loop_opti_result;
-}
-
 void pubLoopInfo()
 {
-    cv::Mat sc_img = sc_manager.getLastScanContextImage();
-    cv_bridge::CvImage last_scan_context_msg;
-    last_scan_context_msg.header.frame_id = "/laser";
-    last_scan_context_msg.header.stamp = ros::Time().fromSec(time_laser_keyframes);
-    last_scan_context_msg.encoding = sensor_msgs::image_encodings::RGB8;
-    last_scan_context_msg.image = sc_img;
-    pub_scan_context.publish(last_scan_context_msg.toImageMsg());
+    // cv::Mat sc_img = sc_manager.getScanContextImage(frame_cnt);
+    // cv_bridge::CvImage last_scan_context_msg;
+    // last_scan_context_msg.header.frame_id = "/laser";
+    // last_scan_context_msg.header.stamp = ros::Time().fromSec(time_laser_keyframes);
+    // last_scan_context_msg.encoding = sensor_msgs::image_encodings::RGB8;
+    // last_scan_context_msg.image = sc_img;
+    // pub_scan_context.publish(last_scan_context_msg.toImageMsg());
 
     // iscloam::LoopInfo loop;
     // loop.header.stamp = pointcloud_time;
@@ -462,64 +242,56 @@ void process()
 
             mloam_msgs::Keyframes keyframes_msg = *keyframes_buf.front();
             keyframes_buf.pop();
-
-            // TODO: depend on the calculation speed
-    		// while (!keyframes_buf.empty())
-            // {
-			// 	keyframes_buf.pop();
-            //     frame_drop_cnt++;
-            //     std::cout << common::GREEN << "[loop_closure] drop keyframe real time performance" << common::RESET << std::endl;
-            // }
 			m_buf.unlock();
 
-            // main process
-            std::lock_guard<std::mutex> lock(m_process);
-            frame_cnt++;
-            TicToc t_loop_closure;
+            double time_keyframe = keyframes_msg.header.stamp.toSec();
+            Eigen::Quaterniond q(keyframes_msg.poses.back().pose.pose.orientation.w,
+                                 keyframes_msg.poses.back().pose.pose.orientation.x,
+                                 keyframes_msg.poses.back().pose.pose.orientation.y,
+                                 keyframes_msg.poses.back().pose.pose.orientation.z);
+            Eigen::Vector3d t(keyframes_msg.poses.back().pose.pose.position.x,
+                              keyframes_msg.poses.back().pose.pose.position.y,
+                              keyframes_msg.poses.back().pose.pose.position.z);
+            Pose pose_w(q, t);
+            for (size_t i = 0; i < 6; i++)
+                for (size_t j = 0; j < 6; j++)
+                    pose_w.cov_(i, j) = double(keyframes_msg.poses.back().pose.covariance[i * 6 + j]);
 
-            // step 1: add new keyframes
-            addNewKeyframes(keyframes_msg);
+            KeyFrame *keyframe = new KeyFrame(time_keyframe,
+                                              frame_cnt,
+                                              pose_w,
+                                              laser_cloud_surf_last,
+                                              laser_cloud_corner_last,
+                                              laser_cloud_full_res,
+                                              laser_cloud_outlier,
+                                              0);
 
-            // step 2: detect loop candidates
-            TicToc t_loop_detect;
-            bool detect_loop = loopDetection();
-            printf("loop_detection: %fms\n", t_loop_detect.toc());
+            m_process.lock();
 
-            if (detect_loop)
+            posegraph.skip_cnt_++;
+            if (posegraph.skip_cnt_ >= LOOP_SKIP_INTERVAL)
             {
-                printf("find loop: cur_kf_idx: %d, loop_kf_idx: %d\n", cur_kf_idx, loop_kf_idx);
-                
-                bool tc_flag = checkTemporalConsistency();
-                if (!tc_flag) 
-                {
-                    printf("loop reject with temporal verificiation\n");
-                    continue;
-                }
-                
-                auto loop_opti_result = performLoopOptimization();
-                bool gc_flag = checkGeometricConsistency(loop_opti_result);
-                if (!gc_flag)
-                {
-                    printf("loop reject with geometry verificiation\n");
-                    continue;
-                } 
-                Pose pose_rlt = loop_opti_result.second; // the relative transformation from map to keyframe
-
-                // addPoseGraph();
-                // poseGraphOptimization();
-            } 
+                posegraph.addKeyFrame(keyframe, 1);
+            }
             else
             {
+                printf("skip loop detection: %d\n", posegraph.skip_cnt_);
+                posegraph.addKeyFrame(keyframe, 0);
+            }
+            m_process.unlock();
+            frame_cnt++;            
 
+            if (frame_cnt >= 10)
+            {
+                m_process.lock();
+                posegraph.savePoseGraph();
+                m_process.unlock();
+                ros::shutdown();
             }
 
-            pubLoopInfo();
-
-            std::cout << common::RED << "frame: " << frame_cnt
-                      << ", loop closure time: " << t_loop_closure.toc() << "ms" << common::RESET << std::endl;
-            printf("\n");
+            std::cout << common::RED << "keyframe size: " << frame_cnt << common::RESET << std::endl;
         }
-        std::chrono::milliseconds dura(2);
+        std::chrono::milliseconds dura(5);
         std::this_thread::sleep_for(dura);
     }
 }
@@ -527,7 +299,7 @@ void process()
 void sigintHandler(int sig)
 {
     printf("[loop_closure_node] press ctrl-c\n");
-    std::cout << common::YELLOW << "mapping drop frame: " << frame_drop_cnt << common::RESET << std::endl;
+    // std::cout << common::YELLOW << "mapping drop frame: " << frame_drop_cnt << common::RESET << std::endl;
     if (RESULT_SAVE)
     {
         // save_statistics.saveMapStatistics(MLOAM_MAP_PATH,
@@ -561,63 +333,79 @@ int main(int argc, char **argv)
 
     ros::init(argc, argv, "loop_closure_node");
     ros::NodeHandle nh("~");
+    posegraph.registerPub(nh);
+
+    VISUALIZATION_SHIFT_X = 0;
+    VISUALIZATION_SHIFT_Y = 0;
 
     RESULT_SAVE = FLAGS_result_save;
     OUTPUT_FOLDER = FLAGS_output_path;
+    POSE_GRAPH_SAVE_PATH = OUTPUT_FOLDER + "pose_graph/";
     printf("[loop_closure_node] save result (0/1): %d to %s\n", RESULT_SAVE, OUTPUT_FOLDER.c_str());
-
     printf("config_file: %s\n", FLAGS_config_file.c_str());
-    readParameters(FLAGS_config_file);
 
-    sc_manager.setParameter(LIDAR_HEIGHT,
-                            PC_NUM_RING,
-                            PC_NUM_SECTOR,
-                            PC_MAX_RADIUS,
-                            PC_UNIT_SECTORANGLE,
-                            PC_UNIT_RINGGAP,
-                            NUM_EXCLUDE_RECENT,
-                            NUM_CANDIDATES_FROM_TREE,
-                            SEARCH_RATIO,
-                            SC_DIST_THRES,
-                            TREE_MAKING_PERIOD);
+    cv::FileStorage fsSettings(FLAGS_config_file, cv::FileStorage::READ);
+    if (!fsSettings.isOpened())
+    {
+        std::cerr << "ERROR: Wrong path to settings" << std::endl;
+    }
 
+    LOOP_SKIP_INTERVAL = fsSettings["loop_skip_interval"];
+    LOOP_HISTORY_SEARCH_NUM = fsSettings["loop_history_search_num"];
+    LOOP_DISTANCE_THRESHOLD = fsSettings["loop_distance_threshold"];
+    // LOOP_OPTI_COST_THRESHOLD = fsSettings["loop_opti_cost_threshold"];
+    LOOP_TEMPORAL_CONSISTENCY_THRESHOLD = fsSettings["loop_temporal_consistency_threshold"];
+    LOOP_GEOMETRIC_CONSISTENCY_THRESHOLD = fsSettings["loop_geometric_consistency_threshold"];
+
+    VISUALIZE_IMAGE = fsSettings["visualize_image"];
+    LOAD_PREVIOUS_POSE_GRAPH = fsSettings["load_previous_pose_graph"];
+
+    // scan context
+    LIDAR_HEIGHT = fsSettings["lidar_height"];
+    PC_NUM_RING = fsSettings["pc_num_ring"];
+    PC_NUM_SECTOR = fsSettings["pc_num_sector"];
+    PC_MAX_RADIUS = fsSettings["pc_max_radius"];
+    PC_UNIT_SECTORANGLE = 360.0 / double(PC_NUM_SECTOR);
+    PC_UNIT_RINGGAP = PC_MAX_RADIUS / double(PC_NUM_RING);
+    NUM_EXCLUDE_RECENT = fsSettings["num_exclude_recent"];
+    NUM_CANDIDATES_FROM_TREE = fsSettings["num_candidates_from_tree"];
+    SEARCH_RATIO = fsSettings["search_ratio"];
+    SC_DIST_THRES = fsSettings["sc_dist_thres"];
+    TREE_MAKING_PERIOD = fsSettings["tree_making_period"];
+    fsSettings.release();
+
+    posegraph.setParameter();
+    posegraph.setPGOTread();
+    if (LOAD_PREVIOUS_POSE_GRAPH)
+    {
+        printf("load pose graph\n");
+        m_process.lock();
+        // posegraph.loadPoseGraph();
+        m_process.unlock();
+        printf("load pose graph finish\n");
+    }
+    else
+    {
+        printf("no previous pose graph\n");
+    }
+
+    // *******************************
     ros::Subscriber sub_laser_cloud_full_res = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud", 2, laserCloudFullResHandler);
     ros::Subscriber sub_laser_cloud_outlier = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud_outlier", 2, laserCloudOutlierResHandler);
     ros::Subscriber sub_laser_cloud_surf_last = nh.subscribe<sensor_msgs::PointCloud2>("/surf_points_less_flat", 2, laserCloudSurfLastHandler);
 	ros::Subscriber sub_laser_cloud_corner_last = nh.subscribe<sensor_msgs::PointCloud2>("/corner_points_less_sharp", 2, laserCloudCornerLastHandler);
     ros::Subscriber sub_laser_keyframes = nh.subscribe<mloam_msgs::Keyframes>("/laser_map_keyframes_6d", 5, laserKeyframeHandler);
 
-    pub_laser_loop_keyframes_6d = nh.advertise<mloam_msgs::Keyframes>("/laser_loop_keyframes_6d", 5);
-    pub_scan_context = nh.advertise<sensor_msgs::Image>("/input_scan_context", 5);
-    // loop_map_pub = nh.advertise<sensor_msgs::PointCloud2>("/loop_map", 100);
-    // loop_candidate_pub = nh.advertise<sensor_msgs::PointCloud2>("/loop_candidate", 100);
-
-    // int sector_width =60;
-    // int ring_height = 60;
-    // double max_distance= 40.0;
-
-    // nh.getParam("/sector_width", sector_width); 
-    // nh.getParam("/ring_height", ring_height); 
-    // nh.getParam("/max_distance", max_distance);  
-    // nh.getParam("/scan_period", scan_period); 
-
-    // //init ISC
-    // iscOptimization.init();
-
-    // //open thread
-    // std::thread global_optimization_process{global_optimization};
+    // pub_laser_loop_keyframes_6d = nh.advertise<mloam_msgs::Keyframes>("/laser_loop_keyframes_6d", 5);
+    // pub_scan_context = nh.advertise<sensor_msgs::Image>("/input_scan_context", 5);
 
     signal(SIGINT, sigintHandler);
-
     std::thread loop_closure_node_thread{process};
-
     ros::Rate loop_rate(100);
     while (ros::ok())
     {
         ros::spinOnce();
         loop_rate.sleep();
     }
-
-    loop_closure_node_thread.join();    
     return 0;
 }

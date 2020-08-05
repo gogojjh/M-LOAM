@@ -9,24 +9,28 @@
  * Author: Qin Tong (qintonguav@gmail.com)
  *******************************************************/
 
-#include "pose_graph.h"
+#include "mloam_loop/pose_graph.h"
 
 PoseGraph::PoseGraph()
 {
     posegraph_visualization = new CameraPoseVisualization(1.0, 0.0, 1.0, 1.0);
     posegraph_visualization->setScale(0.1);
     posegraph_visualization->setLineWidth(0.01);
-    earliest_loop_index = -1;
-    t_drift = Eigen::Vector3d(0, 0, 0);
-    yaw_drift = 0;
-    r_drift = Eigen::Matrix3d::Identity();
-    w_t_vio = Eigen::Vector3d(0, 0, 0);
-    w_r_vio = Eigen::Matrix3d::Identity();
-    global_index = 0;
-    sequence_cnt = 0;
-    sequence_loop.push_back(0);
-    base_sequence = 1;
-    use_imu = 0;
+    
+    skip_cnt_ = 0;
+    earliest_loop_index_ = -1;
+    global_index_ = 0;
+
+    laser_cloud_surf_.reset(new pcl::PointCloud<pcl::PointXYZI>());
+    laser_cloud_corner_.reset(new pcl::PointCloud<pcl::PointXYZI>());
+    laser_cloud_surf_from_map_.reset(new pcl::PointCloud<pcl::PointXYZI>());
+    laser_cloud_corner_from_map_.reset(new pcl::PointCloud<pcl::PointXYZI>());
+    laser_cloud_surf_from_map_ds_.reset(new pcl::PointCloud<pcl::PointXYZI>());
+    laser_cloud_corner_from_map_ds_.reset(new pcl::PointCloud<pcl::PointXYZI>());
+    down_size_filter_surf_map_.setLeafSize(0.4, 0.4, 0.4);
+    down_size_filter_corner_map_.setLeafSize(0.4, 0.4, 0.4);
+    kdtree_surf_from_map_.reset(new pcl::KdTreeFLANN<pcl::PointXYZI>());
+    kdtree_corner_from_map_.reset(new pcl::KdTreeFLANN<pcl::PointXYZI>());
 }
 
 PoseGraph::~PoseGraph()
@@ -34,273 +38,170 @@ PoseGraph::~PoseGraph()
     t_optimization.detach();
 }
 
-void PoseGraph::registerPub(ros::NodeHandle &n)
+void PoseGraph::registerPub(ros::NodeHandle &nh)
 {
-    pub_pg_path = n.advertise<nav_msgs::Path>("pose_graph_path", 1000);
-    pub_base_path = n.advertise<nav_msgs::Path>("base_path", 1000);
-    pub_pose_graph = n.advertise<visualization_msgs::MarkerArray>("pose_graph", 1000);
-    for (int i = 1; i < 10; i++)
-        pub_path[i] = n.advertise<nav_msgs::Path>("path_" + to_string(i), 1000);
+    pub_pg_path_ = nh.advertise<nav_msgs::Path>("pose_graph_path", 1000);
+    pub_pose_graph_ = nh.advertise<visualization_msgs::MarkerArray>("pose_graph", 1000);
 }
 
-void PoseGraph::setIMUFlag(bool _use_imu)
+void PoseGraph::setParameter()
 {
-    use_imu = _use_imu;
-    if(use_imu)
-    {
-        printf("VIO input, perfrom 4 DoF (x, y, z, yaw) pose graph optimization\n");
-        t_optimization = std::thread(&PoseGraph::optimize4DoF, this);
-    }
-    else
-    {
-        printf("VO input, perfrom 6 DoF pose graph optimization\n");
-        t_optimization = std::thread(&PoseGraph::optimize6DoF, this);
-    }
-
+    sc_manager_.setParameter(LIDAR_HEIGHT,
+                             PC_NUM_RING,
+                             PC_NUM_SECTOR,
+                             PC_MAX_RADIUS,
+                             PC_UNIT_SECTORANGLE,
+                             PC_UNIT_RINGGAP,
+                             NUM_EXCLUDE_RECENT,
+                             NUM_CANDIDATES_FROM_TREE,
+                             SEARCH_RATIO,
+                             SC_DIST_THRES,
+                             TREE_MAKING_PERIOD);
 }
 
-void PoseGraph::loadVocabulary(std::string voc_path)
+void PoseGraph::setPGOTread()
 {
-    voc = new BriefVocabulary(voc_path);
-    db.setVocabulary(*voc, false, 0);
+    printf("set new pose graph thread, perfrom 6 DoF pose graph optimization\n");
+    t_optimization = std::thread(&PoseGraph::optimizePoseGraph, this);
 }
 
-void PoseGraph::addKeyFrame(KeyFrame* cur_kf, bool flag_detect_loop)
+void PoseGraph::addKeyFrameIntoDB(KeyFrame *keyframe)
 {
-    //shift to base frame
-    Vector3d vio_P_cur;
-    Matrix3d vio_R_cur;
-    if (sequence_cnt != cur_kf->sequence)
-    {
-        sequence_cnt++;
-        sequence_loop.push_back(0);
-        w_t_vio = Eigen::Vector3d(0, 0, 0);
-        w_r_vio = Eigen::Matrix3d::Identity();
-        m_drift.lock();
-        t_drift = Eigen::Vector3d(0, 0, 0);
-        r_drift = Eigen::Matrix3d::Identity();
-        m_drift.unlock();
-    }
-    
-    cur_kf->getVioPose(vio_P_cur, vio_R_cur);
-    vio_P_cur = w_r_vio * vio_P_cur + w_t_vio;
-    vio_R_cur = w_r_vio *  vio_R_cur;
-    cur_kf->updateVioPose(vio_P_cur, vio_R_cur);
-    cur_kf->index = global_index;
-    global_index++;
-	int loop_index = -1;
+    // if (VISUALIZE_IMAGE)
+    // {
+    //     cv::Mat tmp1_image = sc_manager_.getScanContextImage(que_index);
+    //     cv::Mat tmp2_image = sc_manager_.getScanContextImage(detect);
+    //     putText(tmp2_image, "loop score:" + to_string(qr.score_), cv::Point2f(10, 50), CV_FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255));
+    //     cv::hconcat(loop_result, tmp1_image, tmp2_image);
+    // }
+    pcl::PointCloud<pcl::PointXYZI>::Ptr raw_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+    *raw_cloud += *keyframe->full_cloud_;
+    *raw_cloud += *keyframe->outlier_cloud_;
+    sc_manager_.makeAndSaveScancontextAndKeys(*raw_cloud);
+}
+
+void PoseGraph::addKeyFrame(KeyFrame *cur_kf, bool flag_detect_loop)
+{
+    global_index_++;
     if (flag_detect_loop)
     {
-        TicToc tmp_t;
-        loop_index = detectLoop(cur_kf, cur_kf->index);
+        // detect loop candidates
+        TicToc t_loop_detect;
+        std::pair<int, double> ld_result = detectLoop(cur_kf, cur_kf->index_);
+        printf("loop_detection: %fms\n", t_loop_detect.toc());
+        // if (ld_result.first != -1)
+        // {           
+        //     int loop_index = ld_result.first;
+        //     double yaw_diff_rad = ld_result.second;
+        //     printf("find a loop candidate: %d <-> %d, yaw_ini: %f\n", cur_kf->index_, loop_index, yaw_diff_rad);
+
+        //     // check temporal consistency
+        //     TicToc t_check_tc;
+        //     std::pair<bool, int> tc_result = checkTemporalConsistency(cur_kf->index_, loop_index);
+        //     printf("check temporal consistency: %fms\n", t_check_tc.toc());
+        //     if (!tc_result.first)
+        //     {
+        //         printf("loop reject with temporal verificiation\n");
+        //     }
+        //     else 
+        //     {
+        //         skip_cnt_ = 0; // not perform frequent geometric verification
+
+        //         // check geometric consistency
+        //         TicToc t_check_gc;
+        //         std::pair<bool, Pose> loop_opti_result = checkGeometricConsistency(cur_kf->index_, loop_index);
+        //         printf("check geoometryc consistency %fms\n", t_check_gc.toc());
+        //         if (!loop_opti_result.first)
+        //         {
+        //             printf("loop reject with geometry verificiation\n");
+        //         }
+        //         else 
+        //         {
+        //             // perform pose graph optimization
+        //             Pose loop_info = loop_opti_result.second;
+        //             cur_kf->updateLoopInfo(loop_index, loop_info);
+        //             if (earliest_loop_index_ > loop_index || earliest_loop_index_ == -1)
+        //                 earliest_loop_index_ = loop_index;
+
+        //             m_optimize_buf.lock();
+        //             optimize_buf_.push(cur_kf->index_);
+        //             m_optimize_buf.unlock();
+        //         }
+        //     }
+        // }
     }
     else
     {
-        addKeyFrameIntoVoc(cur_kf);
+        // for not frequently performing loop closure
+        addKeyFrameIntoDB(cur_kf);
     }
-	if (loop_index != -1)
-	{
-        //printf(" %d detect loop with %d \n", cur_kf->index, loop_index);
-        KeyFrame* old_kf = getKeyFrame(loop_index);
 
-        if (cur_kf->findConnection(old_kf))
-        {
-            if (earliest_loop_index > loop_index || earliest_loop_index == -1)
-                earliest_loop_index = loop_index;
-
-            Vector3d w_P_old, w_P_cur, vio_P_cur;
-            Matrix3d w_R_old, w_R_cur, vio_R_cur;
-            old_kf->getVioPose(w_P_old, w_R_old);
-            cur_kf->getVioPose(vio_P_cur, vio_R_cur);
-
-            Vector3d relative_t;
-            Quaterniond relative_q;
-            relative_t = cur_kf->getLoopRelativeT();
-            relative_q = (cur_kf->getLoopRelativeQ()).toRotationMatrix();
-            w_P_cur = w_R_old * relative_t + w_P_old;
-            w_R_cur = w_R_old * relative_q;
-            double shift_yaw;
-            Matrix3d shift_r;
-            Vector3d shift_t; 
-            if(use_imu)
-            {
-                shift_yaw = Utility::R2ypr(w_R_cur).x() - Utility::R2ypr(vio_R_cur).x();
-                shift_r = Utility::ypr2R(Vector3d(shift_yaw, 0, 0));
-            }
-            else
-                shift_r = w_R_cur * vio_R_cur.transpose();
-            shift_t = w_P_cur - w_R_cur * vio_R_cur.transpose() * vio_P_cur; 
-            // shift vio pose of whole sequence to the world frame
-            if (old_kf->sequence != cur_kf->sequence && sequence_loop[cur_kf->sequence] == 0)
-            {  
-                w_r_vio = shift_r;
-                w_t_vio = shift_t;
-                vio_P_cur = w_r_vio * vio_P_cur + w_t_vio;
-                vio_R_cur = w_r_vio *  vio_R_cur;
-                cur_kf->updateVioPose(vio_P_cur, vio_R_cur);
-                list<KeyFrame*>::iterator it = keyframelist.begin();
-                for (; it != keyframelist.end(); it++)   
-                {
-                    if((*it)->sequence == cur_kf->sequence)
-                    {
-                        Vector3d vio_P_cur;
-                        Matrix3d vio_R_cur;
-                        (*it)->getVioPose(vio_P_cur, vio_R_cur);
-                        vio_P_cur = w_r_vio * vio_P_cur + w_t_vio;
-                        vio_R_cur = w_r_vio *  vio_R_cur;
-                        (*it)->updateVioPose(vio_P_cur, vio_R_cur);
-                    }
-                }
-                sequence_loop[cur_kf->sequence] = 1;
-            }
-            m_optimize_buf.lock();
-            optimize_buf.push(cur_kf->index);
-            m_optimize_buf.unlock();
-        }
-	}
-	m_keyframelist.lock();
-    Vector3d P;
-    Matrix3d R;
-    cur_kf->getVioPose(P, R);
-    P = r_drift * P + t_drift;
-    R = r_drift * R;
-    cur_kf->updatePose(P, R);
-    Quaterniond Q{R};
-    geometry_msgs::PoseStamped pose_stamped;
-    pose_stamped.header.stamp = ros::Time(cur_kf->time_stamp);
-    pose_stamped.header.frame_id = "world";
-    pose_stamped.pose.position.x = P.x() + VISUALIZATION_SHIFT_X;
-    pose_stamped.pose.position.y = P.y() + VISUALIZATION_SHIFT_Y;
-    pose_stamped.pose.position.z = P.z();
-    pose_stamped.pose.orientation.x = Q.x();
-    pose_stamped.pose.orientation.y = Q.y();
-    pose_stamped.pose.orientation.z = Q.z();
-    pose_stamped.pose.orientation.w = Q.w();
-    path[sequence_cnt].poses.push_back(pose_stamped);
-    path[sequence_cnt].header = pose_stamped.header;
-
-    if (SAVE_LOOP_PATH)
-    {
-        ofstream loop_path_file(VINS_RESULT_PATH, ios::app);
-        loop_path_file.setf(ios::fixed, ios::floatfield);
-        loop_path_file.precision(0);
-        loop_path_file << cur_kf->time_stamp * 1e9 << ",";
-        loop_path_file.precision(5);
-        loop_path_file  << P.x() << ","
-              << P.y() << ","
-              << P.z() << ","
-              << Q.w() << ","
-              << Q.x() << ","
-              << Q.y() << ","
-              << Q.z() << ","
-              << endl;
-        loop_path_file.close();
-    }
-    //draw local connection
-    if (SHOW_S_EDGE)
-    {
-        list<KeyFrame*>::reverse_iterator rit = keyframelist.rbegin();
-        for (int i = 0; i < 4; i++)
-        {
-            if (rit == keyframelist.rend())
-                break;
-            Vector3d conncected_P;
-            Matrix3d connected_R;
-            if((*rit)->sequence == cur_kf->sequence)
-            {
-                (*rit)->getPose(conncected_P, connected_R);
-                posegraph_visualization->add_edge(P, conncected_P);
-            }
-            rit++;
-        }
-    }
-    if (SHOW_L_EDGE)
-    {
-        if (cur_kf->has_loop)
-        {
-            //printf("has loop \n");
-            KeyFrame* connected_KF = getKeyFrame(cur_kf->loop_index);
-            Vector3d connected_P,P0;
-            Matrix3d connected_R,R0;
-            connected_KF->getPose(connected_P, connected_R);
-            //cur_kf->getVioPose(P0, R0);
-            cur_kf->getPose(P0, R0);
-            if(cur_kf->sequence > 0)
-            {
-                //printf("add loop into visual \n");
-                posegraph_visualization->add_loopedge(P0, connected_P + Vector3d(VISUALIZATION_SHIFT_X, VISUALIZATION_SHIFT_Y, 0));
-            }
-            
-        }
-    }
-    //posegraph_visualization->add_pose(P + Vector3d(VISUALIZATION_SHIFT_X, VISUALIZATION_SHIFT_Y, 0), Q);
-
-	keyframelist.push_back(cur_kf);
-    publish();
-	m_keyframelist.unlock();
-}
-
-
-void PoseGraph::loadKeyFrame(KeyFrame* cur_kf, bool flag_detect_loop)
-{
-    cur_kf->index = global_index;
-    global_index++;
-    int loop_index = -1;
-    if (flag_detect_loop)
-       loop_index = detectLoop(cur_kf, cur_kf->index);
-    else
-    {
-        addKeyFrameIntoVoc(cur_kf);
-    }
-    if (loop_index != -1)
-    {
-        printf(" %d detect loop with %d \n", cur_kf->index, loop_index);
-        KeyFrame* old_kf = getKeyFrame(loop_index);
-        if (cur_kf->findConnection(old_kf))
-        {
-            if (earliest_loop_index > loop_index || earliest_loop_index == -1)
-                earliest_loop_index = loop_index;
-            m_optimize_buf.lock();
-            optimize_buf.push(cur_kf->index);
-            m_optimize_buf.unlock();
-        }
-    }
     m_keyframelist.lock();
-    Vector3d P;
-    Matrix3d R;
-    cur_kf->getPose(P, R);
-    Quaterniond Q{R};
-    geometry_msgs::PoseStamped pose_stamped;
-    pose_stamped.header.stamp = ros::Time(cur_kf->time_stamp);
-    pose_stamped.header.frame_id = "world";
-    pose_stamped.pose.position.x = P.x() + VISUALIZATION_SHIFT_X;
-    pose_stamped.pose.position.y = P.y() + VISUALIZATION_SHIFT_Y;
-    pose_stamped.pose.position.z = P.z();
-    pose_stamped.pose.orientation.x = Q.x();
-    pose_stamped.pose.orientation.y = Q.y();
-    pose_stamped.pose.orientation.z = Q.z();
-    pose_stamped.pose.orientation.w = Q.w();
-    base_path.poses.push_back(pose_stamped);
-    base_path.header = pose_stamped.header;
 
-    //draw local connection
-    if (SHOW_S_EDGE)
-    {
-        list<KeyFrame*>::reverse_iterator rit = keyframelist.rbegin();
-        for (int i = 0; i < 1; i++)
-        {
-            if (rit == keyframelist.rend())
-                break;
-            Vector3d conncected_P;
-            Matrix3d connected_R;
-            if((*rit)->sequence == cur_kf->sequence)
-            {
-                (*rit)->getPose(conncected_P, connected_R);
-                posegraph_visualization->add_edge(P, conncected_P);
-            }
-            rit++;
-        }
-    }
+    Pose pose_w;
+    cur_kf->getPose(pose_w);
+    geometry_msgs::PoseStamped pose_stamped;
+    pose_stamped.header.stamp = ros::Time(cur_kf->time_stamp_);
+    pose_stamped.header.frame_id = "world";
+    pose_stamped.pose.position.x = pose_w.t_(0) + VISUALIZATION_SHIFT_X;
+    pose_stamped.pose.position.y = pose_w.t_(1) + VISUALIZATION_SHIFT_Y;
+    pose_stamped.pose.position.z = pose_w.t_(2);
+    pose_stamped.pose.orientation.x = pose_w.q_.x();
+    pose_stamped.pose.orientation.y = pose_w.q_.y();
+    pose_stamped.pose.orientation.z = pose_w.q_.z();
+    pose_stamped.pose.orientation.w = pose_w.q_.w();
+    pg_path_.poses.push_back(pose_stamped);
+    pg_path_.header = pose_stamped.header;
+
+    keyframelist_.push_back(cur_kf);
+    publish();
+    m_keyframelist.unlock();
+}
+
+void PoseGraph::loadKeyFrame(KeyFrame *cur_kf, bool flag_detect_loop)
+{
+    cur_kf->index_ = global_index_;
+    global_index_++;
+    int loop_index = -1;
+    addKeyFrameIntoDB(cur_kf);
+
+    m_keyframelist.lock();
+
+    Pose pose_w;
+    cur_kf->getPose(pose_w);
+    geometry_msgs::PoseStamped pose_stamped;
+    pose_stamped.header.stamp = ros::Time(cur_kf->time_stamp_);
+    pose_stamped.header.frame_id = "world";
+    pose_stamped.pose.position.x = pose_w.t_(0) + VISUALIZATION_SHIFT_X;
+    pose_stamped.pose.position.y = pose_w.t_(1) + VISUALIZATION_SHIFT_Y;
+    pose_stamped.pose.position.z = pose_w.t_(2);
+    pose_stamped.pose.orientation.x = pose_w.q_.x();
+    pose_stamped.pose.orientation.y = pose_w.q_.y();
+    pose_stamped.pose.orientation.z = pose_w.q_.z();
+    pose_stamped.pose.orientation.w = pose_w.q_.w();
+    pg_path_.poses.push_back(pose_stamped);
+    pg_path_.header = pose_stamped.header;
+
+    // TODO:
+    // draw local connection
+    // if (SHOW_S_EDGE)
+    // {
+    //     list<KeyFrame*>::reverse_iterator rit = keyframelist.rbegin();
+    //     for (int i = 0; i < 1; i++)
+    //     {
+    //         if (rit == keyframelist.rend())
+    //             break;
+    //         Vector3d conncected_P;
+    //         Matrix3d connected_R;
+    //         if((*rit)->sequence == cur_kf->sequence)
+    //         {
+    //             (*rit)->getPose(conncected_P, connected_R);
+    //             posegraph_visualization->add_edge(P, conncected_P);
+    //         }
+    //         rit++;
+    //     }
+    // }
+
     /*
     if (cur_kf->has_loop)
     {
@@ -312,419 +213,343 @@ void PoseGraph::loadKeyFrame(KeyFrame* cur_kf, bool flag_detect_loop)
     }
     */
 
-    keyframelist.push_back(cur_kf);
-    //publish();
+    keyframelist_.push_back(cur_kf);
+    publish();
     m_keyframelist.unlock();
 }
 
-KeyFrame* PoseGraph::getKeyFrame(int index)
+std::pair<int, double> PoseGraph::detectLoop(const KeyFrame *keyframe, const int que_index)
 {
-//    unique_lock<mutex> lock(m_keyframelist);
-    list<KeyFrame*>::iterator it = keyframelist.begin();
-    for (; it != keyframelist.end(); it++)   
-    {
-        if((*it)->index == index)
-            break;
-    }
-    if (it != keyframelist.end())
-        return *it;
-    else
-        return NULL;
-}
+    pcl::PointCloud<pcl::PointXYZI>::Ptr raw_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+    *raw_cloud += *keyframe->full_cloud_;
+    *raw_cloud += *keyframe->outlier_cloud_;
+    sc_manager_.makeAndSaveScancontextAndKeys(*raw_cloud);
+    assert(que_index < 0 || que_index >= sc_manager_.getDataBaseSize());
 
-int PoseGraph::detectLoop(KeyFrame* keyframe, int frame_index)
-{
-    // put image into image_pool; for visualization
-    cv::Mat compressed_image;
-    if (DEBUG_IMAGE)
-    {
-        int feature_num = keyframe->keypoints.size();
-        cv::resize(keyframe->image, compressed_image, cv::Size(376, 240));
-        putText(compressed_image, "feature_num:" + to_string(feature_num), cv::Point2f(10, 10), CV_FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255));
-        image_pool[frame_index] = compressed_image;
-    }
-    TicToc tmp_t;
-    //first query; then add this frame into database!
-    QueryResults ret;
-    TicToc t_query;
-    db.query(keyframe->brief_descriptors, ret, 4, frame_index - 50);
-    //printf("query time: %f", t_query.toc());
-    //cout << "Searching for Image " << frame_index << ". " << ret << endl;
-
-    TicToc t_add;
-    db.add(keyframe->brief_descriptors);
-    //printf("add feature time: %f", t_add.toc());
-    // ret[0] is the nearest neighbour's score. threshold change with neighour score
-    bool find_loop = false;
+    // apply scan context-based global localization
+    QueryResult qr = sc_manager_.detectLoopClosureID(que_index);
+    std::pair<int, double> detect_result;
+    detect_result.first = qr.match_index_;
+    detect_result.second = qr.yaw_diff_rad_;
     cv::Mat loop_result;
-    if (DEBUG_IMAGE)
+    if (detect_result.first != -1)
     {
-        loop_result = compressed_image.clone();
-        if (ret.size() > 0)
-            putText(loop_result, "neighbour score:" + to_string(ret[0].Score), cv::Point2f(10, 50), CV_FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255));
-    }
-    // visual loop result 
-    if (DEBUG_IMAGE)
-    {
-        for (unsigned int i = 0; i < ret.size(); i++)
+        int match_index = detect_result.first;
+        Eigen::Vector3d t_que = keyframe->pose_w_.t_;
+        Eigen::Vector3d t_match;
+        list<KeyFrame *>::iterator it;
+        for (it = keyframelist_.begin(); it != keyframelist_.end(); it++)
         {
-            int tmp_index = ret[i].Id;
-            auto it = image_pool.find(tmp_index);
-            cv::Mat tmp_image = (it->second).clone();
-            putText(tmp_image, "index:  " + to_string(tmp_index) + "loop score:" + to_string(ret[i].Score), cv::Point2f(10, 50), CV_FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255));
-            cv::hconcat(loop_result, tmp_image, loop_result);
-        }
-    }
-    // a good match with its nerghbour
-    if (ret.size() >= 1 &&ret[0].Score > 0.05)
-        for (unsigned int i = 1; i < ret.size(); i++)
-        {
-            //if (ret[i].Score > ret[0].Score * 0.3)
-            if (ret[i].Score > 0.015)
-            {          
-                find_loop = true;
-                int tmp_index = ret[i].Id;
-                if (DEBUG_IMAGE && 0)
-                {
-                    auto it = image_pool.find(tmp_index);
-                    cv::Mat tmp_image = (it->second).clone();
-                    putText(tmp_image, "loop score:" + to_string(ret[i].Score), cv::Point2f(10, 50), CV_FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255));
-                    cv::hconcat(loop_result, tmp_image, loop_result);
-                }
+            if ((*it)->index_ == match_index)
+            {
+                t_match = (*it)->pose_w_.t_;
+                break;
             }
-
         }
-/*
-    if (DEBUG_IMAGE)
+
+        // check if the candidate loop is to far
+        if ((t_que - t_match).norm() > LOOP_DISTANCE_THRESHOLD)
+        {
+            detect_result.first = -1;
+        }
+        if (VISUALIZE_IMAGE)
+        {
+            cv::Mat tmp1_image = sc_manager_.getScanContextImage(que_index);
+            cv::Mat tmp2_image = sc_manager_.getScanContextImage(match_index);
+            putText(tmp2_image, "loop score:" + to_string(qr.score_), cv::Point2f(10, 50), CV_FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255));
+            cv::hconcat(loop_result, tmp1_image, tmp2_image);
+        }
+    }
+    /*
+    if (VISUALIZE_IMAGE)
     {
         cv::imshow("loop_result", loop_result);
         cv::waitKey(20);
     }
 */
-    if (find_loop && frame_index > 50)
+    return detect_result;
+}
+
+std::pair<bool, int> PoseGraph::checkTemporalConsistency(const int &que_index,
+                                                         const int &match_index)
+{
+    bool tc_flag = true;
+    std::vector<int> all_match_index;
+    all_match_index.push_back(match_index);
+    for (int reque_index = que_index - 5; reque_index < que_index; reque_index++)
     {
-        int min_index = -1;
-        for (unsigned int i = 0; i < ret.size(); i++)
+        QueryResult qr = sc_manager_.detectLoopClosureID(reque_index);
+        std::pair<int, double> redetect_result;
+        redetect_result.first = qr.match_index_;
+        redetect_result.second = qr.yaw_diff_rad_;
+        int rematch_index = redetect_result.first;
+        // std::cout << "reque_index: " << reque_index << std::endl;
+        // if (rematch_index != -1) std::cout << ref_filename[rematch_index] << std::endl;
+        if ((rematch_index == -1) || (abs(match_index - rematch_index) > LOOP_TEMPORAL_CONSISTENCY_THRESHOLD))
         {
-            if (min_index == -1 || (ret[i].Id < min_index && ret[i].Score > 0.015))
-                min_index = ret[i].Id;
+            tc_flag = false;
+            break;
         }
-        return min_index;
+        all_match_index.push_back(rematch_index);
+    }
+    // if (tc_flag)
+    // {
+    //     for (size_t i = 0; i < all_match_index.size(); i++)
+    //         std::cout << "que_index: " << que_index - i << ", matcded: " << all_match_index[i] << std::endl;
+    // }
+    return make_pair(tc_flag, match_index);
+}
+
+std::pair<double, Pose> PoseGraph::checkGeometricConsistency(KeyFrame *keyframe_cur,
+                                                             const int &que_index,
+                                                             const int &match_index)
+{
+    // assert(que_index < 0);
+    // assert(match_index < 0);
+
+    // construct the keyframe point cloud
+    pcl::PointCloud<pcl::PointXYZI> surf_trans, corner_trans;
+    laser_cloud_surf_->clear();
+    laser_cloud_corner_->clear();
+    pcl::transformPointCloud(*keyframe_cur->surf_cloud_, surf_trans,
+                             keyframe_cur->pose_w_.T_.cast<float>());
+    *laser_cloud_surf_ += surf_trans;
+
+    pcl::transformPointCloud(*keyframe_cur->corner_cloud_, corner_trans,
+                             keyframe_cur->pose_w_.T_.cast<float>());
+    *laser_cloud_corner_ += corner_trans;
+
+    // construct the model point cloud
+    laser_cloud_surf_from_map_->clear();
+    laser_cloud_corner_from_map_->clear();
+    for (int j = -LOOP_HISTORY_SEARCH_NUM; j <= LOOP_HISTORY_SEARCH_NUM; j++)
+    {
+        if (match_index + j < 0 || match_index + j > que_index)
+            continue;
+        KeyFrame *old_kf = getKeyFrame(match_index + j);
+        pcl::transformPointCloud(*old_kf->surf_cloud_, surf_trans,
+                                 old_kf->pose_w_.T_.cast<float>());
+        *laser_cloud_surf_from_map_ += surf_trans;
+
+        pcl::transformPointCloud(*old_kf->corner_cloud_, corner_trans,
+                                 old_kf->pose_w_.T_.cast<float>());
+        *laser_cloud_corner_from_map_ += corner_trans;
+    }
+    down_size_filter_surf_map_.setInputCloud(laser_cloud_surf_from_map_);
+    down_size_filter_surf_map_.filter(*laser_cloud_surf_from_map_ds_);
+    down_size_filter_corner_map_.setInputCloud(laser_cloud_corner_from_map_);
+    down_size_filter_corner_map_.filter(*laser_cloud_corner_from_map_ds_);
+
+    // perform loop optimization between the model (as the base frame) to the keyframe point cloud
+    size_t laser_cloud_surf_from_map_num = laser_cloud_surf_from_map_ds_->size();
+    size_t laser_cloud_corner_from_map_num = laser_cloud_corner_from_map_ds_->size();
+    printf("[loop_closure] map surf num: %lu, corner num: %lu\n", laser_cloud_surf_from_map_num, laser_cloud_corner_from_map_num);
+    kdtree_surf_from_map_->setInputCloud(laser_cloud_surf_from_map_ds_);
+    kdtree_corner_from_map_->setInputCloud(laser_cloud_corner_from_map_ds_);
+    double opti_cost = 300;
+
+    Pose pose_relative; // initialize an identity pose
+    TicToc t_optimization;
+    for (int iter_cnt = 0; iter_cnt < 5; iter_cnt++)
+    {
+        double *para_pose = new double[SIZE_POSE];
+        ceres::Problem problem;
+        ceres::LossFunctionWrapper *loss_function = new ceres::LossFunctionWrapper(new ceres::HuberLoss(1), ceres::TAKE_OWNERSHIP);
+
+        para_pose[0] = pose_relative.t_(0);
+        para_pose[1] = pose_relative.t_(1);
+        para_pose[2] = pose_relative.t_(2);
+        para_pose[3] = pose_relative.q_.x();
+        para_pose[4] = pose_relative.q_.y();
+        para_pose[5] = pose_relative.q_.z();
+        para_pose[6] = pose_relative.q_.w();
+
+        std::vector<PointPlaneFeature> all_surf_features, all_corner_features;
+        size_t surf_num = 0, corner_num = 0;
+        TicToc t_match_features;
+        int n_neigh = 5;
+        f_extract_.matchSurfFromMap(kdtree_surf_from_map_,
+                                   *laser_cloud_surf_from_map_ds_,
+                                   *laser_cloud_surf_,
+                                   pose_relative,
+                                   all_surf_features,
+                                   n_neigh);
+        surf_num = all_surf_features.size();
+
+        f_extract_.matchCornerFromMap(kdtree_corner_from_map_,
+                                     *laser_cloud_corner_from_map_ds_,
+                                     *laser_cloud_corner_,
+                                     pose_relative,
+                                     all_corner_features,
+                                     n_neigh);
+        corner_num = all_corner_features.size();
+        printf("matching features time: %fms\n", t_match_features.toc());
+
+        for (const PointPlaneFeature &feature : all_surf_features)
+        {
+            Eigen::Matrix3d cov_matrix;
+            cov_matrix.setIdentity();
+            LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
+            problem.AddResidualBlock(f, loss_function, para_pose);
+        }
+        for (const PointPlaneFeature &feature : all_corner_features)
+        {
+            Eigen::Matrix3d cov_matrix;
+            cov_matrix.setIdentity();
+            LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
+            problem.AddResidualBlock(f, loss_function, para_pose);
+        }
+
+        TicToc t_solver;
+        ceres::Solver::Summary summary;
+        ceres::Solver::Options options;
+        options.linear_solver_type = ceres::DENSE_SCHUR;
+        options.minimizer_progress_to_stdout = false;
+        options.check_gradients = false;
+        options.gradient_check_relative_precision = 1e-4;
+        options.max_num_iterations = 30;
+        options.max_solver_time_in_seconds = 0.03;
+        ceres::Solve(options, &problem, &summary);
+        std::cout << summary.BriefReport() << std::endl;
+        opti_cost = std::min((double)summary.final_cost, opti_cost);
+        printf("solver time: %fms\n", t_solver.toc());
+
+        pose_relative.t_ = Eigen::Vector3d(para_pose[0], para_pose[1], para_pose[2]);
+        pose_relative.q_ = Eigen::Quaterniond(para_pose[6], para_pose[3], para_pose[4], para_pose[5]);
+        pose_relative.update();
+    }
+    std::cout << "opti_cost: " << opti_cost << ", relative transformation: " << pose_relative << std::endl;
+    printf("optimization time: %fms\n", t_optimization.toc());
+
+    std::pair<double, Pose> loop_opti_result;
+    if (opti_cost <= LOOP_GEOMETRIC_CONSISTENCY_THRESHOLD)
+    {
+        loop_opti_result = make_pair(true, pose_relative);
     }
     else
-        return -1;
-
-}
-
-void PoseGraph::addKeyFrameIntoVoc(KeyFrame* keyframe)
-{
-    // put image into image_pool; for visualization
-    cv::Mat compressed_image;
-    if (DEBUG_IMAGE)
     {
-        int feature_num = keyframe->keypoints.size();
-        cv::resize(keyframe->image, compressed_image, cv::Size(376, 240));
-        putText(compressed_image, "feature_num:" + to_string(feature_num), cv::Point2f(10, 10), CV_FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255));
-        image_pool[keyframe->index] = compressed_image;
+        loop_opti_result = make_pair(false, pose_relative);
     }
-
-    db.add(keyframe->brief_descriptors);
+    return loop_opti_result;
 }
 
-void PoseGraph::optimize4DoF()
+KeyFrame *PoseGraph::getKeyFrame(int index)
+{
+    //    unique_lock<mutex> lock(m_keyframelist_);
+    list<KeyFrame *>::iterator it = keyframelist_.begin();
+    for (; it != keyframelist_.end(); it++)
+    {
+        if ((*it)->index_ == index)
+            break;
+    }
+    if (it != keyframelist_.end())
+        return *it;
+    else
+        return NULL;
+}
+
+void PoseGraph::optimizePoseGraph()
 {
     while(true)
     {
         int cur_index = -1;
         int first_looped_index = -1;
         m_optimize_buf.lock();
-        while(!optimize_buf.empty())
+        while(!optimize_buf_.empty())
         {
-            cur_index = optimize_buf.front();
-            first_looped_index = earliest_loop_index;
-            optimize_buf.pop();
+            cur_index = optimize_buf_.front();
+            first_looped_index = earliest_loop_index_;
+            optimize_buf_.pop();
         }
         m_optimize_buf.unlock();
         if (cur_index != -1)
         {
             printf("optimize pose graph \n");
-            TicToc tmp_t;
+            TicToc t_pgo;
             m_keyframelist.lock();
             KeyFrame* cur_kf = getKeyFrame(cur_index);
-
             int max_length = cur_index + 1;
-
-            // w^t_i   w^q_i
-            double t_array[max_length][3];
-            Quaterniond q_array[max_length];
-            double euler_array[max_length][3];
-            double sequence_array[max_length];
-
-            ceres::Problem problem;
-            ceres::Solver::Options options;
-            options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
-            //options.minimizer_progress_to_stdout = true;
-            //options.max_solver_time_in_seconds = SOLVER_TIME * 3;
-            options.max_num_iterations = 5;
-            ceres::Solver::Summary summary;
-            ceres::LossFunction *loss_function;
-            loss_function = new ceres::HuberLoss(0.1);
-            //loss_function = new ceres::CauchyLoss(1.0);
-            ceres::LocalParameterization* angle_local_parameterization =
-                AngleLocalParameterization::Create();
-
-            list<KeyFrame*>::iterator it;
-
-            int i = 0;
-            for (it = keyframelist.begin(); it != keyframelist.end(); it++)
-            {
-                if ((*it)->index < first_looped_index)
-                    continue;
-                (*it)->local_index = i;
-                Quaterniond tmp_q;
-                Matrix3d tmp_r;
-                Vector3d tmp_t;
-                (*it)->getVioPose(tmp_t, tmp_r);
-                tmp_q = tmp_r;
-                t_array[i][0] = tmp_t(0);
-                t_array[i][1] = tmp_t(1);
-                t_array[i][2] = tmp_t(2);
-                q_array[i] = tmp_q;
-
-                Vector3d euler_angle = Utility::R2ypr(tmp_q.toRotationMatrix());
-                euler_array[i][0] = euler_angle.x();
-                euler_array[i][1] = euler_angle.y();
-                euler_array[i][2] = euler_angle.z();
-
-                sequence_array[i] = (*it)->sequence;
-
-                problem.AddParameterBlock(euler_array[i], 1, angle_local_parameterization);
-                problem.AddParameterBlock(t_array[i], 3);
-
-                if ((*it)->index == first_looped_index || (*it)->sequence == 0)
-                {   
-                    problem.SetParameterBlockConstant(euler_array[i]);
-                    problem.SetParameterBlockConstant(t_array[i]);
-                }
-
-                //add edge
-                for (int j = 1; j < 5; j++)
-                {
-                  if (i - j >= 0 && sequence_array[i] == sequence_array[i-j])
-                  {
-                    Vector3d euler_conncected = Utility::R2ypr(q_array[i-j].toRotationMatrix());
-                    Vector3d relative_t(t_array[i][0] - t_array[i-j][0], t_array[i][1] - t_array[i-j][1], t_array[i][2] - t_array[i-j][2]);
-                    relative_t = q_array[i-j].inverse() * relative_t;
-                    double relative_yaw = euler_array[i][0] - euler_array[i-j][0];
-                    ceres::CostFunction* cost_function = FourDOFError::Create( relative_t.x(), relative_t.y(), relative_t.z(),
-                                                   relative_yaw, euler_conncected.y(), euler_conncected.z());
-                    problem.AddResidualBlock(cost_function, NULL, euler_array[i-j], 
-                                            t_array[i-j], 
-                                            euler_array[i], 
-                                            t_array[i]);
-                  }
-                }
-
-                //add loop edge
-                
-                if((*it)->has_loop)
-                {
-                    assert((*it)->loop_index >= first_looped_index);
-                    int connected_index = getKeyFrame((*it)->loop_index)->local_index;
-                    Vector3d euler_conncected = Utility::R2ypr(q_array[connected_index].toRotationMatrix());
-                    Vector3d relative_t;
-                    relative_t = (*it)->getLoopRelativeT();
-                    double relative_yaw = (*it)->getLoopRelativeYaw();
-                    ceres::CostFunction* cost_function = FourDOFWeightError::Create( relative_t.x(), relative_t.y(), relative_t.z(),
-                                                                               relative_yaw, euler_conncected.y(), euler_conncected.z());
-                    problem.AddResidualBlock(cost_function, loss_function, euler_array[connected_index], 
-                                                                  t_array[connected_index], 
-                                                                  euler_array[i], 
-                                                                  t_array[i]);
-                    
-                }
-                
-                if ((*it)->index == cur_index)
-                    break;
-                i++;
-            }
-            m_keyframelist.unlock();
-
-            ceres::Solve(options, &problem, &summary);
-            //std::cout << summary.BriefReport() << "\n";
-            
-            //printf("pose optimization time: %f \n", tmp_t.toc());
-            /*
-            for (int j = 0 ; j < i; j++)
-            {
-                printf("optimize i: %d p: %f, %f, %f\n", j, t_array[j][0], t_array[j][1], t_array[j][2] );
-            }
-            */
-            m_keyframelist.lock();
-            i = 0;
-            for (it = keyframelist.begin(); it != keyframelist.end(); it++)
-            {
-                if ((*it)->index < first_looped_index)
-                    continue;
-                Quaterniond tmp_q;
-                tmp_q = Utility::ypr2R(Vector3d(euler_array[i][0], euler_array[i][1], euler_array[i][2]));
-                Vector3d tmp_t = Vector3d(t_array[i][0], t_array[i][1], t_array[i][2]);
-                Matrix3d tmp_r = tmp_q.toRotationMatrix();
-                (*it)-> updatePose(tmp_t, tmp_r);
-
-                if ((*it)->index == cur_index)
-                    break;
-                i++;
-            }
-
-            Vector3d cur_t, vio_t;
-            Matrix3d cur_r, vio_r;
-            cur_kf->getPose(cur_t, cur_r);
-            cur_kf->getVioPose(vio_t, vio_r);
-            m_drift.lock();
-            yaw_drift = Utility::R2ypr(cur_r).x() - Utility::R2ypr(vio_r).x();
-            r_drift = Utility::ypr2R(Vector3d(yaw_drift, 0, 0));
-            t_drift = cur_t - r_drift * vio_t;
-            m_drift.unlock();
-            //cout << "t_drift " << t_drift.transpose() << endl;
-            //cout << "r_drift " << Utility::R2ypr(r_drift).transpose() << endl;
-            //cout << "yaw drift " << yaw_drift << endl;
-
-            it++;
-            for (; it != keyframelist.end(); it++)
-            {
-                Vector3d P;
-                Matrix3d R;
-                (*it)->getVioPose(P, R);
-                P = r_drift * P + t_drift;
-                R = r_drift * R;
-                (*it)->updatePose(P, R);
-            }
-            m_keyframelist.unlock();
-            updatePath();
-        }
-
-        std::chrono::milliseconds dura(2000);
-        std::this_thread::sleep_for(dura);
-    }
-    return;
-}
-
-
-void PoseGraph::optimize6DoF()
-{
-    while(true)
-    {
-        int cur_index = -1;
-        int first_looped_index = -1;
-        m_optimize_buf.lock();
-        while(!optimize_buf.empty())
-        {
-            cur_index = optimize_buf.front();
-            first_looped_index = earliest_loop_index;
-            optimize_buf.pop();
-        }
-        m_optimize_buf.unlock();
-        if (cur_index != -1)
-        {
-            printf("optimize pose graph \n");
-            TicToc tmp_t;
-            m_keyframelist.lock();
-            KeyFrame* cur_kf = getKeyFrame(cur_index);
-
-            int max_length = cur_index + 1;
-
-            // w^t_i   w^q_i
             double t_array[max_length][3];
             double q_array[max_length][4];
             double sequence_array[max_length];
 
             ceres::Problem problem;
             ceres::Solver::Options options;
-            options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
+            options.linear_solver_type = ceres::DENSE_SCHUR;
+            // options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
             //ptions.minimizer_progress_to_stdout = true;
             //options.max_solver_time_in_seconds = SOLVER_TIME * 3;
             options.max_num_iterations = 5;
             ceres::Solver::Summary summary;
             ceres::LossFunction *loss_function;
-            loss_function = new ceres::HuberLoss(0.1);
+            loss_function = new ceres::HuberLoss(1.0);
+            // loss_function = new ceres::HuberLoss(0.1);
             //loss_function = new ceres::CauchyLoss(1.0);
             ceres::LocalParameterization* local_parameterization = new ceres::QuaternionParameterization();
 
             list<KeyFrame*>::iterator it;
-
-            int i = 0;
-            for (it = keyframelist.begin(); it != keyframelist.end(); it++)
+            int i = 0; // the index of the array
+            for (it = keyframelist_.begin(); it != keyframelist_.end(); it++)
             {
-                if ((*it)->index < first_looped_index)
+                if ((*it)->index_ < first_looped_index)
                     continue;
-                (*it)->local_index = i;
-                Quaterniond tmp_q;
-                Matrix3d tmp_r;
-                Vector3d tmp_t;
-                (*it)->getVioPose(tmp_t, tmp_r);
-                tmp_q = tmp_r;
-                t_array[i][0] = tmp_t(0);
-                t_array[i][1] = tmp_t(1);
-                t_array[i][2] = tmp_t(2);
-                q_array[i][0] = tmp_q.w();
-                q_array[i][1] = tmp_q.x();
-                q_array[i][2] = tmp_q.y();
-                q_array[i][3] = tmp_q.z();
-
-                sequence_array[i] = (*it)->sequence;
-
+                (*it)->local_index_ = i;
+                Pose tmp_pose;
+                (*it)->getPose(tmp_pose);
+                t_array[i][0] = tmp_pose.t_(0);
+                t_array[i][1] = tmp_pose.t_(1);
+                t_array[i][2] = tmp_pose.t_(2);
+                q_array[i][0] = tmp_pose.q_.w();
+                q_array[i][1] = tmp_pose.q_.x();
+                q_array[i][2] = tmp_pose.q_.y();
+                q_array[i][3] = tmp_pose.q_.z();
                 problem.AddParameterBlock(q_array[i], 4, local_parameterization);
                 problem.AddParameterBlock(t_array[i], 3);
-
-                if ((*it)->index == first_looped_index || (*it)->sequence == 0)
+                if ((*it)->index_ == first_looped_index) 
                 {   
                     problem.SetParameterBlockConstant(q_array[i]);
                     problem.SetParameterBlockConstant(t_array[i]);
                 }
 
-                //add edge
+                // add edge between previous frames
                 for (int j = 1; j < 5; j++)
                 {
-                    if (i - j >= 0 && sequence_array[i] == sequence_array[i-j])
+                    if (i - j >= 0)
                     {
                         Vector3d relative_t(t_array[i][0] - t_array[i-j][0], t_array[i][1] - t_array[i-j][1], t_array[i][2] - t_array[i-j][2]);
                         Quaterniond q_i_j = Quaterniond(q_array[i-j][0], q_array[i-j][1], q_array[i-j][2], q_array[i-j][3]);
                         Quaterniond q_i = Quaterniond(q_array[i][0], q_array[i][1], q_array[i][2], q_array[i][3]);
                         relative_t = q_i_j.inverse() * relative_t;
                         Quaterniond relative_q = q_i_j.inverse() * q_i;
-                        ceres::CostFunction* vo_function = RelativeRTError::Create(relative_t.x(), relative_t.y(), relative_t.z(),
-                                                                                relative_q.w(), relative_q.x(), relative_q.y(), relative_q.z(),
-                                                                                0.1, 0.01);
-                        problem.AddResidualBlock(vo_function, NULL, q_array[i-j], t_array[i-j], q_array[i], t_array[i]);
+                        ceres::CostFunction *f = RelativeRTError::Create(relative_t.x(), relative_t.y(), relative_t.z(),
+                                                                         relative_q.w(), relative_q.x(), relative_q.y(), relative_q.z(),
+                                                                         0.1, 0.01);
+                        problem.AddResidualBlock(f, NULL, q_array[i-j], t_array[i-j], q_array[i], t_array[i]);
                     }
                 }
 
                 //add loop edge
-                
-                if((*it)->has_loop)
+                if((*it)->has_loop_)
                 {
-                    assert((*it)->loop_index >= first_looped_index);
-                    int connected_index = getKeyFrame((*it)->loop_index)->local_index;
-                    Vector3d relative_t;
-                    relative_t = (*it)->getLoopRelativeT();
-                    Quaterniond relative_q;
-                    relative_q = (*it)->getLoopRelativeQ();
-                    ceres::CostFunction* loop_function = RelativeRTError::Create(relative_t.x(), relative_t.y(), relative_t.z(),
-                                                                                relative_q.w(), relative_q.x(), relative_q.y(), relative_q.z(),
-                                                                                0.1, 0.01);
+                    assert((*it)->loop_index_ >= first_looped_index);
+                    int connected_index = getKeyFrame((*it)->loop_index_)->local_index_;
+                    Pose pose_relative;
+                    pose_relative = (*it)->getLoopRelativePose();
+                    Eigen::Vector3d relative_t = pose_relative.t_;
+                    Eigen::Quaterniond relative_q = pose_relative.q_;
+                    ceres::CostFunction *loop_function = RelativeRTError::Create(relative_t.x(), relative_t.y(), relative_t.z(),
+                                                                                 relative_q.w(), relative_q.x(), relative_q.y(), relative_q.z(),
+                                                                                 0.1, 0.01);
                     problem.AddResidualBlock(loop_function, loss_function, q_array[connected_index], t_array[connected_index], q_array[i], t_array[i]);                    
                 }
-                
-                if ((*it)->index == cur_index)
+                if ((*it)->index_ == cur_index)
                     break;
                 i++;
             }
             m_keyframelist.unlock();
 
             ceres::Solve(options, &problem, &summary);
-            //std::cout << summary.BriefReport() << "\n";
-            
+            std::cout << summary.BriefReport() << "\n";
             //printf("pose optimization time: %f \n", tmp_t.toc());
             /*
             for (int j = 0 ; j < i; j++)
@@ -733,226 +558,87 @@ void PoseGraph::optimize6DoF()
             }
             */
             m_keyframelist.lock();
+
             i = 0;
-            for (it = keyframelist.begin(); it != keyframelist.end(); it++)
+            for (it = keyframelist_.begin(); it != keyframelist_.end(); it++)
             {
-                if ((*it)->index < first_looped_index)
+                if ((*it)->index_ < first_looped_index)
                     continue;
                 Quaterniond tmp_q(q_array[i][0], q_array[i][1], q_array[i][2], q_array[i][3]);
                 Vector3d tmp_t = Vector3d(t_array[i][0], t_array[i][1], t_array[i][2]);
-                Matrix3d tmp_r = tmp_q.toRotationMatrix();
-                (*it)-> updatePose(tmp_t, tmp_r);
-
-                if ((*it)->index == cur_index)
+                Pose tmp_pose(tmp_q, tmp_t);
+                (*it)->updatePose(tmp_pose);
+                if ((*it)->index_ == cur_index)
                     break;
                 i++;
             }
 
-            Vector3d cur_t, vio_t;
-            Matrix3d cur_r, vio_r;
-            cur_kf->getPose(cur_t, cur_r);
-            cur_kf->getVioPose(vio_t, vio_r);
-            m_drift.lock();
-            r_drift = cur_r * vio_r.transpose();
-            t_drift = cur_t - r_drift * vio_t;
-            m_drift.unlock();
-            //cout << "t_drift " << t_drift.transpose() << endl;
-            //cout << "r_drift " << Utility::R2ypr(r_drift).transpose() << endl;
-
+            // update the pose in behind frames
+            Pose cur_pose_w, last_pose_w;
+            cur_kf->getPose(cur_pose_w);
+            cur_kf->getLastPose(last_pose_w);
+            Pose pose_drift = cur_pose_w * last_pose_w.inverse();
             it++;
-            for (; it != keyframelist.end(); it++)
+            for (; it != keyframelist_.end(); it++)
             {
-                Vector3d P;
-                Matrix3d R;
-                (*it)->getVioPose(P, R);
-                P = r_drift * P + t_drift;
-                R = r_drift * R;
-                (*it)->updatePose(P, R);
+                Pose update_pose;
+                (*it)->getPose(update_pose);
+                update_pose = pose_drift * update_pose;
+                (*it)->updatePose(update_pose);
             }
             m_keyframelist.unlock();
             updatePath();
+            printf("perform pose graph optimization: %fs\n", t_pgo.toc() / 1000);
         }
-
         std::chrono::milliseconds dura(2000);
         std::this_thread::sleep_for(dura);
     }
     return;
 }
 
-void PoseGraph::updatePath()
-{
-    m_keyframelist.lock();
-    list<KeyFrame*>::iterator it;
-    for (int i = 1; i <= sequence_cnt; i++)
-    {
-        path[i].poses.clear();
-    }
-    base_path.poses.clear();
-    posegraph_visualization->reset();
-
-    if (SAVE_LOOP_PATH)
-    {
-        ofstream loop_path_file_tmp(VINS_RESULT_PATH, ios::out);
-        loop_path_file_tmp.close();
-    }
-
-    for (it = keyframelist.begin(); it != keyframelist.end(); it++)
-    {
-        Vector3d P;
-        Matrix3d R;
-        (*it)->getPose(P, R);
-        Quaterniond Q;
-        Q = R;
-//        printf("path p: %f, %f, %f\n",  P.x(),  P.z(),  P.y() );
-
-        geometry_msgs::PoseStamped pose_stamped;
-        pose_stamped.header.stamp = ros::Time((*it)->time_stamp);
-        pose_stamped.header.frame_id = "world";
-        pose_stamped.pose.position.x = P.x() + VISUALIZATION_SHIFT_X;
-        pose_stamped.pose.position.y = P.y() + VISUALIZATION_SHIFT_Y;
-        pose_stamped.pose.position.z = P.z();
-        pose_stamped.pose.orientation.x = Q.x();
-        pose_stamped.pose.orientation.y = Q.y();
-        pose_stamped.pose.orientation.z = Q.z();
-        pose_stamped.pose.orientation.w = Q.w();
-        if((*it)->sequence == 0)
-        {
-            base_path.poses.push_back(pose_stamped);
-            base_path.header = pose_stamped.header;
-        }
-        else
-        {
-            path[(*it)->sequence].poses.push_back(pose_stamped);
-            path[(*it)->sequence].header = pose_stamped.header;
-        }
-
-        if (SAVE_LOOP_PATH)
-        {
-            ofstream loop_path_file(VINS_RESULT_PATH, ios::app);
-            loop_path_file.setf(ios::fixed, ios::floatfield);
-            loop_path_file.precision(0);
-            loop_path_file << (*it)->time_stamp * 1e9 << ",";
-            loop_path_file.precision(5);
-            loop_path_file  << P.x() << ","
-                  << P.y() << ","
-                  << P.z() << ","
-                  << Q.w() << ","
-                  << Q.x() << ","
-                  << Q.y() << ","
-                  << Q.z() << ","
-                  << endl;
-            loop_path_file.close();
-        }
-        //draw local connection
-        if (SHOW_S_EDGE)
-        {
-            list<KeyFrame*>::reverse_iterator rit = keyframelist.rbegin();
-            list<KeyFrame*>::reverse_iterator lrit;
-            for (; rit != keyframelist.rend(); rit++)  
-            {  
-                if ((*rit)->index == (*it)->index)
-                {
-                    lrit = rit;
-                    lrit++;
-                    for (int i = 0; i < 4; i++)
-                    {
-                        if (lrit == keyframelist.rend())
-                            break;
-                        if((*lrit)->sequence == (*it)->sequence)
-                        {
-                            Vector3d conncected_P;
-                            Matrix3d connected_R;
-                            (*lrit)->getPose(conncected_P, connected_R);
-                            posegraph_visualization->add_edge(P, conncected_P);
-                        }
-                        lrit++;
-                    }
-                    break;
-                }
-            } 
-        }
-        if (SHOW_L_EDGE)
-        {
-            if ((*it)->has_loop && (*it)->sequence == sequence_cnt)
-            {
-                
-                KeyFrame* connected_KF = getKeyFrame((*it)->loop_index);
-                Vector3d connected_P;
-                Matrix3d connected_R;
-                connected_KF->getPose(connected_P, connected_R);
-                //(*it)->getVioPose(P, R);
-                (*it)->getPose(P, R);
-                if((*it)->sequence > 0)
-                {
-                    posegraph_visualization->add_loopedge(P, connected_P + Vector3d(VISUALIZATION_SHIFT_X, VISUALIZATION_SHIFT_Y, 0));
-                }
-            }
-        }
-
-    }
-    publish();
-    m_keyframelist.unlock();
-}
-
-
 void PoseGraph::savePoseGraph()
 {
     m_keyframelist.lock();
-    TicToc tmp_t;
+    TicToc t_save_pose_graph;
     FILE *pFile;
-    printf("pose graph path: %s\n",POSE_GRAPH_SAVE_PATH.c_str());
+    printf("pose graph path: %s\n", POSE_GRAPH_SAVE_PATH.c_str());
     printf("pose graph saving... \n");
     string file_path = POSE_GRAPH_SAVE_PATH + "pose_graph.txt";
     pFile = fopen (file_path.c_str(),"w");
     //fprintf(pFile, "index time_stamp Tx Ty Tz Qw Qx Qy Qz loop_index loop_info\n");
     list<KeyFrame*>::iterator it;
-    for (it = keyframelist.begin(); it != keyframelist.end(); it++)
+    for (it = keyframelist_.begin(); it != keyframelist_.end(); it++)
     {
-        std::string image_path, descriptor_path, brief_path, keypoints_path;
-        if (DEBUG_IMAGE)
+        std::string pcd_path;
+        if (LOOP_SAVE_PCD)
         {
-            image_path = POSE_GRAPH_SAVE_PATH + to_string((*it)->index) + "_image.png";
-            imwrite(image_path.c_str(), (*it)->image);
+            pcd_path = POSE_GRAPH_SAVE_PATH + to_string((*it)->index_) + "_surf_cloud.pcd";
+            pcd_writer_.write(pcd_path, *(*it)->surf_cloud_);
+            pcd_path = POSE_GRAPH_SAVE_PATH + to_string((*it)->index_) + "_corner_cloud.pcd";
+            pcd_writer_.write(pcd_path, *(*it)->corner_cloud_);
+            pcd_path = POSE_GRAPH_SAVE_PATH + to_string((*it)->index_) + "_full_cloud.pcd";
+            pcd_writer_.write(pcd_path, *(*it)->full_cloud_);
+            pcd_path = POSE_GRAPH_SAVE_PATH + to_string((*it)->index_) + "_outlier_cloud.pcd";
+            pcd_writer_.write(pcd_path, *(*it)->outlier_cloud_);
         }
-        Quaterniond VIO_tmp_Q{(*it)->vio_R_w_i};
-        Quaterniond PG_tmp_Q{(*it)->R_w_i};
-        Vector3d VIO_tmp_T = (*it)->vio_T_w_i;
-        Vector3d PG_tmp_T = (*it)->T_w_i;
-
-        fprintf (pFile, " %d %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %d %f %f %f %f %f %f %f %f %d\n",(*it)->index, (*it)->time_stamp, 
-                                    VIO_tmp_T.x(), VIO_tmp_T.y(), VIO_tmp_T.z(), 
-                                    PG_tmp_T.x(), PG_tmp_T.y(), PG_tmp_T.z(), 
-                                    VIO_tmp_Q.w(), VIO_tmp_Q.x(), VIO_tmp_Q.y(), VIO_tmp_Q.z(), 
-                                    PG_tmp_Q.w(), PG_tmp_Q.x(), PG_tmp_Q.y(), PG_tmp_Q.z(), 
-                                    (*it)->loop_index, 
-                                    (*it)->loop_info(0), (*it)->loop_info(1), (*it)->loop_info(2), (*it)->loop_info(3),
-                                    (*it)->loop_info(4), (*it)->loop_info(5), (*it)->loop_info(6), (*it)->loop_info(7),
-                                    (int)(*it)->keypoints.size());
-
-        // write keypoints, brief_descriptors   vector<cv::KeyPoint> keypoints vector<BRIEF::bitset> brief_descriptors;
-        assert((*it)->keypoints.size() == (*it)->brief_descriptors.size());
-        brief_path = POSE_GRAPH_SAVE_PATH + to_string((*it)->index) + "_briefdes.dat";
-        std::ofstream brief_file(brief_path, std::ios::binary);
-        keypoints_path = POSE_GRAPH_SAVE_PATH + to_string((*it)->index) + "_keypoints.txt";
-        FILE *keypoints_file;
-        keypoints_file = fopen(keypoints_path.c_str(), "w");
-        for (int i = 0; i < (int)(*it)->keypoints.size(); i++)
-        {
-            brief_file << (*it)->brief_descriptors[i] << endl;
-            fprintf(keypoints_file, "%f %f %f %f\n", (*it)->keypoints[i].pt.x, (*it)->keypoints[i].pt.y, 
-                                                     (*it)->keypoints_norm[i].pt.x, (*it)->keypoints_norm[i].pt.y);
-        }
-        brief_file.close();
-        fclose(keypoints_file);
+        Pose tmp_pose = (*it)->pose_w_;
+        Pose loop_info = (*it)->loop_info_; // the relative pose
+        fprintf(pFile, " %d %f %f %f %f %f %f %f %f %d %f %f %f %f %f %f %f\n",
+                (*it)->index_, (*it)->time_stamp_,
+                tmp_pose.t_(0), tmp_pose.t_(1), tmp_pose.t_(2),
+                tmp_pose.q_.x(), tmp_pose.q_.y(), tmp_pose.q_.z(), tmp_pose.q_.w(),
+                (*it)->loop_index_,
+                loop_info.t_(0), loop_info.t_(1), loop_info.t_(2),
+                loop_info.q_.x(), loop_info.q_.y(), loop_info.q_.z(), loop_info.q_.w());
     }
     fclose(pFile);
-
-    printf("save pose graph time: %f s\n", tmp_t.toc() / 1000);
+    printf("save pose graph time: %fs\n", t_save_pose_graph.toc() / 1000);
     m_keyframelist.unlock();
 }
+
 void PoseGraph::loadPoseGraph()
 {
-    TicToc tmp_t;
+    TicToc t_load_posegraph;
     FILE * pFile;
     string file_path = POSE_GRAPH_SAVE_PATH + "pose_graph.txt";
     printf("lode pose graph from: %s \n", file_path.c_str());
@@ -965,99 +651,67 @@ void PoseGraph::loadPoseGraph()
     }
     int index;
     double time_stamp;
-    double VIO_Tx, VIO_Ty, VIO_Tz;
-    double PG_Tx, PG_Ty, PG_Tz;
-    double VIO_Qw, VIO_Qx, VIO_Qy, VIO_Qz;
-    double PG_Qw, PG_Qx, PG_Qy, PG_Qz;
-    double loop_info_0, loop_info_1, loop_info_2, loop_info_3;
-    double loop_info_4, loop_info_5, loop_info_6, loop_info_7;
+    double pose_w_tx, pose_w_ty, pose_w_tz;
+    double pose_w_qx, pose_w_qy, pose_w_qz, pose_w_qw;
+    double loop_info_tx, loop_info_ty, loop_info_tz;
+    double loop_info_qx, loop_info_qy, loop_info_qz, loop_info_qw;
     int loop_index;
-    int keypoints_num;
-    Eigen::Matrix<double, 8, 1 > loop_info;
     int cnt = 0;
-    while (fscanf(pFile,"%d %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d %lf %lf %lf %lf %lf %lf %lf %lf %d", &index, &time_stamp, 
-                                    &VIO_Tx, &VIO_Ty, &VIO_Tz, 
-                                    &PG_Tx, &PG_Ty, &PG_Tz, 
-                                    &VIO_Qw, &VIO_Qx, &VIO_Qy, &VIO_Qz, 
-                                    &PG_Qw, &PG_Qx, &PG_Qy, &PG_Qz, 
-                                    &loop_index,
-                                    &loop_info_0, &loop_info_1, &loop_info_2, &loop_info_3, 
-                                    &loop_info_4, &loop_info_5, &loop_info_6, &loop_info_7,
-                                    &keypoints_num) != EOF) 
+    while (fscanf(pFile, "%d %lf %lf %lf %lf %lf %lf %lf %lf %d %lf %lf %lf %lf %lf %lf %lf",
+                  &index, &time_stamp,
+                  &pose_w_tx, &pose_w_ty, &pose_w_tz,
+                  &pose_w_qx, &pose_w_qy, &pose_w_qz, &pose_w_qw,
+                  &loop_index,
+                  &loop_info_tx, &loop_info_ty, &loop_info_tz,
+                  &loop_info_qx, &loop_info_qy, &loop_info_qz, &loop_info_qw) != EOF)
     {
-        /*
-        printf("I read: %d %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d %lf %lf %lf %lf %lf %lf %lf %lf %d\n", index, time_stamp, 
-                                    VIO_Tx, VIO_Ty, VIO_Tz, 
-                                    PG_Tx, PG_Ty, PG_Tz, 
-                                    VIO_Qw, VIO_Qx, VIO_Qy, VIO_Qz, 
-                                    PG_Qw, PG_Qx, PG_Qy, PG_Qz, 
-                                    loop_index,
-                                    loop_info_0, loop_info_1, loop_info_2, loop_info_3, 
-                                    loop_info_4, loop_info_5, loop_info_6, loop_info_7,
-                                    keypoints_num);
-        */
-        cv::Mat image;
-        std::string image_path, descriptor_path;
-        if (DEBUG_IMAGE)
+        printf("I read: %d %f %f %f %f %f %f %f %f %d %f %f %f %f %f %f %f",
+               index, time_stamp,
+               pose_w_tx, pose_w_ty, pose_w_tz,
+               pose_w_qx, pose_w_qy, pose_w_qz, pose_w_qw,
+               loop_index,
+               loop_info_tx, loop_info_ty, loop_info_tz,
+               loop_info_qx, loop_info_qy, loop_info_qz, loop_info_qw);
+        pcl::PointCloud<pcl::PointXYZI>::Ptr surf_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+        pcl::PointCloud<pcl::PointXYZI>::Ptr corner_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+        pcl::PointCloud<pcl::PointXYZI>::Ptr full_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+        pcl::PointCloud<pcl::PointXYZI>::Ptr outlier_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+        std::string pcd_path;
+        if (LOOP_SAVE_PCD)
         {
-            image_path = POSE_GRAPH_SAVE_PATH + to_string(index) + "_image.png";
-            image = cv::imread(image_path.c_str(), 0);
+            pcd_path = POSE_GRAPH_SAVE_PATH + to_string(index) + "_surf_cloud.pcd";
+            pcd_reader_.read(pcd_path, *surf_cloud);
+            pcd_path = POSE_GRAPH_SAVE_PATH + to_string(index) + "_corner_cloud.pcd";
+            pcd_reader_.read(pcd_path, *corner_cloud);
+            pcd_path = POSE_GRAPH_SAVE_PATH + to_string(index) + "_full_cloud.pcd";
+            pcd_reader_.read(pcd_path, *full_cloud);
+            pcd_path = POSE_GRAPH_SAVE_PATH + to_string(index) + "_outlier_cloud.pcd";
+            pcd_reader_.read(pcd_path, *outlier_cloud);
         }
+        Pose pose_w = Pose(Eigen::Quaterniond(pose_w_qw, pose_w_qx, pose_w_qy, pose_w_qz),
+                           Eigen::Vector3d(pose_w_tx, pose_w_ty, pose_w_tz));
 
-        Vector3d VIO_T(VIO_Tx, VIO_Ty, VIO_Tz);
-        Vector3d PG_T(PG_Tx, PG_Ty, PG_Tz);
-        Quaterniond VIO_Q;
-        VIO_Q.w() = VIO_Qw;
-        VIO_Q.x() = VIO_Qx;
-        VIO_Q.y() = VIO_Qy;
-        VIO_Q.z() = VIO_Qz;
-        Quaterniond PG_Q;
-        PG_Q.w() = PG_Qw;
-        PG_Q.x() = PG_Qx;
-        PG_Q.y() = PG_Qy;
-        PG_Q.z() = PG_Qz;
-        Matrix3d VIO_R, PG_R;
-        VIO_R = VIO_Q.toRotationMatrix();
-        PG_R = PG_Q.toRotationMatrix();
-        Eigen::Matrix<double, 8, 1 > loop_info;
-        loop_info << loop_info_0, loop_info_1, loop_info_2, loop_info_3, loop_info_4, loop_info_5, loop_info_6, loop_info_7;
-
+        Pose loop_info = Pose(Eigen::Quaterniond(loop_info_qw, loop_info_qx, loop_info_qy, loop_info_qz),
+                              Eigen::Vector3d(loop_info_tx, loop_info_ty, loop_info_tz));
+        
         if (loop_index != -1)
-            if (earliest_loop_index > loop_index || earliest_loop_index == -1)
-            {
-                earliest_loop_index = loop_index;
-            }
-
-        // load keypoints, brief_descriptors   
-        string brief_path = POSE_GRAPH_SAVE_PATH + to_string(index) + "_briefdes.dat";
-        std::ifstream brief_file(brief_path, std::ios::binary);
-        string keypoints_path = POSE_GRAPH_SAVE_PATH + to_string(index) + "_keypoints.txt";
-        FILE *keypoints_file;
-        keypoints_file = fopen(keypoints_path.c_str(), "r");
-        vector<cv::KeyPoint> keypoints;
-        vector<cv::KeyPoint> keypoints_norm;
-        vector<BRIEF::bitset> brief_descriptors;
-        for (int i = 0; i < keypoints_num; i++)
         {
-            BRIEF::bitset tmp_des;
-            brief_file >> tmp_des;
-            brief_descriptors.push_back(tmp_des);
-            cv::KeyPoint tmp_keypoint;
-            cv::KeyPoint tmp_keypoint_norm;
-            double p_x, p_y, p_x_norm, p_y_norm;
-            if(!fscanf(keypoints_file,"%lf %lf %lf %lf", &p_x, &p_y, &p_x_norm, &p_y_norm))
-                printf(" fail to load pose graph \n");
-            tmp_keypoint.pt.x = p_x;
-            tmp_keypoint.pt.y = p_y;
-            tmp_keypoint_norm.pt.x = p_x_norm;
-            tmp_keypoint_norm.pt.y = p_y_norm;
-            keypoints.push_back(tmp_keypoint);
-            keypoints_norm.push_back(tmp_keypoint_norm);
+            if (earliest_loop_index_ > loop_index || earliest_loop_index_ == -1)
+            {
+                earliest_loop_index_ = loop_index;
+            }
         }
-        brief_file.close();
-        fclose(keypoints_file);
 
-        KeyFrame* keyframe = new KeyFrame(time_stamp, index, VIO_T, VIO_R, PG_T, PG_R, image, loop_index, loop_info, keypoints, keypoints_norm, brief_descriptors);
+        KeyFrame *keyframe = new KeyFrame(time_stamp,
+                                          index,
+                                          pose_w,
+                                          surf_cloud,
+                                          corner_cloud,
+                                          full_cloud,
+                                          outlier_cloud,
+                                          loop_index,
+                                          loop_info,
+                                          0);
         loadKeyFrame(keyframe, 0);
         if (cnt % 20 == 0)
         {
@@ -1066,22 +720,65 @@ void PoseGraph::loadPoseGraph()
         cnt++;
     }
     fclose (pFile);
-    printf("load pose graph time: %f s\n", tmp_t.toc()/1000);
-    base_sequence = 0;
+    printf("load pose graph time: %f s\n", t_load_posegraph.toc()/1000);
+}
+
+void PoseGraph::updatePath()
+{
+    m_keyframelist.lock();
+    list<KeyFrame *>::iterator it;
+    pg_path_.poses.clear();
+    posegraph_visualization->reset();
+
+    // if (SAVE_LOOP_PATH)
+    // {
+    //     ofstream loop_path_file_tmp(VINS_RESULT_PATH, ios::out);
+    //     loop_path_file_tmp.close();
+    // }
+
+    for (it = keyframelist_.begin(); it != keyframelist_.end(); it++)
+    {
+        Pose pose_w;
+        (*it)->getPose(pose_w);
+
+        geometry_msgs::PoseStamped pose_stamped;
+        pose_stamped.header.stamp = ros::Time((*it)->time_stamp_);
+        pose_stamped.header.frame_id = "world";
+        pose_stamped.pose.position.x = pose_w.t_(0) + VISUALIZATION_SHIFT_X;
+        pose_stamped.pose.position.y = pose_w.t_(1) + VISUALIZATION_SHIFT_Y;
+        pose_stamped.pose.position.z = pose_w.t_(2);
+        pose_stamped.pose.orientation.x = pose_w.q_.x();
+        pose_stamped.pose.orientation.y = pose_w.q_.y();
+        pose_stamped.pose.orientation.z = pose_w.q_.z();
+        pose_stamped.pose.orientation.w = pose_w.q_.w();
+        pg_path_.poses.push_back(pose_stamped);
+        pg_path_.header = pose_stamped.header;
+
+        // if (SAVE_LOOP_PATH)
+        // {
+        //     ofstream loop_path_file(VINS_RESULT_PATH, ios::app);
+        //     loop_path_file.setf(ios::fixed, ios::floatfield);
+        //     loop_path_file.precision(0);
+        //     loop_path_file << (*it)->time_stamp * 1e9 << ",";
+        //     loop_path_file.precision(5);
+        //     loop_path_file << P.x() << ","
+        //                    << P.y() << ","
+        //                    << P.z() << ","
+        //                    << Q.w() << ","
+        //                    << Q.x() << ","
+        //                    << Q.y() << ","
+        //                    << Q.z() << ","
+        //                    << endl;
+        //     loop_path_file.close();
+        // }
+
+    }
+    publish();
+    m_keyframelist.unlock();
 }
 
 void PoseGraph::publish()
 {
-    for (int i = 1; i <= sequence_cnt; i++)
-    {
-        //if (sequence_loop[i] == true || i == base_sequence)
-        if (1 || i == base_sequence)
-        {
-            pub_pg_path.publish(path[i]);
-            pub_path[i].publish(path[i]);
-            posegraph_visualization->publish_by(pub_pose_graph, path[sequence_cnt].header);
-        }
-    }
-    pub_base_path.publish(base_path);
-    //posegraph_visualization->publish_by(pub_pose_graph, path[sequence_cnt].header);
+    pub_pg_path_.publish(pg_path_);
+    posegraph_visualization->publish_by(pub_pose_graph_, pg_path_.header);
 }

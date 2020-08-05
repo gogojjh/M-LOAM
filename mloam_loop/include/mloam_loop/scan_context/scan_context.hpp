@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <memory>
 #include <iostream>
+#include <fstream>
 
 #include <Eigen/Dense>
 
@@ -24,7 +25,7 @@
 
 #include "nanoflann.hpp"
 #include "KDTreeVectorOfVectorsAdaptor.hpp"
-#include "tic_toc.h"
+#include "../utility/tic_toc.h"
 
 using namespace Eigen;
 using namespace nanoflann;
@@ -40,6 +41,20 @@ using std::sin;
 using SCPointType = pcl::PointXYZI; // using xyz only. but a user can exchange the original bin encoding function (i.e., max hegiht) to max intensity (for detail, refer 20 ICRA Intensity Scan Context)
 using KeyMat = std::vector<std::vector<float>>;
 using InvKeyTree = KDTreeVectorOfVectorsAdaptor<KeyMat, float>;
+
+class QueryResult
+{
+public:
+    QueryResult(int match_index,
+                double score,
+                double yaw_diff_rad) : match_index_(match_index),
+                                       score_(score),
+                                       yaw_diff_rad_(yaw_diff_rad) {}
+    friend std::ostream &operator<<(std::ostream &out, const QueryResult &qr);
+    int match_index_;
+    double score_;
+    double yaw_diff_rad_;
+};
 
 void coreImportTest(void);
 float xy2theta(const float &_x, const float &_y);
@@ -115,10 +130,10 @@ public:
 
     // User-side API
     void makeAndSaveScancontextAndKeys(pcl::PointCloud<SCPointType> &_scan_down);
-    std::pair<int, float> detectLoopClosureID(size_t &query_idx); // int: nearest node index, float: relative yaw
+    QueryResult detectLoopClosureID(const int &query_idx); // int: nearest node index, float: relative yaw
 
     void init_color();
-    cv::Mat getLastScanContextImage();
+    cv::Mat getScanContextImage(const int &que_index);
     size_t getDataBaseSize();
 
 public:

@@ -25,78 +25,84 @@
 #include <nav_msgs/Odometry.h>
 #include <stdio.h>
 #include <ros/ros.h>
-#include "keyframe.h"
-#include "utility/tic_toc.h"
+
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_cloud.h>
+#include <pcl/common/transforms.h>
+
 #include "utility/utility.h"
 #include "utility/CameraPoseVisualization.h"
 #include "utility/tic_toc.h"
-#include "ThirdParty/DBoW/DBoW2.h"
-#include "ThirdParty/DVision/DVision.h"
-#include "ThirdParty/DBoW/TemplatedDatabase.h"
-#include "ThirdParty/DBoW/TemplatedVocabulary.h"
+#include "scan_context/scan_context.hpp"
 
+#include "pose.h"
+#include "keyframe.h"
+#include "parameters.hpp"
+#include "feature_extract.hpp"
+#include "lidar_map_plane_norm_factor.hpp"
 
 #define SHOW_S_EDGE false
-#define SHOW_L_EDGE true
-#define SAVE_LOOP_PATH true
-
-using namespace DVision;
-using namespace DBoW2;
+#define SHOW_L_EDGE false
+#define SAVE_LOOP_PATH false
 
 class PoseGraph
 {
 public:
 	PoseGraph();
 	~PoseGraph();
-	void registerPub(ros::NodeHandle &n);
+	void registerPub(ros::NodeHandle &nh);
+	void setPGOTread();
+	void setParameter();
 	void addKeyFrame(KeyFrame* cur_kf, bool flag_detect_loop);
 	void loadKeyFrame(KeyFrame* cur_kf, bool flag_detect_loop);
-	void loadVocabulary(std::string voc_path);
-	void setIMUFlag(bool _use_imu);
 	KeyFrame* getKeyFrame(int index);
-	nav_msgs::Path path[10];
-	nav_msgs::Path base_path;
-	CameraPoseVisualization* posegraph_visualization;
 	void savePoseGraph();
 	void loadPoseGraph();
 	void publish();
-	Vector3d t_drift;
-	double yaw_drift;
-	Matrix3d r_drift;
-	// world frame( base sequence or first sequence)<----> cur sequence frame  
-	Vector3d w_t_vio;
-	Matrix3d w_r_vio;
+	int skip_cnt_;
 
+	nav_msgs::Path pg_path_;
+	CameraPoseVisualization *posegraph_visualization;
 
 private:
-	int detectLoop(KeyFrame* keyframe, int frame_index);
-	void addKeyFrameIntoVoc(KeyFrame* keyframe);
-	void optimize4DoF();
-	void optimize6DoF();
+	std::pair<int, double> detectLoop(const KeyFrame* keyframe, const int que_index);
+	std::pair<double, Pose> checkGeometricConsistency(KeyFrame *keyframe_cur, const int &que_index, const int &match_index);
+	std::pair<bool, int> checkTemporalConsistency(const int &que_index, const int &match_index); 
+	void addKeyFrameIntoDB(KeyFrame *keyframe);
+	void optimizePoseGraph();
 	void updatePath();
-	list<KeyFrame*> keyframelist;
+	list<KeyFrame*> keyframelist_;
 	std::mutex m_keyframelist;
 	std::mutex m_optimize_buf;
 	std::mutex m_path;
 	std::mutex m_drift;
 	std::thread t_optimization;
-	std::queue<int> optimize_buf;
+	std::queue<int> optimize_buf_;
 
-	int global_index;
-	int sequence_cnt;
-	vector<bool> sequence_loop;
-	map<int, cv::Mat> image_pool;
-	int earliest_loop_index;
-	int base_sequence;
-	bool use_imu;
+	int global_index_; // the index of pose graph
+	int earliest_loop_index_; // the eqrliest loop index for performing loop closure
+	
+	FeatureExtract f_extract_;
+	SCManager sc_manager_;
 
-	BriefDatabase db;
-	BriefVocabulary* voc;
+	// store map and current cloud
+	pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud_surf_;
+	pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud_corner_;
+	pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud_surf_from_map_;
+	pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud_corner_from_map_;
+	pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud_surf_from_map_ds_;
+	pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud_corner_from_map_ds_;
+	pcl::VoxelGrid<pcl::PointXYZI> down_size_filter_surf_map_;
+	pcl::VoxelGrid<pcl::PointXYZI> down_size_filter_corner_map_;
+	pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr kdtree_surf_from_map_;
+	pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr kdtree_corner_from_map_;
 
-	ros::Publisher pub_pg_path;
-	ros::Publisher pub_base_path;
-	ros::Publisher pub_pose_graph;
-	ros::Publisher pub_path[10];
+	pcl::PCDReader pcd_reader_;
+	pcl::PCDWriter pcd_writer_;
+
+	// ros publisher
+	ros::Publisher pub_pg_path_;
+	ros::Publisher pub_pose_graph_;
 };
 
 template <typename T> inline

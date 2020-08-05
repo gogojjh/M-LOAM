@@ -1,7 +1,24 @@
-#include "mloam_loop/scan_context.hpp"
+#include "mloam_loop/scan_context/scan_context.hpp"
 
 // namespace SC2
 // {
+
+std::ostream &operator<<(std::ostream &out, const QueryResult &qr)
+{
+    if (qr.match_index_ == -1)
+    {
+        out << "[Not loop] "
+            << "loop_id: " << qr.match_index_
+            << " score: " << qr.score_ << " yaw_diff: " << qr.yaw_diff_rad_ << std::endl;
+    }
+    else
+    {
+        out << "[Found loop] "
+            << "loop_id: " << qr.match_index_
+            << " score: " << qr.score_ << " yaw_diff: " << qr.yaw_diff_rad_ << std::endl;
+    }
+    return out;
+}
 
 void coreImportTest(void)
 {
@@ -124,7 +141,7 @@ std::pair<double, int> SCManager::distanceBtnScanContext(MatrixXd &_sc1, MatrixX
     double min_sc_dist = 10000000;
     for (int num_shift : shift_idx_search_space)
     {
-        MatrixXd sc2_shifted = circshift(_sc2, num_shift);
+        MatrixXd sc2_shifted = circshift(_sc2, num_shift); // the yaw shoud be for sc2 (the candidate)
         double cur_sc_dist = distDirectSC(_sc1, sc2_shifted);
         if (cur_sc_dist < min_sc_dist)
         {
@@ -212,21 +229,24 @@ void SCManager::makeAndSaveScancontextAndKeys(pcl::PointCloud<SCPointType> &scan
     polarcontext_vkeys_.push_back(sectorkey);
     polarcontext_invkeys_mat_.push_back(polarcontext_invkey_vec);
     // cout << polarcontext_vkeys_.size() << endl;
-} 
+}
 
-std::pair<int, float> SCManager::detectLoopClosureID(size_t &query_idx)
+QueryResult SCManager::detectLoopClosureID(const int &que_index)
 {
+    assert(que_index >= polarcontexts_.size());
+    assert(que_index < 0);
+
     int loop_id{-1}; // init with -1, -1 means no loop (== LeGO-LOAM's variable "closestHistoryFrameID")
-    auto curr_key = polarcontext_invkeys_mat_[query_idx]; // current observation (query)
-    auto curr_desc = polarcontexts_[query_idx];           // current observation (query)
+    auto curr_key = polarcontext_invkeys_mat_[que_index]; // current observation (query)
+    auto curr_desc = polarcontexts_[que_index];           // current observation (query)
 
     /* 
      * step 1: candidates from ringkey tree_
      */
-    if (polarcontext_invkeys_mat_.size() < NUM_EXCLUDE_RECENT + 1)
+    if (que_index < NUM_EXCLUDE_RECENT + 1)
     {
-        std::pair<int, float> result{loop_id, 0.0};
-        return result; // Early return
+        QueryResult qr(loop_id, -1, 0.0);
+        return qr; // Early return
     }
 
     TicToc t_find_candidates;
@@ -236,7 +256,7 @@ std::pair<int, float> SCManager::detectLoopClosureID(size_t &query_idx)
     {
         // TicToc t_tree_construction;
         polarcontext_invkeys_to_search_.clear();
-        polarcontext_invkeys_to_search_.assign(polarcontext_invkeys_mat_.begin(), polarcontext_invkeys_mat_.end() - NUM_EXCLUDE_RECENT);
+        polarcontext_invkeys_to_search_.assign(polarcontext_invkeys_mat_.begin(), polarcontext_invkeys_mat_.begin() + que_index - NUM_EXCLUDE_RECENT);
         polarcontext_tree_.reset();
         polarcontext_tree_ = std::make_unique<InvKeyTree>(PC_NUM_RING /* dim */,
                                                           polarcontext_invkeys_to_search_,
@@ -257,7 +277,7 @@ std::pair<int, float> SCManager::detectLoopClosureID(size_t &query_idx)
     knnsearch_result.init(&candidate_indexes[0], &out_dists_sqr[0]);
     polarcontext_tree_->index->findNeighbors(knnsearch_result, &curr_key[0] /* query */, nanoflann::SearchParams(10));
 
-    printf("find candidates using ringkey costs: %fms\n", t_find_candidates.toc());
+    // printf("find candidates using ringkey costs: %fms\n", t_find_candidates.toc());
 
     /* 
      *  step 2: pairwise distance (find optimal columnwise best-fit using cosine distance)
@@ -276,7 +296,7 @@ std::pair<int, float> SCManager::detectLoopClosureID(size_t &query_idx)
             nn_idx = candidate_indexes[candidate_iter_idx];
         }
     }
-    printf("calculate scan context distance cost: %fms\n", t_calc_dist.toc());
+    // printf("calculate scan context distance cost: %fms\n", t_calc_dist.toc());
 
     /* 
      * step 3: loop threshold check
@@ -285,20 +305,21 @@ std::pair<int, float> SCManager::detectLoopClosureID(size_t &query_idx)
     {
         std::cout.precision(3);
         loop_id = nn_idx;
-        cout << "[Loop found] Nearest distance: " << min_dist << " btn, sc size: " 
-             << polarcontexts_.size() - 1 << ", loop_idx: " << nn_idx << "." << endl;
-        cout << "[Loop found] yaw diff: " << nn_align * PC_UNIT_SECTORANGLE << " deg." << endl;
+        // cout << "[Loop found] Nearest distance: " << min_dist << " btn, sc size: " 
+        //      << polarcontexts_.size() - 1 << ", loop_idx: " << nn_idx << "." << endl;
+        // cout << "[Loop found] yaw diff: " << nn_align * PC_UNIT_SECTORANGLE << " deg." << endl;
     }
     else
     {
         std::cout.precision(3);
-        cout << "[Not loop] Nearest distance: " << min_dist << " btn, sc size: "
-             << polarcontexts_.size() - 1 << ", loop_idx: " << nn_idx << "." << endl;
-        cout << "[Not loop] yaw diff: " << nn_align * PC_UNIT_SECTORANGLE << " deg." << endl;
+        // cout << "[Not loop] Nearest distance: " << min_dist << " btn, sc size: "
+        //      << polarcontexts_.size() - 1 << ", loop_idx: " << nn_idx << "." << endl;
+        // cout << "[Not loop] yaw diff: " << nn_align * PC_UNIT_SECTORANGLE << " deg." << endl;
     }
-    float yaw_diff_rad = deg2rad(nn_align * PC_UNIT_SECTORANGLE); // the initial rotation
-    std::pair<int, float> result{loop_id, yaw_diff_rad};
-    return result;
+    QueryResult qr(loop_id, 
+                   min_dist,
+                   deg2rad(nn_align * PC_UNIT_SECTORANGLE)); // the initial rotation
+    return qr;
 } 
 
 void SCManager::init_color()
@@ -337,9 +358,11 @@ void SCManager::init_color()
     }
 }
 
-cv::Mat SCManager::getLastScanContextImage()
+cv::Mat SCManager::getScanContextImage(const int &que_index)
 {
-    const Eigen::MatrixXd &last_scan_context = polarcontexts_.back();
+    assert(que_index >= polarcontexts_.size());
+    assert(que_index < 0);
+    const Eigen::MatrixXd &last_scan_context = polarcontexts_[que_index];
     cv::Mat scan_context_img = cv::Mat::zeros(PC_NUM_RING, PC_NUM_SECTOR, CV_8UC3);
     for (size_t i = 0; i < last_scan_context.rows(); i++)
     {

@@ -2,7 +2,7 @@
 
     <arg name="run_mloam_loop" default="true" />
     <arg name="result_save" default="false"/>
-    <arg name="output_path" default="/home/jjiao/trajectory_results/real_vehicle/oxford/xxxxxxx/"/>
+    <arg name="output_path" default="/home/jjiao/catkin_ws/src/localization/rpg_trajectory_evaluation/20190118_debug/"/>
 
     <arg name="config_file" default="$(find mloam_loop)/config/config_loop_realvehicle.yaml" />
     <group if="$(arg run_mloam_loop)">
