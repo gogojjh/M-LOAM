@@ -31,16 +31,16 @@
 #include <pcl/common/transforms.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include "keyframe.h"
+#include "parameters.hpp"
+#include "utility/pose.h"
 #include "utility/utility.h"
 #include "utility/CameraPoseVisualization.h"
 #include "utility/tic_toc.h"
+#include "utility/feature_extract.hpp"
 #include "scan_context/scan_context.hpp"
-
-#include "pose.h"
-#include "keyframe.h"
-#include "parameters.hpp"
-#include "feature_extract.hpp"
-#include "lidar_map_plane_norm_factor.hpp"
+#include "factor/lidar_map_plane_norm_factor.hpp"
+#include "factor/pose_local_parameterization.h"
 
 #define SHOW_S_EDGE true
 #define SHOW_L_EDGE true
@@ -67,7 +67,7 @@ public:
 
 private:
 	std::pair<int, double> detectLoop(const KeyFrame* keyframe, const int que_index);
-	std::pair<double, Pose> checkGeometricConsistency(KeyFrame *cur_kf, const int &que_index, const int &match_index);
+	std::pair<double, Pose> checkGeometricConsistency(KeyFrame *cur_kf, const int &que_index, const int &match_index, const Pose &pose_ini);
 	std::pair<bool, int> checkTemporalConsistency(const int &que_index, const int &match_index); 
 	void addKeyFrameIntoDB(KeyFrame *keyframe);
 	void optimizePoseGraph();
@@ -89,6 +89,8 @@ private:
 	// store map and current cloud
 	pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud_surf_;
 	pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud_corner_;
+	pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud_surf_ds_;
+	pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud_corner_ds_;	
 	pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud_surf_from_map_;
 	pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud_corner_from_map_;
 	pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud_surf_from_map_ds_;

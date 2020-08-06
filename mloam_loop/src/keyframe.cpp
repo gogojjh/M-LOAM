@@ -27,10 +27,14 @@ KeyFrame::KeyFrame(const double &time_stamp,
 	pose_3d_w_.x = pose_w.t_(0);
 	pose_3d_w_.y = pose_w.t_(1);
 	pose_3d_w_.z = pose_w.t_(2);
-	surf_cloud_ = surf_cloud;
-	corner_cloud_ = corner_cloud;
-	full_cloud_ = full_cloud;
-	outlier_cloud_ = outlier_cloud;
+	surf_cloud_.reset(new pcl::PointCloud<pcl::PointXYZI>());
+	corner_cloud_.reset(new pcl::PointCloud<pcl::PointXYZI>());
+	full_cloud_.reset(new pcl::PointCloud<pcl::PointXYZI>());
+	outlier_cloud_.reset(new pcl::PointCloud<pcl::PointXYZI>());
+	*surf_cloud_ = *surf_cloud;
+	*corner_cloud_ = *corner_cloud;
+	*full_cloud_ = *full_cloud;
+	*outlier_cloud_ = *outlier_cloud;
 	has_loop_ = false;
 	loop_index_ = -1;
 	loop_info_ = Pose(Eigen::Quaterniond::Identity(), Eigen::Vector3d::Zero());
@@ -55,10 +59,14 @@ KeyFrame::KeyFrame(const double &time_stamp,
 	pose_3d_w_.x = pose_w.t_(0);
 	pose_3d_w_.y = pose_w.t_(1);
 	pose_3d_w_.z = pose_w.t_(2);
-	surf_cloud_ = surf_cloud;
-	corner_cloud_ = corner_cloud;
-	full_cloud_ = full_cloud;
-	outlier_cloud_ = outlier_cloud;
+	surf_cloud_.reset(new pcl::PointCloud<pcl::PointXYZI>());
+	corner_cloud_.reset(new pcl::PointCloud<pcl::PointXYZI>());
+	full_cloud_.reset(new pcl::PointCloud<pcl::PointXYZI>());
+	outlier_cloud_.reset(new pcl::PointCloud<pcl::PointXYZI>());
+	*surf_cloud_ = *surf_cloud;
+	*corner_cloud_ = *corner_cloud;
+	*full_cloud_ = *full_cloud;
+	*outlier_cloud_ = *outlier_cloud;
 	if (loop_index != -1)
 		has_loop_ = true;
 	else

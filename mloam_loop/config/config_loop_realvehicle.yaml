@@ -1,9 +1,9 @@
 %YAML:1.0
 
 loop_skip_interval: 5
-loop_history_search_num: 15
+loop_history_search_num: 20
 loop_distance_threshold: 50.0
-loop_temporal_consistency_threshold: 20
+loop_temporal_consistency_threshold: 41 # floam
 loop_geometric_consistency_threshold: 50 
 
 visualize_image: 1

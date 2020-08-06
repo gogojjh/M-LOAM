@@ -141,7 +141,7 @@ std::pair<double, int> SCManager::distanceBtnScanContext(MatrixXd &_sc1, MatrixX
     double min_sc_dist = 10000000;
     for (int num_shift : shift_idx_search_space)
     {
-        MatrixXd sc2_shifted = circshift(_sc2, num_shift); // the yaw shoud be for sc2 (the candidate)
+        MatrixXd sc2_shifted = circshift(_sc2, num_shift); // TODO: the yaw shoud be for sc2 (the candidate)
         double cur_sc_dist = distDirectSC(_sc1, sc2_shifted);
         if (cur_sc_dist < min_sc_dist)
         {

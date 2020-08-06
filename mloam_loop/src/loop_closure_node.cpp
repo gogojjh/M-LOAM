@@ -41,10 +41,8 @@
 #include "common/color.hpp"
 #include "mloam_msgs/Keyframes.h"
 
-#include "mloam_loop/utility/tic_toc.h"
-#include "mloam_loop/pose_graph.h"
-#include "mloam_loop/pose.h"
 #include "mloam_loop/parameters.hpp"
+#include "mloam_loop/pose_graph.h"
 #include "mloam_loop/keyframe.h"
 
 DEFINE_bool(result_save, true, "save or not save the results");

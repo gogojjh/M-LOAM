@@ -447,7 +447,7 @@ void scan2MapOptimization()
             ceres::LossFunctionWrapper *loss_function;
             if (FLAGS_loss_mode == "huber")
             {
-                loss_function = new ceres::LossFunctionWrapper(new ceres::HuberLoss(1), ceres::TAKE_OWNERSHIP);
+                loss_function = new ceres::LossFunctionWrapper(new ceres::HuberLoss(0.5), ceres::TAKE_OWNERSHIP);
             } 
             else if (FLAGS_loss_mode == "gmc")
             {
@@ -625,16 +625,17 @@ void scan2MapOptimization()
                 ceres::CRSMatrix jaco;
                 problem.Evaluate(ceres::Problem::EvaluateOptions(), &cost, nullptr, nullptr, &jaco);
 
+                // original_mat_H / 134 = normlized_mat_H
                 Eigen::Matrix<double, 6, 6> mat_H;
                 evalHessian(jaco, mat_H);
-                evalDegenracy(mat_H, local_parameterization); // the hessian matrix should be normized to evaluate degeneracy
+                evalDegenracy(mat_H, local_parameterization); // the hessian matrix is already normized to evaluate degeneracy
                 is_degenerate = local_parameterization->is_degenerate_;
                 Eigen::Matrix<double, 6, 6> cov_mapping = mat_H.inverse();
                 pose_wmap_curr.cov_ = cov_mapping;
                 
                 double tr = cov_mapping.trace();
                 double logd = common::logDet(mat_H * 134, true);
-                Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6> > esolver(mat_H * 134);
+                Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6> > esolver(mat_H * 134); 
                 Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real();	
                 double mini_ev = mat_E(0, 0);
 

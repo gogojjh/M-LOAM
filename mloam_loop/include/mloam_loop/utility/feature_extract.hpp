@@ -25,7 +25,7 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/kdtree/kdtree_flann.h>
 
-#include "mloam_loop/pose.h"
+#include "mloam_loop/utility/pose.h"
 
 template <typename PointType>
 inline void pointAssociateToMap(const PointType &pi, PointType &po, const Pose &pose)
@@ -104,7 +104,7 @@ void FeatureExtract::matchCornerFromMap(const typename pcl::KdTreeFLANN<PointTyp
         point_ori = cloud_data.points[i];
         pointAssociateToMap(point_ori, point_sel, pose_local);
         kdtree_corner_from_map->nearestKSearch(point_sel, num_neighbors, point_search_idx, point_search_sq_dis);
-        if (point_search_sq_dis[num_neighbors - 1] < 1.0)
+        if (point_search_sq_dis[num_neighbors - 1] < 2.0)
         {
             // calculate the coefficients of edge points
             std::vector<Eigen::Vector3f> near_corners;
@@ -202,7 +202,7 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
         point_ori = cloud_data.points[i];
         pointAssociateToMap(point_ori, point_sel, pose_local);
         kdtree_surf_from_map->nearestKSearch(point_sel, num_neighbors, point_search_idx, point_search_sq_dis);
-        if (point_search_sq_dis[num_neighbors - 1] < 1.0)
+        if (point_search_sq_dis[num_neighbors - 1] < 2.0)
         {
             for (int j = 0; j < num_neighbors; j++)
             {

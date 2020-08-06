@@ -11,7 +11,7 @@
  * Author: Jianhao JIAO (jiaojh1994@gmail.com)
  *******************************************************/
 
-#include "mloam_loop/pose.h"
+#include "mloam_loop/utility/pose.h"
 
 Pose::Pose()
 {
@@ -100,6 +100,7 @@ Pose Pose::inverse() const
 
 void Pose::update() 
 {
+    T_.setIdentity();
     T_.topLeftCorner<3, 3>() = q_.toRotationMatrix(); 
     T_.topRightCorner<3, 1>() = t_;
 }

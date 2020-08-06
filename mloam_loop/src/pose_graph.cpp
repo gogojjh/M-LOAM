@@ -23,12 +23,16 @@ PoseGraph::PoseGraph()
 
     laser_cloud_surf_.reset(new pcl::PointCloud<pcl::PointXYZI>());
     laser_cloud_corner_.reset(new pcl::PointCloud<pcl::PointXYZI>());
+    laser_cloud_surf_ds_.reset(new pcl::PointCloud<pcl::PointXYZI>());
+    laser_cloud_corner_ds_.reset(new pcl::PointCloud<pcl::PointXYZI>());    
     laser_cloud_surf_from_map_.reset(new pcl::PointCloud<pcl::PointXYZI>());
     laser_cloud_corner_from_map_.reset(new pcl::PointCloud<pcl::PointXYZI>());
     laser_cloud_surf_from_map_ds_.reset(new pcl::PointCloud<pcl::PointXYZI>());
     laser_cloud_corner_from_map_ds_.reset(new pcl::PointCloud<pcl::PointXYZI>());
     down_size_filter_surf_map_.setLeafSize(0.4, 0.4, 0.4);
     down_size_filter_corner_map_.setLeafSize(0.4, 0.4, 0.4);
+    // down_size_filter_surf_map_.setLeafSize(1.0, 1.0, 1.0);
+    // down_size_filter_corner_map_.setLeafSize(1.0, 1.0, 1.0);    
     kdtree_surf_from_map_.reset(new pcl::KdTreeFLANN<pcl::PointXYZI>());
     kdtree_corner_from_map_.reset(new pcl::KdTreeFLANN<pcl::PointXYZI>());
 }
@@ -87,6 +91,7 @@ void PoseGraph::addKeyFrame(KeyFrame *cur_kf, bool flag_detect_loop)
 {
     cur_kf->index_ = global_index_;
     global_index_++;
+    keyframelist_.push_back(cur_kf);
     if (flag_detect_loop)
     {
         // detect loop candidates
@@ -113,8 +118,12 @@ void PoseGraph::addKeyFrame(KeyFrame *cur_kf, bool flag_detect_loop)
 
                 // check geometric consistency
                 TicToc t_check_gc;
-                std::pair<bool, Pose> loop_opti_result = checkGeometricConsistency(cur_kf, cur_kf->index_, loop_index);
-                printf("check geoometryc consistency %fms\n", t_check_gc.toc());
+                Eigen::Quaterniond q_relative; 
+                q_relative = Eigen::AngleAxisd(yaw_diff_rad, Eigen::Vector3d::UnitZ());
+                Eigen::Vector3d t_relative = Eigen::Vector3d::Zero();
+                Pose pose_relative(q_relative, t_relative); 
+                std::pair<bool, Pose> loop_opti_result = checkGeometricConsistency(cur_kf, cur_kf->index_, loop_index, pose_relative);
+                printf("check geoometryc consistency %fs\n", t_check_gc.toc() / 1000);
                 if (!loop_opti_result.first)
                 {
                     printf("loop reject with geometry verificiation\n");
@@ -204,7 +213,6 @@ void PoseGraph::addKeyFrame(KeyFrame *cur_kf, bool flag_detect_loop)
         }
     }
 
-    keyframelist_.push_back(cur_kf);
     publish();
     m_keyframelist.unlock();
 }
@@ -344,29 +352,44 @@ std::pair<bool, int> PoseGraph::checkTemporalConsistency(const int &que_index,
 
 std::pair<double, Pose> PoseGraph::checkGeometricConsistency(KeyFrame *cur_kf,
                                                              const int &que_index,
-                                                             const int &match_index)
+                                                             const int &match_index,
+                                                             const Pose &pose_ini)
 {
-    // assert(que_index < 0);
-    // assert(match_index < 0);
-    KeyFrame *old_kf = getKeyFrame(match_index);
-
-    // construct the keyframe point cloud
+    assert(que_index < 0);
+    assert(match_index < 0);
+    KeyFrame *old_kf = getKeyFrame(match_index); // check NULL
     pcl::PointCloud<pcl::PointXYZI> surf_trans, corner_trans;
+
+    TicToc t_map_construction;
+    // construct the keyframe point cloud
     laser_cloud_surf_->clear();
     laser_cloud_corner_->clear();
-    pcl::transformPointCloud(*cur_kf->surf_cloud_, surf_trans, old_kf->pose_w_.T_.cast<float>());
-    *laser_cloud_surf_ += surf_trans;
-    pcl::transformPointCloud(*cur_kf->corner_cloud_, corner_trans, old_kf->pose_w_.T_.cast<float>());
-    *laser_cloud_corner_ += corner_trans;
+    for (int j = -2; j <= 0; j++)
+    {
+        if (que_index + j < 0) continue;
+        KeyFrame *tmp_kf = getKeyFrame(que_index + j);
+        if (!tmp_kf) continue;        
+        Eigen::Matrix4d T_drift = cur_kf->pose_w_.T_.inverse() * tmp_kf->pose_w_.T_;
+        Eigen::Matrix4d T_map_kf = old_kf->pose_w_.T_ * pose_ini.T_ * T_drift;
+        pcl::transformPointCloud(*tmp_kf->surf_cloud_, surf_trans, T_map_kf.cast<float>());
+        *laser_cloud_surf_ += surf_trans;
+        pcl::transformPointCloud(*tmp_kf->corner_cloud_, corner_trans, T_map_kf.cast<float>());
+        *laser_cloud_corner_ += corner_trans;
+    }
+    down_size_filter_surf_map_.setInputCloud(laser_cloud_surf_);
+    down_size_filter_surf_map_.filter(*laser_cloud_surf_ds_);
+    down_size_filter_corner_map_.setInputCloud(laser_cloud_corner_);
+    down_size_filter_corner_map_.filter(*laser_cloud_corner_ds_);    
+    printf("[loop_closure] kf surf num: %lu, corner num: %lu\n", laser_cloud_surf_ds_->size(), laser_cloud_corner_ds_->size());
 
     // construct the model point cloud
     laser_cloud_surf_from_map_->clear();
     laser_cloud_corner_from_map_->clear();
     for (int j = -LOOP_HISTORY_SEARCH_NUM; j <= LOOP_HISTORY_SEARCH_NUM; j++)
     {
-        if (match_index + j < 0 || match_index + j > que_index)
-            continue;
+        if (match_index + j < 0 || match_index + j >= que_index) continue;
         KeyFrame *tmp_kf = getKeyFrame(match_index + j);
+        if (!tmp_kf) continue;
         pcl::transformPointCloud(*tmp_kf->surf_cloud_, surf_trans, tmp_kf->pose_w_.T_.cast<float>());
         *laser_cloud_surf_from_map_ += surf_trans;
         pcl::transformPointCloud(*tmp_kf->corner_cloud_, corner_trans, tmp_kf->pose_w_.T_.cast<float>());
@@ -376,6 +399,7 @@ std::pair<double, Pose> PoseGraph::checkGeometricConsistency(KeyFrame *cur_kf,
     down_size_filter_surf_map_.filter(*laser_cloud_surf_from_map_ds_);
     down_size_filter_corner_map_.setInputCloud(laser_cloud_corner_from_map_);
     down_size_filter_corner_map_.filter(*laser_cloud_corner_from_map_ds_);
+    printf("[loop_closure] map construction: %fms\n", t_map_construction.toc()); // 47ms
 
     // perform loop optimization between the model (as the base frame) to the keyframe point cloud
     size_t laser_cloud_surf_from_map_num = laser_cloud_surf_from_map_ds_->size();
@@ -385,13 +409,15 @@ std::pair<double, Pose> PoseGraph::checkGeometricConsistency(KeyFrame *cur_kf,
     kdtree_corner_from_map_->setInputCloud(laser_cloud_corner_from_map_ds_);
     double opti_cost = 1e6;
 
-    Pose pose_relative; // initialize an identity pose
     TicToc t_optimization;
-    for (int iter_cnt = 0; iter_cnt < 5; iter_cnt++)
+    Pose pose_relative;
+    for (int iter_cnt = 0; iter_cnt < 10; iter_cnt++)
     {
-        double *para_pose = new double[SIZE_POSE];
+        double para_pose[SIZE_POSE];
         ceres::Problem problem;
         ceres::LossFunctionWrapper *loss_function = new ceres::LossFunctionWrapper(new ceres::HuberLoss(1), ceres::TAKE_OWNERSHIP);
+        // ceres::LossFunction *loss_function = new ceres::HuberLoss(1);
+
         para_pose[0] = pose_relative.t_(0);
         para_pose[1] = pose_relative.t_(1);
         para_pose[2] = pose_relative.t_(2);
@@ -400,37 +426,47 @@ std::pair<double, Pose> PoseGraph::checkGeometricConsistency(KeyFrame *cur_kf,
         para_pose[5] = pose_relative.q_.z();
         para_pose[6] = pose_relative.q_.w();
 
+        PoseLocalParameterization *local_parameterization = new PoseLocalParameterization();
+        local_parameterization->setParameter();
+        problem.AddParameterBlock(para_pose, SIZE_POSE, local_parameterization);        
+
         std::vector<PointPlaneFeature> all_surf_features, all_corner_features;
         size_t surf_num = 0, corner_num = 0;
         TicToc t_match_features;
         int n_neigh = 5;
         f_extract_.matchSurfFromMap(kdtree_surf_from_map_,
                                    *laser_cloud_surf_from_map_ds_,
-                                   *laser_cloud_surf_,
+                                   *laser_cloud_surf_ds_,
                                    pose_relative,
                                    all_surf_features,
                                    n_neigh);
         surf_num = all_surf_features.size();
         f_extract_.matchCornerFromMap(kdtree_corner_from_map_,
                                      *laser_cloud_corner_from_map_ds_,
-                                     *laser_cloud_corner_,
+                                     *laser_cloud_corner_ds_,
                                      pose_relative,
                                      all_corner_features,
                                      n_neigh);
         corner_num = all_corner_features.size();
-        printf("matching features time: %fms\n", t_match_features.toc());
+        printf("match surf: %lu, corner: %lu\n", surf_num, corner_num);
+        printf("matching features time: %fms\n", t_match_features.toc()); // 40ms
+        if (surf_num <= 1000 || corner_num <= 200) // kf surf num: 14271, corner num: 2696
+        {
+            printf("not enough corresponding features\n");
+            break;
+        }
 
         for (const PointPlaneFeature &feature : all_surf_features)
         {
-            Eigen::Matrix3d cov_matrix;
-            cov_matrix.Zero();
+            // Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity() * 0.0025;
+            Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
             LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
             problem.AddResidualBlock(f, loss_function, para_pose);
         }
         for (const PointPlaneFeature &feature : all_corner_features)
         {
-            Eigen::Matrix3d cov_matrix;
-            cov_matrix.Zero();
+            // Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity() * 0.0025;
+            Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
             LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
             problem.AddResidualBlock(f, loss_function, para_pose);
         }
@@ -446,6 +482,7 @@ std::pair<double, Pose> PoseGraph::checkGeometricConsistency(KeyFrame *cur_kf,
         options.max_solver_time_in_seconds = 0.03;
         ceres::Solve(options, &problem, &summary);
         std::cout << summary.BriefReport() << std::endl;
+        // opti_cost = std::min((double)summary.final_cost / problem.NumResidualBlocks(), opti_cost); // 0.045
         opti_cost = std::min((double)summary.final_cost, opti_cost);
         printf("solver time: %fms\n", t_solver.toc());
 
@@ -454,7 +491,7 @@ std::pair<double, Pose> PoseGraph::checkGeometricConsistency(KeyFrame *cur_kf,
         pose_relative.update();
     }
     std::cout << "opti_cost: " << opti_cost << ", relative transformation: " << pose_relative << std::endl;
-    printf("optimization time: %fms\n", t_optimization.toc());
+    printf("optimization time: %fs\n", t_optimization.toc() / 1000);
 
     std::pair<double, Pose> loop_opti_result;
     if (opti_cost <= LOOP_GEOMETRIC_CONSISTENCY_THRESHOLD)
@@ -465,6 +502,11 @@ std::pair<double, Pose> PoseGraph::checkGeometricConsistency(KeyFrame *cur_kf,
     {
         loop_opti_result = make_pair(false, pose_relative);
     }
+
+    pcl::transformPointCloud(*laser_cloud_surf_ds_, surf_trans, pose_relative.T_.cast<float>());
+    pcd_writer_.write("/tmp/loop_kf_surf.pcd", *laser_cloud_surf_ds_);
+    pcd_writer_.write("/tmp/loop_kf_surf_trans.pcd", surf_trans);
+    pcd_writer_.write("/tmp/loop_laser_surf_map.pcd", *laser_cloud_surf_from_map_ds_);
     return loop_opti_result;
 }
 

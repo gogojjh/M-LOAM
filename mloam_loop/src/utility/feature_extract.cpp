@@ -13,5 +13,5 @@
 
 // tutorial about LOAM: https://zhuanlan.zhihu.com/p/57351961
 
-#include "mloam_loop/feature_extract.hpp"
+#include "mloam_loop/utility/feature_extract.hpp"
 

@@ -62,23 +62,15 @@ catkin_package(
 #
 #target_link_libraries(loop_fusion_node ${catkin_LIBRARIES} ${OpenCV_LIBS} ${CERES_LIBRARIES}) 
 
-#add_library(scan_context
-#    src/scan_context.cpp
-#)
-
-#target_link_libraries(scan_context 
-#    ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
-#    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
-#)
-
 add_executable(loop_closure_node
 	src/loop_closure_node.cpp
 	src/pose_graph.cpp
 	src/keyframe.cpp
 	src/scan_context.cpp
-	src/feature_extract.cpp
-	src/pose.cpp
-	src/CameraPoseVisualization.cpp	
+	src/utility/feature_extract.cpp
+	src/utility/pose.cpp
+	src/utility/CameraPoseVisualization.cpp
+	src/factor/pose_local_parameterization.cpp	
 )
 
 target_link_libraries(loop_closure_node

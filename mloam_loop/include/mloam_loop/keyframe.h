@@ -16,9 +16,9 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
-#include "utility/tic_toc.h"
 #include "parameters.hpp"
-#include "pose.h"
+#include "utility/tic_toc.h"
+#include "utility/pose.h"
 
 class KeyFrame
 {
