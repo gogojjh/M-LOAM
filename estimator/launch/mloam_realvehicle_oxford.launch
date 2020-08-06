@@ -1,12 +1,6 @@
 <launch>
     <!-- sensor setup: https://oxford-robotics-institute.github.io/radar-robotcar-dataset/documentation/ -->
     <arg name="bag_file_use" default="true" />
-    <!-- <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-10-14-36-48-radar-oxford-10k-partial/data.bag" />  -->
-    <!-- <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-18-15-20-12-radar-oxford-10k/data_filter.bag" /> -->
-    <!-- <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-18-15-20-12-radar-oxford-10k/data_loop1.bag" /> -->
-    <!-- <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-18-15-20-12-radar-oxford-10k/data_loop1back.bag" /> -->
-    <!-- <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-18-15-20-12-radar-oxford-10k/data_loop1back_filter.bag" /> -->
-    <!-- <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-18-15-20-12-radar-oxford-10k/data_ds_1_700.bag" /> -->
     <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-18-15-20-12-radar-oxford-10k/data_ds_250_800.bag"/>
 
     <param name="use_sim_time" value="true" />
@@ -41,7 +35,7 @@
                 args="-config_file=$(arg config_file)
                     -data_source=$(arg data_source)
                     -result_save=$(arg result_save)
-                    -output_path=$(arg output_path)">
+                    -output_path=$(arg output_path)" >
                 <remap from="/base_pose_gt" to="/current_odom" />
             </node>
         </group>

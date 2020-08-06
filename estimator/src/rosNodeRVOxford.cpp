@@ -289,14 +289,15 @@ int main(int argc, char **argv)
             loop_rate.sleep();
         }
 
-        std::cout << common::YELLOW << "odometry drop frame: " << frame_drop_cnt << common::RESET << std::endl;
+        // std::cout << common::YELLOW << "odometry drop frame: " << frame_drop_cnt << common::RESET << std::endl;
+        LOG(INFO) << "odometry drop frame: " << frame_drop_cnt;
         if (MLOAM_RESULT_SAVE)
         {
             std::cout << common::RED << "saving odometry results" << common::RESET << std::endl;
             save_statistics.saveSensorPath(MLOAM_GT_PATH, laser_gt_path);
             save_statistics.saveSensorPath(MLOAM_GPS_PATH, gps_path);
             save_statistics.saveOdomStatistics(EX_CALIB_EIG_PATH, EX_CALIB_RESULT_PATH, MLOAM_ODOM_PATH, estimator);
-            save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time_mloam_odometry_" + std::to_string(ODOM_GF_RATIO) + ".txt", estimator);
+            save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time/time_mloam_odometry_" + std::to_string(ODOM_GF_RATIO) + ".txt", estimator);
         }
         sync_thread.join();
     } else

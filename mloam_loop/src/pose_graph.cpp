@@ -127,9 +127,9 @@ void PoseGraph::addKeyFrame(KeyFrame *cur_kf, bool flag_detect_loop)
                     if (earliest_loop_index_ > loop_index || earliest_loop_index_ == -1)
                         earliest_loop_index_ = loop_index;
 
-                    // m_optimize_buf.lock();
-                    // optimize_buf_.push(cur_kf->index_);
-                    // m_optimize_buf.unlock();
+                    m_optimize_buf.lock();
+                    optimize_buf_.push(cur_kf->index_);
+                    m_optimize_buf.unlock();
                 }
             }
         }
@@ -490,7 +490,7 @@ void PoseGraph::optimizePoseGraph()
         int cur_index = -1;
         int first_looped_index = -1;
         m_optimize_buf.lock();
-        while(!optimize_buf_.empty())
+        while (!optimize_buf_.empty())
         {
             cur_index = optimize_buf_.front();
             first_looped_index = earliest_loop_index_;
@@ -500,6 +500,8 @@ void PoseGraph::optimizePoseGraph()
         if (cur_index != -1)
         {
             printf("optimize pose graph \n");
+            continue; // TODO:
+
             TicToc t_pgo;
             m_keyframelist.lock();
             KeyFrame* cur_kf = getKeyFrame(cur_index);

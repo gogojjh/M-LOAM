@@ -423,9 +423,7 @@ void downsampleCurrentScan()
         PointIWithCov point_cov(point_ori, cov_point.cast<float>());
         laser_cloud_outlier_cov->push_back(point_cov);
     }    
-
-    std::cout << "input surf num: " << laser_cloud_surf_cov->size()
-              << " corner num: " << laser_cloud_corner_cov->size() << std::endl;
+    std::cout << "input surf num: " << laser_cloud_surf_cov->size() << " corner num: " << laser_cloud_corner_cov->size() << std::endl;
 }
 
 void scan2MapOptimization()
@@ -699,7 +697,7 @@ void scan2MapOptimization()
     }
     else
     {
-        std::cout << common::YELLOW << "Map surf num is not enough" << common::RESET << std::endl;
+        std::cout << "Map surf num is not enough" << std::endl;
     }
 }
 
@@ -957,12 +955,12 @@ void saveGlobalMap()
     down_size_filter_corner_map_cov.setInputCloud(laser_cloud_corner_map);
     down_size_filter_corner_map_cov.filter(*laser_cloud_corner_map_ds);
 
-    *laser_cloud_map += *laser_cloud_surf_map_ds;
-    *laser_cloud_map += *laser_cloud_corner_map_ds;
+    // *laser_cloud_map += *laser_cloud_surf_map_ds;
+    // *laser_cloud_map += *laser_cloud_corner_map_ds;
 
     pcd_writer.write("/tmp/mloam_mapping_corner_cloud.pcd", *laser_cloud_corner_map_ds);
     pcd_writer.write("/tmp/mloam_mapping_surf_cloud.pcd", *laser_cloud_surf_map_ds);
-    pcd_writer.write("/tmp/mloam_mapping_cloud.pcd", *laser_cloud_map);
+    // pcd_writer.write("/tmp/mloam_mapping_cloud.pcd", *laser_cloud_map);
 }
 
 void clearCloud()
@@ -1400,9 +1398,9 @@ int main(int argc, char **argv)
 		loop_rate.sleep();
     }
 
-    pub_map_process.join();
+    pub_map_process.detach();
     mapping_process.join();
-	return 0;
+    return 0;
 }
 
 

@@ -21,6 +21,16 @@ roslaunch mloam mloam_realvehicle_oxford.launch \
     gnc:=false \
     bag_file:=$data_path \
     output_path:=$result_path
+
+# roslaunch mloam mloam_realvehicle_oxford.launch \
+#     run_mloam:=true \
+#     result_save:=true \
+#     gf_method:=gd_float \
+#     gf_ratio_ini:=0.2 \
+#     loss_mode:=huber \
+#     gnc:=false \
+#     bag_file:=$data_path \
+#     output_path:=$result_path
 # sleep 5
 
 ## different feature ratio
