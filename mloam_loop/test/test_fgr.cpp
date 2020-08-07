@@ -1,3 +1,5 @@
+// rosrun mloam_loop test_fgr baseline_data/
+
 #include <iostream>
 #include <string>
 
@@ -84,13 +86,17 @@ int main(int argc, char *argv[])
     parseFPFH(point_cloud[0], fpfh_feature[0], p1, f1);
     parseFPFH(point_cloud[1], fpfh_feature[1], p2, f2);
     
+    TicToc t_fgr;
     app.LoadFeature(p1, f1);
     app.LoadFeature(p2, f2);
 	app.NormalizePoints();
 	app.AdvancedMatching();
 	app.OptimizePairwise(true);
+    printf("FGR: %fms\n", t_fpfh.toc());
 
     Eigen::MatrixXf T = app.GetOutputTrans();
+    std::cout << T << std::endl;
+
     pcl::transformPointCloud(*laser_cloud, *laser_cloud, T);
     pcd_writer.write(std::string(argv[1]) + "data_fgr.pcd", *laser_cloud);
 	app.WriteTrans(std::string(std::string(argv[1]) + "output_fgr.txt").c_str());

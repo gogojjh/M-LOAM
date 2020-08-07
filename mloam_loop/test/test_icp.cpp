@@ -1,3 +1,5 @@
+// rosrun mloam_loop test_icp baseline_data/
+
 #include <iostream>
 #include <string>
 
@@ -92,8 +94,8 @@ int main(int argc, char *argv[])
         options.max_num_iterations = 5;
         options.max_solver_time_in_seconds = 0.03;
         ceres::Solve(options, &problem, &summary);
-        std::cout << summary.BriefReport() << std::endl;
-        printf("solver time: %fms\n", t_solver.toc());
+        if (iter_cnt == 9) std::cout << summary.BriefReport() << std::endl;
+        // printf("solver time: %fms\n", t_solver.toc());
 
         gmc_mu /= 1.4;
 
@@ -101,8 +103,8 @@ int main(int argc, char *argv[])
         pose_relative.t_ = Eigen::Vector3d(para_pose[0], para_pose[1], para_pose[2]);
         pose_relative.update();
     }
-    printf("optimization time: %fs\n", t_optimization.toc() / 1000);
-    std::cout << pose_relative.T_ << std::endl;
+    printf("ICP: %fms\n", t_optimization.toc());
+    std::cout << pose_relative.T_ << std::endl << std::endl;
 
     pcl::transformPointCloud(*laser_cloud, *laser_cloud, pose_relative.T_.cast<float>());
     pcd_writer.write(std::string(argv[1]) + "data_icp.pcd", *laser_cloud);
