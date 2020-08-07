@@ -83,7 +83,10 @@ add_executable(test_icp
 	src/factor/pose_local_parameterization.cpp
 	src/factor/impl_loss_function.cpp
 )
-target_link_libraries(test_icp
-    ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
-    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
-)
+target_link_libraries(test_icp ${PCL_LIBRARIES} ${CERES_LIBRARIES})
+
+add_executable(test_generate_data test/test_generate_data.cpp)
+target_link_libraries(test_generate_data ${PCL_LIBRARIES})
+
+add_executable(test_fgr test/test_fgr.cpp ThirdParty/FastGlobalRegistration/app.cpp)
+target_link_libraries(test_fgr ${PCL_LIBRARIES})

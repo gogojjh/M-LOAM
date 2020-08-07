@@ -507,16 +507,16 @@ std::pair<double, Pose> PoseGraph::checkGeometricConsistency(KeyFrame *cur_kf,
     if (LOOP_SAVE_PCD)
     {
         pcl::transformPointCloud(*laser_cloud_surf_ds_, surf_trans, pose_relative.T_.cast<float>());
-        // pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop_data/" + to_string(que_index) + "_loop_kf_surf.pcd", *laser_cloud_surf_ds_);
-        // pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop_data/" + to_string(que_index) + "_loop_kf_surf_trans.pcd", surf_trans);
-        // pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop_data/" + to_string(que_index) + "_loop_laser_surf_map.pcd", *laser_cloud_surf_from_map_ds_);
+        // pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop/" + to_string(que_index) + "_loop_kf_surf.pcd", *laser_cloud_surf_ds_);
+        // pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop/" + to_string(que_index) + "_loop_kf_surf_trans.pcd", surf_trans);
+        // pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop/" + to_string(que_index) + "_loop_laser_surf_map.pcd", *laser_cloud_surf_from_map_ds_);
         pcl::transformPointCloud(*laser_cloud_corner_ds_, corner_trans, pose_relative.T_.cast<float>());
-        // pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop_data/" + to_string(que_index) + "_loop_kf_corner.pcd", *laser_cloud_corner_ds_);
-        // pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop_data/" + to_string(que_index) + "_loop_kf_corner_trans.pcd", corner_trans);    
-        // pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop_data/" + to_string(que_index) + "_loop_laser_corner_map.pcd", *laser_cloud_corner_from_map_ds_);
-        pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop_data/" + to_string(que_index) + "_kf.pcd", *laser_cloud_surf_ds_ + *laser_cloud_corner_ds_);
-        pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop_data/" + to_string(que_index) + "_kf_trans.pcd", surf_trans + corner_trans);    
-        pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop_data/" + to_string(que_index) + "_laser_map.pcd", *laser_cloud_surf_from_map_ds_ + *laser_cloud_corner_from_map_ds_);
+        // pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop/" + to_string(que_index) + "_loop_kf_corner.pcd", *laser_cloud_corner_ds_);
+        // pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop/" + to_string(que_index) + "_loop_kf_corner_trans.pcd", corner_trans);    
+        // pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop/" + to_string(que_index) + "_loop_laser_corner_map.pcd", *laser_cloud_corner_from_map_ds_);
+        pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop/" + to_string(que_index) + "_data.pcd", *laser_cloud_surf_ds_ + *laser_cloud_corner_ds_);
+        pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop/" + to_string(que_index) + "_data_icp.pcd", surf_trans + corner_trans);    
+        pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop/" + to_string(que_index) + "_model.pcd", *laser_cloud_surf_from_map_ds_ + *laser_cloud_corner_from_map_ds_);
     }
     return loop_opti_result;
 }

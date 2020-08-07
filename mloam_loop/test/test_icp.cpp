@@ -103,10 +103,9 @@ int main(int argc, char *argv[])
     }
     printf("optimization time: %fs\n", t_optimization.toc() / 1000);
     std::cout << pose_relative.T_ << std::endl;
+
     pcl::transformPointCloud(*laser_cloud, *laser_cloud, pose_relative.T_.cast<float>());
-
-    pcd_writer.write(std::string(argv[1]) + "data_trans_icp.pcd", *laser_cloud);
+    pcd_writer.write(std::string(argv[1]) + "data_icp.pcd", *laser_cloud);
     WriteTrans(std::string(argv[1]) + "output_icp.txt", pose_relative.T_.cast<float>());
-
     return 0;
 }
