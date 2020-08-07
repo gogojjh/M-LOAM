@@ -72,18 +72,18 @@ add_executable(loop_closure_node
 	src/utility/CameraPoseVisualization.cpp
 	src/factor/pose_local_parameterization.cpp	
 )
-
 target_link_libraries(loop_closure_node
     ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
 )
 
-#add_executable(test_scan_context
-#	test/test_scan_context.cpp
-#	src/scan_context.cpp
-#)
-
-#target_link_libraries(test_scan_context
-#    ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
-#    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
-#)
+add_executable(test_icp
+	test/test_icp.cpp
+	src/utility/pose.cpp
+	src/factor/pose_local_parameterization.cpp
+	src/factor/impl_loss_function.cpp
+)
+target_link_libraries(test_icp
+    ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
+    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
+)
