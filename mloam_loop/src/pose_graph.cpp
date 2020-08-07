@@ -370,7 +370,7 @@ std::pair<double, Pose> PoseGraph::checkGeometricConsistency(KeyFrame *cur_kf,
         KeyFrame *tmp_kf = getKeyFrame(que_index + j);
         if (!tmp_kf) continue;        
         Eigen::Matrix4d T_drift = cur_kf->pose_w_.T_.inverse() * tmp_kf->pose_w_.T_;
-        Eigen::Matrix4d T_map_kf = old_kf->pose_w_.T_ * pose_ini.T_ * T_drift;
+        Eigen::Matrix4d T_map_kf = pose_ini.T_ * T_drift;
         pcl::transformPointCloud(*tmp_kf->surf_cloud_, surf_trans, T_map_kf.cast<float>());
         *laser_cloud_surf_ += surf_trans;
         pcl::transformPointCloud(*tmp_kf->corner_cloud_, corner_trans, T_map_kf.cast<float>());
@@ -390,9 +390,10 @@ std::pair<double, Pose> PoseGraph::checkGeometricConsistency(KeyFrame *cur_kf,
         if (match_index + j < 0 || match_index + j >= que_index) continue;
         KeyFrame *tmp_kf = getKeyFrame(match_index + j);
         if (!tmp_kf) continue;
-        pcl::transformPointCloud(*tmp_kf->surf_cloud_, surf_trans, tmp_kf->pose_w_.T_.cast<float>());
+        Eigen::Matrix4d tmp_T = old_kf->pose_w_.T_.inverse() * tmp_kf->pose_w_.T_;
+        pcl::transformPointCloud(*tmp_kf->surf_cloud_, surf_trans, tmp_T.cast<float>());
         *laser_cloud_surf_from_map_ += surf_trans;
-        pcl::transformPointCloud(*tmp_kf->corner_cloud_, corner_trans, tmp_kf->pose_w_.T_.cast<float>());
+        pcl::transformPointCloud(*tmp_kf->corner_cloud_, corner_trans, tmp_T.cast<float>());
         *laser_cloud_corner_from_map_ += corner_trans;
     }
     down_size_filter_surf_map_.setInputCloud(laser_cloud_surf_from_map_);

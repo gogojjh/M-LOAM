@@ -1,26 +1,39 @@
-
 #include <iostream>
 #include <string>
+
+#include <ceres/ceres.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/common/transforms.h>
 
 #include "mloam_loop/utility/tic_toc.h"
 #include "mloam_loop/utility/pose.h"
 #include "mloam_loop/utility/feature_extract.hpp"
 #include "mloam_loop/factor/pose_local_parameterization.h"
 #include "mloam_loop/factor/lidar_map_plane_norm_factor.hpp"
+#include "mloam_loop/factor/impl_loss_function.hpp"
 
 FeatureExtract f_extract;
+
+void WriteTrans(const std::string filepath, Eigen::Matrix4f transtemp)
+{
+    FILE *fid = fopen(filepath.c_str(), "w");
+    fprintf(fid, "%.10f %.10f %.10f %.10f\n", transtemp(0, 0), transtemp(0, 1), transtemp(0, 2), transtemp(0, 3));
+    fprintf(fid, "%.10f %.10f %.10f %.10f\n", transtemp(1, 0), transtemp(1, 1), transtemp(1, 2), transtemp(1, 3));
+    fprintf(fid, "%.10f %.10f %.10f %.10f\n", transtemp(2, 0), transtemp(2, 1), transtemp(2, 2), transtemp(2, 3));
+    fprintf(fid, "%.10f %.10f %.10f %.10f\n", 0.0f, 0.0f, 0.0f, 1.0f);
+    fclose(fid);
+}
 
 int main(int argc, char *argv[])
 {
     pcl::PCDReader pcd_reader;
     pcl::PCDWriter pcd_writer;
 
-    pcl::VoxelGrid<pcl::PointXYZI>::Ptr down_size_filter(new pcl::VoxelGrid<pcl::PointXYZI>());
     pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr kdtree(new pcl::KdTreeFLANN<pcl::PointXYZI>());
     pcl::PointCloud<pcl::PointXYZI>::Ptr laser_cloud(new pcl::PointCloud<pcl::PointXYZI>());
     pcl::PointCloud<pcl::PointXYZI>::Ptr laser_map(new pcl::PointCloud<pcl::PointXYZI>());
-    pcd_reader.read(std::string(argv[1]) + "ref.pcd", laser_cloud);
-    pcd_reader.read(std::string(argv[1]) + "model.pcd", laser_map);
+    pcd_reader.read(std::string(argv[1]) + "model.pcd", *laser_map);
+    pcd_reader.read(std::string(argv[1]) + "data.pcd", *laser_cloud);
 
     size_t laser_map_num = laser_map->size();
     kdtree->setInputCloud(laser_map);
@@ -28,16 +41,16 @@ int main(int argc, char *argv[])
     TicToc t_optimization;
     Pose pose_relative;
     double gmc_s = 1.0;
-    double gmc_mu = 10.0;
+    double gmc_mu = 20.0;
     for (int iter_cnt = 0; iter_cnt < 10; iter_cnt++)
     {
-        // if (gmc_mu < 1) break;
         double para_pose[7];
         ceres::Problem problem;
-        // ceres::LossFunctionWrapper *loss_function = 
-        //     new ceres::LossFunctionWrapper(new ceres::SurrogateGemanMcClureLoss(gmc_s, gmc_mu), ceres::TAKE_OWNERSHIP);
-        ceres::LossFunctionWrapper *loss_function = 
-            new ceres::LossFunctionWrapper(new ceres::HuberLoss(1.0), ceres::TAKE_OWNERSHIP);
+
+        // if (gmc_mu < 1) break;
+        ceres::LossFunctionWrapper *loss_function;
+        loss_function = new ceres::LossFunctionWrapper(new ceres::HuberLoss(1.0), ceres::TAKE_OWNERSHIP);
+        // loss_function = new ceres::LossFunctionWrapper(new ceres::SurrogateGemanMcClureLoss(gmc_s, gmc_mu), ceres::TAKE_OWNERSHIP);
 
         para_pose[0] = pose_relative.t_(0);
         para_pose[1] = pose_relative.t_(1);
@@ -49,7 +62,7 @@ int main(int argc, char *argv[])
 
         PoseLocalParameterization *local_parameterization = new PoseLocalParameterization();
         local_parameterization->setParameter();
-        problem.AddParameterBlock(para_pose, SIZE_POSE, local_parameterization);        
+        problem.AddParameterBlock(para_pose, 7, local_parameterization);        
 
         std::vector<PointPlaneFeature> all_surf_features;
         size_t surf_num = 0;
@@ -76,21 +89,24 @@ int main(int argc, char *argv[])
         options.minimizer_progress_to_stdout = false;
         options.check_gradients = false;
         options.gradient_check_relative_precision = 1e-4;
-        options.max_num_iterations = 2;
+        options.max_num_iterations = 5;
         options.max_solver_time_in_seconds = 0.03;
         ceres::Solve(options, &problem, &summary);
         std::cout << summary.BriefReport() << std::endl;
         printf("solver time: %fms\n", t_solver.toc());
 
-        // gmc_mu /= 1.4;
-        // loss_function->Reset(new ceres::SurrogateGemanMcClureLoss(gmc_s, gmc_mu), ceres::TAKE_OWNERSHIP);        
+        gmc_mu /= 1.4;
 
         pose_relative.q_ = Eigen::Quaterniond(para_pose[6], para_pose[3], para_pose[4], para_pose[5]);
         pose_relative.t_ = Eigen::Vector3d(para_pose[0], para_pose[1], para_pose[2]);
         pose_relative.update();
     }
     printf("optimization time: %fs\n", t_optimization.toc() / 1000);
-    std::cout << pose_relative.T_;
+    std::cout << pose_relative.T_ << std::endl;
     pcl::transformPointCloud(*laser_cloud, *laser_cloud, pose_relative.T_.cast<float>());
-    pcd_writer.write(std::string(argv[1]) + "model_trans_icp.pcd");
+
+    pcd_writer.write(std::string(argv[1]) + "data_trans_icp.pcd", *laser_cloud);
+    WriteTrans(std::string(argv[1]) + "output_icp.txt", pose_relative.T_.cast<float>());
+
+    return 0;
 }
