@@ -32,7 +32,8 @@ extern int LOOP_HISTORY_SEARCH_NUM;
 extern double LOOP_DISTANCE_THRESHOLD;
 extern double LOOP_OPTI_COST_THRESHOLD;
 extern double LOOP_TEMPORAL_CONSISTENCY_THRESHOLD;
-extern double LOOP_GEOMETRIC_CONSISTENCY_THRESHOLD;
+extern double LOOP_GLOBAL_REGISTRATION_THRESHOLD;
+extern double LOOP_LOCAL_REGISTRATION_THRESHOLD;
 
 extern int VISUALIZE_IMAGE;
 extern int LOAD_PREVIOUS_POSE_GRAPH;
@@ -54,6 +55,16 @@ extern int NUM_CANDIDATES_FROM_TREE;
 extern double SEARCH_RATIO;
 extern double SC_DIST_THRES;
 extern int TREE_MAKING_PERIOD;
+
+// registration
+extern double NORMAL_RADIUS;
+extern double FPFH_RADIUS;
+extern double DIV_FACTOR;
+extern double USE_ABSOLUTE_SCALE;
+extern double MAX_CORR_DIST;
+extern double ITERATION_NUMBER;
+extern double TUPLE_SCALE;
+extern double TUPLE_MAX_CNT;
 
 enum SIZE_PARAMETERIZATION
 {

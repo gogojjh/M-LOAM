@@ -33,11 +33,11 @@
 
 #include "keyframe.h"
 #include "parameters.hpp"
+#include "loop_registration.hpp"
 #include "utility/pose.h"
 #include "utility/utility.h"
 #include "utility/CameraPoseVisualization.h"
 #include "utility/tic_toc.h"
-#include "utility/feature_extract.hpp"
 #include "scan_context/scan_context.hpp"
 #include "factor/lidar_map_plane_norm_factor.hpp"
 #include "factor/pose_local_parameterization.h"
@@ -67,8 +67,9 @@ public:
 
 private:
 	std::pair<int, double> detectLoop(const KeyFrame* keyframe, const int que_index);
-	std::pair<double, Pose> checkGeometricConsistency(KeyFrame *cur_kf, const int &que_index, const int &match_index, const Pose &pose_ini);
 	std::pair<bool, int> checkTemporalConsistency(const int &que_index, const int &match_index); 
+	void constructLocalMap(const KeyFrame *cur_kf, const int &que_index, const int &match_index, const Pose &pose_ini);
+	std::pair<bool, Pose> checkGeometricConsistency(const KeyFrame *cur_kf, const int &que_index, const int &match_index, const Pose &pose_ini);
 	void addKeyFrameIntoDB(KeyFrame *keyframe);
 	void optimizePoseGraph();
 	void updatePath();
@@ -82,8 +83,8 @@ private:
 
 	int global_index_; // the index of pose graph
 	int earliest_loop_index_; // the eqrliest loop index for performing loop closure
-	
-	FeatureExtract f_extract_;
+
+	LoopRegistration loop_reg_;	
 	SCManager sc_manager_;
 
 	// store map and current cloud

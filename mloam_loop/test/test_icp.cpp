@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
         f_extract.matchSurfFromMap(kdtree,
                                    *laser_map,
                                    *laser_cloud,
-                                   pose_relative,
+                                   pose_relative.T_.cast<float>(),
                                    all_surf_features,
                                    n_neigh);
         surf_num = all_surf_features.size();

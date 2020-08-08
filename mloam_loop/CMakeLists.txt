@@ -67,10 +67,12 @@ add_executable(loop_closure_node
 	src/pose_graph.cpp
 	src/keyframe.cpp
 	src/scan_context.cpp
+	src/loop_registration.cpp
 	src/utility/feature_extract.cpp
 	src/utility/pose.cpp
 	src/utility/CameraPoseVisualization.cpp
 	src/factor/pose_local_parameterization.cpp	
+	ThirdParty/FastGlobalRegistration/app.cpp
 )
 target_link_libraries(loop_closure_node
     ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
@@ -78,6 +80,9 @@ target_link_libraries(loop_closure_node
 )
 
 ########################################### TEST ################
+add_executable(test_generate_data test/test_generate_data.cpp)
+target_link_libraries(test_generate_data ${PCL_LIBRARIES})
+
 add_executable(test_icp
 	test/test_icp.cpp
 	src/utility/pose.cpp
@@ -85,9 +90,6 @@ add_executable(test_icp
 	src/factor/impl_loss_function.cpp
 )
 target_link_libraries(test_icp ${PCL_LIBRARIES} ${CERES_LIBRARIES})
-
-add_executable(test_generate_data test/test_generate_data.cpp)
-target_link_libraries(test_generate_data ${PCL_LIBRARIES})
 
 add_executable(test_fgr test/test_fgr.cpp ThirdParty/FastGlobalRegistration/app.cpp)
 target_link_libraries(test_fgr ${PCL_LIBRARIES})

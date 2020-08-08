@@ -23,19 +23,19 @@ def run_registration(path, max_x, max_y, max_yaw):
     fgr_cost_normalize = []
     icp_time = []
     fgr_time = []
-    for x in range(0, max_x, 1):
-        for y in range(0, max_y, 1):
-            for yaw in range(0, max_yaw, 5):
+    for x in range(0, max_x, 5):
+        for y in range(0, max_y, 5):
+            for yaw in range(0, max_yaw, 30):
                 path2 = '{}transform_data_{}_{}_{}/'.format(path, x, y, yaw)
                 if not os.path.exists(path2):
                     continue
-                print('Loading data from: {}'.format(path2))
-                command = 'rosrun mloam_loop test_icp {}'.format(path2)
-                os.system(command)
-                command = 'rosrun mloam_loop test_fgr {}'.format(path2)
-                os.system(command)
-                command = 'rosrun mloam_loop test_registration_error {}'.format(path2)
-                os.system(command)
+                # print('Loading data from: {}'.format(path2))
+                # command = 'rosrun mloam_loop test_icp {}'.format(path2)
+                # os.system(command)
+                # command = 'rosrun mloam_loop test_fgr {}'.format(path2)
+                # os.system(command)
+                # command = 'rosrun mloam_loop test_registration_error {}'.format(path2)
+                # os.system(command)
 
                 file = open('{}transform_error.txt'.format(path2), 'r')
                 icp_r_e, fgr_r_e = map(float, file.readline().split(' '))
@@ -83,12 +83,16 @@ def run_registration(path, max_x, max_y, max_yaw):
     plt.plot(frame, fgr_cost, label='FGR')
     plt.title('Cost')
     plt.legend(fontsize=20)
+    print(min(icp_cost))
+    print(min(fgr_cost))
 
     plt.subplot(3, 2, 4)
     plt.plot(frame, icp_cost_normalize, label='ICP')
     plt.plot(frame, fgr_cost_normalize, label='FGR')
     plt.title('Normalized Cost')
     plt.legend(fontsize=20)    
+    print(min(icp_cost_normalize))
+    print(min(fgr_cost_normalize))
 
     plt.subplot(3, 2, 5)
     plt.plot(frame, icp_time, label='ICP')

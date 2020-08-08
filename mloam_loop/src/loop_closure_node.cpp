@@ -60,7 +60,8 @@ int LOOP_HISTORY_SEARCH_NUM;
 double LOOP_DISTANCE_THRESHOLD;
 double LOOP_OPTI_COST_THRESHOLD;
 double LOOP_TEMPORAL_CONSISTENCY_THRESHOLD;
-double LOOP_GEOMETRIC_CONSISTENCY_THRESHOLD;
+double LOOP_GLOBAL_REGISTRATION_THRESHOLD;
+double LOOP_LOCAL_REGISTRATION_THRESHOLD;
 int VISUALIZE_IMAGE;
 int LOAD_PREVIOUS_POSE_GRAPH;
 int LOOP_SAVE_PCD;
@@ -76,6 +77,15 @@ int NUM_CANDIDATES_FROM_TREE;
 double SEARCH_RATIO;
 double SC_DIST_THRES;
 int TREE_MAKING_PERIOD;
+
+double NORMAL_RADIUS;
+double FPFH_RADIUS;
+double DIV_FACTOR;
+double USE_ABSOLUTE_SCALE;
+double MAX_CORR_DIST;
+double ITERATION_NUMBER;
+double TUPLE_SCALE;
+double TUPLE_MAX_CNT;
 
 // setting in the main procedure
 std::string POSE_GRAPH_SAVE_PATH;
@@ -323,13 +333,13 @@ int main(int argc, char **argv)
         std::cerr << "ERROR: Wrong path to settings" << std::endl;
     }
 
+
     LOOP_SKIP_INTERVAL = fsSettings["loop_skip_interval"];
     LOOP_HISTORY_SEARCH_NUM = fsSettings["loop_history_search_num"];
     LOOP_DISTANCE_THRESHOLD = fsSettings["loop_distance_threshold"];
-    // LOOP_OPTI_COST_THRESHOLD = fsSettings["loop_opti_cost_threshold"];
     LOOP_TEMPORAL_CONSISTENCY_THRESHOLD = fsSettings["loop_temporal_consistency_threshold"];
-    LOOP_GEOMETRIC_CONSISTENCY_THRESHOLD = fsSettings["loop_geometric_consistency_threshold"];
-
+    LOOP_GLOBAL_REGISTRATION_THRESHOLD = fsSettings["loop_global_registration_threshold"];
+    LOOP_LOCAL_REGISTRATION_THRESHOLD = fsSettings["loop_local_registration_threshold"];
     VISUALIZE_IMAGE = fsSettings["visualize_image"];
     LOAD_PREVIOUS_POSE_GRAPH = fsSettings["load_previous_pose_graph"];
     LOOP_SAVE_PCD = fsSettings["loop_save_pcd"];
@@ -346,6 +356,17 @@ int main(int argc, char **argv)
     SEARCH_RATIO = fsSettings["search_ratio"];
     SC_DIST_THRES = fsSettings["sc_dist_thres"];
     TREE_MAKING_PERIOD = fsSettings["tree_making_period"];
+
+    // registration
+    NORMAL_RADIUS = fsSettings["normal_radius"];
+    FPFH_RADIUS = fsSettings["fpfh_radius"];
+    DIV_FACTOR = fsSettings["div_factor"];
+    USE_ABSOLUTE_SCALE = fsSettings["use_absolute_scale"];
+    MAX_CORR_DIST = fsSettings["max_corr_dist"];
+    ITERATION_NUMBER = fsSettings["iteration_number"];
+    TUPLE_SCALE = fsSettings["tuple_scale"];
+    TUPLE_MAX_CNT = fsSettings["tuple_max_cnt"];
+
     fsSettings.release();
 
     posegraph.setParameter();

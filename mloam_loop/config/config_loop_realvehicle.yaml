@@ -3,8 +3,9 @@
 loop_skip_interval: 5
 loop_history_search_num: 20
 loop_distance_threshold: 50.0
-loop_temporal_consistency_threshold: 41 # floam
-loop_geometric_consistency_threshold: 50 
+loop_temporal_consistency_threshold: 5 # floam
+loop_global_registration_threshold: 0.5
+loop_local_registration_threshold: 0.05 # icp normalized cost
 
 visualize_image: 1
 load_previous_pose_graph: 0
@@ -20,4 +21,19 @@ num_candidates_from_tree: 50 # 10 or 50
 search_ratio: 0.1
 sc_dist_thres: 0.5
 tree_making_period: 10
+
+# registration
+div_factor: 1.4		    # Division factor used for graduated non-convexity
+use_absolute_scale:	1	# Measure distance in absolute scale (1) or in scale relative to the diameter of the model (0)
+max_corr_dist: 0.025	# Maximum correspondence distance (also see comment of USE_ABSOLUTE_SCALE)
+iteration_number:	64	# Maximum number of iteration
+tuple_scale: 0.95	    # Similarity measure used for tuples of feature points.
+tuple_max_cnt: 1000	  # Maximum tuple numbers.
+
+
+
+
+
+
+
 

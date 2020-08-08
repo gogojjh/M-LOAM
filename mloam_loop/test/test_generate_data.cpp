@@ -46,11 +46,11 @@ int main(int argc, char* argv[])
     pcd_reader.read(std::string(argv[1]) + "baseline_data/data.pcd", *laser_cloud);
     Eigen::MatrixXf T_ini = ReadTrans(std::string(std::string(argv[1]) + "baseline_data/output_icp.txt").c_str());
     // std::cout << T_ini << std::endl;
-    for (int x = 0; x <= 5; x += 1)
+    for (int x = 0; x <= 20; x += 5)
     {
-        for (int y = 0; y <= 5; y += 1)
+        for (int y = 0; y <= 20; y += 5)
         {
-            for (int yaw = 0; yaw <= 20; yaw += 5)
+            for (int yaw = 0; yaw <= 90; yaw += 30)
             {
                 std::stringstream ss;
                 ss << std::string(argv[1]) << "transform_data_" << x << "_" << y << "_" << yaw << "/";

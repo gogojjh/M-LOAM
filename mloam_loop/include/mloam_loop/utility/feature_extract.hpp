@@ -25,10 +25,8 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/kdtree/kdtree_flann.h>
 
-#include "mloam_loop/utility/pose.h"
-
 template <typename PointType>
-inline void pointAssociateToMap(const PointType &pi, PointType &po, const Pose &pose)
+inline void pointAssociateToMap(const PointType &pi, PointType &po, const Eigen::Matrix4f &T)
 {
     if (!pcl::traits::has_field<PointType, pcl::fields::intensity>::value)
     {
@@ -36,8 +34,8 @@ inline void pointAssociateToMap(const PointType &pi, PointType &po, const Pose &
         exit(EXIT_FAILURE);
     }
     po = pi;
-    Eigen::Vector3d point_curr(pi.x, pi.y, pi.z);
-    Eigen::Vector3d point_trans = pose.q_ * point_curr + pose.t_;
+    Eigen::Vector3f point_curr(pi.x, pi.y, pi.z);
+    Eigen::Vector3f point_trans = T.block<3, 3>(0, 0) * point_curr + T.block<3, 1>(0, 3);
     po.x = point_trans.x();
     po.y = point_trans.y();
     po.z = point_trans.z();
@@ -63,7 +61,7 @@ public:
     void matchCornerFromMap(const typename pcl::KdTreeFLANN<PointType>::Ptr &kdtree_corner_from_map,
                             const typename pcl::PointCloud<PointType> &cloud_map, 
                             const typename pcl::PointCloud<PointType> &cloud_data,
-                            const Pose &pose_local, 
+                            const Eigen::Matrix4f &T_local, 
                             std::vector<PointPlaneFeature> &features, 
                             const size_t &N_NEIGH = 5);
 
@@ -71,7 +69,7 @@ public:
     void matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>::Ptr &kdtree_surf_from_map,
                           const typename pcl::PointCloud<PointType> &cloud_map,
                           const typename pcl::PointCloud<PointType> &cloud_data,
-                          const Pose &pose_local,
+                          const Eigen::Matrix4f &T_local,
                           std::vector<PointPlaneFeature> &features,
                           const size_t &N_NEIGH = 5);
 };
@@ -80,7 +78,7 @@ template <typename PointType>
 void FeatureExtract::matchCornerFromMap(const typename pcl::KdTreeFLANN<PointType>::Ptr &kdtree_corner_from_map,
                                         const typename pcl::PointCloud<PointType> &cloud_map,
                                         const typename pcl::PointCloud<PointType> &cloud_data,
-                                        const Pose &pose_local,
+                                        const Eigen::Matrix4f &T_local,
                                         std::vector<PointPlaneFeature> &features,
                                         const size_t &N_NEIGH)
 {
@@ -102,7 +100,7 @@ void FeatureExtract::matchCornerFromMap(const typename pcl::KdTreeFLANN<PointTyp
     for (size_t i = 0; i < cloud_size; i++)
     {
         point_ori = cloud_data.points[i];
-        pointAssociateToMap(point_ori, point_sel, pose_local);
+        pointAssociateToMap(point_ori, point_sel, T_local);
         kdtree_corner_from_map->nearestKSearch(point_sel, num_neighbors, point_search_idx, point_search_sq_dis);
         if (point_search_sq_dis[num_neighbors - 1] < 5.0)
         {
@@ -177,7 +175,7 @@ template <typename PointType>
 void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>::Ptr &kdtree_surf_from_map,
                                       const typename pcl::PointCloud<PointType> &cloud_map,
                                       const typename pcl::PointCloud<PointType> &cloud_data,
-                                      const Pose &pose_local,
+                                      const Eigen::Matrix4f &T_local,
                                       std::vector<PointPlaneFeature> &features,
                                       const size_t &N_NEIGH)
 {
@@ -200,7 +198,7 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
     for (size_t i = 0; i < cloud_size; i++)
     {
         point_ori = cloud_data.points[i];
-        pointAssociateToMap(point_ori, point_sel, pose_local);
+        pointAssociateToMap(point_ori, point_sel, T_local);
         kdtree_surf_from_map->nearestKSearch(point_sel, num_neighbors, point_search_idx, point_search_sq_dis);
         if (point_search_sq_dis[num_neighbors - 1] < 5.0)
         {

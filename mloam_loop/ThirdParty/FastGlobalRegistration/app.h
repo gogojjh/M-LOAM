@@ -32,13 +32,6 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
-#define DIV_FACTOR			1.4		// Division factor used for graduated non-convexity
-#define USE_ABSOLUTE_SCALE	0		// Measure distance in absolute scale (1) or in scale relative to the diameter of the model (0)
-#define MAX_CORR_DIST		0.025	// Maximum correspondence distance (also see comment of USE_ABSOLUTE_SCALE)
-#define ITERATION_NUMBER	64		// Maximum number of iteration
-#define TUPLE_SCALE			0.95	// Similarity measure used for tuples of feature points.
-#define TUPLE_MAX_CNT		1000	// Maximum tuple numbers.
-
 namespace fgr {
   
 typedef std::vector<Eigen::Vector3f> Points;
@@ -48,12 +41,12 @@ typedef std::vector<std::pair<int, int> > Correspondences;
 
 class CApp{
 public:
-	CApp(double div_factor         = DIV_FACTOR,
-	     bool    use_absolute_scale = USE_ABSOLUTE_SCALE,
-	     double  max_corr_dist      = MAX_CORR_DIST,
-	     int     iteration_number   = ITERATION_NUMBER,
-	     float   tuple_scale        = TUPLE_SCALE,
-	     int     tuple_max_cnt      = TUPLE_MAX_CNT):
+	CApp(double div_factor          ,
+	     bool    use_absolute_scale ,
+	     double  max_corr_dist      ,
+	     int     iteration_number   ,
+	     float   tuple_scale        ,
+	     int     tuple_max_cnt      ) :
 		 div_factor_(div_factor),
 		 use_absolute_scale_(use_absolute_scale),
 		 max_corr_dist_(max_corr_dist),
@@ -71,6 +64,9 @@ public:
 	void Evaluation(const char* gth, const char* estimation, const char *output);
 
 	void WriteCost(const char *filepath);
+	double final_cost_;
+	double final_cost_normalize_;
+
 private:
 	// containers
 	std::vector<Points> pointcloud_;
@@ -82,9 +78,6 @@ private:
 	Points Means;
 	float GlobalScale = 1.0f;
 	float StartScale = 1.0f;
-
-	double final_cost_;
-	double final_cost_normalize_;
 
 	// some internal functions
 	void ReadFeature(const char* filepath, Points& pts, Feature& feat);
