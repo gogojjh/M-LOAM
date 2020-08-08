@@ -90,7 +90,7 @@ void CameraPoseVisualization::add_loopedge(const Eigen::Vector3d& p0, const Eige
     marker.type = visualization_msgs::Marker::LINE_STRIP;
     marker.action = visualization_msgs::Marker::ADD;
     marker.lifetime = ros::Duration();
-    marker.scale.x = 0.4;
+    marker.scale.x = 1.0;
     // marker.scale.x = 0.15;
     marker.color.r = 1.0f;
     //marker.color.g = 1.0f;

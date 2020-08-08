@@ -49,7 +49,7 @@ void CApp::LoadFeature(const Points& pts, const Feature& feat)
 
 void CApp::ReadFeature(const char* filepath, Points& pts, Feature& feat)
 {
-	printf("ReadFeature ... ");
+	// printf("ReadFeature ... ");
 	FILE* fid = fopen(filepath, "rb");
 	int nvertex;
 	fread(&nvertex, sizeof(int), 1, fid);
@@ -69,7 +69,7 @@ void CApp::ReadFeature(const char* filepath, Points& pts, Feature& feat)
 		feat.push_back(feat_v);
 	}
 	fclose(fid);
-	printf("%d points with %d feature dimensions.\n", nvertex, ndim);
+	// printf("%d points with %d feature dimensions.\n", nvertex, ndim);
 }
 
 template <typename T>
@@ -115,7 +115,7 @@ void CApp::AdvancedMatching()
 	int fi = 0;
 	int fj = 1;
 
-	printf("Advanced matching : [%d - %d]\n", fi, fj);
+	// printf("Advanced matching : [%d - %d]\n", fi, fj);
 	bool swapped = false;
 
 	if (pointcloud_[fj].size() > pointcloud_[fi].size())
@@ -184,7 +184,7 @@ void CApp::AdvancedMatching()
 	for (int j = 0; j < ncorres_ji; ++j)
 		corres.push_back(std::pair<int, int>(corres_ji[j].first, corres_ji[j].second));
 
-	printf("Number of points that remain: %d\n", (int)corres.size());
+	// printf("Number of points that remain: %d\n", (int)corres.size());
 
 	///////////////////////////
 	/// CROSS CHECK
@@ -193,7 +193,7 @@ void CApp::AdvancedMatching()
 	///////////////////////////
 	if (crosscheck)
 	{
-		printf("\t[cross check] ");
+		// printf("\t[cross check] ");
 
 		// build data structure for cross check
 		corres.clear();
@@ -231,7 +231,7 @@ void CApp::AdvancedMatching()
 				}
 			}
 		}
-		printf("Number of points that remain after cross-check: %d\n", (int)corres.size());
+		// printf("Number of points that remain after cross-check: %d\n", (int)corres.size());
 	}
 
 	///////////////////////////
@@ -243,7 +243,7 @@ void CApp::AdvancedMatching()
 	{
 		srand(time(NULL));
 
-		printf("\t[tuple constraint] ");
+		// printf("\t[tuple constraint] ");
 		int rand0, rand1, rand2;
 		int idi0, idi1, idi2;
 		int idj0, idj1, idj2;
@@ -299,7 +299,7 @@ void CApp::AdvancedMatching()
 				break;
 		}
 
-		printf("%d tuples (%d trial, %d actual).\n", cnt, number_of_trial, i);
+		// printf("%d tuples (%d trial, %d actual).\n", cnt, number_of_trial, i);
 		corres.clear();
 
 		for (int i = 0; i < corres_tuple.size(); ++i)
@@ -315,7 +315,7 @@ void CApp::AdvancedMatching()
 		corres = temp;
 	}
 
-	printf("\t[final] matches %d.\n", (int)corres.size());
+	// printf("\t[final] matches %d.\n", (int)corres.size());
 	corres_ = corres;
 }
 
@@ -345,7 +345,7 @@ void CApp::NormalizePoints()
 		mean = mean / npti;
 		Means.push_back(mean);
 
-		printf("normalize points :: mean[%d] = [%f %f %f]\n", i, mean(0), mean(1), mean(2));
+		// printf("normalize points :: mean[%d] = [%f %f %f]\n", i, mean(0), mean(1), mean(2));
 
 		for (int ii = 0; ii < npti; ++ii)
 		{
@@ -375,7 +375,7 @@ void CApp::NormalizePoints()
 		GlobalScale = scale; // second choice: we keep the maximum scale.
 		StartScale = 1.0f;
 	}
-	printf("normalize points :: global scale : %f\n", GlobalScale);
+	// printf("normalize points :: global scale : %f\n", GlobalScale);
 
 	for (int i = 0; i < num; ++i)
 	{
@@ -391,7 +391,7 @@ void CApp::NormalizePoints()
 
 double CApp::OptimizePairwise(bool decrease_mu_)
 {
-	printf("Pairwise rigid pose optimization\n");
+	// printf("Pairwise rigid pose optimization\n");
 
 	double par;
 	int numIter = iteration_number_;

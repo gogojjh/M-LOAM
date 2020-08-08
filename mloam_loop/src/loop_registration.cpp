@@ -86,7 +86,7 @@ std::pair<bool, Eigen::Matrix4f> LoopRegistration::performGlobalRegistration(pcl
 
     double opti_cost = app.final_cost_normalize_;
     Eigen::Matrix4f T_relative = app.GetOutputTrans();
-    std::cout << "opti_cost: " << opti_cost << ", rlt: " << T_relative << std::endl;
+    std::cout << "opti_cost: " << opti_cost << ", rlt: \n" << T_relative << std::endl;
 
     std::pair<bool, Eigen::Matrix4f> result;
     if (opti_cost <= LOOP_GLOBAL_REGISTRATION_THRESHOLD)
@@ -111,7 +111,7 @@ std::pair<bool, Eigen::Matrix4f> LoopRegistration::performLocalRegistration(cons
     pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr kdtree_corner_from_map(new pcl::KdTreeFLANN<pcl::PointXYZI>());
     kdtree_surf_from_map->setInputCloud(laser_cloud_surf_from_map);
     kdtree_corner_from_map->setInputCloud(laser_cloud_corner_from_map);
-    double opti_cost = 1e3;
+    double opti_cost = 1e7;
 
     Eigen::Matrix4d T_relative = T_ini.cast<double>();
     for (int iter_cnt = 0; iter_cnt < 2; iter_cnt++)
@@ -155,7 +155,8 @@ std::pair<bool, Eigen::Matrix4f> LoopRegistration::performLocalRegistration(cons
         corner_num = all_corner_features.size();
         // printf("match surf: %lu, corner: %lu\n", surf_num, corner_num);
         // printf("matching features time: %fms\n", t_match_features.toc()); // 40ms
-        if (surf_num <= 1000 || corner_num <= 200) // kf surf num: 14271, corner num: 2696
+        if (1.0 * surf_num / laser_cloud_surf->size() <= 0.2 && 
+            1.0 * corner_num / laser_cloud_corner->size() <= 0.2) // kf surf num: 14271, corner num: 2696
         {
             printf("not enough corresponding features\n");
             break;
@@ -186,15 +187,16 @@ std::pair<bool, Eigen::Matrix4f> LoopRegistration::performLocalRegistration(cons
         options.max_num_iterations = 5;
         options.max_solver_time_in_seconds = 0.03;
         ceres::Solve(options, &problem, &summary);
-        std::cout << summary.BriefReport() << std::endl;
-        opti_cost = std::min((double)summary.final_cost / problem.NumResidualBlocks(), opti_cost);
+        // std::cout << summary.BriefReport() << std::endl;
+        // opti_cost = std::min(summary.final_cost / problem.NumResidualBlocks(), opti_cost);
+        opti_cost = std::min(summary.final_cost, opti_cost);
 
         q_relative = Eigen::Quaterniond(para_pose[6], para_pose[3], para_pose[4], para_pose[5]);
         t_relative = Eigen::Vector3d(para_pose[0], para_pose[1], para_pose[2]);
         T_relative.block<3, 3>(0, 0) = q_relative.toRotationMatrix();
         T_relative.block<3, 1>(0, 3) = t_relative;
     }
-    std::cout << "opti_cost: " << opti_cost << ", rlt: " << T_relative << std::endl;
+    std::cout << "opti_cost: " << opti_cost << ", rlt: \n" << T_relative << std::endl;
 
     std::pair<bool, Eigen::Matrix4f> result;
     if (opti_cost <= LOOP_LOCAL_REGISTRATION_THRESHOLD)

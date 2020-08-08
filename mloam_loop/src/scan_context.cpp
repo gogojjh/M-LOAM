@@ -9,13 +9,13 @@ std::ostream &operator<<(std::ostream &out, const QueryResult &qr)
     {
         out << "[Not loop] "
             << "loop_id: " << qr.match_index_
-            << ", score: " << qr.score_ << ", yaw_diff: " << qr.yaw_diff_rad_ << std::endl;
+            << ", score: " << qr.score_ << ", yaw_diff: " << qr.yaw_diff_rad_;
     }
     else
     {
         out << "[Found loop] "
             << "loop_id: " << qr.match_index_
-            << ", score: " << qr.score_ << ", yaw_diff: " << qr.yaw_diff_rad_ << std::endl;
+            << ", score: " << qr.score_ << ", yaw_diff: " << qr.yaw_diff_rad_;
     }
     return out;
 }

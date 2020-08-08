@@ -111,6 +111,8 @@ void transformUpdate();
 
 void saveKeyframeAndInsertGraph();
 
+void updateKeyframe();
+
 void pubGlobalMap();
 
 void pubPointCloud();

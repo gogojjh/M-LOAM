@@ -36,6 +36,7 @@ std::queue<sensor_msgs::PointCloud2ConstPtr> full_res_buf;
 std::queue<sensor_msgs::PointCloud2ConstPtr> outlier_buf;
 std::queue<nav_msgs::Odometry::ConstPtr> odometry_buf;
 std::queue<mloam_msgs::ExtrinsicsConstPtr> ext_buf;
+std::queue<mloam_msgs::KeyframesConstPtr> loop_info_buf;
 std::mutex m_buf;
 
 PointICloud::Ptr laser_cloud_surf_last(new PointICloud());
@@ -89,10 +90,13 @@ pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_global_map_keyframes;
 std::vector<int> point_search_ind;
 std::vector<float> point_search_sq_dis;
 
+PointICloud::Ptr pose_keyframes_3d(new PointICloud());
 PointI pose_point_cur, pose_point_prev;
 Eigen::Quaterniond pose_ori_cur, pose_ori_prev;
 std::vector<std::pair<double, Pose> > pose_keyframes_6d;
-PointICloud::Ptr pose_keyframes_3d(new PointICloud());
+mloam_msgs::Keyframes laser_keyframes_6d;
+
+mloam_msgs::Keyframes loop_info;
 
 // wmap_T_curr = wmap_T_odom * wodom_T_curr;
 // transformation between odom's world and map's world frame
@@ -185,6 +189,13 @@ void extrinsicsHandler(const mloam_msgs::ExtrinsicsConstPtr &ext)
 	m_buf.lock();
 	ext_buf.push(ext);
 	m_buf.unlock();
+}
+
+void loopInfoHandler(const mloam_msgs::KeyframesConstPtr &loop_info_msg)
+{
+    m_buf.lock();
+    loop_info_buf.push(loop_info_msg);
+    m_buf.unlock();
 }
 
 //receive odomtry
@@ -723,24 +734,6 @@ void saveKeyframeAndInsertGraph()
     pose_point_prev = pose_point_cur;
     pose_ori_prev = pose_ori_cur;
 
-    // if (cloudKeyPoses3D->points.empty())
-    // {
-    //     gtSAMgraph.add(PriorFactor<Pose3>(0, Pose3(Rot3::RzRyRx(transformTobeMapped[2], transformTobeMapped[0], transformTobeMapped[1]), Point3(transformTobeMapped[5], transformTobeMapped[3], transformTobeMapped[4])), priorNoise));
-    //     initialEstimate.insert(0, Pose3(Rot3::RzRyRx(transformTobeMapped[2], transformTobeMapped[0], transformTobeMapped[1]),
-    //                                     Point3(transformTobeMapped[5], transformTobeMapped[3], transformTobeMapped[4])));
-    //     for (int i = 0; i < 6; ++i)
-    //         transformLast[i] = transformTobeMapped[i];
-    // } else
-    // {
-    //     gtsam::Pose3 poseFrom = Pose3(Rot3::RzRyRx(transformLast[2], transformLast[0], transformLast[1]),
-    //                                   Point3(transformLast[5], transformLast[3], transformLast[4]));
-    //     gtsam::Pose3 poseTo = Pose3(Rot3::RzRyRx(transformAftMapped[2], transformAftMapped[0], transformAftMapped[1]),
-    //                                 Point3(transformAftMapped[5], transformAftMapped[3], transformAftMapped[4]));
-    //     gtSAMgraph.add(BetweenFactor<Pose3>(cloudKeyPoses3D->size() - 1, cloudKeyPoses3D->size(), poseFrom.between(poseTo), odometryNoise));
-    //     initialEstimate.insert(cloudKeyPoses3D->size(), Pose3(Rot3::RzRyRx(transformAftMapped[2], transformAftMapped[0], transformAftMapped[1]),
-    //                                                                  Point3(transformAftMapped[5], transformAftMapped[3], transformAftMapped[4])));
-    // }
-
     PointI pose_3d;
     pose_3d.x = pose_wmap_curr.t_[0];
     pose_3d.y = pose_wmap_curr.t_[1];
@@ -761,13 +754,17 @@ void saveKeyframeAndInsertGraph()
     surf_cloud_keyframes_cov.push_back(surf_keyframe_cov);
     corner_cloud_keyframes_cov.push_back(corner_keyframe_cov);
     outlier_cloud_keyframes_cov.push_back(outlier_keyframe_cov);
-
     printf("current keyframes size: %lu\n", pose_keyframes_3d->size());
     // for (size_t i = 0; i < 6; i++)
     // {
     //     for (size_t j = 0; j < 6; j++) std::cout << pose_wmap_curr.cov_(i, j) << " ";
     //     std::cout << std::endl;
     // }
+}
+
+void updateKeyframe()
+{
+    std::cout << common::YELLOW << "received loop info, need to update all keyframes" << common::RESET << std::endl;  
 }
 
 void pubPointCloud()
@@ -837,29 +834,25 @@ void pubOdometry()
     }
 
     // publish 6d keyframes with covariance
-    if (pub_keyframes_6d.getNumSubscribers() != 0 && save_new_keyframe)
+    // if (pub_keyframes_6d.getNumSubscribers() != 0 && save_new_keyframe)
+    if (save_new_keyframe)
     {
-        mloam_msgs::Keyframes laser_keyframes_6d;
-        laser_keyframes_6d.header.stamp = ros::Time().fromSec(time_laser_odometry);
-        laser_keyframes_6d.header.frame_id = "/world";
-        for (size_t i = 0; i < pose_keyframes_6d.size(); i++)
-        {
-            geometry_msgs::PoseWithCovarianceStamped laser_keyframes_pose;
-            laser_keyframes_pose.header.seq = i;
-            laser_keyframes_pose.header.stamp = ros::Time().fromSec(pose_keyframes_6d[i].first);
-            laser_keyframes_pose.header.frame_id = "/world";
-            laser_keyframes_pose.pose.pose.orientation.x = pose_keyframes_6d[i].second.q_.x();
-            laser_keyframes_pose.pose.pose.orientation.y = pose_keyframes_6d[i].second.q_.y();
-            laser_keyframes_pose.pose.pose.orientation.z = pose_keyframes_6d[i].second.q_.z();
-            laser_keyframes_pose.pose.pose.orientation.w = pose_keyframes_6d[i].second.q_.w();
-            laser_keyframes_pose.pose.pose.position.x = pose_keyframes_6d[i].second.t_.x();
-            laser_keyframes_pose.pose.pose.position.y = pose_keyframes_6d[i].second.t_.y();
-            laser_keyframes_pose.pose.pose.position.z = pose_keyframes_6d[i].second.t_.z();
-            for (size_t i = 0; i < pose_wmap_curr.cov_.rows(); i++)
-                for (size_t j = 0; j < pose_wmap_curr.cov_.cols(); j++)
-                    laser_keyframes_pose.pose.covariance[i * 6 + j] = float(pose_keyframes_6d[i].second.cov_(i, j));
-            laser_keyframes_6d.poses.push_back(laser_keyframes_pose);
-        }
+        const std::pair<double, Pose> &pkf = pose_keyframes_6d.back();
+        geometry_msgs::PoseWithCovarianceStamped laser_keyframes_pose;
+        laser_keyframes_pose.header.stamp = ros::Time().fromSec(pkf.first);
+        laser_keyframes_pose.header.frame_id = "/world";
+        laser_keyframes_pose.pose.pose.position.x = pkf.second.t_.x();
+        laser_keyframes_pose.pose.pose.position.y = pkf.second.t_.y();
+        laser_keyframes_pose.pose.pose.position.z = pkf.second.t_.z();
+        laser_keyframes_pose.pose.pose.orientation.x = pkf.second.q_.x();
+        laser_keyframes_pose.pose.pose.orientation.y = pkf.second.q_.y();
+        laser_keyframes_pose.pose.pose.orientation.z = pkf.second.q_.z();
+        laser_keyframes_pose.pose.pose.orientation.w = pkf.second.q_.w();
+        for (size_t i = 0; i < 6; i++)
+            for (size_t j = 0; j < 6; j++)
+                laser_keyframes_pose.pose.covariance[i * 6 + j] = float(pkf.second.cov_(i, j));
+        laser_keyframes_6d.poses.push_back(laser_keyframes_pose);
+        laser_keyframes_6d.header = laser_keyframes_pose.header;
         pub_keyframes_6d.publish(laser_keyframes_6d);
     }
 }
@@ -1123,6 +1116,20 @@ void process()
             saveKeyframeAndInsertGraph();
             printf("save keyframes time: %fms\n", t_skf.toc());
 
+            if (!loop_info_buf.empty())
+            {
+                while (loop_info_buf.size() != 1)
+                {
+                    loop_info_buf.pop();
+                }
+                loop_info = *loop_info_buf.front();
+                if (loop_info.status)
+                {
+                    updateKeyframe();
+                }
+                loop_info_buf.pop();
+            }
+
             TicToc t_pub;
             pubPointCloud();
             // printf("mapping pub time: %fms\n", t_pub.toc());
@@ -1340,6 +1347,7 @@ int main(int argc, char **argv)
 	ros::Subscriber sub_laser_cloud_corner_last = nh.subscribe<sensor_msgs::PointCloud2>("/corner_points_less_sharp", 2, laserCloudCornerLastHandler);
 	ros::Subscriber sub_laser_odometry = nh.subscribe<nav_msgs::Odometry>("/laser_odom", 5, laserOdometryHandler);
 	ros::Subscriber sub_extrinsic = nh.subscribe<mloam_msgs::Extrinsics>("/extrinsics", 5, extrinsicsHandler);
+    ros::Subscriber sub_loop_info = nh.subscribe<mloam_msgs::Keyframes>("/loop_info", 5, loopInfoHandler);
 
 	pub_laser_cloud_full_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_registered", 2);
 	pub_laser_cloud_surf_last_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surf_registered", 2);
@@ -1386,6 +1394,7 @@ int main(int argc, char **argv)
 
     pose_keyframes_6d.clear();
     pose_keyframes_3d->clear();
+    laser_keyframes_6d.poses.clear();
 
     signal(SIGINT, sigintHandler);
 

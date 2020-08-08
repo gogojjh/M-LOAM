@@ -29,13 +29,13 @@ def run_registration(path, max_x, max_y, max_yaw):
                 path2 = '{}transform_data_{}_{}_{}/'.format(path, x, y, yaw)
                 if not os.path.exists(path2):
                     continue
-                # print('Loading data from: {}'.format(path2))
-                # command = 'rosrun mloam_loop test_icp {}'.format(path2)
-                # os.system(command)
-                # command = 'rosrun mloam_loop test_fgr {}'.format(path2)
-                # os.system(command)
-                # command = 'rosrun mloam_loop test_registration_error {}'.format(path2)
-                # os.system(command)
+                print('Loading data from: {}'.format(path2))
+                command = 'rosrun mloam_loop test_icp {}'.format(path2)
+                os.system(command)
+                command = 'rosrun mloam_loop test_fgr {}'.format(path2)
+                os.system(command)
+                command = 'rosrun mloam_loop test_registration_error {}'.format(path2)
+                os.system(command)
 
                 file = open('{}transform_error.txt'.format(path2), 'r')
                 icp_r_e, fgr_r_e = map(float, file.readline().split(' '))

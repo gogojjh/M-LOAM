@@ -31,6 +31,8 @@
 #include <pcl/common/transforms.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include "mloam_msgs/Keyframes.h"
+
 #include "keyframe.h"
 #include "parameters.hpp"
 #include "loop_registration.hpp"
@@ -58,6 +60,7 @@ public:
 	KeyFrame* getKeyFrame(int index);
 	void savePoseGraph();
 	void loadPoseGraph();
+	void publishLoopInfo();
 	void publish();
 	int getKeyFrameSize();
 	int skip_cnt_;
@@ -83,6 +86,7 @@ private:
 
 	int global_index_; // the index of pose graph
 	int earliest_loop_index_; // the eqrliest loop index for performing loop closure
+	bool pgo_flag_;
 
 	LoopRegistration loop_reg_;	
 	SCManager sc_manager_;
@@ -110,6 +114,7 @@ private:
 	ros::Publisher pub_pose_graph_;
 	ros::Publisher pub_cloud_;
 	ros::Publisher pub_loop_map_;
+	ros::Publisher pub_loop_info_;
 };
 
 template <typename T> inline

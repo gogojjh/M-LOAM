@@ -20,6 +20,7 @@ PoseGraph::PoseGraph()
     skip_cnt_ = 0;
     earliest_loop_index_ = -1;
     global_index_ = 0;
+    pgo_flag_ = false;
 
     laser_cloud_surf_.reset(new pcl::PointCloud<pcl::PointXYZI>());
     laser_cloud_corner_.reset(new pcl::PointCloud<pcl::PointXYZI>());
@@ -44,11 +45,12 @@ PoseGraph::~PoseGraph()
 
 void PoseGraph::registerPub(ros::NodeHandle &nh)
 {
-    pub_pg_path_ = nh.advertise<nav_msgs::Path>("pose_graph_path", 1000);
-    pub_pose_graph_ = nh.advertise<visualization_msgs::MarkerArray>("pose_graph", 1000);
-    pub_sc_ = nh.advertise<sensor_msgs::Image>("scan_context", 5);
-    pub_cloud_ = nh.advertise<sensor_msgs::PointCloud2>("kf_cloud", 5);
-    pub_loop_map_ = nh.advertise<sensor_msgs::PointCloud2>("loop_map", 5);
+    pub_pg_path_ = nh.advertise<nav_msgs::Path>("/pose_graph_path", 1000);
+    pub_pose_graph_ = nh.advertise<visualization_msgs::MarkerArray>("/pose_graph", 1000);
+    pub_sc_ = nh.advertise<sensor_msgs::Image>("/scan_context", 5);
+    pub_cloud_ = nh.advertise<sensor_msgs::PointCloud2>("/kf_cloud", 5);
+    pub_loop_map_ = nh.advertise<sensor_msgs::PointCloud2>("/loop_map", 5);
+    pub_loop_info_ = nh.advertise<mloam_msgs::Keyframes>("/loop_info", 5);
 }
 
 void PoseGraph::setParameter()
@@ -283,7 +285,7 @@ std::pair<int, double> PoseGraph::detectLoop(const KeyFrame *keyframe, const int
 
     // apply scan context-based global localization
     QueryResult qr = sc_manager_.detectLoopClosureID(que_index);
-    std::cout << qr;
+    std::cout << qr << std::endl;
     std::pair<int, double> detect_result;
     detect_result.first = qr.match_index_;
     detect_result.second = qr.yaw_diff_rad_;
@@ -305,6 +307,7 @@ std::pair<int, double> PoseGraph::detectLoop(const KeyFrame *keyframe, const int
         // check if the candidate loop is to far
         if ((t_que - t_match).norm() > LOOP_DISTANCE_THRESHOLD)
         {
+            printf("loop reject since distance is far: %f\n", (t_que - t_match).norm());
             detect_result.first = -1;
         }
         // if (VISUALIZE_IMAGE)
@@ -325,6 +328,7 @@ std::pair<bool, int> PoseGraph::checkTemporalConsistency(const int &que_index,
                                                          const int &match_index)
 {
     bool tc_flag = true;
+    int cnt = 0;
     // std::vector<int> all_match_index;
     // all_match_index.push_back(match_index);
     for (int reque_index = que_index - 5; reque_index < que_index; reque_index++)
@@ -338,8 +342,11 @@ std::pair<bool, int> PoseGraph::checkTemporalConsistency(const int &que_index,
         if ((rematch_index == -1) || (abs(match_index - rematch_index) > LOOP_TEMPORAL_CONSISTENCY_THRESHOLD))
         {
             tc_flag = false;
+            printf("%d <-> %d\n", match_index, rematch_index);
+            printf("loop reject since only find %d matchings\n", cnt);
             break;
         }
+        cnt++;
         // all_match_index.push_back(rematch_index);
     }
     // if (tc_flag)
@@ -428,7 +435,7 @@ std::pair<bool, Pose> PoseGraph::checkGeometricConsistency(const KeyFrame *cur_k
     printf("global registration: %fs\n", t_global_reg.toc() / 1000);
 
     Pose pose_global(global_reg_result.second.cast<double>());
-    if (global_reg_result.first)
+    if (!global_reg_result.first)
     {
         printf("loop reject in global registration ...\n");
         return make_pair(false, pose_global);
@@ -444,7 +451,7 @@ std::pair<bool, Pose> PoseGraph::checkGeometricConsistency(const KeyFrame *cur_k
     printf("local registration: %fs\n", t_local_reg.toc() / 1000);
 
     Pose pose_local(local_reg_result.second.cast<double>());
-    if (local_reg_result.first)
+    if (!local_reg_result.first)
     {
         printf("loop reject in local registration ...\n");
         return make_pair(false, pose_local);
@@ -455,9 +462,9 @@ std::pair<bool, Pose> PoseGraph::checkGeometricConsistency(const KeyFrame *cur_k
         pcl::PointCloud<pcl::PointXYZI> surf_trans, corner_trans;
         pcl::transformPointCloud(*laser_cloud_surf_ds_, surf_trans, pose_local.T_.cast<float>());
         pcl::transformPointCloud(*laser_cloud_corner_ds_, corner_trans, pose_local.T_.cast<float>());
-        pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop/" + to_string(que_index) + "_data.pcd", *laser_cloud_surf_ds_ + *laser_cloud_corner_ds_);
-        pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop/" + to_string(que_index) + "_data_icp.pcd", surf_trans + corner_trans);    
-        pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop/" + to_string(que_index) + "_model.pcd", *laser_cloud_surf_from_map_ds_ + *laser_cloud_corner_from_map_ds_);
+        pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop/raw_data/" + to_string(que_index) + "_data.pcd", *laser_cloud_surf_ds_ + *laser_cloud_corner_ds_);
+        pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop/raw_data/" + to_string(que_index) + "_data_icp.pcd", surf_trans + corner_trans);    
+        pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop/raw_data/" + to_string(que_index) + "_model.pcd", *laser_cloud_surf_from_map_ds_ + *laser_cloud_corner_from_map_ds_);
     }
     return make_pair(true, pose_local);
 }
@@ -494,8 +501,6 @@ void PoseGraph::optimizePoseGraph()
         if (cur_index != -1)
         {
             printf("optimize pose graph \n");
-            continue; // TODO:
-
             TicToc t_pgo;
             m_keyframelist.lock();
             KeyFrame* cur_kf = getKeyFrame(cur_index);
@@ -559,7 +564,7 @@ void PoseGraph::optimizePoseGraph()
                     }
                 }
 
-                //add loop edge
+                // add loop edge
                 if((*it)->has_loop_)
                 {
                     assert((*it)->loop_index_ >= first_looped_index);
@@ -617,8 +622,11 @@ void PoseGraph::optimizePoseGraph()
                 update_pose = pose_drift * update_pose;
                 (*it)->updatePose(update_pose);
             }
+            pgo_flag_ = true;
+
             m_keyframelist.unlock();
             updatePath();
+            publishLoopInfo();
             printf("perform pose graph optimization: %fs\n", t_pgo.toc() / 1000);
         }
         std::chrono::milliseconds dura(2000);
@@ -845,6 +853,45 @@ void PoseGraph::updatePath()
     m_keyframelist.unlock();
 }
 
+void PoseGraph::publishLoopInfo()
+{
+    m_keyframelist.lock();
+    mloam_msgs::Keyframes kf_path;
+    list<KeyFrame *>::iterator it;
+    for (it = keyframelist_.begin(); it != keyframelist_.end(); it++)
+    {
+        Pose pose_w;
+        (*it)->getPose(pose_w);
+        geometry_msgs::PoseWithCovarianceStamped pose_stamped_cov;
+        pose_stamped_cov.header.stamp = ros::Time().fromSec((*it)->time_stamp_);
+        pose_stamped_cov.header.frame_id = "/world";
+        pose_stamped_cov.pose.pose.position.x = pose_w.t_.x();
+        pose_stamped_cov.pose.pose.position.y = pose_w.t_.y();
+        pose_stamped_cov.pose.pose.position.z = pose_w.t_.z();
+        pose_stamped_cov.pose.pose.orientation.x = pose_w.q_.x();
+        pose_stamped_cov.pose.pose.orientation.y = pose_w.q_.y();
+        pose_stamped_cov.pose.pose.orientation.z = pose_w.q_.z();
+        pose_stamped_cov.pose.pose.orientation.w = pose_w.q_.w();
+        for (size_t i = 0; i < 6; i++)
+            for (size_t j = 0; j < 6; j++)
+                pose_stamped_cov.pose.covariance[i * 6 + j] = float(pose_w.cov_(i, j));
+        kf_path.poses.push_back(pose_stamped_cov);
+        kf_path.header = pose_stamped_cov.header;
+    }
+    if (pgo_flag_)
+    {
+        kf_path.status = 1;
+    } 
+    else
+    {
+        kf_path.status = 0;
+    }
+    pgo_flag_ = false;
+    pub_loop_info_.publish(kf_path);
+    printf("publish loop info\n");
+    m_keyframelist.unlock();
+}
+
 void PoseGraph::publish()
 {
     pub_pg_path_.publish(pg_path_);
@@ -870,6 +917,7 @@ void PoseGraph::publish()
         pub_loop_map_.publish(msg_cloud);
     }
 }
+
 
 int PoseGraph::getKeyFrameSize()
 {
