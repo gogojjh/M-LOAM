@@ -50,9 +50,3 @@ int main(int argc, char *argv[])
     printf("t_error: icp: %f, fgr: %f\n", t_error[0], t_error[1]);
 }
 
-
-
-
-
-
-

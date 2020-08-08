@@ -42,18 +42,20 @@ int main(int argc, char* argv[])
     pcl::PCDWriter pcd_writer;
     pcl::PointCloud<pcl::PointXYZ>::Ptr laser_map(new pcl::PointCloud<pcl::PointXYZ>());
     pcl::PointCloud<pcl::PointXYZ>::Ptr laser_cloud(new pcl::PointCloud<pcl::PointXYZ>());
-    pcd_reader.read(std::string(argv[1]) + "model.pcd", *laser_map);
-    pcd_reader.read(std::string(argv[1]) + "data.pcd", *laser_cloud);
-    Eigen::MatrixXf T_ini = ReadTrans(std::string(std::string(argv[1]) + "output_icp.txt").c_str());
-    for (float x = 0; x <= 20; x += 5)
+    pcd_reader.read(std::string(argv[1]) + "baseline_data/model.pcd", *laser_map);
+    pcd_reader.read(std::string(argv[1]) + "baseline_data/data.pcd", *laser_cloud);
+    Eigen::MatrixXf T_ini = ReadTrans(std::string(std::string(argv[1]) + "baseline_data/output_icp.txt").c_str());
+    // std::cout << T_ini << std::endl;
+    for (int x = 0; x <= 5; x += 1)
     {
-        for (float y = 0; y <= 20; y += 5)
+        for (int y = 0; y <= 5; y += 1)
         {
-            for (float yaw = 0; yaw <= 90; yaw += 30)
+            for (int yaw = 0; yaw <= 20; yaw += 5)
             {
                 std::stringstream ss;
-                ss << std::string(argv[1]) << "../transform_data_" << x << "_" << y << "_" << yaw << "/";
-                boost::filesystem::create_directory(ss.str().c_str());
+                ss << std::string(argv[1]) << "transform_data_" << x << "_" << y << "_" << yaw << "/";
+                if (!boost::filesystem::exists(ss.str().c_str()))
+                    boost::filesystem::create_directory(ss.str().c_str());
                 Eigen::Vector3f t(x, y, 0);
                 Eigen::Quaternionf q;
                 q = Eigen::AngleAxisf(yaw * 3.1415926 / 180.0, Eigen::Vector3f::UnitZ());
