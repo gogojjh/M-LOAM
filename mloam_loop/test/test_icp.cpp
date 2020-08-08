@@ -26,6 +26,22 @@ void WriteTrans(const std::string filepath, Eigen::Matrix4f transtemp)
     fclose(fid);
 }
 
+void WriteCost(const char *filepath, double final_cost, double final_cost_normalize)
+{
+    FILE *fid = fopen(filepath, "w");
+    fprintf(fid, "%f %f\n", final_cost, final_cost_normalize);
+    printf("final cost, final cost normalize: %f %f\n", final_cost, final_cost_normalize);
+    fclose(fid);
+}
+
+void WriteTime(const char *filepath, double time)
+{
+    FILE *fid = fopen(filepath, "w");
+    fprintf(fid, "%.10f\n", time);
+    printf("time: %.10fms\n", time);
+    fclose(fid);
+}
+
 int main(int argc, char *argv[])
 {
     pcl::PCDReader pcd_reader;
@@ -40,10 +56,13 @@ int main(int argc, char *argv[])
     size_t laser_map_num = laser_map->size();
     kdtree->setInputCloud(laser_map);
 
+    double time = 0.0;
     TicToc t_optimization;
     Pose pose_relative;
     double gmc_s = 1.0;
     double gmc_mu = 20.0;
+    double final_cost;
+    double final_cost_normalize;
     for (int iter_cnt = 0; iter_cnt < 10; iter_cnt++)
     {
         double para_pose[7];
@@ -97,6 +116,9 @@ int main(int argc, char *argv[])
         if (iter_cnt == 9) std::cout << summary.BriefReport() << std::endl;
         // printf("solver time: %fms\n", t_solver.toc());
 
+        final_cost = summary.final_cost;
+        final_cost_normalize = summary.final_cost / problem.NumResidualBlocks();
+
         gmc_mu /= 1.4;
 
         pose_relative.q_ = Eigen::Quaterniond(para_pose[6], para_pose[3], para_pose[4], para_pose[5]);
@@ -104,10 +126,13 @@ int main(int argc, char *argv[])
         pose_relative.update();
     }
     printf("ICP: %fms\n", t_optimization.toc());
+    time += t_optimization.toc();
     std::cout << pose_relative.T_ << std::endl << std::endl;
 
     pcl::transformPointCloud(*laser_cloud, *laser_cloud, pose_relative.T_.cast<float>());
     pcd_writer.write(std::string(argv[1]) + "data_icp.pcd", *laser_cloud);
     WriteTrans(std::string(argv[1]) + "output_icp.txt", pose_relative.T_.cast<float>());
+    WriteCost(std::string(std::string(argv[1]) + "cost_icp.txt").c_str(), final_cost, final_cost_normalize);   
+    WriteTime(std::string(std::string(argv[1]) + "time_icp.txt").c_str(), time);
     return 0;
 }

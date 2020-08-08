@@ -41,6 +41,14 @@ void parseFPFH(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud,
     }
 }
 
+void WriteTime(const char *filepath, double time)
+{
+    FILE *fid = fopen(filepath, "w");
+    fprintf(fid, "%.10f\n", time);
+    printf("time: %.10fms\n", time);
+    fclose(fid);
+}
+
 int main(int argc, char *argv[])
 {
     pcl::PCDReader pcd_reader;
@@ -55,6 +63,7 @@ int main(int argc, char *argv[])
     point_cloud.push_back(laser_map);
     point_cloud.push_back(laser_cloud);
 
+    double time = 0.0;
     TicToc t_fpfh;
     std::vector<pcl::PointCloud<pcl::FPFHSignature33>::Ptr> fpfh_feature;
     for (size_t i = 0; i < point_cloud.size(); i++)
@@ -78,21 +87,22 @@ int main(int argc, char *argv[])
         fest.compute(*object_features);
         fpfh_feature.push_back(object_features);
     }
-    printf("extract fpfh from %lu clouds: %fms\n", fpfh_feature.size(), t_fpfh.toc());
-
-	fgr::CApp app(DIV_FACTOR, USE_ABSOLUTE_SCALE, MAX_CORR_DIST, ITERATION_NUMBER, TUPLE_SCALE, TUPLE_MAX_CNT);
     fgr::Points p1, p2;
     fgr::Feature f1, f2;
     parseFPFH(point_cloud[0], fpfh_feature[0], p1, f1);
     parseFPFH(point_cloud[1], fpfh_feature[1], p2, f2);
+    printf("extract fpfh from %lu clouds: %fms\n", fpfh_feature.size(), t_fpfh.toc());
+    time += t_fpfh.toc();
     
     TicToc t_fgr;
+	fgr::CApp app(DIV_FACTOR, USE_ABSOLUTE_SCALE, MAX_CORR_DIST, ITERATION_NUMBER, TUPLE_SCALE, TUPLE_MAX_CNT);
     app.LoadFeature(p1, f1);
     app.LoadFeature(p2, f2);
 	app.NormalizePoints();
 	app.AdvancedMatching();
 	app.OptimizePairwise(true);
-    printf("FGR: %fms\n", t_fpfh.toc());
+    printf("FGR: %fms\n", t_fgr.toc());
+    time += t_fgr.toc();
 
     Eigen::MatrixXf T = app.GetOutputTrans();
     std::cout << T << std::endl;
@@ -100,5 +110,6 @@ int main(int argc, char *argv[])
     pcl::transformPointCloud(*laser_cloud, *laser_cloud, T);
     pcd_writer.write(std::string(argv[1]) + "data_fgr.pcd", *laser_cloud);
 	app.WriteTrans(std::string(std::string(argv[1]) + "output_fgr.txt").c_str());
-
+    app.WriteCost(std::string(std::string(argv[1]) + "cost_fgr.txt").c_str());
+    WriteTime(std::string(std::string(argv[1]) + "time_fgr.txt").c_str(), time);
 }

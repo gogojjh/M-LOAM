@@ -445,7 +445,7 @@ double CApp::OptimizePairwise(bool decrease_mu_)
 			Eigen::Vector3f p, q;
 			p = pointcloud_[i][ii];
 			q = pcj_copy[jj];
-			Eigen::Vector3f rpq = p - q;
+			Eigen::Vector3f rpq = p - q; // residual = [x, y, z]
 
 			int c2 = c;
 
@@ -483,7 +483,7 @@ double CApp::OptimizePairwise(bool decrease_mu_)
 		}
 
 		Eigen::MatrixXd result(nvariable, 1);
-		result = -JTJ.llt().solve(JTr);
+		result = -JTJ.llt().solve(JTr); // result update
 
 		Eigen::Affine3d aff_mat;
 		aff_mat.linear() = (Eigen::Matrix3d) Eigen::AngleAxisd(result(2), Eigen::Vector3d::UnitZ())
@@ -493,8 +493,11 @@ double CApp::OptimizePairwise(bool decrease_mu_)
 
 		Eigen::Matrix4f delta = aff_mat.matrix().cast<float>();
 
-		trans = delta * trans;
+		trans = delta * trans; // final result
 		TransformPoints(pcj_copy, delta);
+
+		final_cost_ = r2;
+		final_cost_normalize_ = r2 / corres_.size();
 	}
 
 	TransOutput_ = trans * TransOutput_;
@@ -568,6 +571,14 @@ Eigen::Matrix4f CApp::ReadTrans(const char* filename)
 		}
 	}
 	return temp;
+}
+
+void CApp::WriteCost(const char *filepath)
+{
+	FILE *fid = fopen(filepath, "w");
+	fprintf(fid, "%f %f\n", final_cost_, final_cost_normalize_);
+	printf("final cost, final cost normalize: %f %f\n", final_cost_, final_cost_normalize_);
+	fclose(fid);
 }
 
 void CApp::BuildDenseCorrespondence(const Eigen::Matrix4f& trans, Correspondences& corres)

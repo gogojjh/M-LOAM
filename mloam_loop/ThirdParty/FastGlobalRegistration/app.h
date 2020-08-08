@@ -33,7 +33,7 @@
 #include <Eigen/Geometry>
 
 #define DIV_FACTOR			1.4		// Division factor used for graduated non-convexity
-#define USE_ABSOLUTE_SCALE	1		// Measure distance in absolute scale (1) or in scale relative to the diameter of the model (0)
+#define USE_ABSOLUTE_SCALE	0		// Measure distance in absolute scale (1) or in scale relative to the diameter of the model (0)
 #define MAX_CORR_DIST		0.025	// Maximum correspondence distance (also see comment of USE_ABSOLUTE_SCALE)
 #define ITERATION_NUMBER	64		// Maximum number of iteration
 #define TUPLE_SCALE			0.95	// Similarity measure used for tuples of feature points.
@@ -70,6 +70,7 @@ public:
 	double OptimizePairwise(bool decrease_mu_);
 	void Evaluation(const char* gth, const char* estimation, const char *output);
 
+	void WriteCost(const char *filepath);
 private:
 	// containers
 	std::vector<Points> pointcloud_;
@@ -81,6 +82,9 @@ private:
 	Points Means;
 	float GlobalScale = 1.0f;
 	float StartScale = 1.0f;
+
+	double final_cost_;
+	double final_cost_normalize_;
 
 	// some internal functions
 	void ReadFeature(const char* filepath, Points& pts, Feature& feat);
