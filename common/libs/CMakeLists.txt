@@ -70,6 +70,7 @@ include_directories(
 ## Declare a C++ executable
 add_library(${PROJECT_NAME}
     src/algos/hungarian_bigraph_matcher.cpp
+    src/timing.cpp
 )
 
 ## http://mariobadr.com/creating-a-header-only-library-with-cmake.html
