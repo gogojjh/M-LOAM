@@ -69,14 +69,14 @@ catkin_package(
 # add_executable(test_pointiwithcov test_pointiwithcov.cpp)
 # target_link_libraries(test_pointiwithcov ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-# add_executable(test_merge_pointcloud_sr src/test_merge_pointcloud_sr.cpp)
-# target_link_libraries(test_merge_pointcloud_sr ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+add_executable(test_merge_pointcloud_sr src/test_merge_pointcloud_sr.cpp)
+target_link_libraries(test_merge_pointcloud_sr ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(test_merge_pointcloud_rhd src/test_merge_pointcloud_rhd.cpp)
 target_link_libraries(test_merge_pointcloud_rhd ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-# add_executable(test_merge_pointcloud_rv src/test_merge_pointcloud_rv.cpp)
-# target_link_libraries(test_merge_pointcloud_rv ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+add_executable(test_merge_pointcloud_rv src/test_merge_pointcloud_rv.cpp)
+target_link_libraries(test_merge_pointcloud_rv ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 # add_executable(test_parse_bag test_parse_bag.cpp)
 # target_link_libraries(test_parse_bag ${catkin_LIBRARIES} ${PCL_LIBRARIES})
@@ -133,3 +133,5 @@ target_link_libraries(test_jacobian_memory
 # target_link_libraries(ceres_simple_bundle_adjustment ${catkin_LIBRARIES} 
 # 	${CERES_LIBRARIES} ${GLOG_LIBRARIES})
 
+add_executable(test_timing src/test_timing.cpp)
+target_link_libraries(test_timing ${catkin_LIBRARIES})

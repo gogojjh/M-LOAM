@@ -3,33 +3,27 @@
 #Multiple thread support
 multiple_thread: 0
 
-#optimization PARAMETERS
-max_solver_time: 0.05  # max solver itration time (s), to guarantee real time
-max_num_iterations: 10   # max solver itrations, to guarantee real time
-keyframe_parallax: 0 # keyframe selection threshold (pixel)
-
-evaluate_residual: 1
-optimal_odometry: 1
-
-###############################################
-# laser parameters
-num_of_laser: 2
-n_scans: 16
-
-# segmentation parameters
+# segmmentation
 segment_cloud: 1
 horizon_scan: 400
 min_cluster_size: 15
 min_line_size: 10
 segment_valid_point_num: 5
 segment_valid_line_num: 3
-segment_theta: 0.53
+segment_theta: 0.53 # Lego-loam: 1.047
+
+# laser parameters
+idx_ref: 0
+n_scans: 16
+num_of_laser: 2
+
+cloud_topic:
+   - "/left/velodyne_points"
+   - "/right/velodyne_points"
 
 # window sizes
 window_size: 6
 opt_window_size: 3
-
-optimal_extrinsic: 0
 
 # Extrinsic parameter between IMU and Camera.
 estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
@@ -70,21 +64,18 @@ td: !!opencv-matrix                 # initial value of time offset. unit: s. rea
    dt: d
    data: [0, 0]
 
-idx_ref: 0
-
-cloud_topic: 
-   - "/left/velodyne_points"
-   - "/right/velodyne_points"
-
-laser_sync_threshold: 0.07
-roi_range: 0.5
-roi_range_mapping: 100
-
-# odometry parameters
+distortion: 0
 scan_period: 0.1
+laser_sync_threshold: 0.07
+
+######################################################## odometry
+# optimization 
+max_solver_time: 0.02  # max solver itration time (s), to guarantee real time
+max_num_iterations: 5   # max solver itrations, to guarantee real time
+
+roi_range: 1
 distance_sq_threshold: 25
 nearby_scan: 2.5
-distortion: 0 # gazebo simulation without distortion
 
 # movement type
 planar_movement: 1
@@ -100,7 +91,6 @@ point_edge_factor: 1
 prior_factor: 0
 prior_factor_pos: 0.5
 prior_factor_rot: 1
-check_jacobian: 0
 
 pcl_viewer: 0
 pcl_viewer_normal_ratio: 10
@@ -111,9 +101,15 @@ eig_initial: 200
 eig_thre_calib: 150
 n_calib: 15
 
-# mapping 
+# good feature
+odom_gf_ratio: 1.0
+
+skip_num_odom_pub: 1
+
+######################################################## mapping
 map_corner_res: 0.2
-map_surf_res: 0.3
+map_surf_res: 0.4
+map_outlier_res: 0.8
 map_eig_thre: 50
 
 # uncertainty parameter
@@ -134,5 +130,3 @@ uct_measurement: !!opencv-matrix
 
 trace_threshold_before_mapping: 1
 trace_threshold_after_mapping: 0.7
-
-skip_num_odom_pub: 1

@@ -36,6 +36,7 @@
 #include "common/types/type.h"
 #include "common/csvfile.h"
 #include "common/color.hpp"
+#include "common/timing.hpp"
 
 #include "../estimator/pose.h"
 

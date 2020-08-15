@@ -44,8 +44,8 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
     {
         ceres::Problem problem;
         ceres::Solver::Summary summary;
-        // ceres::LossFunction *loss_function = new ceres::HuberLoss(0.5);
-        ceres::LossFunction *loss_function = new ceres::GemanMcClureLoss(1.0);
+        ceres::LossFunction *loss_function = new ceres::HuberLoss(0.5);
+        // ceres::LossFunction *loss_function = new ceres::GemanMcClureLoss(1.0);
 
         ceres::Solver::Options options;
         options.linear_solver_type = ceres::DENSE_SCHUR;

@@ -25,27 +25,47 @@ struct CustomCompare
     }
 };
 
+struct rotCmp
+{
+    bool operator()(const size_t &r, const size_t &l)
+    {
+        return (l > r);
+    }
+};
+
 int main() 
 {
-    std::priority_queue<FeatureWithScore, std::vector<FeatureWithScore>, std::less<FeatureWithScore> > q;
+    // std::priority_queue<FeatureWithScore, std::vector<FeatureWithScore>, std::less<FeatureWithScore> > q;
+    // for (size_t i = 0; i < 10; i++)
+    // {
+    //     double score = rand() % 100;
+    //     FeatureWithScore f(i, score);
+    //     q.push(f);
+    // }
+    // while (!q.empty())
+    // {
+    //     std::cout << q.top().score_ << std::endl;
+    //     q.pop();
+    // }
+
+    // size_t n = 0;
+    // std::vector<int> feature_visited(10, -1);
+    // for (size_t i = 0; i < 10; i++)
+    // {
+    //     // std::cout << feature_visited[i] << std::endl;
+    //     std::cout << (feature_visited[i] < int(n)) << std::endl;
+    // }
+
+    std::priority_queue<size_t, std::vector<size_t>, rotCmp> q;
     for (size_t i = 0; i < 10; i++)
     {
-        double score = rand() % 100;
-        FeatureWithScore f(i, score);
-        q.push(f);
+        size_t d = size_t(rand() % 30);
+        q.push(d);
     }
     while (!q.empty())
     {
-        std::cout << q.top().score_ << std::endl;
+        std::cout << q.top() << std::endl;
         q.pop();
-    }
-
-    size_t n = 0;
-    std::vector<int> feature_visited(10, -1);
-    for (size_t i = 0; i < 10; i++)
-    {
-        // std::cout << feature_visited[i] << std::endl;
-        std::cout << (feature_visited[i] < int(n)) << std::endl;
     }
     return 0;
 }

@@ -253,7 +253,7 @@ int main(int argc, char **argv)
     size_t END_IDX = FLAGS_end_idx;
     size_t DELTA_IDX = FLAGS_delta_idx;
     bool TIME_NOW = FLAGS_time_now;
-    ROS_WARN("waiting for cloud...");
+    std::cout << common::YELLOW << "waiting for cloud..." << common::RESET << std::endl;
 
     string data_source = FLAGS_data_source;
     ros::Subscriber sub_pause = nh.subscribe<std_msgs::String>("/mloam_pause", 5, pauseCallback);

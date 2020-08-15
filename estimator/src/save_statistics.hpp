@@ -43,10 +43,7 @@ public:
                            const std::vector<std::vector<double> > &mapping_sp_list,
                            const std::vector<double> &logdet_H_list);
 
-    void saveMapTimeStatistics(const string &map_time_filename,
-                               const std::vector<double> &total_feat_time,
-                               const std::vector<double> &total_solver_time,
-                               const std::vector<double> &total_mapping_time);
+    void saveMapTimeStatistics(const string &map_time_filename);
 };
 
 void SaveStatistics::saveSensorPath(const string &filename, const nav_msgs::Path &sensor_path)
@@ -120,53 +117,21 @@ void SaveStatistics::saveOdomStatistics(const string &calib_eig_filename,
     fout.close();
 }
 
-void SaveStatistics::saveOdomTimeStatistics(const string &filename,
-                                            const Estimator &estimator)
+void SaveStatistics::saveOdomTimeStatistics(const string &filename, const Estimator &estimator)
 {
     std::ofstream fout(filename.c_str(), std::ios::out);
     fout.precision(15);
-    fout << "frame, mean_corner_feature, mean_surf_feature, mean_mea_pre_time, mean_matching_time, mean_solver_time, mean_marginalization_time, mean_opt_odom_time" << std::endl;
-    fout << estimator.frame_cnt_
-         << ", " << estimator.total_corner_feature_ / estimator.frame_cnt_
-         << ", " << estimator.total_surf_feature_ / estimator.frame_cnt_
-         << ", " << std::accumulate(estimator.total_measurement_pre_time_.begin(), estimator.total_measurement_pre_time_.end(), 0.0) / estimator.total_measurement_pre_time_.size()
-         << ", " << std::accumulate(estimator.total_feat_matching_time_.begin(), estimator.total_feat_matching_time_.end(), 0.0) / estimator.total_feat_matching_time_.size()
-         << ", " << std::accumulate(estimator.total_solver_time_.begin(), estimator.total_solver_time_.end(), 0.0) / estimator.total_solver_time_.size()
-         << ", " << std::accumulate(estimator.total_marginalization_time_.begin(), estimator.total_marginalization_time_.end(), 0.0) / estimator.total_marginalization_time_.size()
-         << ", " << std::accumulate(estimator.total_whole_odom_time_.begin(), estimator.total_whole_odom_time_.end(), 0.0) / estimator.total_whole_odom_time_.size()
-         << std::endl;
-    for (size_t i = 0; i < estimator.total_measurement_pre_time_.size(); i++) 
-    {
-        if (i >= estimator.total_solver_time_.size() ||
-            i >= estimator.total_marginalization_time_.size() ||
-            i >= estimator.total_whole_odom_time_.size()) 
-                break;
-        fout << estimator.total_measurement_pre_time_[i] << ", "
-             << estimator.total_feat_matching_time_[i] << ", "
-             << estimator.total_solver_time_[i] << ", " 
-             << estimator.total_marginalization_time_[i] << ", "
-             << estimator.total_whole_odom_time_[i] << std::endl;
-    }
+    fout << "corner_feature, surf_feature" << std::endl;
+    fout << 1.0 * estimator.total_corner_feature_ / estimator.frame_cnt_ << ", "
+         << 1.0 * estimator.total_surf_feature_ / estimator.frame_cnt_ << std::endl;
+
+    fout << "frame, mea_pre_time, matching_time, solver_time, marginalization_time, opt_odom_time" << std::endl;
+    fout << common::timing::Timing::GetNumSamples("odom_mea_pre") << ", " << common::timing::Timing::GetMeanSeconds("odom_mea_pre") * 1000 << ", " << common::timing::Timing::GetVarianceSeconds("odom_mea_pre") * 1000 << std::endl;
+    fout << common::timing::Timing::GetNumSamples("odom_match_feat") << ", " << common::timing::Timing::GetMeanSeconds("odom_match_feat") * 1000 << ", " << common::timing::Timing::GetVarianceSeconds("odom_match_feat") * 1000 << std::endl;
+    fout << common::timing::Timing::GetNumSamples("odom_solver") << ", " << common::timing::Timing::GetMeanSeconds("odom_solver") * 1000 << ", " << common::timing::Timing::GetVarianceSeconds("odom_solver") * 1000 << std::endl;
+    fout << common::timing::Timing::GetNumSamples("odom_marg") << ", " << common::timing::Timing::GetMeanSeconds("odom_marg") * 1000 << ", " << common::timing::Timing::GetVarianceSeconds("odom_marg") * 1000 << std::endl;
+    fout << common::timing::Timing::GetNumSamples("odom_process") << ", " << common::timing::Timing::GetMeanSeconds("odom_process") * 1000 << ", " << common::timing::Timing::GetVarianceSeconds("odom_process") * 1000 << std::endl;
     fout.close();
-
-    printf("Frame: %d, mean measurement preprocess time: %fms, mean optimize odometry time: %fms\n", estimator.frame_cnt_,
-           std::accumulate(estimator.total_measurement_pre_time_.begin(), estimator.total_measurement_pre_time_.end(), 0.0) / estimator.total_measurement_pre_time_.size(),
-           std::accumulate(estimator.total_whole_odom_time_.begin(), estimator.total_whole_odom_time_.end(), 0.0) / estimator.total_whole_odom_time_.size());
-    printf("Frame: %d, mean corner feature: %f, mean surf feature: %f\n", estimator.frame_cnt_,
-           estimator.total_corner_feature_ * 1.0 / estimator.frame_cnt_, 
-           estimator.total_surf_feature_ * 1.0 / estimator.frame_cnt_);
-
-    LOG(INFO) << "Frame: " << estimator.frame_cnt_
-              << ", mean measurement preprocess time: "
-              << std::accumulate(estimator.total_measurement_pre_time_.begin(), estimator.total_measurement_pre_time_.end(), 0.0) / estimator.total_measurement_pre_time_.size()
-              << "ms, mean optimize odometry time: "
-              << std::accumulate(estimator.total_whole_odom_time_.begin(), estimator.total_whole_odom_time_.end(), 0.0) / estimator.total_whole_odom_time_.size();
-
-    LOG(INFO) << "Frame: " << estimator.frame_cnt_
-              << ", mean surf feature: " 
-              << estimator.total_surf_feature_ * 1.0 / estimator.frame_cnt_
-              << "mean corner feature: " 
-              << estimator.total_corner_feature_ * 1.0 / estimator.frame_cnt_;
 }
 
 void SaveStatistics::saveMapStatistics(const string &map_filename,
@@ -238,35 +203,13 @@ void SaveStatistics::saveMapStatistics(const string &map_filename,
     fout.close();
 }
 
-void SaveStatistics::saveMapTimeStatistics(const string &map_time_filename,
-                                           const std::vector<double> &total_feat_time,
-                                           const std::vector<double> &total_solver_time,
-                                           const std::vector<double> &total_mapping_time)
+void SaveStatistics::saveMapTimeStatistics(const string &map_time_filename)
 {
     std::ofstream fout(map_time_filename.c_str(), std::ios::out);
     fout.precision(15);
-    fout << "frame, mean_feat_matching_time, mean_solver_time, mean_mapping_time" << std::endl;
-    fout << total_mapping_time.size() << ", "
-         << std::accumulate(total_feat_time.begin(), total_feat_time.end(), 0.0) / total_feat_time.size()
-         << std::accumulate(total_solver_time.begin(), total_solver_time.end(), 0.0) / total_solver_time.size() << ", "
-         << std::accumulate(total_mapping_time.begin(), total_mapping_time.end(), 0.0) / total_mapping_time.size() << std::endl;
-    for (size_t i = 0; i < total_mapping_time.size(); i++)
-    {
-        if (i >= total_feat_time.size() || 
-            i >= total_solver_time.size()) 
-                break;
-        fout << total_feat_time[i] << ", "
-             << total_solver_time[i] << ", "
-             << total_mapping_time[i] << std::endl;
-    }
+    fout << "frame, feat_matching_time, solver_time, mapping_time" << std::endl;
+    fout << common::timing::Timing::GetNumSamples("mapping_match_feat") << ", " << common::timing::Timing::GetMeanSeconds("mapping_match_feat") * 1000 << ", " << common::timing::Timing::GetVarianceSeconds("mapping_match_feat") * 1000 << std::endl;
+    fout << common::timing::Timing::GetNumSamples("mapping_solver") << ", " << common::timing::Timing::GetMeanSeconds("mapping_solver") * 1000 << ", " << common::timing::Timing::GetVarianceSeconds("mapping_solver") * 1000 << std::endl;
+    fout << common::timing::Timing::GetNumSamples("mapping_process") << ", " << common::timing::Timing::GetMeanSeconds("mapping_process") * 1000 << ", " << common::timing::Timing::GetVarianceSeconds("mapping_process") * 1000 << std::endl;
     fout.close();
-
-    printf("Frame: %d, mean mapping time: %fms\n",
-           total_mapping_time.size(),
-           std::accumulate(total_mapping_time.begin(), total_mapping_time.end(), 0.0) / total_mapping_time.size());
-
-    LOG(INFO) << "Frame: " << total_mapping_time.size()
-              << ", mean mapping time: " 
-              << std::accumulate(total_mapping_time.begin(), total_mapping_time.end(), 0.0) / total_mapping_time.size() 
-              << "ms";
 }

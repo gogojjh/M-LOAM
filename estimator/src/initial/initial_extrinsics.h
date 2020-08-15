@@ -29,12 +29,13 @@
 #include "../utility/tic_toc.h"
 #include "../utility/utility.h"
 
-// maintain a min_heap
+// maintain a priority_queue
+// the left (first) should have larger w (higher_priority) than the right (second)
 struct rotCmp
 {
-	bool operator()(const std::pair<size_t, std::vector<Pose> > &pose_pair_1, const std::pair<size_t, std::vector<Pose> > &pose_pair_2)
+	bool operator()(const std::pair<size_t, std::vector<Pose> > &pose_r, const std::pair<size_t, std::vector<Pose> > &pose_l)
 	{
-		return (pose_pair_1.second[0].q_.w() < pose_pair_2.second[0].q_.w()); // TODO: check the order
+		return (pose_l.second[0].q_.w() > pose_r.second[0].q_.w()); 
 	}
 };
 
@@ -72,8 +73,8 @@ public:
 	bool full_cov_rot_state_, full_cov_pos_state_;
 	double rot_cov_thre_;
 
-	// std::vector<std::vector<Pose> > v_pose_;
-	std::priority_queue<std::pair<size_t, std::vector<Pose> >, std::vector<std::pair<size_t, std::vector<Pose> > >, rotCmp> pq_pose_;
+	std::priority_queue<std::pair<size_t, std::vector<Pose> >, 
+						std::vector<std::pair<size_t, std::vector<Pose> > >, rotCmp> pq_pose_;
 	std::vector<std::vector<Pose> > v_pose_;
 
 						

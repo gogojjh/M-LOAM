@@ -116,7 +116,7 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
     divb_mul_ = Eigen::Vector4i (1, div_b_[0], div_b_[0] * div_b_[1], 0);
 
     int centroid_size = 4;
-    if (downsample_all_data_) centroid_size = boost::mpl::size<FieldList>::value;
+    if (downsample_all_data_) centroid_size = boost::mpl::size<FieldList>::value; // default: true
 
     // ---[ RGB special case
     std::vector<pcl::PCLPointField> itsy_fields;
@@ -132,7 +132,7 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
     if (rgba_index >= 0)
     {
         rgba_index = rgb_fields[rgba_index].offset;
-        centroid_size += 3;
+        // centroid_size += 3;
     }
 
     // ---[ COV special case
@@ -142,7 +142,6 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
     if (cov_index >= 0)
     {
         cov_index = cov_fields[cov_index].offset;
-        centroid_size += 7;
     }
 
     std::vector<cloud_point_index_idx> index_vector;
@@ -330,7 +329,8 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
             centroid[3] = ity;
             centroid.tail(7) = cov;
             centroid[10] = centroid[4] + centroid[7] + centroid[9];
-        } else
+        } 
+        else
         {
             for (unsigned int i = first_index; i < last_index; ++i)
             {

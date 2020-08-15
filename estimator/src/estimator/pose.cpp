@@ -37,6 +37,7 @@ Pose::Pose(const Eigen::Quaterniond &q, const Eigen::Vector3d &t, const double &
     t_ = t;
     T_.setIdentity(); T_.topLeftCorner<3, 3>() = q_.toRotationMatrix(); T_.topRightCorner<3, 1>() = t_;
     td_ = td;
+    cov_.setZero();
 }
 
 Pose::Pose(const Eigen::Matrix3d &R, const Eigen::Vector3d &t, const double &td)
@@ -45,6 +46,7 @@ Pose::Pose(const Eigen::Matrix3d &R, const Eigen::Vector3d &t, const double &td)
     t_ = t;
     T_.setIdentity(); T_.topLeftCorner<3, 3>() = R; T_.topRightCorner<3, 1>() = t_;
     td_ = td;
+    cov_.setZero();
 }
 
 Pose::Pose(const Eigen::Matrix4d &T, const double &td)
@@ -53,6 +55,7 @@ Pose::Pose(const Eigen::Matrix4d &T, const double &td)
     t_ = T.topRightCorner<3, 1>();
     T_ = T;
     td_ = td;
+    cov_.setZero();
 }
 
 Pose::Pose(const nav_msgs::Odometry &odom)

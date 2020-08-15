@@ -89,25 +89,11 @@ class Estimator
     void optimizeMap();
 
     // apply good feature
-    void evaluateFeatJacobian(const double *para_pose_pivot,
-                              const double *para_pose_other,
-                              const double *para_pose_ext,
-                              const PointPlaneFeature &feature,
-                              Eigen::MatrixXd &mat_jaco);
-
     void evaluateFeatJacobian(const Pose &pose_pivot,
                               const Pose &pose_i,
                               const Pose &pose_ext,
-                              const PointPlaneFeature &feature,
-                              Eigen::MatrixXd &mat_jaco);
+                              PointPlaneFeature &feature);
                               
-    void goodFeatureSelect(const std::vector<PointPlaneFeature> &all_features,
-                           std::vector<size_t> &sel_feature_idx,
-                           const double *para_pose_pivot,
-                           const double *para_pose_other,
-                           const double *para_pose_ext,
-                           const double gf_ratio = 0.5);
-
     void goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_from_map,
                              const PointICloud &laser_map,
                              const PointICloud &laser_cloud,

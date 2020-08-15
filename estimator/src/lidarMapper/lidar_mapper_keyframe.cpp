@@ -349,7 +349,7 @@ void extractSurroundingKeyFrames()
     //     *laser_cloud_corner_from_map_cov += *surrounding_corner_cloud_keyframes[i];
     // }
 
-    TicToc t_filter;
+    common::timing::Timer filter_timer("mapping_filter");
     down_size_filter_surf_map_cov.setInputCloud(laser_cloud_surf_from_map_cov);
     down_size_filter_surf_map_cov.filter(*laser_cloud_surf_from_map_cov_ds);
     down_size_filter_corner_map_cov.setInputCloud(laser_cloud_corner_from_map_cov);
@@ -357,7 +357,7 @@ void extractSurroundingKeyFrames()
     printf("corner/surf: before ds: %lu, %lu; after ds: %lu, %lu\n", 
             laser_cloud_corner_from_map_cov->size(), laser_cloud_surf_from_map_cov->size(),
             laser_cloud_corner_from_map_cov_ds->size(), laser_cloud_surf_from_map_cov_ds->size());
-    printf("filter time: %fms\n", t_filter.toc()); // 10ms
+    printf("filter time: %fms\n", filter_timer.Stop() * 1000); // 10ms
 }
 
 void downsampleCurrentScan()
@@ -445,10 +445,10 @@ void scan2MapOptimization()
     printf("map surf num: %lu, corner num: %lu\n", laser_cloud_surf_from_map_num, laser_cloud_corner_from_map_num);
     if ((laser_cloud_surf_from_map_num > 100) && (laser_cloud_corner_from_map_num > 10))
     {
-        TicToc t_opt, t_tree;
+        common::timing::Timer t_timer("mapping_kdtree");
         kdtree_surf_from_map->setInputCloud(laser_cloud_surf_from_map_cov_ds);
         kdtree_corner_from_map->setInputCloud(laser_cloud_corner_from_map_cov_ds);
-        printf("build time %fms\n", t_tree.toc());
+        printf("build time %fms\n", t_timer.Stop() * 1000);
         printf("********************************\n");
         for (int iter_cnt = 0; iter_cnt < 2; iter_cnt++)
         {
@@ -468,8 +468,8 @@ void scan2MapOptimization()
 
             vector2Double();
 
-            std::vector<double *> para_ids;
-            std::vector<ceres::internal::ResidualBlock *> res_ids_proj;
+            // std::vector<double *> para_ids;
+            // std::vector<ceres::internal::ResidualBlock *> res_ids_proj;
             PoseLocalParameterization *local_parameterization = new PoseLocalParameterization();
             local_parameterization->setParameter();
             problem.AddParameterBlock(para_pose, SIZE_POSE, local_parameterization);
@@ -555,7 +555,7 @@ void scan2MapOptimization()
             std::vector<PointPlaneFeature> all_surf_features, all_corner_features;
             std::vector<size_t> sel_surf_feature_idx, sel_corner_feature_idx;
             size_t surf_num = 0, corner_num = 0;
-            TicToc t_match_features;
+            common::timing::Timer gfs_timer("mapping_match_feat");
             if (POINT_PLANE_FACTOR)
             {
                 afs.goodFeatureMatching(kdtree_surf_from_map,
@@ -582,14 +582,12 @@ void scan2MapOptimization()
                                         gf_ratio_cur);
                 corner_num = sel_corner_feature_idx.size();
             }
-            printf("matching features time: %fms\n", t_match_features.toc());
-            total_match_feature.push_back(t_match_features.toc());
+            printf("matching features time: %fms\n", gfs_timer.Stop() * 1000);
             
             if (MLOAM_RESULT_SAVE && frame_cnt == 100)
                 afs.writeFeature(*laser_cloud_surf_cov, sel_surf_feature_idx, all_surf_features);
             // printf("matching surf & corner num: %lu, %lu\n", surf_num, corner_num);
 
-            TicToc t_add_constraints;
             CHECK_JACOBIAN = 0;
             for (const size_t &fid : sel_surf_feature_idx)
             {
@@ -629,9 +627,9 @@ void scan2MapOptimization()
             //                      frame_cnt);
 
             // ******************************************************
-            if (iter_cnt == 0)
+            if (iter_cnt == 1)
             {
-                TicToc t_eval_H;
+                common::timing::Timer eval_deg_timer("mapping_eval_deg");
                 double cost = 0.0;
                 ceres::CRSMatrix jaco;
                 problem.Evaluate(ceres::Problem::EvaluateOptions(), &cost, nullptr, nullptr, &jaco);
@@ -654,7 +652,7 @@ void scan2MapOptimization()
                 mapping_sp_list.push_back(sp);
 
                 LOG_EVERY_N(INFO, 20) << "trace: " << tr << ", logdet: " << logd << ", min_ev: " << mini_ev;
-                printf("evaluate H: %fms\n", t_eval_H.toc());
+                printf("evaluate H: %fms\n", eval_deg_timer.Stop() * 1000);
             }
             else if (is_degenerate)
             {
@@ -662,7 +660,7 @@ void scan2MapOptimization()
             }
             // *********************************************************
             
-            TicToc t_solver;
+            common::timing::Timer solver_timer("mapping_solver");
             ceres::Solver::Summary summary;
             ceres::Solver::Options options;
             options.linear_solver_type = ceres::DENSE_SCHUR;
@@ -697,8 +695,7 @@ void scan2MapOptimization()
                 ceres::Solve(options, &problem, &summary);
                 std::cout << summary.BriefReport() << std::endl;
             }
-            printf("mapping solver time: %fms\n", t_solver.toc());
-            total_solver.push_back(t_solver.toc());
+            printf("mapping solver time: %fms\n", solver_timer.Stop() * 1000);
 
             double2Vector();
             printf("-------------------------------------\n");
@@ -713,7 +710,7 @@ void scan2MapOptimization()
     }
 }
 
-void saveKeyframeAndInsertGraph()
+void saveKeyframe()
 {
     pose_point_cur.x = pose_wmap_curr.t_[0];
     pose_point_cur.y = pose_wmap_curr.t_[1];
@@ -972,7 +969,7 @@ void process()
 			   !full_res_buf.empty() && !outlier_buf.empty() &&
                !ext_buf.empty() && !odometry_buf.empty())
 		{
-			//***************************************************************************
+			//********************* * 100******************************************************
 			// step 1: pop up subscribed data
 			m_buf.lock();
 			while (!corner_last_buf.empty() && corner_last_buf.front()->header.stamp.toSec() < surf_last_buf.front()->header.stamp.toSec())
@@ -1094,27 +1091,27 @@ void process()
             std::lock_guard<std::mutex> lock(m_process);
 
 			frame_cnt++;
-			TicToc t_whole_mapping;
+			common::timing::Timer process_timer("mapping_process");
 
 			transformAssociateToMap();
 
-            TicToc t_extract;
+            common::timing::Timer extract_kf_timer("mapping_extract_kf");
             extractSurroundingKeyFrames();
-            printf("extract surrounding keyframes: %fms\n", t_extract.toc());
+            printf("extract surrounding keyframes: %fms\n", extract_kf_timer.Stop() * 1000);
 
-            TicToc t_dscs;
+            common::timing::Timer dscs_timer("mapping_dscs");
             downsampleCurrentScan();
             // printf("downsample current scan time: %fms\n", t_dscs.toc());
 
-            TicToc t_opti;
+            common::timing::Timer opti_timer("mapping_opti");
             scan2MapOptimization();
-            printf("optimization time: %fms\n", t_opti.toc());
+            printf("optimization time: %fms\n", opti_timer.Stop() * 1000);
 
 			transformUpdate();
 
-            TicToc t_skf;
-            saveKeyframeAndInsertGraph();
-            printf("save keyframes time: %fms\n", t_skf.toc());
+            common::timing::Timer skf_timer("mapping_save_kf");
+            saveKeyframe();
+            printf("save keyframes time: %fms\n", skf_timer.Stop() * 1000);
 
             if (!loop_info_buf.empty())
             {
@@ -1130,19 +1127,16 @@ void process()
                 loop_info_buf.pop();
             }
 
-            TicToc t_pub;
             pubPointCloud();
-            // printf("mapping pub time: %fms\n", t_pub.toc());
-            LOG_EVERY_N(INFO, 20) << "mapping pub time: " << t_pub.toc() << "ms";
 
             pubOdometry();
 
             clearCloud();
 
+            double process_time = process_timer.Stop() * 1000;
             std::cout << common::RED << "frame: " << frame_cnt
-                      << ", whole mapping time: " << t_whole_mapping.toc() << "ms" << common::RESET << std::endl;
-            LOG_EVERY_N(INFO, 20) << "whole mapping time " << t_whole_mapping.toc() << "ms";
-            total_mapping.push_back(t_whole_mapping.toc());
+                      << ", whole mapping time: " << process_time << "ms" << common::RESET << std::endl;
+            LOG_EVERY_N(INFO, 20) << "whole mapping time " << process_time << "ms";
 
             // std::cout << "pose_wmap_curr: " << pose_wmap_curr << std::endl;
 			printf("\n");
@@ -1290,10 +1284,14 @@ void sigintHandler(int sig)
                                           d_eigvec_list,
                                           mapping_sp_list,
                                           logdet_H_list);
-        save_statistics.saveMapTimeStatistics(OUTPUT_FOLDER + "time/time_mloam_mapping_" + FLAGS_gf_method + "_" + std::to_string(FLAGS_gf_ratio_ini) + "_" + FLAGS_loss_mode + "_" + std::to_string(int(FLAGS_gnc)) + ".txt",
-                                              total_match_feature,
-                                              total_solver,
-                                              total_mapping);
+        if (with_ua_flag)                                          
+        {
+            save_statistics.saveMapTimeStatistics(OUTPUT_FOLDER + "time/time_mloam_mapping_" + FLAGS_gf_method + "_" + std::to_string(FLAGS_gf_ratio_ini) + "_" + FLAGS_loss_mode + "_" + std::to_string(int(FLAGS_gnc)) + ".txt");
+        } 
+        else
+        {
+            save_statistics.saveMapTimeStatistics(OUTPUT_FOLDER + "time/time_mloam_mapping_wo_ua_" + FLAGS_gf_method + "_" + std::to_string(FLAGS_gf_ratio_ini) + "_" + FLAGS_loss_mode + "_" + std::to_string(int(FLAGS_gnc)) + ".txt");
+        }
     }
     saveGlobalMap();
     ros::shutdown();
@@ -1331,7 +1329,7 @@ int main(int argc, char **argv)
     }
     else
     {
-        ss << OUTPUT_FOLDER << "traj/stamped_mloam_map_wo_ua_estimate"
+        ss << OUTPUT_FOLDER << "traj/stamped_mloam_map_wo_ua_estimate_"
            << FLAGS_gf_method << "_" << to_string(FLAGS_gf_ratio_ini)
            << "_" << FLAGS_loss_mode << "_" << int(FLAGS_gnc) << ".txt";
     }
