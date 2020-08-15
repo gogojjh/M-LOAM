@@ -126,9 +126,8 @@ void FeatureExtract::extractCloud(const PointICloud &laser_cloud_in,
     size_t cloud_size = laser_cloud->size();
     float *cloud_curvature = new float[cloud_size];
     int *cloud_sort_ind = new int[cloud_size];
-    
-    std::vector<int> cloud_neighbor_picked(cloud_size, 0);
-    std::vector<int> cloud_label(cloud_size, 0);
+    int *cloud_neighbor_picked = new int[cloud_size];
+    int *cloud_label = new int[cloud_size];
     for (size_t i = 5; i < cloud_size - 5; i++)
     {
         float diff_x = laser_cloud->points[i - 5].x + laser_cloud->points[i - 4].x + laser_cloud->points[i - 3].x + laser_cloud->points[i - 2].x + laser_cloud->points[i - 1].x - 10 * laser_cloud->points[i].x + laser_cloud->points[i + 1].x + laser_cloud->points[i + 2].x + laser_cloud->points[i + 3].x + laser_cloud->points[i + 4].x + laser_cloud->points[i + 5].x;
@@ -136,6 +135,8 @@ void FeatureExtract::extractCloud(const PointICloud &laser_cloud_in,
         float diff_z = laser_cloud->points[i - 5].z + laser_cloud->points[i - 4].z + laser_cloud->points[i - 3].z + laser_cloud->points[i - 2].z + laser_cloud->points[i - 1].z - 10 * laser_cloud->points[i].z + laser_cloud->points[i + 1].z + laser_cloud->points[i + 2].z + laser_cloud->points[i + 3].z + laser_cloud->points[i + 4].z + laser_cloud->points[i + 5].z;
         cloud_curvature[i] = sqrSum(diff_x, diff_y, diff_z);
         cloud_sort_ind[i] = i;
+        cloud_neighbor_picked[i] = 0;
+        cloud_label[i] = 0;
     }
 
     // step 3: 挑选点，排除容易被斜面挡住的点以及离群点，有些点容易被斜面挡住，而离群点可能出现带有偶然性，这些情况都可能导致前后两次扫描不能被同时看到
@@ -159,7 +160,7 @@ void FeatureExtract::extractCloud(const PointICloud &laser_cloud_in,
         {
             int sp = scan_info.scan_start_ind_[i] + (scan_info.scan_end_ind_[i] - scan_info.scan_start_ind_[i]) * j / 6;
             int ep = scan_info.scan_start_ind_[i] + (scan_info.scan_end_ind_[i] - scan_info.scan_start_ind_[i]) * (j + 1) / 6 - 1;
-            std::sort(cloud_sort_ind + sp, cloud_sort_ind + ep + 1, comp_object);
+            std::sort(cloud_sort_ind + sp, cloud_sort_ind + ep + 1, comp_object); // sort from smallest to largest
 
             // step 3: extract edge feature
             int largest_picked_num = 0;
@@ -170,7 +171,7 @@ void FeatureExtract::extractCloud(const PointICloud &laser_cloud_in,
                                                     && !scan_info.ground_flag_[ind])
                 {
                     largest_picked_num++;
-                    if (largest_picked_num <= 2) // select 2 points with maximum curvature
+                    if (largest_picked_num <= 2) // select if and only if existing 2 points with maximum curvature
                     {
                         cloud_label[ind] = 2;
                         corner_points_sharp.push_back(laser_cloud->points[ind]);
@@ -252,6 +253,7 @@ void FeatureExtract::extractCloud(const PointICloud &laser_cloud_in,
                     }
                 }
             }
+
             for (int k = sp; k <= ep; k++)
             {
                 if (cloud_label[k] <= 0)
@@ -277,15 +279,15 @@ void FeatureExtract::extractCloud(const PointICloud &laser_cloud_in,
     // cloud_feature.find("key")->first/ second
     // cloud_feature.erase("key")/ cloud_feature.erase(cloud_feature.find("key"))
     cloud_feature.insert(pair<std::string, PointICloud>("laser_cloud", *laser_cloud));
-    cloud_feature.insert(pair<std::string, PointICloud>("corner_points_sharp", corner_points_sharp));
-    cloud_feature.insert(pair<std::string, PointICloud>("corner_points_less_sharp", corner_points_less_sharp));
-    cloud_feature.insert(pair<std::string, PointICloud>("surf_points_flat", surf_points_flat));
-    cloud_feature.insert(pair<std::string, PointICloud>("surf_points_less_flat", surf_points_less_flat));
+    cloud_feature.insert(pair<std::string, PointICloud>("corner_points_sharp", corner_points_sharp)); // subset: the most distinctive edge points
+    cloud_feature.insert(pair<std::string, PointICloud>("corner_points_less_sharp", corner_points_less_sharp)); // more corner points
+    cloud_feature.insert(pair<std::string, PointICloud>("surf_points_flat", surf_points_flat)); // subset: the most distinctive planar points
+    cloud_feature.insert(pair<std::string, PointICloud>("surf_points_less_flat", surf_points_less_flat)); // more planar points
 
     delete[] cloud_curvature;
     delete[] cloud_sort_ind;
-    // delete[] cloud_neighbor_picked;
-    // delete[] cloud_label;
+    delete[] cloud_neighbor_picked;
+    delete[] cloud_label;
 }
 
 //

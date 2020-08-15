@@ -131,7 +131,7 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
         Eigen::Quaterniond r1 = pose_ref.q_;
         Eigen::Quaterniond r2 = calib_ext_[idx_data].q_ * pose_data.q_ * calib_ext_[idx_data].inverse().q_;
         double angular_distance = 180 / M_PI * r1.angularDistance(r2); // calculate delta_theta=|theta_1-theta_2|
-        double huber = angular_distance > 5.0 ? 5.0 / angular_distance : 1.0;
+        double huber = angular_distance > 5.0 ? 5.0 / angular_distance : 1.0; // the derivative of huber norm
 
         Eigen::Matrix4d L, R; // Q1 and Q2 to represent the quaternion representation
         double w = pose_ref.q_.w();

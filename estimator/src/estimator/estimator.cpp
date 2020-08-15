@@ -520,7 +520,7 @@ void Estimator::process()
     prev_feature_.second.resize(NUM_OF_LASER);
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
-        prev_feature_.second[n].insert(make_pair("corner_points_less_sharp", 
+        prev_feature_.second[n].insert(make_pair("corner_points_less_sharp", // TODO: use the most distinctive features: corner_points_sharp
             cur_feature_.second[n].find("corner_points_less_sharp")->second));
         prev_feature_.second[n].insert(make_pair("surf_points_less_flat", 
             cur_feature_.second[n].find("surf_points_less_flat")->second));

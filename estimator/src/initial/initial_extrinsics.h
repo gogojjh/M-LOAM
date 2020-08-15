@@ -34,7 +34,7 @@ struct rotCmp
 {
 	bool operator()(const std::pair<size_t, std::vector<Pose> > &pose_pair_1, const std::pair<size_t, std::vector<Pose> > &pose_pair_2)
 	{
-		return (pose_pair_1.second[0].q_.w() < pose_pair_2.second[0].q_.w());
+		return (pose_pair_1.second[0].q_.w() < pose_pair_2.second[0].q_.w()); // TODO: check the order
 	}
 };
 
@@ -73,9 +73,7 @@ public:
 	double rot_cov_thre_;
 
 	// std::vector<std::vector<Pose> > v_pose_;
-	std::priority_queue<std::pair<size_t, std::vector<Pose> >, 
-					    std::vector<std::pair<size_t, std::vector<Pose> > >, 
-						rotCmp> pq_pose_;
+	std::priority_queue<std::pair<size_t, std::vector<Pose> >, std::vector<std::pair<size_t, std::vector<Pose> > >, rotCmp> pq_pose_;
 	std::vector<std::vector<Pose> > v_pose_;
 
 						
