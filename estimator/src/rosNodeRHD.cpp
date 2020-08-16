@@ -66,6 +66,8 @@ nav_msgs::Path laser_gt_path;
 ros::Publisher pub_laser_gt_path;
 Pose pose_world_ref_ini;
 
+int frame_drop_cnt = 0;
+
 void dataProcessCallback(const sensor_msgs::PointCloud2ConstPtr &cloud0_msg,
                          const sensor_msgs::PointCloud2ConstPtr &cloud1_msg)
 {
@@ -108,6 +110,7 @@ void sync_process()
         }
         while (!all_cloud_buf[0].empty())
         {
+            frame_drop_cnt++;
             for (size_t i = 0; i < all_cloud_buf.size(); i++)
             {
                 if (!all_cloud_buf[i].empty())
@@ -172,7 +175,7 @@ void pose_gt_callback(const geometry_msgs::PoseStamped &pose_msg)
 
 int main(int argc, char **argv)
 {
-    if (argc < 5)
+    if (argc < 2)
     {
         printf("please intput: rosrun mloam mloam_node_rhd -help\n");
         return 1;
@@ -191,17 +194,11 @@ int main(int argc, char **argv)
 
     MLOAM_RESULT_SAVE = FLAGS_result_save;
     OUTPUT_FOLDER = FLAGS_output_path;
-    MLOAM_GT_PATH = OUTPUT_FOLDER + "stamped_groundtruth.txt";
-    MLOAM_ODOM_PATH = OUTPUT_FOLDER + "stamped_mloam_odom_estimate.txt";
-    EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
-    EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "calib_eig.txt";
-    printf("save result (0/1): %d to %s\n", MLOAM_RESULT_SAVE, OUTPUT_FOLDER.c_str());
-    if (NUM_OF_LASER > 2)
-    {
-        printf("not support > 2 cases");
-        ROS_BREAK();
-        return 0;
-    }
+    MLOAM_ODOM_PATH = OUTPUT_FOLDER + "traj/stamped_mloam_odom_estimate_" + to_string(ODOM_GF_RATIO) + ".txt";
+    MLOAM_GT_PATH = OUTPUT_FOLDER + "traj/stamped_groundtruth.txt";
+    EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "others/extrinsic_parameter.txt";
+    EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "others/calib_eig.txt";
+    printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
     std::cout << common::YELLOW << "waiting for cloud..." << common::RESET << std::endl;
 
     // ******************************************
@@ -235,12 +232,13 @@ int main(int argc, char **argv)
         loop_rate.sleep();
     }
 
+    std::cout << common::YELLOW << "odometry drop frame: " << frame_drop_cnt << common::RESET << std::endl;
     if (MLOAM_RESULT_SAVE)
     {
         std::cout << common::RED << "saving odometry results" << common::RESET << std::endl;
         save_statistics.saveSensorPath(MLOAM_GT_PATH, laser_gt_path);
         save_statistics.saveOdomStatistics(EX_CALIB_EIG_PATH, EX_CALIB_RESULT_PATH, MLOAM_ODOM_PATH, estimator);
-        save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time_odometry.txt", estimator);
+        save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time/time_mloam_odometry_" + std::to_string(ODOM_GF_RATIO) + ".txt", estimator);
     }
 
     cloud_visualizer_thread.join();

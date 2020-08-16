@@ -19,11 +19,8 @@ using namespace common;
 
 // pointcloud
 ros::Publisher pub_laser_cloud;
-ros::Publisher pub_laser_cloud_proj;
 ros::Publisher pub_laser_outlier;
-ros::Publisher pub_corner_points_sharp;
 ros::Publisher pub_corner_points_less_sharp;
-ros::Publisher pub_surf_points_flat;
 ros::Publisher pub_surf_points_less_flat;
 ros::Publisher pub_surf_points_target;
 ros::Publisher pub_surf_points_target_localmap;
@@ -62,12 +59,8 @@ void clearPath()
 void registerPub(ros::NodeHandle &nh)
 {
     pub_laser_cloud = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud", 5);
-    // pub_laser_cloud_proj = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_proj", 5);
     pub_laser_outlier = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_outlier", 5);
-
-    // pub_corner_points_sharp = nh.advertise<sensor_msgs::PointCloud2>("/corner_points_sharp",5);
     pub_corner_points_less_sharp = nh.advertise<sensor_msgs::PointCloud2>("/corner_points_less_sharp", 5);
-    // pub_surf_points_flat = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_flat", 5);
     pub_surf_points_less_flat = nh.advertise<sensor_msgs::PointCloud2>("/surf_points_less_flat", 5);
     pub_extrinsics = nh.advertise<mloam_msgs::Extrinsics>("/extrinsics", 5);
     for (int i = 0; i < NUM_OF_LASER; i++)
@@ -103,22 +96,14 @@ void pubPointCloud(const Estimator &estimator, const double &time)
         {
             laser_cloud += cloud_feature_trans["laser_cloud"];
             laser_cloud_outlier += cloud_feature_trans["laser_cloud_outlier"];
-
-            // corner_points_sharp += cloud_feature_trans["corner_points_sharp"];
-            // surf_points_flat += cloud_feature_trans["surf_points_flat"];
             corner_points_less_sharp += cloud_feature_trans["corner_points_less_sharp"];
             surf_points_less_flat += cloud_feature_trans["surf_points_less_flat"];
         }
-        // laser_cloud_proj += cloud_feature_trans["laser_cloud"];
     }
     publishCloud(pub_laser_cloud, header, laser_cloud);
     publishCloud(pub_laser_outlier, header, laser_cloud_outlier);    
-    
-    // publishCloud(pub_corner_points_sharp, header, corner_points_sharp);
-    // publishCloud(pub_surf_points_flat, header, surf_points_flat);
     publishCloud(pub_corner_points_less_sharp, header, corner_points_less_sharp);
     publishCloud(pub_surf_points_less_flat, header, surf_points_less_flat);
-    // publishCloud(pub_laser_cloud_proj, header, laser_cloud_proj);
 
 
     // publish local map

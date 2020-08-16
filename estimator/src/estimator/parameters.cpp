@@ -242,6 +242,7 @@ void readParameters(std::string config_file)
     EIG_THRE_CALIB = fsSettings["eig_thre_calib"];
     N_CALIB = fsSettings["n_calib"];
     ODOM_GF_RATIO = fsSettings["odom_gf_ratio"];
+    if (ODOM_GF_RATIO == 0) ODOM_GF_RATIO = 1.0;
 
     SKIP_NUM_ODOM_PUB = fsSettings["skip_num_odom_pub"];
     if (SKIP_NUM_ODOM_PUB == 0) SKIP_NUM_ODOM_PUB = 1;

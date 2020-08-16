@@ -1,26 +1,34 @@
 <launch>
     <arg name="bag_file_use" default="true" />
-    <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD00calib.bag" />      -->
-    <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD01corridor.bag" />  -->
-    <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD02lab.bag" />  -->
-    <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD03garden.bag" /> 
-    <!-- <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD04building.bag" />  -->
+    <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD02lab.bag" />
 
     <param name="use_sim_time" value="true" />
     <group if="$(arg bag_file_use)">
-        <node pkg="rosbag" type="play" name="rosbag" args="--clock --pause -r 1 $(arg bag_file)" />
+        <node pkg="rosbag" type="play" name="rosbag" 
+            args="--clock -r 1 $(arg bag_file)" required="true"/>    
     </group>    
+
+    <include file="$(find rviz_car_model)/launch/default.launch" >
+        <arg name="fixed_frame" value="base_link" />
+        <arg name="transform" value="0 0 0 -0.1131 -0.0433 -0.0049 0.9926" />
+    </include>    
 
     <arg name="run_mloam" default="true" />
     <arg name="run_mloam_odom" default="true" />
     <arg name="run_mloam_mapping" default="true" />    
     <arg name="run_aloam" default="false" />
+    <arg name="run_floam" default="false" />
     <arg name="run_legoloam" default="false" />
 
-    <arg name="result_save" default="true" />
-    <arg name="output_path" default="/home/jjiao/trajectory_results/handheld/test/RHD03garden_test_3/"/>
-    <arg name="with_ua" default="true" /> <!-- uncertainty propagation -->    
+    <arg name="data_source" default="bag"/>
+    <arg name="result_save" default="false"/>
+    <arg name="output_path" default="/home/jjiao/trajectory_results/handheld/xxxxx"/>
+    <arg name="with_ua" default="true" /> <!-- awareness of uncertainty propagation-->    
+    <arg name="gf_method" default="wo_gf" /> <!-- gd_fix, gd_float, rnd, fps, wo_gf-->
     <arg name="gf_ratio_ini" default="1" />
+    <arg name="gnc" default="false" />
+    <arg name="debug_mode" default="false" />
+    <arg name="loss_mode" default="huber" /> <!-- huber, gmc-->
 
     <arg name="config_file" default="$(find mloam)/config/config_handheld.yaml" />
     <group if="$(arg run_mloam)">
@@ -28,8 +36,7 @@
             <node pkg="mloam" type="mloam_node_rhd" name="mloam_node_rhd" 
                 args="-config_file=$(arg config_file)
                     -result_save=$(arg result_save)
-                    -output_path=$(arg output_path)">
-                <remap from="/base_pose_gt" to="/current_odom"/>
+                    -output_path=$(arg output_path)" output="screen">
             </node>
         </group>
         <group if="$(arg run_mloam_mapping)">
@@ -38,18 +45,20 @@
                       -result_save=$(arg result_save) 
                       -output_path=$(arg output_path)
                       -with_ua=$(arg with_ua)
-                      -gf_ratio_ini=$(arg gf_ratio_ini)" output="screen">
+                      -gf_method=$(arg gf_method)
+                      -gf_ratio_ini=$(arg gf_ratio_ini)
+                      -gnc=$(arg gnc)
+                      -debug_mode=$(arg debug_mode)
+                      -loss_mode=$(arg loss_mode)" output="screen">
                 <remap from="/laser_odom" to="/laser_odom_0"/>
             </node>
         </group>
     </group>
-
+    
     <!-- publish static tf -->
     <!-- x y z yaw pitch roll -->
     <!-- x y z qx qy qz qw -->
     <!-- <include file="$(find rviz_car_model)/launch/default.launch" /> -->
-    <node name="static_tf_base_sensor_into_base_link" pkg="tf" type="static_transform_publisher"
-        args="0 0 0 0 0 0 1 aft_mapped base_link 10"/>                
     <node name="static_tf_world_base_into_world_sensor" pkg="tf" type="static_transform_publisher"
         args="0 0 0 -0.1131 -0.0433 -0.0049 0.9926 world_base world 10"/> 
     <node name="static_tf_world_sensor_into_base_sensor" pkg="tf" type="static_transform_publisher"
@@ -57,7 +66,9 @@
     <node name="static_tf_laser_into_laser_left" pkg="tf" type="static_transform_publisher"
         args="0 0 0 0 0 0 1 laser_0 velo_left 10"/>        
     <node name="static_tf_laser_into_laser_right" pkg="tf" type="static_transform_publisher"
-        args="0 0 0 0 0 0 1 laser_1 velo_right 10"/>      
+        args="0 0 0 0 0 0 1 laser_1 velo_right 10"/>     
+    <node name="static_tf_base_sensor_into_base_link" pkg="tf" type="static_transform_publisher"
+        args="0 0 0 0 0 0 1 aft_mapped base_link 10"/>                
 
     <!-- merge cloud -->
     <group unless="$(arg run_mloam)">
@@ -69,17 +80,25 @@
     <!-- run aloam  -->
     <group if="$(arg run_aloam)">
         <include file="$(find aloam_velodyne)/launch/aloam_exp.launch">
-            <arg name="aloam_odom_path" default="/home/jjiao/trajectory_results/handheld/test/RHD03garden_test_3/stamped_aloam_odom_estimate.txt" />
-            <arg name="aloam_map_path" default="/home/jjiao/trajectory_results/handheld/test/RHD03garden_test_3/stamped_aloam_map_estimate.txt" />
+            <arg name="output_path" value="$(arg output_path)"/>
+            <arg name="skip_frame" value="1" />
+            <arg name="s_line" value="16" />
         </include>       
-    </group>        
+   </group>        
+
+    <!-- run floam  -->
+    <group if="$(arg run_floam)">
+        <include file="$(find floam)/launch/floam_exp.launch">
+            <arg name="output_path" value="$(arg output_path)"/>
+            <arg name="s_line" value="16" />
+        </include>       
+   </group>        
 
     <!-- run legoloam  -->
     <group if="$(arg run_legoloam)">
         <include file="$(find lego_loam)/launch/legoloam_exp.launch">
-            <arg name="lego_loam_odom_path" default="/home/jjiao/trajectory_results/handheld/test/RHD03garden_test_3/stamped_legoloam_odom_estimate.txt" />
-            <arg name="lego_loam_map_path" default="/home/jjiao/trajectory_results/handheld/test/RHD03garden_test_3/stamped_legoloam_map_estimate.txt" />
+            <arg name="output_path" value="$(arg output_path)"/>
         </include>
-    </group>         
+    </group>           
 
  </launch>

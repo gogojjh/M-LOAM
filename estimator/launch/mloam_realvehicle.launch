@@ -1,11 +1,18 @@
 <launch>
-    <arg name="bag_file_use" default="false" />
-    <arg name="bag_file" default="/Monster/dataset/UDI_dataset/xfl_20200301/jjiao_vehicle_sensor_travel_3_filter.bag" /> 
+    <arg name="bag_file_use" default="true" />
+    <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/SR01.bag" />
 
     <param name="use_sim_time" value="true" />
     <group if="$(arg bag_file_use)">
-        <node pkg="rosbag" type="play" name="rosbag" args="--clock --pause -r 1 $(arg bag_file)" />
+        <node pkg="rosbag" type="play" name="rosbag" 
+            args="--clock -r 1.7 $(arg bag_file)" required="true"/>    
     </group>    
+
+    <include file="$(find rviz_car_model)/launch/default.launch" >
+        <arg name="fixed_frame" value="base_link" />
+        <arg name="transform" value="0 0.266 0.734 -0.216 0 0 0.976" />
+    </include>    
+
 
     <arg name="run_mloam" default="true" />
     <arg name="run_aloam" default="false" />

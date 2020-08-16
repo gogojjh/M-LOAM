@@ -264,7 +264,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointITimeCloud> &
     std::vector<cloudFeature> feature_frame(NUM_OF_LASER);
     stringstream ss;
 
-    // #pragma omp parallel for num_threads(NUM_OF_LASER)
+    #pragma omp parallel for num_threads(NUM_OF_LASER)
     for (size_t i = 0; i < v_laser_cloud_in.size(); i++)
     {
         PointICloud laser_cloud;
@@ -317,8 +317,8 @@ void Estimator::processMeasurements()
             process();
             double time_process = odom_process_timer.Stop() * 1000;
             std::cout << common::RED << "frame: " << frame_cnt_
-                      << ", processMea time: " << time_process << "ms" << common::RESET << std::endl << std::endl;
-            LOG_EVERY_N(INFO, 20) << "processMea time: " << time_process << "ms";
+                      << ", odom process time: " << time_process << "ms" << common::RESET << std::endl << std::endl;
+            LOG_EVERY_N(INFO, 20) << "odom process time: " << time_process << "ms";
 
             // printStatistics(*this, 0);
             pubOdometry(*this, cur_time_);

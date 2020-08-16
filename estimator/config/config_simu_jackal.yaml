@@ -38,10 +38,6 @@ body_T_laser: !!opencv-matrix
    #        0, 0, 0, 1, 0, 0, 0] # qx qy qz qw px py pz
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
          #  0.31, 0.0, 0.0, 0.94, 0, -0.2, 0.0] # initialization   
-   # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-         #  0.33068, -0.00056, -0.00047, 0.94374, 0.00428, -0.48702, -0.21382] # estimate
-   # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-         #  0.3173, 0.0, 0.0, 0.9483, 0.009, -0.4939, -0.2226] # estimate
    data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
           0.32597, -0.0009444, -0.000578, 0.94538, 0.003173, -0.49107, -0.214356] # estimate         
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
@@ -73,7 +69,7 @@ laser_sync_threshold: 0.07
 max_solver_time: 0.02  # max solver itration time (s), to guarantee real time
 max_num_iterations: 5   # max solver itrations, to guarantee real time
 
-roi_range: 1
+roi_range: 0.5
 distance_sq_threshold: 25
 nearby_scan: 2.5
 
@@ -120,7 +116,6 @@ uct_ext: !!opencv-matrix
    dt: d
    data: [0, 0, 0, 0, 0, 0,
           0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01] 
-         #  0, 0, 0, 0, 0, 0]
 
 uct_measurement: !!opencv-matrix
    rows: 1
@@ -129,4 +124,4 @@ uct_measurement: !!opencv-matrix
    data: [0.0025, 0.0025, 0.0025]
 
 trace_threshold_before_mapping: 1
-trace_threshold_after_mapping: 0.7
+trace_threshold_after_mapping: 1

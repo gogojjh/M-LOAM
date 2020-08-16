@@ -365,6 +365,7 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
                 else if (!scan_info.segment_flag_)
                 {
                     laser_cloud_out.push_back(point);
+                    if (laser_cloud_outlier.size() == 0) laser_cloud_outlier.push_back(point);
                     scan_info.ground_flag_.push_back(ground_flag);
                 }
             }
