@@ -161,6 +161,13 @@ double Timing::GetVarianceSeconds(size_t handle) {
 double Timing::GetVarianceSeconds(std::string const& tag) {
   return GetVarianceSeconds(GetHandle(tag));
 }
+double Timing::GetSTDSeconds(size_t handle) {
+  std::lock_guard<std::mutex> lock(Instance().mutex_);
+  return sqrt(Instance().timers_[handle].acc_.LazyVariance());
+}
+double Timing::GetSTDSeconds(std::string const& tag) {
+  return GetSTDSeconds(GetHandle(tag));
+}
 double Timing::GetMinSeconds(size_t handle) {
   std::lock_guard<std::mutex> lock(Instance().mutex_);
   return Instance().timers_[handle].acc_.Min();

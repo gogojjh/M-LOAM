@@ -218,6 +218,8 @@ namespace common
             static size_t GetNumSamples(std::string const &tag);
             static double GetVarianceSeconds(size_t handle);
             static double GetVarianceSeconds(std::string const &tag);
+            static double GetSTDSeconds(size_t handle);
+            static double GetSTDSeconds(std::string const &tag);            
             static double GetMinSeconds(size_t handle);
             static double GetMinSeconds(std::string const &tag);
             static double GetMaxSeconds(size_t handle);

@@ -121,16 +121,16 @@ void SaveStatistics::saveOdomTimeStatistics(const string &filename, const Estima
 {
     std::ofstream fout(filename.c_str(), std::ios::out);
     fout.precision(15);
-    fout << "corner_feature, surf_feature" << std::endl;
-    fout << 1.0 * estimator.total_corner_feature_ / estimator.frame_cnt_ << ", "
+    fout << "frame, corner_feature, surf_feature" << std::endl;
+    fout << estimator.frame_cnt_ << ", "
+         << 1.0 * estimator.total_corner_feature_ / estimator.frame_cnt_ << ", "
          << 1.0 * estimator.total_surf_feature_ / estimator.frame_cnt_ << std::endl;
-
     fout << "frame, mea_pre_time, matching_time, solver_time, marginalization_time, opt_odom_time" << std::endl;
-    fout << common::timing::Timing::GetNumSamples("odom_mea_pre") << ", " << common::timing::Timing::GetMeanSeconds("odom_mea_pre") * 1000 << ", " << common::timing::Timing::GetVarianceSeconds("odom_mea_pre") * 1000 << std::endl;
-    fout << common::timing::Timing::GetNumSamples("odom_match_feat") << ", " << common::timing::Timing::GetMeanSeconds("odom_match_feat") * 1000 << ", " << common::timing::Timing::GetVarianceSeconds("odom_match_feat") * 1000 << std::endl;
-    fout << common::timing::Timing::GetNumSamples("odom_solver") << ", " << common::timing::Timing::GetMeanSeconds("odom_solver") * 1000 << ", " << common::timing::Timing::GetVarianceSeconds("odom_solver") * 1000 << std::endl;
-    fout << common::timing::Timing::GetNumSamples("odom_marg") << ", " << common::timing::Timing::GetMeanSeconds("odom_marg") * 1000 << ", " << common::timing::Timing::GetVarianceSeconds("odom_marg") * 1000 << std::endl;
-    fout << common::timing::Timing::GetNumSamples("odom_process") << ", " << common::timing::Timing::GetMeanSeconds("odom_process") * 1000 << ", " << common::timing::Timing::GetVarianceSeconds("odom_process") * 1000 << std::endl;
+    fout << common::timing::Timing::GetNumSamples("odom_mea_pre") << ", " << common::timing::Timing::GetMeanSeconds("odom_mea_pre") * 1000 << ", " << common::timing::Timing::GetSTDSeconds("odom_mea_pre") * 1000 << std::endl;
+    fout << common::timing::Timing::GetNumSamples("odom_match_feat") << ", " << common::timing::Timing::GetMeanSeconds("odom_match_feat") * 1000 << ", " << common::timing::Timing::GetSTDSeconds("odom_match_feat") * 1000 << std::endl;
+    fout << common::timing::Timing::GetNumSamples("odom_solver") << ", " << common::timing::Timing::GetMeanSeconds("odom_solver") * 1000 << ", " << common::timing::Timing::GetSTDSeconds("odom_solver") * 1000 << std::endl;
+    fout << common::timing::Timing::GetNumSamples("odom_marg") << ", " << common::timing::Timing::GetMeanSeconds("odom_marg") * 1000 << ", " << common::timing::Timing::GetSTDSeconds("odom_marg") * 1000 << std::endl;
+    fout << common::timing::Timing::GetNumSamples("odom_process") << ", " << common::timing::Timing::GetMeanSeconds("odom_process") * 1000 << ", " << common::timing::Timing::GetSTDSeconds("odom_process") * 1000 << std::endl;
     fout.close();
 }
 
@@ -208,8 +208,8 @@ void SaveStatistics::saveMapTimeStatistics(const string &map_time_filename)
     std::ofstream fout(map_time_filename.c_str(), std::ios::out);
     fout.precision(15);
     fout << "frame, feat_matching_time, solver_time, mapping_time" << std::endl;
-    fout << common::timing::Timing::GetNumSamples("mapping_match_feat") << ", " << common::timing::Timing::GetMeanSeconds("mapping_match_feat") * 1000 << ", " << common::timing::Timing::GetVarianceSeconds("mapping_match_feat") * 1000 << std::endl;
-    fout << common::timing::Timing::GetNumSamples("mapping_solver") << ", " << common::timing::Timing::GetMeanSeconds("mapping_solver") * 1000 << ", " << common::timing::Timing::GetVarianceSeconds("mapping_solver") * 1000 << std::endl;
-    fout << common::timing::Timing::GetNumSamples("mapping_process") << ", " << common::timing::Timing::GetMeanSeconds("mapping_process") * 1000 << ", " << common::timing::Timing::GetVarianceSeconds("mapping_process") * 1000 << std::endl;
+    fout << common::timing::Timing::GetNumSamples("mapping_match_feat") << ", " << common::timing::Timing::GetMeanSeconds("mapping_match_feat") * 1000 << ", " << common::timing::Timing::GetSTDSeconds("mapping_match_feat") * 1000 << std::endl;
+    fout << common::timing::Timing::GetNumSamples("mapping_solver") << ", " << common::timing::Timing::GetMeanSeconds("mapping_solver") * 1000 << ", " << common::timing::Timing::GetSTDSeconds("mapping_solver") * 1000 << std::endl;
+    fout << common::timing::Timing::GetNumSamples("mapping_process") << ", " << common::timing::Timing::GetMeanSeconds("mapping_process") * 1000 << ", " << common::timing::Timing::GetSTDSeconds("mapping_process") * 1000 << std::endl;
     fout.close();
 }
