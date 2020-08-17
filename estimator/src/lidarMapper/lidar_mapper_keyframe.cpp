@@ -378,7 +378,6 @@ void downsampleCurrentScan()
     laser_cloud_outlier_cov->clear();
 
     // propagate the extrinsic uncertainty on points
-    int cnt = 0;
     for (PointI &point_ori : *laser_cloud_surf_last_ds)
     {
         int idx = int(point_ori.intensity); // indicate the lidar id
@@ -582,9 +581,11 @@ void scan2MapOptimization()
             {
                 const PointPlaneFeature &feature = all_surf_features[fid];
                 if (feature.type_ == 'n') continue;
-                Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
+                Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Zero();
                 if (with_ua_flag)
                     extractCov(laser_cloud_surf_cov->points[feature.idx_], cov_matrix);
+                else 
+                    cov_matrix = COV_MEASUREMENT;
                 LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
                 problem.AddResidualBlock(f, loss_function, para_pose);
                 if (CHECK_JACOBIAN)
@@ -601,9 +602,11 @@ void scan2MapOptimization()
             {
                 const PointPlaneFeature &feature = all_corner_features[fid];
                 if (feature.type_ == 'n') continue;
-                Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
+                Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Zero();
                 if (with_ua_flag)
                     extractCov(laser_cloud_corner_cov->points[feature.idx_], cov_matrix);
+                else
+                    cov_matrix = COV_MEASUREMENT;
                 LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
                 problem.AddResidualBlock(f, loss_function, para_pose);
             }
@@ -630,12 +633,12 @@ void scan2MapOptimization()
                 evalHessian(jaco, mat_H);
                 evalDegenracy(mat_H / 134, local_parameterization); // the hessian matrix is already normized to evaluate degeneracy
                 is_degenerate = local_parameterization->is_degenerate_;
-                Eigen::Matrix<double, 6, 6> cov_mapping = mat_H.inverse() * 134;
+                Eigen::Matrix<double, 6, 6> cov_mapping = mat_H.inverse() * 400; // TODO: normalize the Hessian matrix
                 pose_wmap_curr.cov_ = cov_mapping;
                 
                 double tr = cov_mapping.trace();
-                double logd = common::logDet(mat_H * 134, true);
-                Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6>> esolver(mat_H * 134);
+                double logd = common::logDet(mat_H, true);
+                Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6>> esolver(mat_H);
                 Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real();	
                 double mini_ev = mat_E(0, 0);
 
@@ -1303,7 +1306,7 @@ int main(int argc, char **argv)
     OUTPUT_FOLDER = FLAGS_output_path;
 	with_ua_flag = FLAGS_with_ua;
     printf("save result (0/1): %d to %s\n", MLOAM_RESULT_SAVE, OUTPUT_FOLDER.c_str());
-	printf("uncertainty propagation on (0/1): %d\n", with_ua_flag);
+	printf("with the awareness of uncertainty (0/1): %d\n", with_ua_flag);
     printf("gf method: %s, gf ratio: %f\n", FLAGS_gf_method.c_str(), FLAGS_gf_ratio_ini);
 
     gf_ratio_cur = std::min(1.0, FLAGS_gf_ratio_ini);
