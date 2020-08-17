@@ -36,7 +36,7 @@
             <node pkg="mloam" type="mloam_node_rhd" name="mloam_node_rhd" 
                 args="-config_file=$(arg config_file)
                     -result_save=$(arg result_save)
-                    -output_path=$(arg output_path)" output="screen">
+                    -output_path=$(arg output_path)">
             </node>
         </group>
         <group if="$(arg run_mloam_mapping)">
@@ -81,7 +81,7 @@
     <group if="$(arg run_aloam)">
         <include file="$(find aloam_velodyne)/launch/aloam_exp.launch">
             <arg name="output_path" value="$(arg output_path)"/>
-            <arg name="skip_frame" value="1" />
+            <arg name="skip_frame" value="2" />
             <arg name="s_line" value="16" />
         </include>       
    </group>        

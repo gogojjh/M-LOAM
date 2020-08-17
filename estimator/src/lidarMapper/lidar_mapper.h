@@ -605,13 +605,13 @@ public:
                             if (feature_type == 's')
                             {
                                 b_match = f_extract.matchSurfPointFromMap(kdtree_from_map,
-                                                                        laser_map,
-                                                                        laser_cloud.points[que_idx],
-                                                                        pose_local,
-                                                                        all_features[que_idx],
-                                                                        que_idx,
-                                                                        n_neigh,
-                                                                        false);
+                                                                          laser_map,
+                                                                          laser_cloud.points[que_idx],
+                                                                          pose_local,
+                                                                          all_features[que_idx],
+                                                                          que_idx,
+                                                                          n_neigh,
+                                                                          false);
                             } else if (feature_type == 'c')
                             {
                                 b_match = f_extract.matchCornerPointFromMap(kdtree_from_map,

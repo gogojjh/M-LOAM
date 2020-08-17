@@ -298,6 +298,7 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
             float ity = 0;
             Eigen::Matrix<float, 7, 1> cov = Eigen::Matrix<float, 7, 1>::Zero();
             float weight_total = 0;
+            float w_max = 0;
             for (unsigned int i = first_index; i < last_index; ++i)
             {
                 pcl::for_each_type<FieldList>(NdCopyPointEigenFunctor<PointT>(input_->points[index_vector[i].cloud_point_index], temporary));
@@ -308,9 +309,10 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
                 }
                 // weight_vec[i - first_index] = (w < trace_threshold_ / 2.0) ? w : trace_threshold_ / 2.0;
                 // weight_vec[i - first_index] = w;
-                double w = trace_threshold_ - (temporary[4] + temporary[7] + temporary[9]);
+                float w = trace_threshold_ - (temporary[4] + temporary[7] + temporary[9]);
                 mu.head(3) += w * temporary.head(3); // mu
-                ity = temporary[3]; // intensity
+                ity = w > w_max ? temporary[3] : ity; // intensity
+                w_max = w > w_max ? w : w_max;
                 cov += w * w * temporary.tail(7); // covariance
                 
                 weight_total += w;

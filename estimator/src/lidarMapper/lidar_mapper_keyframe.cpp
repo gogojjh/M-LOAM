@@ -378,16 +378,13 @@ void downsampleCurrentScan()
     laser_cloud_outlier_cov->clear();
 
     // propagate the extrinsic uncertainty on points
+    int cnt = 0;
     for (PointI &point_ori : *laser_cloud_surf_last_ds)
     {
         int idx = int(point_ori.intensity); // indicate the lidar id
         PointI point_sel;
         Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
-        if (!with_ua_flag) 
-        {
-            cov_point = COV_MEASUREMENT; // add extrinsic perturbation
-        } 
-        else
+        if (with_ua_flag)
         {
             pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
             evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
@@ -402,11 +399,7 @@ void downsampleCurrentScan()
         int idx = int(point_ori.intensity); // indicate the lidar id
         PointI point_sel;
         Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
-        if (!with_ua_flag) 
-        {
-            cov_point = COV_MEASUREMENT; // add extrinsic perturbation
-        } 
-        else
+        if (with_ua_flag)
         {
             pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
             evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
@@ -421,11 +414,7 @@ void downsampleCurrentScan()
         int idx = int(point_ori.intensity); // indicate the lidar id
         PointI point_sel;
         Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
-        if (!with_ua_flag)
-        {
-            cov_point = COV_MEASUREMENT; // add extrinsic perturbation
-        }
-        else
+        if (with_ua_flag)
         {
             pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
             evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
@@ -594,7 +583,8 @@ void scan2MapOptimization()
                 const PointPlaneFeature &feature = all_surf_features[fid];
                 if (feature.type_ == 'n') continue;
                 Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
-                extractCov(laser_cloud_surf_cov->points[feature.idx_], cov_matrix);
+                if (with_ua_flag)
+                    extractCov(laser_cloud_surf_cov->points[feature.idx_], cov_matrix);
                 LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
                 problem.AddResidualBlock(f, loss_function, para_pose);
                 if (CHECK_JACOBIAN)
@@ -612,7 +602,8 @@ void scan2MapOptimization()
                 const PointPlaneFeature &feature = all_corner_features[fid];
                 if (feature.type_ == 'n') continue;
                 Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
-                extractCov(laser_cloud_corner_cov->points[feature.idx_], cov_matrix);
+                if (with_ua_flag)
+                    extractCov(laser_cloud_corner_cov->points[feature.idx_], cov_matrix);
                 LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
                 problem.AddResidualBlock(f, loss_function, para_pose);
             }
@@ -634,17 +625,17 @@ void scan2MapOptimization()
                 ceres::CRSMatrix jaco;
                 problem.Evaluate(ceres::Problem::EvaluateOptions(), &cost, nullptr, nullptr, &jaco);
 
-                // original_mat_H / 134 = normlized_mat_H
+                // mat_H / 400 = normlized_mat_H
                 Eigen::Matrix<double, 6, 6> mat_H;
                 evalHessian(jaco, mat_H);
-                evalDegenracy(mat_H, local_parameterization); // the hessian matrix is already normized to evaluate degeneracy
+                evalDegenracy(mat_H / 134, local_parameterization); // the hessian matrix is already normized to evaluate degeneracy
                 is_degenerate = local_parameterization->is_degenerate_;
-                Eigen::Matrix<double, 6, 6> cov_mapping = mat_H.inverse();
+                Eigen::Matrix<double, 6, 6> cov_mapping = mat_H.inverse() * 134;
                 pose_wmap_curr.cov_ = cov_mapping;
                 
                 double tr = cov_mapping.trace();
                 double logd = common::logDet(mat_H * 134, true);
-                Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6> > esolver(mat_H * 134); 
+                Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6>> esolver(mat_H * 134);
                 Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real();	
                 double mini_ev = mat_E(0, 0);
 
@@ -652,6 +643,7 @@ void scan2MapOptimization()
                 mapping_sp_list.push_back(sp);
 
                 LOG_EVERY_N(INFO, 20) << "trace: " << tr << ", logdet: " << logd << ", min_ev: " << mini_ev;
+                std::cout << common::YELLOW << "trace: " << tr << common::RESET << std::endl;
                 printf("evaluate H: %fms\n", eval_deg_timer.Stop() * 1000);
             }
             else if (is_degenerate)
@@ -1146,9 +1138,9 @@ void process()
 	}
 }
 
-void cloudUCTAssociateToMap(const PointICovCloud &cloud_local, 
+void cloudUCTAssociateToMap(const PointICovCloud &cloud_local,
                             PointICovCloud &cloud_global,
-                            const Pose &pose_global, 
+                            const Pose &pose_global,
                             const vector<Pose> &pose_ext)
 {
     // the compound pose: pose_global * pose_ext with uncertainty
@@ -1164,16 +1156,11 @@ void cloudUCTAssociateToMap(const PointICovCloud &cloud_local,
         int ind = (int)point_ori.intensity;
         PointIWithCov point_sel, point_cov;
         Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
-        if (!with_ua_flag) 
-        {
-            cov_point = COV_MEASUREMENT;
-        } 
-        else
+        if (with_ua_flag) 
         {
             pointAssociateToMap(point_ori, point_sel, pose_ext[ind].inverse());
             evalPointUncertainty(point_sel, cov_point, pose_compound[ind]);
-            if (cov_point.trace() > TRACE_THRESHOLD_AFTER_MAPPING) 
-                continue;
+            if (cov_point.trace() > TRACE_THRESHOLD_AFTER_MAPPING) continue;
         }
         pointAssociateToMap(point_ori, point_cov, pose_global);
         updateCov(point_cov, cov_point);
@@ -1191,7 +1178,7 @@ void evalHessian(const ceres::CRSMatrix &jaco, Eigen::Matrix<double, 6, 6> &mat_
 	CRSMatrix2EigenMatrix(jaco, mat_J);
 	Eigen::SparseMatrix<double, Eigen::RowMajor> mat_Jt = mat_J.transpose();
 	Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J;
-	mat_H = mat_JtJ.block(0, 0, 6, 6) / 134;  // normalized the hessian matrix for pair uncertainty evaluation
+	mat_H = mat_JtJ.block(0, 0, 6, 6);  // normalized the hessian matrix for pair uncertainty evaluation
 }
 
 void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameterization *local_parameterization)
