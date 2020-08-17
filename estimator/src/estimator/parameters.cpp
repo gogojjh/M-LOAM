@@ -95,6 +95,7 @@ float MAP_GF_RATIO;
 float LAMBDA_1;
 float LAMBDA_2;
 
+float UCT_EXT_RATIO;
 std::vector<Eigen::Matrix<double, 6, 6> > COV_EXT;
 Eigen::Matrix<double, 3, 3> COV_MEASUREMENT;
 double TRACE_THRESHOLD_BEFORE_MAPPING, TRACE_THRESHOLD_AFTER_MAPPING;
@@ -259,6 +260,8 @@ void readParameters(std::string config_file)
 
     printf("map corner resolution:%f, surf resolution:%f\n", MAP_CORNER_RES, MAP_SURF_RES);
 
+    UCT_EXT_RATIO = fsSettings["uct_ext_ratio"];
+    printf("uct ext ratio:%f\n", UCT_EXT_RATIO);
     cv::Mat cv_uct;
     COV_EXT.resize(NUM_OF_LASER);
     fsSettings["uct_ext"] >> cv_uct;
@@ -267,7 +270,7 @@ void readParameters(std::string config_file)
         Eigen::Matrix<double, 6, 1> vec_uct_ext; // rotation, translation, point
         vec_uct_ext << cv_uct.ptr<double>(i)[0], cv_uct.ptr<double>(i)[1], cv_uct.ptr<double>(i)[2],
             cv_uct.ptr<double>(i)[3], cv_uct.ptr<double>(i)[4], cv_uct.ptr<double>(i)[5];
-        COV_EXT[i] = vec_uct_ext.asDiagonal();
+        COV_EXT[i] = vec_uct_ext.asDiagonal() * UCT_EXT_RATIO;
     }
 
     fsSettings["uct_measurement"] >> cv_uct;
