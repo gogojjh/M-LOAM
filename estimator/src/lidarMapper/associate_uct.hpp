@@ -85,11 +85,13 @@ inline void compoundPoseWithCov(const Pose &pose_1, const Eigen::Matrix<double, 
 
 // fixed: topLeftCorner<3, 3>()
 // dynamic: topLeftCorner(3, 3)
-inline void compoundPoseWithCov(const Pose &pose_1, const Pose &pose_2,
-                                Pose &pose_cp, const int &method = 2)
+inline void compoundPoseWithCov(const Pose &pose_1,
+                                const Pose &pose_2,
+                                Pose &pose_cp,
+                                const int &method = 2)
 {
-    Eigen::Matrix<double, 6, 6> cov_1 = pose_1.cov_;
-    Eigen::Matrix<double, 6, 6> cov_2 = pose_2.cov_;
+    const Eigen::Matrix<double, 6, 6> &cov_1 = pose_1.cov_;
+    const Eigen::Matrix<double, 6, 6> &cov_2 = pose_2.cov_;
     Eigen::Matrix<double, 6, 6> cov_cp;
 
     pose_cp.q_ = pose_1.q_ * pose_2.q_;

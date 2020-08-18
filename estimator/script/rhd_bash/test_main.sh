@@ -7,7 +7,7 @@ roslaunch mloam mloam_handheld.launch \
     result_save:=true \
     bag_file:=$data_path \
     output_path:=$result_path
-# sleep 2
+sleep 2
 
 # without uncertainty-aware
 # roslaunch mloam mloam_handheld.launch \

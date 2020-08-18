@@ -628,20 +628,21 @@ void scan2MapOptimization()
                 ceres::CRSMatrix jaco;
                 problem.Evaluate(ceres::Problem::EvaluateOptions(), &cost, nullptr, nullptr, &jaco);
 
-                // mat_H / 400 = normlized_mat_H
+                // mat_H / 134 = normlized_mat_H
                 Eigen::Matrix<double, 6, 6> mat_H;
                 evalHessian(jaco, mat_H);
-                evalDegenracy(mat_H / 134, local_parameterization); // the hessian matrix is already normized to evaluate degeneracy
+                evalDegenracy(mat_H, local_parameterization); // the hessian matrix is already normized to evaluate degeneracy
                 is_degenerate = local_parameterization->is_degenerate_;
-                Eigen::Matrix<double, 6, 6> cov_mapping = mat_H.inverse() * 400; // TODO: normalize the Hessian matrix
+                Eigen::Matrix<double, 6, 6> cov_mapping = mat_H.inverse(); // TODO: normalize the Hessian matrix
                 pose_wmap_curr.cov_ = cov_mapping;
-                
+                // Eigen::MatrixXd L = Eigen::LLT<Eigen::Matrix<double, 6, 6> >(cov_mapping).matrixL();
+                // std::cout << L << std::endl;
+
                 double tr = cov_mapping.trace();
                 double logd = common::logDet(mat_H, true);
                 Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6>> esolver(mat_H);
                 Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real();	
                 double mini_ev = mat_E(0, 0);
-
                 std::vector<double> sp{tr, logd, mini_ev};
                 mapping_sp_list.push_back(sp);
 
@@ -696,6 +697,7 @@ void scan2MapOptimization()
             printf("-------------------------------------\n");
         }
         std::cout << "optimization result: " << pose_wmap_curr << std::endl;
+        std::cout << pose_wmap_curr.cov_ << std::endl;
         // printf("********************************\n");
         // printf("mapping optimization time: %fms\n", t_opt.toc());
     }
@@ -1175,13 +1177,13 @@ void cloudUCTAssociateToMap(const PointICovCloud &cloud_local,
 
 void evalHessian(const ceres::CRSMatrix &jaco, Eigen::Matrix<double, 6, 6> &mat_H)
 {
-	// printf("jacob: %d constraints, %d parameters\n", jaco.num_rows, jaco.num_cols); // 2000+, 6
+	printf("jacob: %d constraints, %d parameters\n", jaco.num_rows, jaco.num_cols); // 2000+, 6
 	if (jaco.num_rows == 0) return;
 	Eigen::SparseMatrix<double, Eigen::RowMajor> mat_J; // Jacobian is a diagonal matrix
 	CRSMatrix2EigenMatrix(jaco, mat_J);
 	Eigen::SparseMatrix<double, Eigen::RowMajor> mat_Jt = mat_J.transpose();
 	Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J;
-	mat_H = mat_JtJ.block(0, 0, 6, 6);  // normalized the hessian matrix for pair uncertainty evaluation
+	mat_H = mat_JtJ.block(0, 0, 6, 6) / 134;  // normalized the hessian matrix for pair uncertainty evaluation
 }
 
 void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameterization *local_parameterization)
