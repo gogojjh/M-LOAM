@@ -129,6 +129,9 @@ std::vector<double> total_mapping;
 bool is_degenerate;
 bool with_ua_flag;
 
+Eigen::Matrix<double, 6, 6> cov_mapping;
+Eigen::Matrix<double, 6, 6> cov_cp;
+
 pcl::PCDWriter pcd_writer;
 
 double lambda = 10.0;
@@ -438,6 +441,7 @@ void scan2MapOptimization()
         kdtree_corner_from_map->setInputCloud(laser_cloud_corner_from_map_cov_ds);
         printf("build time %fms\n", t_timer.Stop() * 1000);
         printf("********************************\n");
+        pose_wmap_prev = pose_wmap_curr;
         for (int iter_cnt = 0; iter_cnt < 2; iter_cnt++)
         {
             ceres::Problem problem;
@@ -586,6 +590,33 @@ void scan2MapOptimization()
                     extractCov(laser_cloud_surf_cov->points[feature.idx_], cov_matrix);
                 else 
                     cov_matrix = COV_MEASUREMENT;
+                // if (feature.laser_idx_ == 1)
+                // {
+                //     PointI point_ori, point_sel;
+                //     point_ori.x = laser_cloud_surf_cov->points[feature.idx_].x;
+                //     point_ori.y = laser_cloud_surf_cov->points[feature.idx_].y;
+                //     point_ori.z = laser_cloud_surf_cov->points[feature.idx_].z;
+                //     point_ori.intensity = laser_cloud_surf_cov->points[feature.idx_].intensity;
+                //     std::cout << "point: ";
+                //     std::cout << point_ori.x << ", "
+                //               << point_ori.y << ", "
+                //               << point_ori.z << ", "
+                //               << point_ori.intensity << std::endl;
+                //     std::cout << "laser idx: " << feature.laser_idx_ << ": " << pose_ext[feature.laser_idx_] << std::endl;
+                //     std::cout << "ext covariance: \n" << pose_ext[feature.laser_idx_].cov_ << std::endl;
+                //     std::cout << "stored point covariance: \n" << cov_matrix << std::endl << std::endl;
+
+                //     Eigen::Matrix3d cov_point;
+                //     pointAssociateToMap(point_ori, point_sel, pose_ext[feature.laser_idx_].inverse());
+                //     evalPointUncertainty(point_sel, cov_point, pose_ext[feature.laser_idx_]);
+                //     std::cout << "sel point: ";
+                //     std::cout << point_sel.x << ", "
+                //               << point_sel.y << ", "
+                //               << point_sel.z << ", "
+                //               << point_sel.intensity << std::endl;
+                //     std::cout << "estimated point covariance: \n" << cov_point << std::endl;
+                //     exit(EXIT_FAILURE);
+                // }
                 LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
                 problem.AddResidualBlock(f, loss_function, para_pose);
                 if (CHECK_JACOBIAN)
@@ -633,8 +664,8 @@ void scan2MapOptimization()
                 evalHessian(jaco, mat_H);
                 evalDegenracy(mat_H, local_parameterization); // the hessian matrix is already normized to evaluate degeneracy
                 is_degenerate = local_parameterization->is_degenerate_;
-                Eigen::Matrix<double, 6, 6> cov_mapping = mat_H.inverse(); // TODO: normalize the Hessian matrix
-                pose_wmap_curr.cov_ = cov_mapping;
+                cov_mapping = mat_H.inverse(); // TODO: normalize the Hessian matrix
+                // pose_wmap_curr.cov_ = cov_mapping;
                 // Eigen::MatrixXd L = Eigen::LLT<Eigen::Matrix<double, 6, 6> >(cov_mapping).matrixL();
                 // std::cout << L << std::endl;
 
@@ -697,9 +728,15 @@ void scan2MapOptimization()
             printf("-------------------------------------\n");
         }
         std::cout << "optimization result: " << pose_wmap_curr << std::endl;
-        std::cout << pose_wmap_curr.cov_ << std::endl;
         // printf("********************************\n");
         // printf("mapping optimization time: %fms\n", t_opt.toc());
+
+        // TODO: calculate the incremental covariance matrix
+        Pose pose_prev_cur = pose_wmap_prev.inverse() * pose_wmap_curr;
+        compoundPoseWithCov(pose_wmap_prev, cov_cp,
+                            pose_prev_cur, cov_mapping,
+                            pose_wmap_curr, cov_cp);
+        pose_wmap_curr.cov_ = cov_cp;
     }
     else
     {
@@ -736,6 +773,7 @@ void saveKeyframe()
 
     pose_keyframes_3d->push_back(pose_3d);
     pose_keyframes_6d.push_back(std::make_pair(time_laser_odometry, pose_wmap_curr));
+    cov_cp.setZero();
 
     PointICovCloud::Ptr surf_keyframe_cov(new PointICovCloud());
     PointICovCloud::Ptr corner_keyframe_cov(new PointICovCloud());
@@ -1369,6 +1407,9 @@ int main(int argc, char **argv)
     down_size_filter_global_map_cov.setLeafSize(MAP_CORNER_RES, MAP_SURF_RES, MAP_SURF_RES);
     down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_AFTER_MAPPING);
     down_size_filter_global_map_keyframes.setLeafSize(2.0, 2.0, 2.0);
+
+    cov_mapping.setZero();
+    cov_cp.setZero();
 
     pose_ext.resize(NUM_OF_LASER);
 
