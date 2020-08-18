@@ -787,11 +787,6 @@ void saveKeyframe()
     corner_cloud_keyframes_cov.push_back(corner_keyframe_cov);
     outlier_cloud_keyframes_cov.push_back(outlier_keyframe_cov);
     printf("current keyframes size: %lu\n", pose_keyframes_3d->size());
-    // for (size_t i = 0; i < 6; i++)
-    // {
-    //     for (size_t j = 0; j < 6; j++) std::cout << pose_wmap_curr.cov_(i, j) << " ";
-    //     std::cout << std::endl;
-    // }
 }
 
 void updateKeyframe()
@@ -1189,7 +1184,10 @@ void cloudUCTAssociateToMap(const PointICovCloud &cloud_local,
     // the compound pose: pose_global * pose_ext with uncertainty
     std::vector<Pose> pose_compound(NUM_OF_LASER);
     for (size_t n = 0; n < NUM_OF_LASER; n++) 
+    {
         compoundPoseWithCov(pose_global, pose_ext[n], pose_compound[n]);
+        // pose_compound[n].cov_ = pose_compound[IDX_REF].cov_;
+    }
 
     cloud_global.clear();
     cloud_global.resize(cloud_local.size());

@@ -123,7 +123,6 @@ uct_ext: !!opencv-matrix
    dt: d
    data: [0, 0, 0, 0, 0, 0,
           0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01] 
-         #  0.0025, 0.0025, 0.0025, 0.0025, 0.0025, 0.0025] 
 
 uct_measurement: !!opencv-matrix
    rows: 1
