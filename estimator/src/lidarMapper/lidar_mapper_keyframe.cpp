@@ -436,12 +436,12 @@ void scan2MapOptimization()
     printf("map surf num: %lu, corner num: %lu\n", laser_cloud_surf_from_map_num, laser_cloud_corner_from_map_num);
     if ((laser_cloud_surf_from_map_num > 100) && (laser_cloud_corner_from_map_num > 10))
     {
+        pose_wmap_prev = pose_wmap_curr;
         common::timing::Timer t_timer("mapping_kdtree");
         kdtree_surf_from_map->setInputCloud(laser_cloud_surf_from_map_cov_ds);
         kdtree_corner_from_map->setInputCloud(laser_cloud_corner_from_map_cov_ds);
         printf("build time %fms\n", t_timer.Stop() * 1000);
         printf("********************************\n");
-        pose_wmap_prev = pose_wmap_curr;
         for (int iter_cnt = 0; iter_cnt < 2; iter_cnt++)
         {
             ceres::Problem problem;
@@ -731,7 +731,7 @@ void scan2MapOptimization()
         // printf("********************************\n");
         // printf("mapping optimization time: %fms\n", t_opt.toc());
 
-        // TODO: calculate the incremental covariance matrix
+        // calculate the incremental covariance matrix
         Pose pose_prev_cur = pose_wmap_prev.inverse() * pose_wmap_curr;
         compoundPoseWithCov(pose_wmap_prev, cov_cp,
                             pose_prev_cur, cov_mapping,
