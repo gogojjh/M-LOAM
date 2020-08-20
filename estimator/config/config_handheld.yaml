@@ -103,7 +103,7 @@ eig_thre_calib: 400
 n_calib: 15
 
 # good feature
-odom_gf_ratio: 0.0
+odom_gf_ratio: 1.0
 
 skip_num_odom_pub: 2
 
@@ -114,10 +114,10 @@ map_surf_res: 0.4
 map_eig_thre: 100
 
 # for indoor office
-# uct_ext_ratio: 1
+# uct_ext_ratio: 0
 
 # for outdoor office
-uct_ext_ratio: 0
+uct_ext_ratio: 1
 
 # uncertainty parameter
 # translation, rotation, point (rho, phi, zeta)

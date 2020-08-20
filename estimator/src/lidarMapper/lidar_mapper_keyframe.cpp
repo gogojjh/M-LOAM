@@ -662,7 +662,7 @@ void scan2MapOptimization()
                 // mat_H / 134 = normlized_mat_H
                 Eigen::Matrix<double, 6, 6> mat_H;
                 evalHessian(jaco, mat_H);
-                evalDegenracy(mat_H, local_parameterization); // the hessian matrix is already normized to evaluate degeneracy
+                evalDegenracy(mat_H / 134, local_parameterization); // the hessian matrix is already normized to evaluate degeneracy
                 is_degenerate = local_parameterization->is_degenerate_;
                 cov_mapping = mat_H.inverse(); // TODO: normalize the Hessian matrix
                 // pose_wmap_curr.cov_ = cov_mapping;
@@ -1213,13 +1213,13 @@ void cloudUCTAssociateToMap(const PointICovCloud &cloud_local,
 
 void evalHessian(const ceres::CRSMatrix &jaco, Eigen::Matrix<double, 6, 6> &mat_H)
 {
-	printf("jacob: %d constraints, %d parameters\n", jaco.num_rows, jaco.num_cols); // 2000+, 6
+	// printf("jacob: %d constraints, %d parameters\n", jaco.num_rows, jaco.num_cols); // 2000+, 6
 	if (jaco.num_rows == 0) return;
 	Eigen::SparseMatrix<double, Eigen::RowMajor> mat_J; // Jacobian is a diagonal matrix
 	CRSMatrix2EigenMatrix(jaco, mat_J);
 	Eigen::SparseMatrix<double, Eigen::RowMajor> mat_Jt = mat_J.transpose();
 	Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J;
-	mat_H = mat_JtJ.block(0, 0, 6, 6) / 134;  // normalized the hessian matrix for pair uncertainty evaluation
+	mat_H = mat_JtJ.block(0, 0, 6, 6);  // normalized the hessian matrix for pair uncertainty evaluation
 }
 
 void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameterization *local_parameterization)

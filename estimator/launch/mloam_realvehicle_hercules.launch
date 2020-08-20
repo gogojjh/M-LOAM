@@ -1,16 +1,16 @@
 <launch>
     <arg name="bag_file_use" default="true" />
-    <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/RHD02lab.bag" />
+    <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/xx.bag" />
 
     <param name="use_sim_time" value="true" />
     <group if="$(arg bag_file_use)">
         <node pkg="rosbag" type="play" name="rosbag" 
-            args="--clock -r 0.5 $(arg bag_file)" required="true"/>    
+            args="--clock -r 1 $(arg bag_file)" required="true"/>    
     </group>    
 
     <include file="$(find rviz_car_model)/launch/default.launch" >
         <arg name="fixed_frame" value="base_link" />
-        <arg name="transform" value="0 0 0 -0.1131 -0.0433 -0.0049 0.9926" />
+        <arg name="transform" value="0 0 -1.5 0 0 0 1" />
     </include>    
 
     <arg name="run_mloam" default="true" />
@@ -20,9 +20,11 @@
     <arg name="run_floam" default="false" />
     <arg name="run_legoloam" default="false" />
 
-    <arg name="data_source" default="bag"/>
-    <arg name="result_save" default="false"/>
-    <arg name="output_path" default="/home/jjiao/trajectory_results/handheld/xxxxx"/>
+    <arg name="result_save" default="false" />
+    <arg name="output_path" default="/home/jjiao/trajectory_results/real_vehicle/xxxxx" />
+    <arg name="data_source" default="pcd" />
+    <arg name="data_path" default="/Monster/dataset/lidar_calibration/mloam_rv_dataset/" />
+    <arg name="delta_idx" default="1" />
     <arg name="with_ua" default="true" /> <!-- awareness of uncertainty propagation-->    
     <arg name="gf_method" default="wo_gf" /> <!-- gd_fix, gd_float, rnd, fps, wo_gf-->
     <arg name="gf_ratio_ini" default="1" />
@@ -30,15 +32,17 @@
     <arg name="debug_mode" default="false" />
     <arg name="loss_mode" default="huber" /> <!-- huber, gmc-->
 
-    <arg name="config_file" default="$(find mloam)/config/config_handheld.yaml" />
+    <arg name="config_file" default="$(find mloam)/config/config_realvehicle_hercules.yaml" />
     <group if="$(arg run_mloam)">
-        <group if="$(arg run_mloam_odom)">
-            <node pkg="mloam" type="mloam_node_rhd" name="mloam_node_rhd" 
-                args="-config_file=$(arg config_file)
-                    -result_save=$(arg result_save)
-                    -output_path=$(arg output_path)">
-            </node>
-        </group>
+        <node pkg="mloam" type="mloam_node_rv_hercules" name="mloam_node_rv_hercules" 
+            args="-config_file=$(arg config_file)
+                  -result_save=$(arg result_save)
+                  -output_path=$(arg output_path)
+                  -data_source=$(arg data_source)
+                  -data_path=$(arg data_path)
+                  -delta_idx=$(arg delta_idx)" output="screen">
+            <remap from="/base_odom_gt" to="/current_odom"/>
+        </node>
         <group if="$(arg run_mloam_mapping)">
             <node pkg="mloam" type="lidar_mapper_keyframe" name="lidar_mapper_keyframe"
                 args="-config_file=$(arg config_file)
@@ -54,27 +58,31 @@
             </node>
         </group>
     </group>
-    
+
     <!-- publish static tf -->
     <!-- x y z yaw pitch roll -->
     <!-- x y z qx qy qz qw -->
-    <!-- <include file="$(find rviz_car_model)/launch/default.launch" /> -->
-    <node name="static_tf_world_base_into_world_sensor" pkg="tf" type="static_transform_publisher"
-        args="0 0 0 -0.1131 -0.0433 -0.0049 0.9926 world_base world 10"/> 
+    <node name="static_tf_base_sensor_into_base_link" pkg="tf" type="static_transform_publisher"
+        args="0 0 -1.5 0 0 0 1 aft_mapped base_link 10"/>                
+    <node name="static_tf_world_into_world_base_sensor" pkg="tf" type="static_transform_publisher"
+        args="0 0 -1.5 0 0 0 1 world world_base 10"/>
     <node name="static_tf_world_sensor_into_base_sensor" pkg="tf" type="static_transform_publisher"
         args="0 0 0 0 0 0 1 world laser_0 10"/>
-    <node name="static_tf_laser_into_laser_left" pkg="tf" type="static_transform_publisher"
-        args="0 0 0 0 0 0 1 laser_0 velo_left 10"/>        
-    <node name="static_tf_laser_into_laser_right" pkg="tf" type="static_transform_publisher"
-        args="0 0 0 0 0 0 1 laser_1 velo_right 10"/>     
-    <node name="static_tf_base_sensor_into_base_link" pkg="tf" type="static_transform_publisher"
-        args="0 0 0 0 0 0 1 aft_mapped base_link 10"/>                
-
+    <node name="static_tf_laser_0_into_laser_1" pkg="tf" type="static_transform_publisher"
+        args="0.5355 0.0393 -1.131 -0.0169 0.0575 0.0195 0.998 laser_0 laser_1 10"/>
+    <node name="static_tf_laser_0_into_laser_2" pkg="tf" type="static_transform_publisher"
+        args="-0.1118 0.1894 0.6845 0.6951 0.5116 0.6440 -0.904 laser_0 laser_2 10"/>
+    <node name="static_tf_laser_0_into_laser_3" pkg="tf" type="static_transform_publisher"
+        args="0.0745 0.1312 -0.7449 0.6496 0.4406 -0.628 -1.0295 laser_0 laser_3 10"/>                
+ 
     <!-- merge cloud -->
     <group unless="$(arg run_mloam)">
-        <node pkg="mloam_test" type="test_merge_pointcloud_rhd" name="test_merge_pointcloud_rhd" output="screen" />      
+        <node pkg="mloam_test" type="test_merge_pointcloud_rv_hercules" name="test_merge_pointcloud_rv_hercules" 
+            args="0 $(arg data_path) $(arg delta_idx)"/>      
         <node name="static_tf_world_sensor_into_camera" pkg="tf" type="static_transform_publisher"
             args="0 0 0 0 0 0 1 world camera_init 10"/>            
+        <node name="static_tf_world_sensor_into_laser" pkg="tf" type="static_transform_publisher"
+            args="0 0 0 0 0 0 1 world rslidar 10"/>
     </group>
 
     <!-- run aloam  -->
@@ -82,7 +90,7 @@
         <include file="$(find aloam_velodyne)/launch/aloam_exp.launch">
             <arg name="output_path" value="$(arg output_path)"/>
             <arg name="skip_frame" value="2" />
-            <arg name="s_line" value="16" />
+            <arg name="s_line" value="32" />
             <arg name="mapping_line_res" value="0.2" />
             <arg name="mapping_plane_res" value="0.4" />
         </include>       
@@ -92,7 +100,7 @@
     <group if="$(arg run_floam)">
         <include file="$(find floam)/launch/floam_exp.launch">
             <arg name="output_path" value="$(arg output_path)"/>
-            <arg name="s_line" value="16" />
+            <arg name="s_line" value="32" />
             <arg name="map_res" value="0.4" />
         </include>       
    </group>        
@@ -104,4 +112,4 @@
         </include>
     </group>           
 
- </launch>
+</launch>

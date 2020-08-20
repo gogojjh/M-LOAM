@@ -56,13 +56,10 @@ using namespace std;
 
 DEFINE_bool(result_save, true, "save or not save the results");
 DEFINE_string(config_file, "config.yaml", "the yaml config file");
+DEFINE_string(output_path, "", "the path ouf saving results");
 DEFINE_string(data_source, "bag", "the data source: bag or bag");
 DEFINE_string(data_path, "", "the data path");
-DEFINE_string(output_path, "", "the path ouf saving results");
-DEFINE_int32(start_idx, 0, "the start idx of the data");
-DEFINE_int32(end_idx, 0, "the end idx of the data");
-DEFINE_int32(delta_idx, 1, "the delta idx of reading the data");
-DEFINE_bool(time_now, true, "use current time or data time");
+DEFINE_int32(delta_idx, 1, "the delta index");
 
 Estimator estimator;
 
@@ -80,6 +77,10 @@ ros::Publisher pub_gps_odom, pub_gps_path, pub_gps;
 ros::Publisher pub_laser_gt_odom, pub_laser_gt_path;
 
 bool b_pause = false;
+
+int frame_drop_cnt = 0;
+int frame_cnt = 0;
+size_t DELTA_IDX;
 
 void dataProcessCallback(const sensor_msgs::PointCloud2ConstPtr &cloud0_msg,
                          const sensor_msgs::PointCloud2ConstPtr &cloud1_msg,
@@ -101,6 +102,7 @@ void gtCallback(const nav_msgs::OdometryConstPtr &gt_odom_msg)
     Pose pose_world_base(*gt_odom_msg);
     Pose pose_base_ref(Eigen::Quaterniond(1, 0, 0, 0), Eigen::Vector3d(0, 0, 0));
     Pose pose_world_ref(pose_world_base * pose_base_ref);
+
     if (laser_gt_path.poses.size() == 0)
         pose_world_ref_ini = pose_world_ref;
     Pose pose_ref_ini_cur(pose_world_ref_ini.inverse() * pose_world_ref);
@@ -159,12 +161,12 @@ void pauseCallback(std_msgs::StringConstPtr msg)
     printf("%s\n", msg->data.c_str());
     b_pause = !b_pause;
 }
-
 pcl::PointCloud<pcl::PointXYZ> getCloudFromMsg(const sensor_msgs::PointCloud2ConstPtr &cloud_msg)
 {
     pcl::PointCloud<pcl::PointXYZ> laser_cloud;
     pcl::fromROSMsg(*cloud_msg, laser_cloud);
-    roiCloudFilter(laser_cloud, ROI_RANGE);
+    std::vector<int> indices;
+    pcl::removeNaNFromPointCloud(laser_cloud, laser_cloud, indices);
     return laser_cloud;
 }
 
@@ -192,6 +194,7 @@ void sync_process()
         }
         while (!all_cloud_buf[0].empty())
         {
+            frame_drop_cnt++;
             for (size_t i = 0; i < all_cloud_buf.size(); i++)
             {
                 if (!all_cloud_buf[i].empty())
@@ -207,21 +210,24 @@ void sync_process()
         bool empty_check = false;
         for (size_t i = 0; i < NUM_OF_LASER; i++)
             if (v_laser_cloud[i].size() == 0) empty_check = true;
-        if (!empty_check) estimator.inputCloud(time, v_laser_cloud);
+            
+        if (frame_cnt % DELTA_IDX == 0)
+            if (!empty_check) estimator.inputCloud(time, v_laser_cloud);
+        frame_cnt++;
     }
 }
 
 int main(int argc, char **argv)
 {
-    if (argc < 5)
+    if (argc < 7)
     {
-        printf("please intput: rosrun mloam mloam_node_rv -help\n");
+        printf("please intput: rosrun mloam mloam_node_rv_hercules -help\n");
         return 1;
     }
     google::InitGoogleLogging(argv[0]);
     google::ParseCommandLineFlags(&argc, &argv, true);
 
-    ros::init(argc, argv, "mloam_node_rv");
+    ros::init(argc, argv, "mloam_node_rv_hercules");
     ros::NodeHandle nh("~");
 
     // ******************************************
@@ -232,24 +238,22 @@ int main(int argc, char **argv)
 
     MLOAM_RESULT_SAVE = FLAGS_result_save;
     OUTPUT_FOLDER = FLAGS_output_path;
-    MLOAM_ODOM_PATH = OUTPUT_FOLDER + "stamped_mloam_odom_estimate.txt";
-    MLOAM_GPS_PATH = OUTPUT_FOLDER + "stamped_gps.txt";
-    MLOAM_GT_PATH = OUTPUT_FOLDER + "stamped_groundtruth.txt";
-    EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "extrinsic_parameter.txt";
-    EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "calib_eig.txt";
+    MLOAM_ODOM_PATH = OUTPUT_FOLDER + "traj/stamped_mloam_odom_estimate_" + to_string(ODOM_GF_RATIO) + ".txt";
+    MLOAM_GPS_PATH = OUTPUT_FOLDER + "traj/stamped_gps.txt";
+    MLOAM_GT_PATH = OUTPUT_FOLDER + "traj/stamped_groundtruth.txt";
+    EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "others/extrinsic_parameter.txt";
+    EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "others/calib_eig.txt";
     printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
-    size_t START_IDX = FLAGS_start_idx;
-    size_t END_IDX = FLAGS_end_idx;
-    size_t DELTA_IDX = FLAGS_delta_idx;
-    bool TIME_NOW = FLAGS_time_now;
-    ROS_WARN("waiting for cloud...");
-
     string data_source = FLAGS_data_source;
+    printf("data source: %s\n", data_source.c_str());
+    DELTA_IDX = FLAGS_delta_idx;
+    printf("delta idx: %d\n", DELTA_IDX);
+    std::cout << common::YELLOW << "waiting for cloud..." << common::RESET << std::endl;
+
     ros::Subscriber sub_pause = nh.subscribe<std_msgs::String>("/mloam_pause", 5, pauseCallback);
 
     // ******************************************
-    // use bag as the data source
-    if (!data_source.compare("bag"))
+    if (!data_source.compare("bag")) // use bag as the data source
     {
         typedef sensor_msgs::PointCloud2 LidarMsgType;
         typedef message_filters::sync_policies::ApproximateTime<LidarMsgType, LidarMsgType, LidarMsgType, LidarMsgType, LidarMsgType> LidarSyncPolicy;
@@ -264,7 +268,7 @@ int main(int argc, char **argv)
                 LidarSyncPolicy(10), *sub_lidar[0], *sub_lidar[1], *sub_lidar[2], *sub_lidar[3], *sub_lidar[4]);
         lidar_synchronizer->registerCallback(boost::bind(&dataProcessCallback, _1, _2, _3, _4, _5));
 
-        ros::Subscriber sub_gt = nh.subscribe<nav_msgs::Odometry>("/base_pose_gt", 1, gtCallback);
+        ros::Subscriber sub_gt = nh.subscribe<nav_msgs::Odometry>("/base_odom_gt", 1, gtCallback);
         ros::Subscriber sub_gps = nh.subscribe<sensor_msgs::NavSatFix>("/novatel718d/pos", 1, gpsCallback);
         pub_laser_gt_path = nh.advertise<nav_msgs::Path>("/laser_gt_path", 10);
         pub_gps_odom = nh.advertise<nav_msgs::Odometry>("/gps/odom", 10);
@@ -278,18 +282,19 @@ int main(int argc, char **argv)
             loop_rate.sleep();
         }
 
+        std::cout << common::YELLOW << "odometry drop frame: " << frame_drop_cnt << common::RESET << std::endl;
+        LOG(INFO) << "odometry drop frame: " << frame_drop_cnt;
         if (MLOAM_RESULT_SAVE)
         {
             std::cout << common::RED << "saving odometry results" << common::RESET << std::endl;
             save_statistics.saveSensorPath(MLOAM_GT_PATH, laser_gt_path);
             save_statistics.saveSensorPath(MLOAM_GPS_PATH, gps_path);
             save_statistics.saveOdomStatistics(EX_CALIB_EIG_PATH, EX_CALIB_RESULT_PATH, MLOAM_ODOM_PATH, estimator);
-            save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time_odometry.txt", estimator);
+            save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time/time_mloam_odometry_" + std::to_string(ODOM_GF_RATIO) + ".txt", estimator);
         }
         sync_thread.join();
-    } else
-    // use pcd as the data source
-    if (!data_source.compare("pcd"))
+    }
+    else if (!data_source.compare("pcd")) // use pcd as the data source
     {
         string data_path = FLAGS_data_path;
         printf("read sequence from: %s\n", FLAGS_data_path);
@@ -328,16 +333,12 @@ int main(int argc, char **argv)
 
         // *************************************
         // read data
-        double base_time = ros::Time::now().toSec();
-        for (size_t i = START_IDX; i < std::min(END_IDX, cloud_time_list.size()); i+=DELTA_IDX)
+        for (size_t i = 0; i < cloud_time_list.size(); i+=DELTA_IDX)
         {	
             if (ros::ok())
             {
                 double cloud_time;
-                if (TIME_NOW)
-                    cloud_time = base_time + cloud_time_list[i] - cloud_time_list[START_IDX];
-                else
-                    cloud_time = cloud_time_list[i];
+                cloud_time = cloud_time_list[i];
                 printf("process data: %d\n", i);
                 stringstream ss;
                 ss << setfill('0') << setw(6) << i;
@@ -350,18 +351,15 @@ int main(int argc, char **argv)
                     stringstream ss_file;
                     ss_file << "cloud_" << j << "/data/" << ss.str() << ".pcd";
                     string cloud_path = data_path + ss_file.str();
-                    //printf("%lu  %f \n", i, cloud_time);
-                    // printf("%s\n", cloud_path.c_str());
                     if (pcl::io::loadPCDFile<pcl::PointXYZ>(cloud_path, laser_cloud_list[j]) == -1)
                     {
                         printf("Couldn't read file %s\n", cloud_path.c_str());
                         ROS_BREAK();
                         return 0;
                     }
-                    roiCloudFilter(laser_cloud_list[j], ROI_RANGE);
-                    printf("%d ", laser_cloud_list[j].size());
+                    std::vector<int> indices;
+                    pcl::removeNaNFromPointCloud(laser_cloud_list[j], laser_cloud_list[j], indices);
                 }
-                printf("\n");
 
                 // load gps
                 FILE *gps_file;
@@ -369,7 +367,7 @@ int main(int argc, char **argv)
                 gps_file = std::fopen(gps_file_path.c_str() , "r");
                 if(!gps_file)
                 {
-                    // printf("cannot find file: %s\n", gps_file_path.c_str());
+                    printf("cannot find file: %s\n", gps_file_path.c_str());
                     // ROS_BREAK();
                     // return 0;          
                 } else
@@ -402,7 +400,7 @@ int main(int argc, char **argv)
                 gt_odom_file = std::fopen(gt_odom_file_path.c_str() , "r");
                 if(!gt_odom_file)
                 {
-                    // printf("cannot find file: %s\n", gt_odom_file_path.c_str());
+                    printf("cannot find file: %s\n", gt_odom_file_path.c_str());
                     // ROS_BREAK();
                     // return 0;          
                 } else
@@ -418,6 +416,7 @@ int main(int argc, char **argv)
                     Pose pose_world_base(q_world_base, t_world_base);
                     Pose pose_base_ref(Eigen::Quaterniond(1, 0, 0, 0), Eigen::Vector3d(0, 0, 0));
                     Pose pose_world_ref(pose_world_base * pose_base_ref);
+
                     if (laser_gt_path.poses.size() == 0) pose_world_ref_ini = pose_world_ref;
                     Pose pose_ref_ini_cur(pose_world_ref_ini.inverse() * pose_world_ref);
 
@@ -469,8 +468,9 @@ int main(int argc, char **argv)
         {
             std::cout << common::RED << "saving odometry results" << common::RESET << std::endl;
             save_statistics.saveSensorPath(MLOAM_GT_PATH, laser_gt_path);
+            save_statistics.saveSensorPath(MLOAM_GPS_PATH, gps_path);
             save_statistics.saveOdomStatistics(EX_CALIB_EIG_PATH, EX_CALIB_RESULT_PATH, MLOAM_ODOM_PATH, estimator);
-            save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time_odometry.txt", estimator);
+            save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time/time_mloam_odometry_" + std::to_string(ODOM_GF_RATIO) + ".txt", estimator);
         }
         cloud_visualizer_thread.join();
     }

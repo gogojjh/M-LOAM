@@ -81,7 +81,8 @@ pcl::PointCloud<pcl::PointXYZ> getCloudFromMsg(const sensor_msgs::PointCloud2Con
 {
     pcl::PointCloud<pcl::PointXYZ> laser_cloud;
     pcl::fromROSMsg(*cloud_msg, laser_cloud);
-    // roiCloudFilter(laser_cloud, ROI_RANGE);
+    std::vector<int> indices;
+    pcl::removeNaNFromPointCloud(laser_cloud, laser_cloud, indices);
     return laser_cloud;
 }
 

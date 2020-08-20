@@ -75,8 +75,11 @@ target_link_libraries(test_merge_pointcloud_sr ${catkin_LIBRARIES} ${PCL_LIBRARI
 add_executable(test_merge_pointcloud_rhd src/test_merge_pointcloud_rhd.cpp)
 target_link_libraries(test_merge_pointcloud_rhd ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-add_executable(test_merge_pointcloud_rv src/test_merge_pointcloud_rv.cpp)
-target_link_libraries(test_merge_pointcloud_rv ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+add_executable(test_merge_pointcloud_rv_hercules src/test_merge_pointcloud_rv_hercules.cpp)
+target_link_libraries(test_merge_pointcloud_rv_hercules ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(test_generate_bag_from_data_hercules src/test_generate_bag_from_data_hercules.cpp)
+target_link_libraries(test_generate_bag_from_data_hercules ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 # add_executable(test_parse_bag test_parse_bag.cpp)
 # target_link_libraries(test_parse_bag ${catkin_LIBRARIES} ${PCL_LIBRARIES})
