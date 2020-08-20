@@ -725,8 +725,6 @@ void scan2MapOptimization()
             printf("-------------------------------------\n");
         }
         std::cout << "optimization result: " << pose_wmap_curr << std::endl;
-        // printf("********************************\n");
-        // printf("mapping optimization time: %fms\n", t_opt.toc());
 
         // calculate the incremental covariance matrix
         Pose pose_prev_cur = pose_wmap_prev.inverse() * pose_wmap_curr;
