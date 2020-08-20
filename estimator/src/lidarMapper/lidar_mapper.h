@@ -76,6 +76,7 @@
 #include "../factor/lidar_plane_norm_factor.hpp"
 #include "../factor/pose_local_parameterization.h"
 #include "../factor/impl_loss_function.hpp"
+#include "../factor/impl_callback.hpp"
 #include "associate_uct.hpp"
 
 // #define MAX_BUF_LENGTH 3

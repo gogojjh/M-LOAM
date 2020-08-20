@@ -60,6 +60,7 @@ add_library(mloam_lib_1
     src/estimator/pose.cpp
     src/factor/pose_local_parameterization.cpp
     src/factor/impl_loss_function.cpp
+    src/factor/impl_callback.cpp
 )
 target_link_libraries(mloam_lib_1
     ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 

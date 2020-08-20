@@ -11,7 +11,7 @@ min_cluster_size: 30
 min_line_size: 10
 segment_valid_point_num: 5
 segment_valid_line_num: 3
-segment_theta: 1.0 # Lego-loam: 1.0
+segment_theta: 0.6 # Lego-loam: 1.0
 
 # laser parameters
 idx_ref: 0
@@ -136,10 +136,10 @@ uct_measurement: !!opencv-matrix
 
 # for indoor office
 # trace_threshold_before_mapping: 2
-# trace_threshold_after_mapping: 10
+# trace_threshold_after_mapping: 2
 
 # for outdoor building
-trace_threshold_before_mapping: 5
+trace_threshold_before_mapping: 10 # min_d: 20
 trace_threshold_after_mapping: 30
 
 

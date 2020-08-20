@@ -40,7 +40,7 @@
                   -output_path=$(arg output_path)
                   -data_source=$(arg data_source)
                   -data_path=$(arg data_path)
-                  -delta_idx=$(arg delta_idx)" output="screen">
+                  -delta_idx=$(arg delta_idx)">
             <remap from="/base_odom_gt" to="/current_odom"/>
         </node>
         <group if="$(arg run_mloam_mapping)">

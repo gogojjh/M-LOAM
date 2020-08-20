@@ -381,6 +381,7 @@ void downsampleCurrentScan()
     laser_cloud_outlier_cov->clear();
 
     // propagate the extrinsic uncertainty on points
+    float min_d = 10000;
     for (PointI &point_ori : *laser_cloud_surf_last_ds)
     {
         int idx = int(point_ori.intensity); // indicate the lidar id
@@ -390,11 +391,20 @@ void downsampleCurrentScan()
         {
             pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
             evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
-            if (cov_point.trace() > TRACE_THRESHOLD_BEFORE_MAPPING) continue;
+            if (cov_point.trace() > TRACE_THRESHOLD_BEFORE_MAPPING) 
+            {
+                float d = sqrt(point_sel.x * point_sel.x +
+                               point_sel.y * point_sel.y +
+                               point_sel.z * point_sel.z);
+                min_d = d < min_d ? d : min_d;
+                continue;
+            }
+            cov_point = COV_MEASUREMENT;
         }
         PointIWithCov point_cov(point_ori, cov_point.cast<float>());
         laser_cloud_surf_cov->push_back(point_cov);
     }
+    std::cout << "min_d: " << min_d << std::endl;
 
     for (PointI &point_ori : *laser_cloud_corner_last_ds)
     {
@@ -406,6 +416,7 @@ void downsampleCurrentScan()
             pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
             evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
             if (cov_point.trace() > TRACE_THRESHOLD_BEFORE_MAPPING) continue;
+            cov_point = COV_MEASUREMENT;
         }
         PointIWithCov point_cov(point_ori, cov_point.cast<float>());
         laser_cloud_corner_cov->push_back(point_cov);
@@ -421,6 +432,7 @@ void downsampleCurrentScan()
             pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
             evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
             if (cov_point.trace() > TRACE_THRESHOLD_BEFORE_MAPPING) continue;
+            cov_point = COV_MEASUREMENT;
         }
         PointIWithCov point_cov(point_ori, cov_point.cast<float>());
         laser_cloud_outlier_cov->push_back(point_cov);
@@ -442,7 +454,8 @@ void scan2MapOptimization()
         kdtree_corner_from_map->setInputCloud(laser_cloud_corner_from_map_cov_ds);
         printf("build time %fms\n", t_timer.Stop() * 1000);
         printf("********************************\n");
-        for (int iter_cnt = 0; iter_cnt < 2; iter_cnt++)
+        int max_iter = 2;
+        for (int iter_cnt = 0; iter_cnt < max_iter; iter_cnt++)
         {
             ceres::Problem problem;
             double gmc_s = 1.0;
@@ -590,33 +603,6 @@ void scan2MapOptimization()
                     extractCov(laser_cloud_surf_cov->points[feature.idx_], cov_matrix);
                 else 
                     cov_matrix = COV_MEASUREMENT;
-                // if (feature.laser_idx_ == 1)
-                // {
-                //     PointI point_ori, point_sel;
-                //     point_ori.x = laser_cloud_surf_cov->points[feature.idx_].x;
-                //     point_ori.y = laser_cloud_surf_cov->points[feature.idx_].y;
-                //     point_ori.z = laser_cloud_surf_cov->points[feature.idx_].z;
-                //     point_ori.intensity = laser_cloud_surf_cov->points[feature.idx_].intensity;
-                //     std::cout << "point: ";
-                //     std::cout << point_ori.x << ", "
-                //               << point_ori.y << ", "
-                //               << point_ori.z << ", "
-                //               << point_ori.intensity << std::endl;
-                //     std::cout << "laser idx: " << feature.laser_idx_ << ": " << pose_ext[feature.laser_idx_] << std::endl;
-                //     std::cout << "ext covariance: \n" << pose_ext[feature.laser_idx_].cov_ << std::endl;
-                //     std::cout << "stored point covariance: \n" << cov_matrix << std::endl << std::endl;
-
-                //     Eigen::Matrix3d cov_point;
-                //     pointAssociateToMap(point_ori, point_sel, pose_ext[feature.laser_idx_].inverse());
-                //     evalPointUncertainty(point_sel, cov_point, pose_ext[feature.laser_idx_]);
-                //     std::cout << "sel point: ";
-                //     std::cout << point_sel.x << ", "
-                //               << point_sel.y << ", "
-                //               << point_sel.z << ", "
-                //               << point_sel.intensity << std::endl;
-                //     std::cout << "estimated point covariance: \n" << cov_point << std::endl;
-                //     exit(EXIT_FAILURE);
-                // }
                 LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
                 problem.AddResidualBlock(f, loss_function, para_pose);
                 if (CHECK_JACOBIAN)
@@ -652,41 +638,13 @@ void scan2MapOptimization()
             //                      frame_cnt);
 
             // ******************************************************
-            if (iter_cnt == 1)
-            {
-                common::timing::Timer eval_deg_timer("mapping_eval_deg");
-                double cost = 0.0;
-                ceres::CRSMatrix jaco;
-                problem.Evaluate(ceres::Problem::EvaluateOptions(), &cost, nullptr, nullptr, &jaco);
+            ceres::CRSMatrix jaco;
+            problem.Evaluate(ceres::Problem::EvaluateOptions(), nullptr, nullptr, nullptr, &jaco);
+            Eigen::Matrix<double, 6, 6> mat_H; // mat_H / 134 = normlized_mat_H
+            evalHessian(jaco, mat_H);
+            evalDegenracy(mat_H / 134, local_parameterization); // the hessian matrix is already normized to evaluate degeneracy
 
-                // mat_H / 134 = normlized_mat_H
-                Eigen::Matrix<double, 6, 6> mat_H;
-                evalHessian(jaco, mat_H);
-                evalDegenracy(mat_H / 134, local_parameterization); // the hessian matrix is already normized to evaluate degeneracy
-                is_degenerate = local_parameterization->is_degenerate_;
-                cov_mapping = mat_H.inverse(); // TODO: normalize the Hessian matrix
-                // pose_wmap_curr.cov_ = cov_mapping;
-                // Eigen::MatrixXd L = Eigen::LLT<Eigen::Matrix<double, 6, 6> >(cov_mapping).matrixL();
-                // std::cout << L << std::endl;
-
-                double tr = cov_mapping.trace();
-                double logd = common::logDet(mat_H, true);
-                Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6>> esolver(mat_H);
-                Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real();	
-                double mini_ev = mat_E(0, 0);
-                std::vector<double> sp{tr, logd, mini_ev};
-                mapping_sp_list.push_back(sp);
-
-                LOG_EVERY_N(INFO, 20) << "trace: " << tr << ", logdet: " << logd << ", min_ev: " << mini_ev;
-                std::cout << common::YELLOW << "trace: " << tr << common::RESET << std::endl;
-                printf("evaluate H: %fms\n", eval_deg_timer.Stop() * 1000);
-            }
-            else if (is_degenerate)
-            {
-                local_parameterization->V_update_ = mat_P;
-            }
             // *********************************************************
-            
             common::timing::Timer solver_timer("mapping_solver");
             ceres::Solver::Summary summary;
             ceres::Solver::Options options;
@@ -695,6 +653,10 @@ void scan2MapOptimization()
             options.minimizer_progress_to_stdout = false;
             options.check_gradients = false;
             options.gradient_check_relative_precision = 1e-4;
+            options.update_state_every_iteration = true;
+            // ceres::IterationCallback *state_update_callback = 
+            //     new ceres::StateUpdatingCovarianceCallback(&problem, para_pose);
+            // options.callbacks.push_back(state_update_callback);
             if (FLAGS_gnc)
             {
                 while (gmc_mu >= 2)
@@ -723,6 +685,41 @@ void scan2MapOptimization()
                 std::cout << summary.BriefReport() << std::endl;
             }
             printf("mapping solver time: %fms\n", solver_timer.Stop() * 1000);
+
+            if (iter_cnt == max_iter - 1)
+            {
+                double cost = 0.0;
+                common::timing::Timer eval_deg_timer("mapping_eval_deg");
+                problem.Evaluate(ceres::Problem::EvaluateOptions(), &cost, nullptr, nullptr, &jaco);
+                Eigen::Matrix<double, 6, 6> mat_H; // mat_H / 134 = normlized_mat_H
+                evalHessian(jaco, mat_H);
+                cov_mapping = 2 * cost / (jaco.num_rows - 6) * mat_H.inverse();
+                // std::cout << cov_mapping * 100 << std::endl;
+
+                double tr = cov_mapping.trace();
+                double logd = common::logDet(mat_H, true);
+                Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6>> esolver(mat_H);
+                Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real();
+                double mini_ev = mat_E(0, 0);
+                std::vector<double> sp{tr, logd, mini_ev};
+                mapping_sp_list.push_back(sp);
+                LOG_EVERY_N(INFO, 20) << "trace: " << tr << ", logdet: " << logd << ", min_ev: " << mini_ev;
+                std::cout << common::YELLOW << "trace: " << tr << common::RESET << std::endl;
+                printf("evaluate H: %fms\n", eval_deg_timer.Stop() * 1000);
+
+                // ceres::Covariance::Options cov_options;
+                // ceres::Covariance covariance(cov_options);
+                // std::vector<std::pair<const double *, const double *>> covariance_blocks;
+                // covariance_blocks.push_back(std::make_pair(para_pose, para_pose));
+                // CHECK(covariance.Compute(covariance_blocks, &problem));
+                // double covariance_pose[SIZE_POSE * SIZE_POSE];
+                // covariance.GetCovarianceBlock(para_pose, para_pose, covariance_pose);
+                // Eigen::Map<Eigen::Matrix<double, 7, 7> > cov_ceres(covariance_pose);
+                // cov_mapping = cov_ceres.topLeftCorner<6, 6>();
+                // std::cout << "ceres covariance: \n"
+                //           << cov_ceres.topLeftCorner<6, 6>() << std::endl;
+                // printf("ceres evaluate covariance: %fms\n", eval_deg_timer.Stop() * 1000);
+            }         
 
             double2Vector();
             printf("-------------------------------------\n");
@@ -1186,7 +1183,7 @@ void cloudUCTAssociateToMap(const PointICovCloud &cloud_local,
     for (size_t n = 0; n < NUM_OF_LASER; n++) 
     {
         compoundPoseWithCov(pose_global, pose_ext[n], pose_compound[n]);
-        // pose_compound[n].cov_ = pose_compound[IDX_REF].cov_;
+        // pose_compound[n].cov_ = pose_compound[IDX_REF].cov_; // not consider extrinsic covariance
     }
 
     cloud_global.clear();
