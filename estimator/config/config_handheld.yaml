@@ -4,7 +4,6 @@
 multiple_thread: 0
 
 # segmmentation
-# segment_cloud: 0
 segment_cloud: 1
 horizon_scan: 1800
 min_cluster_size: 30
@@ -109,15 +108,10 @@ skip_num_odom_pub: 2
 
 ######################################################## mapping
 map_corner_res: 0.2
-# map_surf_res: 0.2
-map_surf_res: 0.4
+map_surf_res: 0.4 # RHD02:0.4, RHD03:0.4, RHD04:0.4
 map_eig_thre: 100
 
-# for indoor office
-# uct_ext_ratio: 0
-
-# for outdoor office
-uct_ext_ratio: 1
+uct_ext_ratio: 0 # RHD02:0, RHD03:0.25, RHD04:0.25
 
 # uncertainty parameter
 # translation, rotation, point (rho, phi, zeta)
@@ -134,13 +128,7 @@ uct_measurement: !!opencv-matrix
    dt: d
    data: [0.0025, 0.0025, 0.0025]
 
-# for indoor office
-# trace_threshold_before_mapping: 2
-# trace_threshold_after_mapping: 2
-
-# for outdoor building
-trace_threshold_before_mapping: 10 # min_d: 20
-trace_threshold_after_mapping: 30
-
-
+# RHD02:5, RHD03:5, RHD04:5
+trace_threshold_before_mapping: 5 # min_d: 20
+trace_threshold_after_mapping: 5
 

@@ -135,5 +135,7 @@ uct_measurement: !!opencv-matrix
    dt: d
    data: [0.0025, 0.0025, 0.0025]
 
-trace_threshold_before_mapping: 5
-trace_threshold_after_mapping: 30
+# RV: 20
+trace_threshold_before_mapping: 5 # min_d: 20
+trace_threshold_after_mapping: 5
+
