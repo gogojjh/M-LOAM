@@ -335,30 +335,37 @@ int main(int argc, char **argv)
         for (size_t i = START_IDX; i < std::min(cloud_time_list.size(), END_IDX); i+=DELTA_IDX)
         {	
             if (!ros::ok()) break;
-            double cloud_time;
-            cloud_time = cloud_time_list[i];
-            std::cout << common::YELLOW << "process data: " << i << " " << cloud_time << common::RESET << std::endl;
             stringstream ss, ss_cloud;
-            ss << setfill('0') << setw(6) << i;
-
-            // load cloud
             std::vector<pcl::PointCloud<pcl::PointXYZ> > laser_cloud_list(NUM_OF_LASER);
-            for (size_t j = 0; j < NUM_OF_LASER; j++)
+            try
             {
-                std::stringstream ss_file;
-                ss_file << "cloud_" << j << "/data/" << ss.str() << ".pcd";
-                std::string cloud_path = data_path + ss_file.str();
-                if (pcl::io::loadPCDFile<pcl::PointXYZ>(cloud_path, laser_cloud_list[j]) == -1)
+                double cloud_time;
+                cloud_time = cloud_time_list[i];
+                std::cout << common::YELLOW << "process data: " << i << " " << cloud_time << common::RESET << std::endl;
+                ss << setfill('0') << setw(6) << i;
+
+                // load cloud
+                for (size_t j = 0; j < NUM_OF_LASER; j++)
                 {
-                    printf("Couldn't read file %s\n", cloud_path.c_str());
-                    ROS_BREAK();
-                    return 0;
+                    std::stringstream ss_file;
+                    ss_file << "cloud_" << j << "/data/" << ss.str() << ".pcd";
+                    std::string cloud_path = data_path + ss_file.str();
+                    if (pcl::io::loadPCDFile<pcl::PointXYZ>(cloud_path, laser_cloud_list[j]) == -1)
+                    {
+                        printf("Couldn't read file %s\n", cloud_path.c_str());
+                        ROS_BREAK();
+                        return 0;
+                    }
+                    ss_cloud << laser_cloud_list[j].size() << " ";
+                    std::vector<int> indices;
+                    pcl::removeNaNFromPointCloud(laser_cloud_list[j], laser_cloud_list[j], indices);
                 }
-                ss_cloud << laser_cloud_list[j].size() << " ";
-                std::vector<int> indices;
-                pcl::removeNaNFromPointCloud(laser_cloud_list[j], laser_cloud_list[j], indices);
+                printf("size of finding laser_cloud: %s\n", ss_cloud.str().c_str());
             }
-            printf("size of finding laser_cloud: %s\n", ss_cloud.str().c_str());
+            catch (...)
+            {
+                LOG_EVERY_N(INFO, 1) << "reading cloud error:";
+            }
 
             // load odom
             std::string gt_odom_file_path;
@@ -414,7 +421,7 @@ int main(int argc, char **argv)
             } 
             catch (...)
             {
-                std::cout << "odom reading error: " << gt_odom_file_path << std::endl;
+                LOG_EVERY_N(INFO, 1) << "odom reading error: " << gt_odom_file_path;
             }
 
 
@@ -478,8 +485,8 @@ int main(int argc, char **argv)
                 }
             }
             catch (...)
-            {
-                std::cout << "gps reading error: " << gps_file_path << std::endl;
+            { 
+                LOG_EVERY_N(INFO, 1) << "gps reading error: " << gps_file_path;
             }
 
             std::cout << "input cloud" << std::endl;
@@ -489,7 +496,7 @@ int main(int argc, char **argv)
             }
             catch (...)
             {
-                std::cout << "input cloud error" << std::endl;
+                LOG_EVERY_N(INFO, 1) << "input cloud error";
             }
             ros::Rate loop_rate(10);
             if (b_pause)
