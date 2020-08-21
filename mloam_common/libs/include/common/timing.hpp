@@ -154,7 +154,7 @@ namespace common
             TimerMapValue() {}
 
             /// Create an accumulator with specified window size.
-            Accumulator<double, double, 1000> acc_;
+            Accumulator<double, double, 200> acc_;
         };
 
         /**

@@ -221,7 +221,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
     std::vector<cloudFeature> feature_frame(NUM_OF_LASER);
     stringstream ss;
 
-    #pragma omp parallel for num_threads(NUM_OF_LASER)
+    #pragma omp parallel for num_threads(2)
     for (size_t i = 0; i < v_laser_cloud_in.size(); i++)
     {
         PointICloud laser_cloud;
@@ -264,7 +264,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointITimeCloud> &
     std::vector<cloudFeature> feature_frame(NUM_OF_LASER);
     stringstream ss;
 
-    #pragma omp parallel for num_threads(NUM_OF_LASER)
+    #pragma omp parallel for num_threads(2)
     for (size_t i = 0; i < v_laser_cloud_in.size(); i++)
     {
         PointICloud laser_cloud;
