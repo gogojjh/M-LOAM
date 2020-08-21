@@ -108,7 +108,7 @@ skip_num_odom_pub: 2
 
 ######################################################## mapping
 map_corner_res: 0.2
-map_surf_res: 0.4 # RHD02:0.4, RHD03:0.4, RHD04:0.4
+map_surf_res: 0.4 # RV:0.4, RHD03:0.4, RHD04:0.4
 map_eig_thre: 100
 
 uct_ext_ratio: 0 # RHD02:0, RHD03:0.25, RHD04:0.25

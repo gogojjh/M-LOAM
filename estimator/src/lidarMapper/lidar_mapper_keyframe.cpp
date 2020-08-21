@@ -482,79 +482,79 @@ void scan2MapOptimization()
 
             // ******************************************************
             // evaluate the full hessian matrix
-            bool ratio_change_flag = false;
-            if (iter_cnt == 0)
-            {
-                if (frame_cnt % 10 == 0)
-                {
-                    int total_feat_num = 0;
-                    Eigen::Matrix<double, 6, 6> mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
-                    if (POINT_PLANE_FACTOR)
-                    {
-                        afs.evalFullHessian(kdtree_surf_from_map, *laser_cloud_surf_from_map_cov_ds,
-                                            *laser_cloud_surf_cov, pose_wmap_curr, 's', mat_H, total_feat_num);
-                    }
-                    if (POINT_EDGE_FACTOR)
-                    {
-                        afs.evalFullHessian(kdtree_corner_from_map, *laser_cloud_corner_from_map_cov_ds,
-                                            *laser_cloud_corner_cov, pose_wmap_curr, 'c', mat_H, total_feat_num);
-                    }
-                    double normalize_logdet_H = common::logDet(mat_H, true) - mat_H.rows() * std::log(1.0 * total_feat_num);
-                    logdet_H_list.push_back(normalize_logdet_H);
+            // bool ratio_change_flag = false;
+            // if (iter_cnt == 0)
+            // {
+            //     if (frame_cnt % 10 == 0)
+            //     {
+            //         int total_feat_num = 0;
+            //         Eigen::Matrix<double, 6, 6> mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
+            //         if (POINT_PLANE_FACTOR)
+            //         {
+            //             afs.evalFullHessian(kdtree_surf_from_map, *laser_cloud_surf_from_map_cov_ds,
+            //                                 *laser_cloud_surf_cov, pose_wmap_curr, 's', mat_H, total_feat_num);
+            //         }
+            //         if (POINT_EDGE_FACTOR)
+            //         {
+            //             afs.evalFullHessian(kdtree_corner_from_map, *laser_cloud_corner_from_map_cov_ds,
+            //                                 *laser_cloud_corner_cov, pose_wmap_curr, 'c', mat_H, total_feat_num);
+            //         }
+            //         double normalize_logdet_H = common::logDet(mat_H, true) - mat_H.rows() * std::log(1.0 * total_feat_num);
+            //         logdet_H_list.push_back(normalize_logdet_H);
 
-                    if (FLAGS_gf_method == "wo_gf") 
-                    {
-                        gf_ratio_cur = 1.0;
-                    }
-                    if (FLAGS_gf_method == "rnd" || FLAGS_gf_method == "fps" || FLAGS_gf_method == "gd_fix") 
-                    {
-                        gf_ratio_cur = FLAGS_gf_ratio_ini;
-                    } 
-                    else if (FLAGS_gf_method == "gd_float") 
-                    {
-                        if (normalize_logdet_H > 35)
-                        {
-                            gf_ratio_cur = FLAGS_gf_ratio_ini;
-                        } 
-                        else if (normalize_logdet_H <= 35)
-                        {
-                            gf_ratio_cur = 0.8;
-                        }
-                        // else 
-                        // {
-                        //     gf_ratio_cur = FLAGS_gf_ratio_ini + (1.0 - FLAGS_gf_ratio_ini) * (72 - normalize_logdet_H) / 7.0;
-                        // }
-                    } 
+            //         if (FLAGS_gf_method == "wo_gf") 
+            //         {
+            //             gf_ratio_cur = 1.0;
+            //         }
+            //         if (FLAGS_gf_method == "rnd" || FLAGS_gf_method == "fps" || FLAGS_gf_method == "gd_fix") 
+            //         {
+            //             gf_ratio_cur = FLAGS_gf_ratio_ini;
+            //         } 
+            //         else if (FLAGS_gf_method == "gd_float") 
+            //         {
+            //             if (normalize_logdet_H > 35)
+            //             {
+            //                 gf_ratio_cur = FLAGS_gf_ratio_ini;
+            //             } 
+            //             else if (normalize_logdet_H <= 35)
+            //             {
+            //                 gf_ratio_cur = 0.8;
+            //             }
+            //             // else 
+            //             // {
+            //             //     gf_ratio_cur = FLAGS_gf_ratio_ini + (1.0 - FLAGS_gf_ratio_ini) * (72 - normalize_logdet_H) / 7.0;
+            //             // }
+            //         } 
 
-                    // else if (normalize_logdet_H >= 70)
-                    // {
-                    //     gf_ratio_cur = 0.4;
-                    // }
-                    // else if (normalize_logdet_H >= 67.5)
-                    // {
-                    //     gf_ratio_cur = 0.6;
-                    // }
-                    // else if (normalize_logdet_H >= 65)
-                    // {
-                    //     gf_ratio_cur = 0.8;
-                    // }
+            //         // else if (normalize_logdet_H >= 70)
+            //         // {
+            //         //     gf_ratio_cur = 0.4;
+            //         // }
+            //         // else if (normalize_logdet_H >= 67.5)
+            //         // {
+            //         //     gf_ratio_cur = 0.6;
+            //         // }
+            //         // else if (normalize_logdet_H >= 65)
+            //         // {
+            //         //     gf_ratio_cur = 0.8;
+            //         // }
 
-                    // if (normalize_logdet_H >= LOGDET_H_THRESHOLD)
-                    // {
-                    //     // constraint_state = "wc";
-                    //     lambda = LAMBDA_1;
-                    // } else 
-                    // {
-                    //     // constraint_state = "dg";
-                    //     lambda = LAMBDA_2;
-                    // }
-                    // std::cout << common::YELLOW << "lambda: " << lambda << common::RESET << std::endl;
-                    // ratio_change_flag = true; 
-                    // gf_ratio_cur = std::min(1.0, FLAGS_gf_ratio_ini);
-                    std::cout << common::YELLOW << "current lambda: " << normalize_logdet_H << ", gf_ratio: " << gf_ratio_cur << common::RESET << std::endl;
-                    LOG_EVERY_N(INFO, 1) << "normalize_logd: " << normalize_logdet_H;
-                }
-            }
+            //         // if (normalize_logdet_H >= LOGDET_H_THRESHOLD)
+            //         // {
+            //         //     // constraint_state = "wc";
+            //         //     lambda = LAMBDA_1;
+            //         // } else 
+            //         // {
+            //         //     // constraint_state = "dg";
+            //         //     lambda = LAMBDA_2;
+            //         // }
+            //         // std::cout << common::YELLOW << "lambda: " << lambda << common::RESET << std::endl;
+            //         // ratio_change_flag = true; 
+            //         // gf_ratio_cur = std::min(1.0, FLAGS_gf_ratio_ini);
+            //         std::cout << common::YELLOW << "current lambda: " << normalize_logdet_H << ", gf_ratio: " << gf_ratio_cur << common::RESET << std::endl;
+            //         LOG_EVERY_N(INFO, 1) << "normalize_logd: " << normalize_logdet_H;
+            //     }
+            // }
 
             // ******************************************************
             std::vector<PointPlaneFeature> all_surf_features, all_corner_features;
@@ -971,12 +971,11 @@ void saveGlobalMap()
     down_size_filter_corner_map_cov.setInputCloud(laser_cloud_corner_map);
     down_size_filter_corner_map_cov.filter(*laser_cloud_corner_map_ds);
 
-    // *laser_cloud_map += *laser_cloud_surf_map_ds;
-    // *laser_cloud_map += *laser_cloud_corner_map_ds;
-
+    *laser_cloud_map += *laser_cloud_surf_map_ds;
+    *laser_cloud_map += *laser_cloud_corner_map_ds;
     pcd_writer.write("/tmp/mloam_mapping_corner_cloud.pcd", *laser_cloud_corner_map_ds);
     pcd_writer.write("/tmp/mloam_mapping_surf_cloud.pcd", *laser_cloud_surf_map_ds);
-    // pcd_writer.write("/tmp/mloam_mapping_cloud.pcd", *laser_cloud_map);
+    pcd_writer.write("/tmp/mloam_mapping_cloud.pcd", *laser_cloud_map);
 }
 
 void clearCloud()

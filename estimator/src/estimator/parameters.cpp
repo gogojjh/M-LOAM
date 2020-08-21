@@ -261,7 +261,7 @@ void readParameters(std::string config_file)
     printf("map corner resolution:%f, surf resolution:%f\n", MAP_CORNER_RES, MAP_SURF_RES);
 
     UCT_EXT_RATIO = fsSettings["uct_ext_ratio"];
-    printf("uct ext ratio:%f\n", UCT_EXT_RATIO);
+    printf("uct ext ratio: %f\n", UCT_EXT_RATIO);
     cv::Mat cv_uct;
     COV_EXT.resize(NUM_OF_LASER);
     fsSettings["uct_ext"] >> cv_uct;

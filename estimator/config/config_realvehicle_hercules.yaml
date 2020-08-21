@@ -24,8 +24,8 @@ cloud_topic:
    - "/right/rslidar_points"
 
 # window sizes
-window_size: 6
-opt_window_size: 3
+window_size: 4
+opt_window_size: 2
 
 # Extrinsic parameter between IMU and Camera.
 estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
@@ -136,6 +136,6 @@ uct_measurement: !!opencv-matrix
    data: [0.0025, 0.0025, 0.0025]
 
 # RV: 20
-trace_threshold_before_mapping: 5 # min_d: 20
-trace_threshold_after_mapping: 5
+trace_threshold_before_mapping: 20 # min_d: 20
+trace_threshold_after_mapping: 20
 

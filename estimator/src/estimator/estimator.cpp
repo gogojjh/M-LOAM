@@ -236,7 +236,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
         f_extract_.extractCloud(laser_cloud_segment, scan_info, *feature_frame_ptr[i]);
         feature_frame_ptr[i]->insert(pair<std::string, PointICloud>("laser_cloud_outlier", laser_cloud_outlier));
     }
-    printf("size of after segmentation: %s\n", ss.str().c_str());
+    printf("size of cloud after segmentation: %s\n", ss.str().c_str());
 
     for (size_t i = 0; i < NUM_OF_LASER; i++) 
     {
@@ -245,9 +245,9 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
         total_surf_feature_ += feature_frame[i]["surf_points_less_flat"].size();
     }
     for (auto &frame_ptr : feature_frame_ptr) delete frame_ptr;    
-    mea_pre_timer.Stop();
-    printf("meaPre time: %fms (%lu*%fms)\n", common::timing::Timing::GetNewestTime("odom_mea_pre") * 1000,
-           v_laser_cloud_in.size(), common::timing::Timing::GetNewestTime("odom_mea_pre") * 1000 / v_laser_cloud_in.size());
+    double mea_pre_time = mea_pre_timer.Stop();
+    printf("meaPre time: %fms (%lu*%fms)\n", mea_pre_time * 1000, v_laser_cloud_in.size(), 
+                                             mea_pre_time * 1000 / v_laser_cloud_in.size());
 
     m_buf_.lock();
     feature_buf_.push(make_pair(t, feature_frame));
@@ -279,7 +279,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointITimeCloud> &
         f_extract_.extractCloud(laser_cloud_segment, scan_info, *feature_frame_ptr[i]);
         feature_frame_ptr[i]->insert(pair<std::string, PointICloud>("laser_cloud_outlier", laser_cloud_outlier));
     }
-    printf("size of after segmentation: %s\n", ss.str().c_str());
+    printf("size of cloud after segmentation: %s\n", ss.str().c_str());
 
     for (size_t i = 0; i < NUM_OF_LASER; i++)
     {
@@ -288,9 +288,9 @@ void Estimator::inputCloud(const double &t, const std::vector<PointITimeCloud> &
         total_surf_feature_ += feature_frame[i]["surf_points_less_flat"].size();
     }
     for (auto &frame_ptr : feature_frame_ptr) delete frame_ptr;
-    mea_pre_timer.Stop();
-    printf("meaPre time: %fms (%lu*%fms)\n", common::timing::Timing::GetNewestTime("odom_mea_pre") * 1000,
-           v_laser_cloud_in.size(), common::timing::Timing::GetNewestTime("odom_mea_pre") * 1000 / v_laser_cloud_in.size());
+    double mea_pre_time = mea_pre_timer.Stop();
+    printf("meaPre time: %fms (%lu*%fms)\n", mea_pre_time * 1000, v_laser_cloud_in.size(), 
+                                             mea_pre_time * 1000 / v_laser_cloud_in.size());
 
     m_buf_.lock();
     feature_buf_.push(make_pair(t, feature_frame));

@@ -191,10 +191,13 @@ int main(int argc, char** argv)
             << covariance_xx[2] << " " << covariance_xx[3] << std::endl;
 
   // self-making covariance calculation
-  problem.Evaluate(ceres::Problem::EvaluateOptions(), nullptr, nullptr, nullptr, &jaco);
+  double cost;
+  ceres::CRSMatrix jaco;
+  problem.Evaluate(ceres::Problem::EvaluateOptions(), &cost, nullptr, nullptr, &jaco);
+  Eigen::MatrixXd mat_J;
   CRSMatrix2EigenMatrix(jaco, mat_J);
-  mat_Jt = mat_J.transpose();
-  mat_H = mat_Jt * mat_J;
+  Eigen::MatrixXd mat_Jt = mat_J.transpose();
+  Eigen::MatrixXd mat_H = mat_Jt * mat_J;
   std::cout << "cost: " << cost << std::endl;
   std::cout << "mat_H: " << std::endl
             << mat_H << std::endl

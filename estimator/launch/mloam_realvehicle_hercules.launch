@@ -1,17 +1,19 @@
 <launch>
-    <arg name="bag_file_use" default="true" />
-    <arg name="bag_file" default="/Monster/dataset/lidar_calibration/mloam_dataset/xx.bag" />
+    <!-- <arg name="bag_file_use" default="true" /> -->
+    <arg name="bag_file" default="false" />
 
-    <param name="use_sim_time" value="true" />
-    <group if="$(arg bag_file_use)">
-        <node pkg="rosbag" type="play" name="rosbag" 
-            args="--clock -r 1 $(arg bag_file)" required="true"/>    
+    <group if="$(arg bag_file)">
+        <param name="use_sim_time" value="true" />
+        <node pkg="rosbag" type="play" name="rosbag" args="--clock -r 0.5 $(arg bag_file)" required="true"/>    
+
+        <include file="$(find rviz_car_model)/launch/default.launch" >
+            <arg name="fixed_frame" value="base_link" />
+            <arg name="transform" value="0 0 -1.5 0 0 0 1" />
+        </include>    
     </group>    
-
-    <include file="$(find rviz_car_model)/launch/default.launch" >
-        <arg name="fixed_frame" value="base_link" />
-        <arg name="transform" value="0 0 -1.5 0 0 0 1" />
-    </include>    
+    <group unless="$(arg bag_file)">
+        <param name="use_sim_time" value="false" />
+    </group>
 
     <arg name="run_mloam" default="true" />
     <arg name="run_mloam_odom" default="true" />
@@ -25,6 +27,8 @@
     <arg name="data_source" default="pcd" />
     <arg name="data_path" default="/Monster/dataset/lidar_calibration/mloam_rv_dataset/" />
     <arg name="delta_idx" default="1" />
+    <arg name="start_idx" default="2100" />
+    <arg name="end_idx" default="25229" />
     <arg name="with_ua" default="true" /> <!-- awareness of uncertainty propagation-->    
     <arg name="gf_method" default="wo_gf" /> <!-- gd_fix, gd_float, rnd, fps, wo_gf-->
     <arg name="gf_ratio_ini" default="1" />
@@ -34,13 +38,15 @@
 
     <arg name="config_file" default="$(find mloam)/config/config_realvehicle_hercules.yaml" />
     <group if="$(arg run_mloam)">
-        <node pkg="mloam" type="mloam_node_rv_hercules" name="mloam_node_rv_hercules" 
+        <node pkg="mloam" type="mloam_node_rv_hercules" name="mloam_node_rv_hercules"
             args="-config_file=$(arg config_file)
                   -result_save=$(arg result_save)
                   -output_path=$(arg output_path)
                   -data_source=$(arg data_source)
                   -data_path=$(arg data_path)
-                  -delta_idx=$(arg delta_idx)">
+                  -delta_idx=$(arg delta_idx)
+                  -start_idx=$(arg start_idx)
+                  -end_idx=$(arg end_idx)" required="true" output="screen">
             <remap from="/base_odom_gt" to="/current_odom"/>
         </node>
         <group if="$(arg run_mloam_mapping)">
@@ -78,7 +84,7 @@
     <!-- merge cloud -->
     <group unless="$(arg run_mloam)">
         <node pkg="mloam_test" type="test_merge_pointcloud_rv_hercules" name="test_merge_pointcloud_rv_hercules" 
-            args="0 $(arg data_path) $(arg delta_idx)"/>      
+            args="$(arg data_source) $(arg data_path) $(arg delta_idx) $(arg start_idx) $(arg end_idx)" required="true"/>
         <node name="static_tf_world_sensor_into_camera" pkg="tf" type="static_transform_publisher"
             args="0 0 0 0 0 0 1 world camera_init 10"/>            
         <node name="static_tf_world_sensor_into_laser" pkg="tf" type="static_transform_publisher"

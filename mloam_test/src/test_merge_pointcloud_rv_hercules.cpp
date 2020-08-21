@@ -41,7 +41,7 @@ bool b_pause;
 string MLOAM_GT_PATH;
 
 int frame_cnt = 0;
-size_t MLOAM_DELTA_IDX;
+size_t DELTA_IDX;
 
 void pauseCallback(std_msgs::StringConstPtr msg)
 {
@@ -123,7 +123,7 @@ void process(const sensor_msgs::PointCloud2ConstPtr& pc2_top,
         cloud_fused += cloud;
         // std::cout << cloud_fused.size() << std::endl;
     }
-    if (frame_cnt % MLOAM_DELTA_IDX == 0)
+    if (frame_cnt % DELTA_IDX == 0)
         common::publishCloud(cloud_fused_pub, header, cloud_fused);
     frame_cnt++;
 }
@@ -133,9 +133,9 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "test_merge_pointcloud_rv_hercules");
     ros::NodeHandle nh("~");
     cloud_fused_pub = nh.advertise<LidarMsgType>("/fused/velodyne_points", 5);
-    MLOAM_DELTA_IDX = std::stoi(argv[2]);
-    int data_choice = std::stoi(argv[1]);
-    if (data_choice == 0)
+    DELTA_IDX = std::stoi(argv[3]);
+    std::string data_source(argv[1]);
+    if (!data_source.compare("bag"))
     {
         //register fusion callback function
         LidarSubType *sub_top = new LidarSubType(nh, "/top/rslidar_points", 1);
@@ -154,13 +154,15 @@ int main(int argc, char** argv)
             fps.sleep();
         }
     } 
-    else if (data_choice == 1)
+    else if (!data_source.compare("pcd"))
     {
-        string data_path = argv[3];
+        std::string data_path = argv[2];
         ros::Subscriber sub_pause = nh.subscribe<std_msgs::String>("/mloam_pause", 5, pauseCallback);
         ros::Publisher pub_laser_gt_odom = nh.advertise<nav_msgs::Odometry>("/laser_gt_odom", 10);
         ros::Publisher pub_laser_gt_path = nh.advertise<nav_msgs::Path>("/laser_gt_path", 10);
         ros::Publisher pub_gps = nh.advertise<sensor_msgs::NavSatFix>("/novatel718d/pos", 10);
+        // ros::Publisher pub_gps_odom = nh.advertise<nav_msgs::Odometry>("/gps/odom", 10);
+        // ros::Publisher pub_gps_path = nh.advertise<nav_msgs::Path>("/gps/path", 10);        
 
         // *************************************
         // read cloud list
@@ -185,7 +187,10 @@ int main(int argc, char** argv)
 
         // *************************************
         // read data
-        for (size_t i = 0; i < cloud_time_list.size(); i+=MLOAM_DELTA_IDX)
+        size_t START_IDX = std::stoi(argv[4]);
+        size_t END_IDX = std::stoi(argv[5]);
+        printf("start idx: %d, end idx: %d, whole data size: %lu\n", START_IDX, END_IDX, cloud_time_list.size());
+        for (size_t i = START_IDX; i < std::min(cloud_time_list.size(), END_IDX); i+=DELTA_IDX)
         {	
             if (ros::ok())
             {
@@ -245,7 +250,7 @@ int main(int argc, char** argv)
                 }
                 printf("size of fused cloud %d\n", cloud_fused.size());
                 std_msgs::Header header;
-                header.frame_id = "laser_0";
+                header.frame_id = "velo";
                 header.stamp = ros::Time(cloud_time);
                 common::publishCloud(cloud_fused_pub, header, cloud_fused);
 
@@ -268,18 +273,18 @@ int main(int argc, char** argv)
                     fscanf(gps_file, "%lf %lf %lf ", &posx_accuracy, &posy_accuracy, &posz_accuracy);
                     std::fclose(gps_file);
 
-                    sensor_msgs::NavSatFix gps_position;
-                    gps_position.header.frame_id = "gps";
-                    gps_position.header.stamp = ros::Time(cloud_time);
-                    gps_position.status.status = navstat;
-                    gps_position.status.service = numsats;
-                    gps_position.latitude = lat;
-                    gps_position.longitude = lon;
-                    gps_position.altitude = alt;
-                    gps_position.position_covariance[0] = posx_accuracy;
-                    gps_position.position_covariance[4] = posy_accuracy;
-                    gps_position.position_covariance[8] = posz_accuracy;
-                    pub_gps.publish(gps_position);
+                    sensor_msgs::NavSatFix gps_msgs;
+                    gps_msgs.header.frame_id = "gps";
+                    gps_msgs.header.stamp = ros::Time(cloud_time);
+                    gps_msgs.status.status = navstat;
+                    gps_msgs.status.service = numsats;
+                    gps_msgs.latitude = lat;
+                    gps_msgs.longitude = lon;
+                    gps_msgs.altitude = alt;
+                    gps_msgs.position_covariance[0] = posx_accuracy;
+                    gps_msgs.position_covariance[4] = posy_accuracy;
+                    gps_msgs.position_covariance[8] = posz_accuracy;
+                    pub_gps.publish(gps_msgs);
                 }
                 
                 // load odom
