@@ -3,7 +3,7 @@
 # ours
 roslaunch mloam mloam_realvehicle_hercules.launch \
     run_mloam:=true \
-    run_mloam_mapping:=false \
+    run_mloam_mapping:=true \
     result_save:=true \
     data_path:=$data_path \
     data_source:=$data_source \
