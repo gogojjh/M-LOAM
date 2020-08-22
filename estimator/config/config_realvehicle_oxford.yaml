@@ -21,8 +21,8 @@ cloud_topic:
    - "/right/velodyne_points"
 
 # window sizes
-window_size: 3
-opt_window_size: 1
+window_size: 4
+opt_window_size: 2
 
 # Extrinsic parameter between IMU and Camera.
 estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
@@ -93,7 +93,7 @@ eig_thre_calib: 1000
 n_calib: 30
 
 # good feature
-odom_gf_ratio: 0.4
+odom_gf_ratio: 1.0
 
 skip_num_odom_pub: 4
 
@@ -115,8 +115,8 @@ uct_ext: !!opencv-matrix
    cols: 6
    dt: d
    data: [0, 0, 0, 0, 0, 0,
-         #  0.0025, 0.0025, 0.0025, 0.0025, 0.0025, 0.0025]
-          0, 0, 0, 0, 0, 0]
+          0.0025, 0.0025, 0.0025, 0.0025, 0.0025, 0.0025]
+         #  0, 0, 0, 0, 0, 0]
 
 uct_measurement: !!opencv-matrix
    rows: 1
@@ -124,5 +124,5 @@ uct_measurement: !!opencv-matrix
    dt: d
    data: [0.0025, 0.0025, 0.0025]
 
-trace_threshold_before_mapping: 2
-trace_threshold_after_mapping: 2
+trace_threshold_before_mapping: 20
+trace_threshold_after_mapping: 20

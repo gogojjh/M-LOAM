@@ -4,7 +4,7 @@
 multiple_thread: 0
 
 # segmmentation
-segment_cloud: 1
+segment_cloud: 0
 horizon_scan: 1800
 min_cluster_size: 30
 min_line_size: 10

@@ -17,8 +17,8 @@
 
 using namespace Eigen;
 
-const double EPSILON_R = 0.05;
-const double EPSILON_T = 0.1;
+const double EPSILON_R = 0.2;
+const double EPSILON_T = 0.2;
 const size_t N_POSE = 300;
 
 InitialExtrinsics::InitialExtrinsics() {}
@@ -55,7 +55,7 @@ void InitialExtrinsics::setParameter()
 
     v_rot_cov_.resize(NUM_OF_LASER);
     v_pos_cov_.resize(NUM_OF_LASER);
-    rot_cov_thre_ = (PLANAR_MOVEMENT) ? 0.08 : 0.25;
+    rot_cov_thre_ = (PLANAR_MOVEMENT) ? 0.10 : 0.25;
     printf("[InitialExtrinsics] rot cov thre: %f\n", rot_cov_thre_);
 
     Q_.resize(NUM_OF_LASER);
@@ -93,7 +93,7 @@ bool InitialExtrinsics::addPose(const std::vector<Pose> &pose_laser)
             // maintain a min heap
             pose_laser_add_ = std::make_pair(pq_pose_.top().first, pose_laser);
             v_pose_[pose_laser_add_.first] = pose_laser_add_.second;
-            pq_pose_.pop();
+             pq_pose_.pop();
             pq_pose_.push(pose_laser_add_);
         }        
         // std::cout << pq_pose_.top().second[0].q_.w() << std::endl;

@@ -58,20 +58,21 @@ int main(int argc, char *argv[])
 
     double time = 0.0;
     TicToc t_optimization;
-    Pose pose_relative;
-    pose_relative.t_(1) = 0.7;
+    Pose pose_relative(Eigen::Quaterniond(std::stof(argv[2]), std::stof(argv[3]), std::stof(argv[4]), std::stof(argv[5])),
+                       Eigen::Vector3d(std::stof(argv[6]), std::stof(argv[7]), std::stof(argv[8])));
     double gmc_s = 1.0;
     double gmc_mu = 20.0;
     double final_cost;
     double final_cost_normalize;
-    for (int iter_cnt = 0; iter_cnt < 10; iter_cnt++)
+    std::vector<PointPlaneFeature> all_surf_features_old;
+    for (int iter_cnt = 0; iter_cnt < std::stoi(argv[9]); iter_cnt++)
     {
         double para_pose[7];
         ceres::Problem problem;
 
         // if (gmc_mu < 1) break;
         ceres::LossFunctionWrapper *loss_function;
-        loss_function = new ceres::LossFunctionWrapper(new ceres::HuberLoss(1), ceres::TAKE_OWNERSHIP);
+        loss_function = new ceres::LossFunctionWrapper(new ceres::HuberLoss(0.5), ceres::TAKE_OWNERSHIP);
         // loss_function = new ceres::LossFunctionWrapper(new ceres::SurrogateGemanMcClureLoss(gmc_s, gmc_mu), ceres::TAKE_OWNERSHIP);
 
         para_pose[0] = pose_relative.t_(0);
@@ -112,7 +113,7 @@ int main(int argc, char *argv[])
         options.minimizer_progress_to_stdout = false;
         options.check_gradients = false;
         options.gradient_check_relative_precision = 1e-4;
-        options.max_num_iterations = 5;
+        options.max_num_iterations = 10;
         // options.max_solver_time_in_seconds = 0.03;
         ceres::Solve(options, &problem, &summary);
         // if (iter_cnt == 9) std::cout << summary.BriefReport() << std::endl;
@@ -131,6 +132,7 @@ int main(int argc, char *argv[])
     printf("ICP: %fms\n", t_optimization.toc());
     time += t_optimization.toc();
     std::cout << pose_relative.T_ << std::endl << std::endl;
+    std::cout << pose_relative << std::endl << std::endl;
 
     pcl::transformPointCloud(*laser_cloud, *laser_cloud, pose_relative.T_.cast<float>());
     pcd_writer.write(std::string(argv[1]) + "data_icp.pcd", *laser_cloud);

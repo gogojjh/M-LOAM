@@ -70,8 +70,8 @@ void Estimator::setParameter()
     corner_points_stack_.resize(NUM_OF_LASER);
     corner_points_stack_size_.resize(NUM_OF_LASER);
 
-    down_size_filter_corner_.setLeafSize(0.2, 0.2, 0.2);
     down_size_filter_surf_.setLeafSize(0.4, 0.4, 0.4);
+    down_size_filter_corner_.setLeafSize(0.2, 0.2, 0.2);
 
     pose_local_.resize(NUM_OF_LASER);
     for (size_t i = 0; i < NUM_OF_LASER; i++)
@@ -228,6 +228,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
 
         PointICloud laser_cloud_segment, laser_cloud_outlier;
         ScanInfo scan_info(N_SCANS, SEGMENT_CLOUD);
+        if (ESTIMATE_EXTRINSIC != 0) scan_info.segment_flag_ = false;
         img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, laser_cloud_outlier, scan_info);
 
         feature_frame_ptr[i] = new cloudFeature;
@@ -249,7 +250,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
     m_buf_.lock();
     feature_buf_.push(make_pair(t, feature_frame));
     m_buf_.unlock();
-    // if (!MULTIPLE_THREAD) processMeasurements();
+    if (!MULTIPLE_THREAD) processMeasurements();
 }
 
 void Estimator::inputCloud(const double &t, const std::vector<PointITimeCloud> &v_laser_cloud_in)
@@ -268,6 +269,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointITimeCloud> &
 
         PointICloud laser_cloud_segment, laser_cloud_outlier;
         ScanInfo scan_info(N_SCANS, SEGMENT_CLOUD);
+        if (ESTIMATE_EXTRINSIC != 0) scan_info.segment_flag_ = false;
         img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, laser_cloud_outlier, scan_info);
 
         feature_frame_ptr[i] = new cloudFeature;
@@ -560,8 +562,6 @@ void Estimator::optimizeMap()
     // options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
     // options.num_threads = 1;
     // options.trust_region_strategy_type = ceres::DOGLEG;
-    options.max_num_iterations = NUM_ITERATIONS;
-    options.max_solver_time_in_seconds = SOLVER_TIME;
     options.gradient_check_relative_precision = 1e-4;
     //options.use_explicit_schur_complement = true;
     //options.minimizer_progress_to_stdout = true;
@@ -632,6 +632,8 @@ void Estimator::optimizeMap()
 
     if (ESTIMATE_EXTRINSIC == 1)
     {
+        options.max_num_iterations = NUM_ITERATIONS * 3;
+        options.max_solver_time_in_seconds = SOLVER_TIME * 3;
         std::cout << common::YELLOW << "optimization with online calibration" << common::RESET << std::endl;
         buildCalibMap();
         if (POINT_PLANE_FACTOR)
@@ -640,13 +642,9 @@ void Estimator::optimizeMap()
             for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
             {
                 std::vector<PointPlaneFeature> &features_frame = surf_map_features_[IDX_REF][i];
-                // printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size());
                 for (const PointPlaneFeature &feature : features_frame)
                 {
                     LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
-                    // ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
-                    //     para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[IDX_REF]);
-                    // res_ids_proj.push_back(res_id);
                     problem.AddResidualBlock(f,
                                              loss_function,
                                              para_pose_[0],
@@ -667,6 +665,7 @@ void Estimator::optimizeMap()
                     }
                 }
             }
+
             for (size_t n = 0; n < NUM_OF_LASER; n++) 
             {
                 if (n == IDX_REF)
@@ -675,9 +674,9 @@ void Estimator::optimizeMap()
                     continue;
                 }
                 cumu_surf_map_features_[n].insert(cumu_surf_map_features_[n].end(),
-                                                  surf_map_features_[n][pivot_idx].begin(), surf_map_features_[n][pivot_idx].end());
+                                                  surf_map_features_[n][pivot_idx].begin(), 
+                                                  surf_map_features_[n][pivot_idx].end());
             }
-
             if (cumu_surf_feature_cnt_ >= N_CUMU_FEATURE)
             {
                 std::cout << common::YELLOW << "Start Calibration !" << common::RESET << std::endl;
@@ -708,13 +707,9 @@ void Estimator::optimizeMap()
             for (size_t i = pivot_idx + 1; i < WINDOW_SIZE + 1; i++)
             {
                 std::vector<PointPlaneFeature> &features_frame = corner_map_features_[IDX_REF][i];
-                // printf("Laser_%d, Win_%d, features: %d\n", n, i, features_frame.size());
                 for (const PointPlaneFeature &feature : features_frame)
                 {
                     LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
-                    // ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function,
-                    //     para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[IDX_REF]);
-                    // res_ids_proj.push_back(res_id);
                     problem.AddResidualBlock(f,
                                              loss_function,
                                              para_pose_[0],
@@ -722,6 +717,7 @@ void Estimator::optimizeMap()
                                              para_ex_pose_[IDX_REF]);
                 }
             }            
+
             for (size_t n = 0; n < NUM_OF_LASER; n++) 
             {
                 if (n == IDX_REF)
@@ -730,9 +726,9 @@ void Estimator::optimizeMap()
                     continue;
                 }
                 cumu_corner_map_features_[n].insert(cumu_corner_map_features_[n].end(),
-                                                    corner_map_features_[n][pivot_idx].begin(), corner_map_features_[n][pivot_idx].end());
+                                                    corner_map_features_[n][pivot_idx].begin(), 
+                                                    corner_map_features_[n][pivot_idx].end());
             }
-
             if (cumu_corner_feature_cnt_ >= N_CUMU_FEATURE)
             {
                 for (size_t n = 0; n < NUM_OF_LASER; n++)
@@ -757,6 +753,8 @@ void Estimator::optimizeMap()
     }
     else if (ESTIMATE_EXTRINSIC == 0)
     {
+        options.max_num_iterations = NUM_ITERATIONS;
+        options.max_solver_time_in_seconds = SOLVER_TIME;
         std::cout << common::YELLOW << "optimization with pure odometry" << common::RESET << std::endl;
         buildLocalMap();
         if (POINT_PLANE_FACTOR)
@@ -811,7 +809,6 @@ void Estimator::optimizeMap()
     std::cout << summary.BriefReport() << std::endl;
     // std::cout << summary.FullReport() << std::endl;
     printf("ceres solver costs: %fms\n", solver_timer.Stop() * 1000);
-    // total_solver_time_.push_back(t_ceres_solver.toc());
 
     double2Vector();
 
@@ -1067,7 +1064,6 @@ void Estimator::buildCalibMap()
         {
             if (((n == IDX_REF) && (i == pivot_idx)) 
              || ((n != IDX_REF) && (i != pivot_idx))) continue;
-            // int n_neigh = (n == IDX_REF ? 5 : 10);
             int n_neigh = 5;
             f_extract_.matchSurfFromMap(kdtree_surf_points_local_map,
                                         surf_points_local_map_filtered_[IDX_REF],
@@ -1576,7 +1572,8 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
         }
         if (ESTIMATE_EXTRINSIC != 0)
         {
-            std::cout << i << " D factor: " << mat_E(0, 0)
+            std::cout << "logdet H: " << common::logDet(mat_H) << std::endl;
+            std::cout << i << ": D factor: " << mat_E(0, 0)
                       << ", D vector: " << mat_V_f.col(0).transpose() << std::endl;
         }
         Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6

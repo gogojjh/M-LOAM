@@ -467,7 +467,7 @@ int main(int argc, char **argv)
             }
 
             estimator.inputCloud(cloud_time, laser_cloud_list);
-            ros::Rate loop_rate(30);
+            ros::Rate loop_rate(10);
             if (b_pause)
             {
                 while (true)

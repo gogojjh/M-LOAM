@@ -3,7 +3,7 @@
 # ours
 roslaunch mloam mloam_realvehicle_hercules.launch \
     run_mloam:=true \
-    run_mloam_mapping:=false \
+    run_mloam_mapping:=true \
     result_save:=true \
     data_path:=$data_path \
     data_source:=$data_source \
@@ -27,7 +27,7 @@ sleep 5
 #     output_path:=$result_path
 # sleep 5
 
-# different LiDAR SLAM
+# # different LiDAR SLAM
 # roslaunch mloam mloam_realvehicle_hercules.launch \
 #     run_mloam:=false \
 #     run_aloam:=true \
@@ -61,11 +61,10 @@ sleep 5
 #     output_path:=$result_path
 # sleep 5
 
-# # evaluation
+# evaluation
 # python2 $rpg_path/scripts/analyze_trajectory_single_mloam.py \
 # --recalculate_errors \
 # --est_type \
-#     M-LO \
 #     M-LOAM-wo-ua M-LOAM \
 #     A-LOAM F-LOAM LEGO-LOAM \
 # --compare \
