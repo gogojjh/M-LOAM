@@ -9,4 +9,4 @@ mkdir -p $result_path/time
 mkdir -p $result_path/others
 mkdir -p $result_path/pose_graph
 
-bash test_mloam_realvehicle_oxford_main.sh
+bash test_main.sh

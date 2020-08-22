@@ -59,6 +59,7 @@ int main(int argc, char *argv[])
     double time = 0.0;
     TicToc t_optimization;
     Pose pose_relative;
+    pose_relative.t_(1) = 0.7;
     double gmc_s = 1.0;
     double gmc_mu = 20.0;
     double final_cost;
@@ -70,7 +71,7 @@ int main(int argc, char *argv[])
 
         // if (gmc_mu < 1) break;
         ceres::LossFunctionWrapper *loss_function;
-        loss_function = new ceres::LossFunctionWrapper(new ceres::HuberLoss(1.0), ceres::TAKE_OWNERSHIP);
+        loss_function = new ceres::LossFunctionWrapper(new ceres::HuberLoss(1), ceres::TAKE_OWNERSHIP);
         // loss_function = new ceres::LossFunctionWrapper(new ceres::SurrogateGemanMcClureLoss(gmc_s, gmc_mu), ceres::TAKE_OWNERSHIP);
 
         para_pose[0] = pose_relative.t_(0);
@@ -100,7 +101,8 @@ int main(int argc, char *argv[])
         {
             Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
             LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
-            problem.AddResidualBlock(f, loss_function, para_pose);
+            // problem.AddResidualBlock(f, loss_function, para_pose);
+            problem.AddResidualBlock(f, NULL, para_pose);
         }
 
         TicToc t_solver;
@@ -111,9 +113,10 @@ int main(int argc, char *argv[])
         options.check_gradients = false;
         options.gradient_check_relative_precision = 1e-4;
         options.max_num_iterations = 5;
-        options.max_solver_time_in_seconds = 0.03;
+        // options.max_solver_time_in_seconds = 0.03;
         ceres::Solve(options, &problem, &summary);
-        if (iter_cnt == 9) std::cout << summary.BriefReport() << std::endl;
+        // if (iter_cnt == 9) std::cout << summary.BriefReport() << std::endl;
+        std::cout << summary.BriefReport() << std::endl;
         // printf("solver time: %fms\n", t_solver.toc());
 
         final_cost = summary.final_cost;

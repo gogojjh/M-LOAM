@@ -1,8 +1,7 @@
 # M-LOAM
 ### Multi-LiDAR Odometry and Mapping
 M-LOAM is a robust system for multi-LiDAR extrinsic calibration, real-time odometry, and mapping. Without manual intervention, our
-system can start with several extrinsic-uncalibrated LiDARs, automatically calibrate their extrinsics, and provide accurate
-poses as well as a globally consistent map.
+system can start with several extrinsic-uncalibrated LiDARs, automatically calibrate their extrinsics, and provide accurate poses as well as a globally consistent map.
 
 **Authors:** 
 [Jianhao Jiao](http://gogojjh.github.io), 
@@ -11,7 +10,6 @@ poses as well as a globally consistent map.
 [Linxin Jiang](),
 [Ming Liu](https://scholar.google.com/citations?user=CdV5LfQAAAAJ&hl=zh-CN)
 from [RAM-LAB](https://www.ramlab.com)
-
 
 ### 1. Prerequisites
 #### 1.1 **Ubuntu** and **ROS**
@@ -52,15 +50,36 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
   3. dataset 3: [Real Handheld Robot](http://gofile.me/4jm56/wJRrdgBwM)
 
 * Run M-LOAM
-  ```
-  rosbag play xxx.bag --clock
-  roslaunch mloam mloam_realvehicle.launch
-  rostopic echo /extrinsics/odoms[1]/pose
-  ```
+  1. We provide a series of script to perform batch testing of M-LOAM with baselines
+  2. Enter the script folder: ``roscd mloam/script/dataset_bash``
+  3. Modify the shell files in ``test_main.sh`` with correct path, an example is shown as below:
+    ```
+    export data_path=$DATA_PATH/xxx/
+    export rpg_path=$CATKIN_WS/src/localization/rpg_trajectory_evaluation
+    export result_path=$rpg_path/results/xxx/
+    mkdir -p $result_path/gf_pcd
+    mkdir -p $result_path/traj
+    mkdir -p $result_path/time
+    mkdir -p $result_path/pose_graph
+    mkdir -p $result_path/others
+    bash test_main.sh
+    ```
+  4. ``bash test_debug.sh``
+  5. Run mloam_loop: ```roslaunch mloam_loop mloam_loop_realvehicle.launch```
 
-### 4. Compare with A-LOAM
-> mloam_handheld.launch set run_aloam:=true <br>
-```roslaunch mloam mloam_handheld.launch```
+* Compare with baselines: M-LOAM-wo-ua, A-LOAM, F-LOAM, LEGO-LOAM
+  1. Also modify the shell files in ``test_main.sh`` with correct commond, an example is shown as below:
+  ```
+  roslaunch mloam mloam_realvehicle_hercules.launch \
+      run_mloam:=false \
+      run_aloam:=true \
+      data_path:=$data_path \
+      data_source:=$data_source \
+      delta_idx:=$delta_idx \
+      start_idx:=$start_idx \
+      end_idx:=$end_idx \
+      output_path:=$result_path
+  ```
 
 ### 5. Results
 **red**: odometry; **green**: mapping; **blue**: gt
@@ -70,11 +89,8 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 
 * Test in HKUST <br>
 ![](picture/hkust.png)
-    
-### 6. Additional Features (have not fixed)
-* Problems which shoould be fixed 
-  1. xxx
 
+### 6. Additional Features (have not fixed)
 * Future research
   1. Add a loop closure
   2. Object-centric SLAM
@@ -82,14 +98,18 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
   4. Integrated with high-frequency sensors
   5. cross-domain, cross-modal dataset (simulator) for autonomous driving
 
+### 6. System pipeline
+* Pipeline <br>
+![](picture/mloam_pipeline.png)
 
 ### 7. Acknowledgements
 Thanks for 
 
 * LOAM (J. Zhang and S. Singh. LOAM: Lidar Odometry and Mapping in Real-time) and its advanced version: [A-LOAM](https://github.com/HKUST-Aerial-Robotics/A-LOAM);
 * [LIO-MAPPING](https://github.com/hyye/lio-mapping) (Haoyang Ye, Yuying Chen, and Ming Liu. Tightly Coupled 3D Lidar Inertial Odometry and Mapping).
+* VINS-MONO
 
-### 8. Compared with LEGO-LOAM
+<!-- ### 8. Compared with LEGO-LOAM
 * Note: 0.2/0.4 (corner/surf resolution)
 Algorithm                  | LEGO-LOAM  | M-LOAM 
 ---------------            | ----       | ---  
@@ -101,4 +121,4 @@ ds current scan time       | 0.5851ms   | 2.37ms
 matching feature time      | 8.67ms     | 14.52ms
 whole optimization time    | 60-100ms   | 100-200ms
 save keyframes time        | 0.3913ms   | 0.000172ms
-
+ -->

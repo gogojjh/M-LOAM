@@ -32,7 +32,7 @@ find_package(PCL REQUIRED)
 find_package(Ceres REQUIRED)
 find_package(Gflags REQUIRED)
 find_package(Glog REQUIRED)
-# find_package(libpointmatcher REQUIRED)
+find_package(libpointmatcher REQUIRED)
 # find_package(G2O)
 
 include_directories(${PCL_INCLUDE_DIRS})
@@ -84,7 +84,7 @@ target_link_libraries(test_generate_bag_from_data_hercules ${catkin_LIBRARIES} $
 # add_executable(test_parse_bag test_parse_bag.cpp)
 # target_link_libraries(test_parse_bag ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-# add_executable(test_icp test_icp.cpp)
+# add_executable(test_icp test_icp/test_icp.cpp)
 # target_link_libraries(test_icp ${libpointmatcher_LIBRARIES})
 
 # add_executable(test_cuda_voxelgrid test_cuda_voxelgrid.cpp)

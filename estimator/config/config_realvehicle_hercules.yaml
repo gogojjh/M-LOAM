@@ -24,8 +24,8 @@ cloud_topic:
    - "/right/rslidar_points"
 
 # window sizes
-window_size: 4
-opt_window_size: 2
+window_size: 6
+opt_window_size: 3
 
 # Extrinsic parameter between IMU and Camera.
 estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.

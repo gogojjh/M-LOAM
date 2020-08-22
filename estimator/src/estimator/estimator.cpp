@@ -219,9 +219,8 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
     common::timing::Timer mea_pre_timer("odom_mea_pre");
     std::vector<cloudFeature *> feature_frame_ptr(NUM_OF_LASER);
     std::vector<cloudFeature> feature_frame(NUM_OF_LASER);
-    stringstream ss;
 
-    #pragma omp parallel for num_threads(2)
+    #pragma omp parallel for num_threads(NUM_OF_LASER)
     for (size_t i = 0; i < v_laser_cloud_in.size(); i++)
     {
         PointICloud laser_cloud;
@@ -230,13 +229,11 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
         PointICloud laser_cloud_segment, laser_cloud_outlier;
         ScanInfo scan_info(N_SCANS, SEGMENT_CLOUD);
         img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, laser_cloud_outlier, scan_info);
-        ss << laser_cloud_segment.size() << " ";
 
         feature_frame_ptr[i] = new cloudFeature;
         f_extract_.extractCloud(laser_cloud_segment, scan_info, *feature_frame_ptr[i]);
         feature_frame_ptr[i]->insert(pair<std::string, PointICloud>("laser_cloud_outlier", laser_cloud_outlier));
     }
-    printf("size of cloud after segmentation: %s\n", ss.str().c_str());
 
     for (size_t i = 0; i < NUM_OF_LASER; i++) 
     {
@@ -252,7 +249,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
     m_buf_.lock();
     feature_buf_.push(make_pair(t, feature_frame));
     m_buf_.unlock();
-    if (!MULTIPLE_THREAD) processMeasurements();
+    // if (!MULTIPLE_THREAD) processMeasurements();
 }
 
 void Estimator::inputCloud(const double &t, const std::vector<PointITimeCloud> &v_laser_cloud_in)
@@ -262,9 +259,8 @@ void Estimator::inputCloud(const double &t, const std::vector<PointITimeCloud> &
     common::timing::Timer mea_pre_timer("odom_mea_pre");
     std::vector<cloudFeature *> feature_frame_ptr(NUM_OF_LASER);
     std::vector<cloudFeature> feature_frame(NUM_OF_LASER);
-    stringstream ss;
 
-    #pragma omp parallel for num_threads(2)
+    #pragma omp parallel for num_threads(NUM_OF_LASER)
     for (size_t i = 0; i < v_laser_cloud_in.size(); i++)
     {
         PointICloud laser_cloud;
@@ -273,13 +269,11 @@ void Estimator::inputCloud(const double &t, const std::vector<PointITimeCloud> &
         PointICloud laser_cloud_segment, laser_cloud_outlier;
         ScanInfo scan_info(N_SCANS, SEGMENT_CLOUD);
         img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, laser_cloud_outlier, scan_info);
-        ss << laser_cloud_segment.size() << " ";
 
         feature_frame_ptr[i] = new cloudFeature;
         f_extract_.extractCloud(laser_cloud_segment, scan_info, *feature_frame_ptr[i]);
         feature_frame_ptr[i]->insert(pair<std::string, PointICloud>("laser_cloud_outlier", laser_cloud_outlier));
     }
-    printf("size of cloud after segmentation: %s\n", ss.str().c_str());
 
     for (size_t i = 0; i < NUM_OF_LASER; i++)
     {

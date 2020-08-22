@@ -113,3 +113,5 @@ int main(int argc, char *argv[])
     app.WriteCost(std::string(std::string(argv[1]) + "cost_fgr.txt").c_str());
     WriteTime(std::string(std::string(argv[1]) + "time_fgr.txt").c_str(), time);
 }
+
+

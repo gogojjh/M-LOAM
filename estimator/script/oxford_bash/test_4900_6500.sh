@@ -8,5 +8,5 @@ mkdir -p $result_path/traj
 mkdir -p $result_path/time
 mkdir -p $result_path/others
 
-bash test_mloam_realvehicle_oxford_main.sh
+bash test_main.sh
 
