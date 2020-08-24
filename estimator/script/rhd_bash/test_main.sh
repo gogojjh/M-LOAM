@@ -3,7 +3,7 @@
 # ours
 roslaunch mloam mloam_handheld.launch \
     run_mloam:=true \
-    run_mloam_mapping:=true \
+    run_mloam_mapping:=false \
     result_save:=true \
     bag_file:=$data_path \
     output_path:=$result_path

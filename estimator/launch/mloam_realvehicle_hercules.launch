@@ -46,7 +46,7 @@
                   -data_path=$(arg data_path)
                   -delta_idx=$(arg delta_idx)
                   -start_idx=$(arg start_idx)
-                  -end_idx=$(arg end_idx)" required="true" output="screen">
+                  -end_idx=$(arg end_idx)" required="true">
             <remap from="/base_odom_gt" to="/current_odom"/>
         </node>
         <group if="$(arg run_mloam_mapping)">

@@ -4,7 +4,7 @@
 multiple_thread: 0
 
 # segmmentation
-segment_cloud: 0
+segment_cloud: 1
 horizon_scan: 1800
 min_cluster_size: 30
 min_line_size: 10
@@ -116,7 +116,7 @@ map_corner_res: 0.2
 map_surf_res: 0.4
 map_eig_thre: 100
 
-uct_ext_ratio: 1
+uct_ext_ratio: 0.5
 
 # uncertainty parameter
 # translation, rotation, point (rho, phi, zeta)

@@ -381,7 +381,6 @@ void downsampleCurrentScan()
     laser_cloud_outlier_cov->clear();
 
     // propagate the extrinsic uncertainty on points
-    float min_d = 10000;
     for (PointI &point_ori : *laser_cloud_surf_last_ds)
     {
         int idx = int(point_ori.intensity); // indicate the lidar id
@@ -391,20 +390,12 @@ void downsampleCurrentScan()
         {
             pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
             evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
-            if (cov_point.trace() > TRACE_THRESHOLD_BEFORE_MAPPING) 
-            {
-                float d = sqrt(point_sel.x * point_sel.x +
-                               point_sel.y * point_sel.y +
-                               point_sel.z * point_sel.z);
-                min_d = d < min_d ? d : min_d;
-                continue;
-            }
-            cov_point = COV_MEASUREMENT;
+            if (cov_point.trace() > TRACE_THRESHOLD_BEFORE_MAPPING) continue;
+            // cov_point = COV_MEASUREMENT;
         }
         PointIWithCov point_cov(point_ori, cov_point.cast<float>());
         laser_cloud_surf_cov->push_back(point_cov);
     }
-    std::cout << "min_d: " << min_d << std::endl;
 
     for (PointI &point_ori : *laser_cloud_corner_last_ds)
     {
@@ -416,7 +407,7 @@ void downsampleCurrentScan()
             pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
             evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
             if (cov_point.trace() > TRACE_THRESHOLD_BEFORE_MAPPING) continue;
-            cov_point = COV_MEASUREMENT;
+            // cov_point = COV_MEASUREMENT;
         }
         PointIWithCov point_cov(point_ori, cov_point.cast<float>());
         laser_cloud_corner_cov->push_back(point_cov);
@@ -432,7 +423,7 @@ void downsampleCurrentScan()
             pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
             evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
             if (cov_point.trace() > TRACE_THRESHOLD_BEFORE_MAPPING) continue;
-            cov_point = COV_MEASUREMENT;
+            // cov_point = COV_MEASUREMENT;
         }
         PointIWithCov point_cov(point_ori, cov_point.cast<float>());
         laser_cloud_outlier_cov->push_back(point_cov);
@@ -680,7 +671,7 @@ void scan2MapOptimization()
             else
             {
                 options.max_num_iterations = 30;
-                options.max_solver_time_in_seconds = 0.03;
+                options.max_solver_time_in_seconds = 0.04;
                 ceres::Solve(options, &problem, &summary);
                 std::cout << summary.BriefReport() << std::endl;
             }
@@ -693,7 +684,7 @@ void scan2MapOptimization()
                 problem.Evaluate(ceres::Problem::EvaluateOptions(), &cost, nullptr, nullptr, &jaco);
                 Eigen::Matrix<double, 6, 6> mat_H; // mat_H / 134 = normlized_mat_H
                 evalHessian(jaco, mat_H);
-                cov_mapping = 2 * cost / (jaco.num_rows - 6) * mat_H.inverse();
+                cov_mapping = mat_H.inverse();
                 // std::cout << cov_mapping * 100 << std::endl;
 
                 double tr = cov_mapping.trace();
@@ -971,11 +962,11 @@ void saveGlobalMap()
     down_size_filter_corner_map_cov.setInputCloud(laser_cloud_corner_map);
     down_size_filter_corner_map_cov.filter(*laser_cloud_corner_map_ds);
 
-    *laser_cloud_map += *laser_cloud_surf_map_ds;
-    *laser_cloud_map += *laser_cloud_corner_map_ds;
-    pcd_writer.write("/tmp/mloam_mapping_corner_cloud.pcd", *laser_cloud_corner_map_ds);
     pcd_writer.write("/tmp/mloam_mapping_surf_cloud.pcd", *laser_cloud_surf_map_ds);
-    pcd_writer.write("/tmp/mloam_mapping_cloud.pcd", *laser_cloud_map);
+    pcd_writer.write("/tmp/mloam_mapping_corner_cloud.pcd", *laser_cloud_corner_map_ds);
+    // *laser_cloud_map += *laser_cloud_surf_map_ds;
+    // *laser_cloud_map += *laser_cloud_corner_map_ds;
+    // pcd_writer.write("/tmp/mloam_mapping_cloud.pcd", *laser_cloud_map);
 }
 
 void clearCloud()
@@ -1178,10 +1169,7 @@ void cloudUCTAssociateToMap(const PointICovCloud &cloud_local,
     // the compound pose: pose_global * pose_ext with uncertainty
     std::vector<Pose> pose_compound(NUM_OF_LASER);
     for (size_t n = 0; n < NUM_OF_LASER; n++) 
-    {
         compoundPoseWithCov(pose_global, pose_ext[n], pose_compound[n]);
-        // pose_compound[n].cov_ = pose_compound[IDX_REF].cov_; // not consider extrinsic covariance
-    }
 
     cloud_global.clear();
     cloud_global.resize(cloud_local.size());

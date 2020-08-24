@@ -17,8 +17,8 @@
 
 using namespace Eigen;
 
-const double EPSILON_R = 0.2;
-const double EPSILON_T = 0.2;
+const double EPSILON_R = 0.05;
+const double EPSILON_T = 0.1;
 const size_t N_POSE = 300;
 
 InitialExtrinsics::InitialExtrinsics() {}
@@ -55,7 +55,7 @@ void InitialExtrinsics::setParameter()
 
     v_rot_cov_.resize(NUM_OF_LASER);
     v_pos_cov_.resize(NUM_OF_LASER);
-    rot_cov_thre_ = (PLANAR_MOVEMENT) ? 0.10 : 0.25;
+    rot_cov_thre_ = (PLANAR_MOVEMENT) ? 0.08 : 0.25;
     printf("[InitialExtrinsics] rot cov thre: %f\n", rot_cov_thre_);
 
     Q_.resize(NUM_OF_LASER);
@@ -93,7 +93,7 @@ bool InitialExtrinsics::addPose(const std::vector<Pose> &pose_laser)
             // maintain a min heap
             pose_laser_add_ = std::make_pair(pq_pose_.top().first, pose_laser);
             v_pose_[pose_laser_add_.first] = pose_laser_add_.second;
-             pq_pose_.pop();
+            pq_pose_.pop();
             pq_pose_.push(pose_laser_add_);
         }        
         // std::cout << pq_pose_.top().second[0].q_.w() << std::endl;
@@ -198,6 +198,38 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
     {
         calib_result = calib_ext_[idx_data];
         setCovRotation(idx_data);
+
+        std::ofstream fout(std::string(OUTPUT_FOLDER + "/others/initialization_rotation.txt").c_str(), std::ios::out);
+        fout.precision(8);
+        auto tmp_pq_pose = pq_pose_;
+        while (!tmp_pq_pose.empty())
+        {
+            auto pose_laser = tmp_pq_pose.top().second;
+            fout << pose_laser[idx_ref].q_.w() << " "
+                 << pose_laser[idx_ref].q_.x() << " "
+                 << pose_laser[idx_ref].q_.y() << " "
+                 << pose_laser[idx_ref].q_.z() << " "
+                 << pose_laser[idx_data].q_.w() << " "
+                 << pose_laser[idx_data].q_.x() << " "
+                 << pose_laser[idx_data].q_.y() << " "
+                 << pose_laser[idx_data].q_.z() << std::endl;
+            tmp_pq_pose.pop();
+        }
+        fout.close();
+
+        fout.open(std::string(OUTPUT_FOLDER + "/others/initialization_Q.txt").c_str(), std::ios::out);
+        fout.precision(8);
+        for (size_t i = 0; i < Q_[idx_data].rows(); i++)
+        {
+            for (size_t j = 0; j < Q_[idx_data].cols(); j++)
+            {
+                fout << Q_[idx_data](i, j) << " ";
+            }
+            fout << std::endl;
+        }
+        fout.close(); 
+        std::cout << "saving initialization state" << std::endl;    
+
         return true;
     }
     else
