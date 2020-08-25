@@ -11,9 +11,9 @@
 #     start_idx:=$start_idx \
 #     end_idx:=$end_idx \
 #     output_path:=$result_path
-# sleep 10
+# sleep 5
 
-# without uncertainty-aware
+# # without uncertainty-aware
 # roslaunch mloam mloam_realvehicle_hercules.launch \
 #     run_mloam:=true \
 #     run_mloam_mapping:=true \
@@ -62,8 +62,15 @@
 # sleep 5
 
 # evaluation
+# python2 $rpg_path/scripts/analyze_trajectory_single_mloam.py \
+# --recalculate_errors \
+# --est_type \
+#     M-LOAM-wo-ua M-LOAM \
+#     A-LOAM F-LOAM LEGO-LOAM \
+# --compare \
+#     $result_path/traj
+
 python2 $rpg_path/scripts/analyze_trajectory_single_mloam.py \
---recalculate_errors \
 --est_type \
     M-LOAM-wo-ua M-LOAM \
     A-LOAM F-LOAM LEGO-LOAM \

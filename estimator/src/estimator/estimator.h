@@ -112,7 +112,11 @@ class Estimator
     void slideWindow();
 
     void evalResidual(ceres::Problem &problem,
-                      std::vector<PoseLocalParameterization *> &local_param_ids);
+                      std::vector<PoseLocalParameterization *> &local_param_ids,
+                      const std::vector<double *> &para_ids,
+                      const std::vector<ceres::internal::ResidualBlock *> &res_ids_proj,
+                      const MarginalizationInfo *last_marginalization_info_,
+                      const std::vector<ceres::internal::ResidualBlock *> &res_ids_marg);
 
     void evalDegenracy(std::vector<PoseLocalParameterization *> &local_param_ids,
                        const ceres::CRSMatrix &jaco);
@@ -200,11 +204,15 @@ class Estimator
     double **para_ex_pose_{};
     double *para_td_{};
 
-    std::vector<double> eig_thre_;
+    Eigen::VectorXd eig_thre_;
+    std::vector<double> log_lambda_;
+    std::vector<Pose> log_extrinsics_;
+
     std::vector<double> d_factor_calib_;
     std::vector<double> cur_eig_calib_;
     std::vector<std::vector<std::pair<double, Pose> > > pose_calib_;
     std::vector<bool> calib_converge_;
+    std::vector<size_t> num_residuals_;
 
     // for marginalization
     MarginalizationInfo *last_marginalization_info_{};

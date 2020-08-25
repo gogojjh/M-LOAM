@@ -7,7 +7,7 @@ roslaunch mloam mloam_simu_jackal.launch \
     result_save:=true \
     bag_file:=$data_path \
     output_path:=$result_path
-sleep 5
+# sleep 5
 
 # without uncertainty-aware
 # roslaunch mloam mloam_simu_jackal.launch \

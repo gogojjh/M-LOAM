@@ -112,8 +112,7 @@ void Estimator::setParameter()
     }
     para_td_ = new double[NUM_OF_LASER];
 
-    eig_thre_ = std::vector<double>(OPT_WINDOW_SIZE + NUM_OF_LASER + 1, EIG_INITIAL * (NUM_OF_LASER - 1));
-    for (size_t i = 0; i < NUM_OF_LASER; i++) eig_thre_[OPT_WINDOW_SIZE + i + 1] = 0;
+    eig_thre_ = Eigen::VectorXd::Constant(OPT_WINDOW_SIZE + 1 + NUM_OF_LASER, 1, EIG_INITIAL);
     d_factor_calib_ = std::vector<double>(NUM_OF_LASER, 0);
     cur_eig_calib_ = std::vector<double>(NUM_OF_LASER, 0);
     pose_calib_.resize(NUM_OF_LASER);
@@ -182,7 +181,6 @@ void Estimator::clearState()
 
     last_marginalization_info_ = nullptr;
 
-    eig_thre_.clear();
     d_factor_calib_.clear();
     cur_eig_calib_.clear();
     pose_calib_.clear();
@@ -551,7 +549,6 @@ void Estimator::optimizeMap()
     // ****************************************************
     ceres::Problem problem;
     ceres::Solver::Summary summary;
-    // ceres: set lossfunction and problem
     ceres::LossFunction *loss_function;
     // loss_function = new ceres::GemanMcClureLoss(1.0);
     loss_function = new ceres::HuberLoss(0.5);
@@ -566,6 +563,16 @@ void Estimator::optimizeMap()
     //options.use_explicit_schur_complement = true;
     //options.minimizer_progress_to_stdout = true;
     //options.use_nonmonotonic_steps = true;
+    if (ESTIMATE_EXTRINSIC == 0)
+    {
+        options.max_num_iterations = NUM_ITERATIONS;
+        options.max_solver_time_in_seconds = SOLVER_TIME;
+    } 
+    else
+    {
+        options.max_num_iterations = NUM_ITERATIONS * 3;
+        options.max_solver_time_in_seconds = SOLVER_TIME * 3;
+    }
 
     vector2Double();
 
@@ -579,7 +586,7 @@ void Estimator::optimizeMap()
         local_parameterization->setParameter();
         problem.AddParameterBlock(para_pose_[i], SIZE_POSE, local_parameterization);
         local_param_ids.push_back(local_parameterization);
-        // para_ids.push_back(para_pose_[i]);
+        para_ids.push_back(para_pose_[i]);
     }
     problem.SetParameterBlockConstant(para_pose_[0]);
 
@@ -589,7 +596,7 @@ void Estimator::optimizeMap()
         local_parameterization->setParameter();
         problem.AddParameterBlock(para_ex_pose_[i], SIZE_POSE, local_parameterization);
         local_param_ids.push_back(local_parameterization);
-        // para_ids.push_back(para_ex_pose_[i]);
+        para_ids.push_back(para_ex_pose_[i]);
         if (ESTIMATE_EXTRINSIC == 0) problem.SetParameterBlockConstant(para_ex_pose_[i]);
     }
     problem.SetParameterBlockConstant(para_ex_pose_[IDX_REF]);
@@ -611,30 +618,31 @@ void Estimator::optimizeMap()
     if ((MARGINALIZATION_FACTOR) && (last_marginalization_info_))
     {
         MarginalizationFactor *marginalization_factor = new MarginalizationFactor(last_marginalization_info_);
-        // ceres::internal::ResidualBlock *res_id_marg = problem.AddResidualBlock(marginalization_factor, NULL, last_marginalization_parameter_blocks_);
-        // res_ids_marg.push_back(res_id_marg);
-        problem.AddResidualBlock(marginalization_factor, NULL, last_marginalization_parameter_blocks_);
+        ceres::internal::ResidualBlock *res_id_marg = problem.AddResidualBlock(marginalization_factor,
+                                                                               NULL,
+                                                                               last_marginalization_parameter_blocks_);
+        res_ids_marg.push_back(res_id_marg);
     }
 
     // ****************************************************
     // ceres: add residual block within the sliding window
     std::vector<ceres::internal::ResidualBlock *> res_ids_proj;
-    if (PRIOR_FACTOR)
-    {
-        for (size_t n = 0; n < NUM_OF_LASER; n++)
-        {
-            PriorFactor *f = new PriorFactor(tbl_[n], qbl_[n], PRIOR_FACTOR_POS, PRIOR_FACTOR_ROT);
-            // ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, NULL, para_ex_pose_[n]);
-            // res_ids_proj.push_back(res_id);
-            problem.AddResidualBlock(f, NULL, para_ex_pose_[n]);
-        }
-    }
-
     if (ESTIMATE_EXTRINSIC == 1)
     {
-        options.max_num_iterations = NUM_ITERATIONS * 3;
-        options.max_solver_time_in_seconds = SOLVER_TIME * 3;
         std::cout << common::YELLOW << "optimization with online calibration" << common::RESET << std::endl;
+        
+        if (PRIOR_FACTOR)
+        {
+            for (size_t n = 0; n < NUM_OF_LASER; n++)
+            {
+                PriorFactor *f = new PriorFactor(tbl_[n], qbl_[n], PRIOR_FACTOR_POS, PRIOR_FACTOR_ROT);
+                ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f,
+                                                                                  NULL,
+                                                                                  para_ex_pose_[n]);
+                res_ids_proj.push_back(res_id);
+            }
+        }
+
         buildCalibMap();
         if (POINT_PLANE_FACTOR)
         {
@@ -645,11 +653,12 @@ void Estimator::optimizeMap()
                 for (const PointPlaneFeature &feature : features_frame)
                 {
                     LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
-                    problem.AddResidualBlock(f,
-                                             loss_function,
-                                             para_pose_[0],
-                                             para_pose_[i - pivot_idx],
-                                             para_ex_pose_[IDX_REF]);
+                    ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f,
+                                                                                      loss_function,
+                                                                                      para_pose_[0],
+                                                                                      para_pose_[i - pivot_idx],
+                                                                                      para_ex_pose_[IDX_REF]);
+                    res_ids_proj.push_back(res_id);
                     if (CHECK_JACOBIAN)
                     {
                         double **tmp_param = new double *[3];
@@ -682,11 +691,10 @@ void Estimator::optimizeMap()
                     for (const PointPlaneFeature &feature : cumu_surf_map_features_[n])
                     {
                         LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(feature.point_, feature.coeffs_);
-                        // ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_ex_pose_[n]);
-                        // res_ids_proj.push_back(res_id);
-                        problem.AddResidualBlock(f,
-                                                 loss_function,
-                                                 para_ex_pose_[n]);
+                        ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f,
+                                                                                          loss_function,
+                                                                                          para_ex_pose_[n]);
+                        res_ids_proj.push_back(res_id);
                     }
                 }
                 if (!MARGINALIZATION_FACTOR)
@@ -705,11 +713,12 @@ void Estimator::optimizeMap()
                 for (const PointPlaneFeature &feature : features_frame)
                 {
                     LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
-                    problem.AddResidualBlock(f,
-                                             loss_function,
-                                             para_pose_[0],
-                                             para_pose_[i - pivot_idx],
-                                             para_ex_pose_[IDX_REF]);
+                    ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f,
+                                                                                      loss_function,
+                                                                                      para_pose_[0],
+                                                                                      para_pose_[i - pivot_idx],
+                                                                                      para_ex_pose_[IDX_REF]);
+                    res_ids_proj.push_back(res_id);
                 }
             }            
 
@@ -728,9 +737,8 @@ void Estimator::optimizeMap()
                     for (const PointPlaneFeature &feature : cumu_corner_map_features_[n])
                     {
                         LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(feature.point_, feature.coeffs_);
-                        // ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_ex_pose_[n]);
-                        // res_ids_proj.push_back(res_id);
-                        problem.AddResidualBlock(f, loss_function, para_ex_pose_[n]);
+                        ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_ex_pose_[n]);
+                        res_ids_proj.push_back(res_id);
                     }
                 }
                 if (!MARGINALIZATION_FACTOR)
@@ -743,8 +751,6 @@ void Estimator::optimizeMap()
     }
     else if (ESTIMATE_EXTRINSIC == 0)
     {
-        options.max_num_iterations = NUM_ITERATIONS;
-        options.max_solver_time_in_seconds = SOLVER_TIME;
         std::cout << common::YELLOW << "optimization with pure odometry" << common::RESET << std::endl;
         buildLocalMap();
         if (POINT_PLANE_FACTOR)
@@ -758,11 +764,12 @@ void Estimator::optimizeMap()
                         const PointPlaneFeature &feature = surf_map_features_[n][i][fid];
                         if (feature.type_ == 'n') continue;
                         LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
-                        problem.AddResidualBlock(f,
-                                                 loss_function,
-                                                 para_pose_[0],
-                                                 para_pose_[i - pivot_idx],
-                                                 para_ex_pose_[n]);
+                        ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f,
+                                                                                          loss_function,
+                                                                                          para_pose_[0],
+                                                                                          para_pose_[i - pivot_idx],
+                                                                                          para_ex_pose_[n]);
+                        res_ids_proj.push_back(res_id);
                     }
                 }
             }
@@ -779,11 +786,12 @@ void Estimator::optimizeMap()
                         const PointPlaneFeature &feature = corner_map_features_[n][i][fid];
                         if (feature.type_ == 'n') continue;
                         LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
-                        problem.AddResidualBlock(f,
-                                                 loss_function,
-                                                 para_pose_[0],
-                                                 para_pose_[i - pivot_idx],
-                                                 para_ex_pose_[n]);
+                        ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f,
+                                                                                          loss_function,
+                                                                                          para_pose_[0],
+                                                                                          para_pose_[i - pivot_idx],
+                                                                                          para_ex_pose_[n]);
+                        res_ids_proj.push_back(res_id);
                     }
                 }
             }
@@ -791,8 +799,14 @@ void Estimator::optimizeMap()
     }
     
     // *******************************
-    // evalResidual(problem, local_param_ids, para_ids, res_ids_proj, last_marginalization_info_, res_ids_marg);
-    evalResidual(problem, local_param_ids);
+    common::timing::Timer eval_deg_timer("odom_eval_residual");
+    evalResidual(problem,
+                 local_param_ids,
+                 para_ids,
+                 res_ids_proj,
+                 last_marginalization_info_,
+                 res_ids_marg);
+    printf("evaluate residual: %fms\n", eval_deg_timer.Stop() * 1000);
 
     common::timing::Timer solver_timer("odom_solver");
     ceres::Solve(options, &problem, &summary);
@@ -893,7 +907,8 @@ void Estimator::optimizeMap()
                         {
                             LidarPivotTargetPlaneNormFactor *f = new LidarPivotTargetPlaneNormFactor(feature.point_, feature.coeffs_);
                             ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
-                                std::vector<double *>{para_ex_pose_[n]}, std::vector<int>{});
+                                                                                           std::vector<double *>{para_ex_pose_[n]},
+                                                                                           std::vector<int>{});
                             marginalization_info->addResidualBlockInfo(residual_block_info);
                         }
                     }
@@ -915,8 +930,10 @@ void Estimator::optimizeMap()
                             const PointPlaneFeature &feature = surf_map_features_[n][i][fid];
                             if (feature.type_ == 'n') continue;
                             LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
-                            ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
-                                                                                           vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]}, std::vector<int>{0});
+                            ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f,
+                                                                                           loss_function,
+                                                                                           vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]},
+                                                                                           std::vector<int>{0});
                             marginalization_info->addResidualBlockInfo(residual_block_info);
                         }
                     }
@@ -933,8 +950,10 @@ void Estimator::optimizeMap()
                             const PointPlaneFeature &feature = corner_map_features_[n][i][fid];
                             if (feature.type_ == 'n') continue;
                             LidarPivotPlaneNormFactor *f = new LidarPivotPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
-                            ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
-                                                                                           vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]}, std::vector<int>{0});
+                            ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f,
+                                                                                           loss_function,
+                                                                                           vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]},
+                                                                                           std::vector<int>{0});
                             marginalization_info->addResidualBlockInfo(residual_block_info);
                         }
                     }
@@ -977,10 +996,6 @@ void Estimator::optimizeMap()
         last_marginalization_parameter_blocks_ = parameter_blocks; // save parameter_blocks at the last optimization
         printf("whole marginalization costs: %fms\n", marg_timer.Stop() * 1000);
     }
-
-    // for (auto &para : para_ids) delete para;
-    // for (auto &res : res_ids_proj) delete res;
-    // for (auto &res : res_ids_marg) delete res;
 }
 
 /****************************************************************************************/
@@ -1008,18 +1023,17 @@ void Estimator::buildCalibMap()
         {
             Pose pose_i(Qs_[i], Ts_[i]);
             pose_local_[n][i] = Pose(pose_pivot.T_.inverse() * pose_i.T_ * pose_ext.T_);
+            PointICloud surf_points_trans, corner_points_trans;
             if (i == WINDOW_SIZE) continue;
-            if (n == IDX_REF) // localmap of reference
-            {
-                PointICloud surf_points_trans, corner_points_trans;
-                pcl::transformPointCloud(surf_points_stack_[n][i], surf_points_trans, pose_local_[n][i].T_.cast<float>());
-                // for (auto &p: surf_points_trans.points) p.intensity = i;
-                surf_points_local_map_[n] += surf_points_trans;
+            if ((n != IDX_REF) && (i > pivot_idx)) continue;
 
-                pcl::transformPointCloud(corner_points_stack_[n][i], corner_points_trans, pose_local_[n][i].T_.cast<float>());
-                // for (auto &p: corner_points_trans.points) p.intensity = i;
-                corner_points_local_map_[n] += corner_points_trans;
-            }
+            pcl::transformPointCloud(surf_points_stack_[IDX_REF][i], surf_points_trans, pose_local_[IDX_REF][i].T_.cast<float>());
+            // for (auto &p: surf_points_trans.points) p.intensity = i;
+            surf_points_local_map_[n] += surf_points_trans;
+
+            pcl::transformPointCloud(corner_points_stack_[IDX_REF][i], corner_points_trans, pose_local_[IDX_REF][i].T_.cast<float>());
+            // for (auto &p: corner_points_trans.points) p.intensity = i;
+            corner_points_local_map_[n] += corner_points_trans;
         }
 
         if (n == IDX_REF)
@@ -1033,9 +1047,9 @@ void Estimator::buildCalibMap()
         {
             pcl::VoxelGrid<PointI> down_size_filter;
             down_size_filter.setLeafSize(0.2, 0.2, 0.2);
-            down_size_filter.setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_[IDX_REF]));
+            down_size_filter.setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_[n]));
             down_size_filter.filter(surf_points_local_map_filtered_[n]);
-            down_size_filter.setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_[IDX_REF]));
+            down_size_filter.setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_[n]));
             down_size_filter.filter(corner_points_local_map_filtered_[n]);
         }         
     }
@@ -1063,7 +1077,8 @@ void Estimator::buildCalibMap()
         {
             if (((n == IDX_REF) && (i == pivot_idx))
              || ((n != IDX_REF) && (i != pivot_idx))) continue;
-            int n_neigh = (n == IDX_REF ? 5:10);
+            // int n_neigh = (n == IDX_REF ? 5:10);
+            int n_neigh = 5;
             f_extract_.matchSurfFromMap(kdtree_surf_points_local_map,
                                         surf_points_local_map_filtered_[n],
                                         surf_points_stack_[n][i],
@@ -1428,7 +1443,7 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
     }
     gfm_timer.Stop();
     sel_feature_idx.resize(num_sel_features);
-    // printf("num of all features: %lu, seevalResiduall features: %lu\n", num_all_features, num_use_features);
+    // printf("num of all features: %lu, selected features: %lu\n", num_all_features, num_use_features);
 }
 
 // push new state and measurements in the sliding window
@@ -1499,68 +1514,70 @@ void Estimator::double2Vector()
 }
 
 void Estimator::evalResidual(ceres::Problem &problem,
-                             std::vector<PoseLocalParameterization *> &local_param_ids)
+                             std::vector<PoseLocalParameterization *> &local_param_ids,
+                             const std::vector<double *> &para_ids,
+                             const std::vector<ceres::internal::ResidualBlock *> &res_ids_proj,
+                             const MarginalizationInfo *last_marginalization_info_,
+                             const std::vector<ceres::internal::ResidualBlock *> &res_ids_marg)
 {
 	double cost;
     ceres::CRSMatrix jaco;
     ceres::Problem::EvaluateOptions e_option;
 	if ((PRIOR_FACTOR) || (POINT_PLANE_FACTOR) || (POINT_EDGE_FACTOR))
 	{
-		// e_option.parameter_blocks = para_ids;
-		// e_option.residual_blocks = res_ids_proj;
-        problem.Evaluate(ceres::Problem::EvaluateOptions(), &cost, nullptr, nullptr, &jaco);
+		e_option.parameter_blocks = para_ids;
+		e_option.residual_blocks = res_ids_proj;
+        problem.Evaluate(e_option, &cost, nullptr, nullptr, &jaco);
         evalDegenracy(local_param_ids, jaco);
-        // std::cout << "cost: " << cost << std::endl;
-	}
-	if (MARGINALIZATION_FACTOR)
-	{
-		// if (last_marginalization_info_ && !res_ids_marg.empty())
-		// {
-			// e_option.parameter_blocks = para_ids;
-			// e_option.residual_blocks = res_ids_marg;
-            // problem.Evaluate(e_option, &cost, nullptr, nullptr, &jaco);
-            // printf("cost marg: %f\n", cost);
-		// }
-	}
+        printf("cost res: %f\n", cost);
+    }
+	// if (MARGINALIZATION_FACTOR)
+	// {
+	// 	if (last_marginalization_info_ && !res_ids_marg.empty())
+	// 	{
+	// 		e_option.parameter_blocks = para_ids;
+	// 		e_option.residual_blocks = res_ids_marg;
+    //         problem.Evaluate(e_option, &cost, nullptr, nullptr, &jaco);
+    //         printf("cost marg: %f\n", cost);
+	// 	}
+	// }
 }
 
 // A^TA is not only symmetric and invertiable: https://math.stackexchange.com/questions/2352684/when-is-a-symmetric-matrix-invertible
-void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_param_ids, const ceres::CRSMatrix &jaco)
+void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_param_ids,
+                              const ceres::CRSMatrix &jaco)
 {
-    // printf("jacob: %d constraints, %d parameters (%d pose_param, %d ext_param)\n",
-    //        jaco.num_rows, jaco.num_cols, 6 * (OPT_WINDOW_SIZE + 1), 6 * NUM_OF_LASER); // 1555(feature_size) * 48(para_size)
-    if (jaco.num_rows == 0) return;
-    common::timing::Timer eval_deg_timer("odom_eval_deg");
+    // printf("jacob: %d constraints, %d parameters 6 * (%d pose_param_block, %d ext_param_block)\n",
+    //        jaco.num_rows, jaco.num_cols, OPT_WINDOW_SIZE + 1, NUM_OF_LASER); // 1555(feature_size) * 48(para_size)
+    // if (jaco.num_rows == 0) return;
     Eigen::SparseMatrix<double, Eigen::RowMajor> mat_J; // Jacobian is a diagonal matrix
     CRSMatrix2EigenMatrix(jaco, mat_J);
     Eigen::SparseMatrix<double, Eigen::RowMajor> mat_Jt = mat_J.transpose();
     Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J;
-    bool b_vis = false; // to verify the structure of A^T*A
-    if (b_vis)
+    // bool b_vis = false; // to verify the structure of A^T*A
+    // if (b_vis)
+    // {
+    //     printf("visualize the structure of H(J^T*J)\n");
+    //     for (size_t i = 0; i < mat_JtJ.rows(); i++)
+    //     {
+    //         for (auto j = 0; j < mat_JtJ.cols(); j++)
+    //         {
+    //             if (mat_JtJ(i, j) == 0) std::cout << "0 ";
+    //                                else std::cout << "1 ";
+    //         }
+    //         std::cout << std::endl;
+    //     }
+    // }
+    for (size_t i = 0; i < OPT_WINDOW_SIZE + 1; i++)
     {
-        printf("visualize the structure of H(J^T*J)\n");
-        for (size_t i = 0; i < mat_JtJ.rows(); i++)
-        {
-            for (auto j = 0; j < mat_JtJ.cols(); j++)
-            {
-                if (mat_JtJ(i, j) == 0) std::cout << "0 ";
-                                   else std::cout << "1 ";
-            }
-            std::cout << std::endl;
-        }
-    }
-    d_factor_calib_ = std::vector<double>(NUM_OF_LASER, 0);
-
-    for (size_t i = 0; i < local_param_ids.size(); i++)
-    {
-        Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(6*i, 6*i, 6, 6);
+        Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(6 * i, 6 * i, 6, 6);
         Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6> > esolver(mat_H);
         Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real(); // 6*1
         Eigen::Matrix<double, 6, 6> mat_V_f = esolver.eigenvectors().real(); // 6*6, column is the corresponding eigenvector
         Eigen::Matrix<double, 6, 6> mat_V_p = mat_V_f;
         for (auto j = 0; j < mat_E.cols(); j++)
         {
-            if (mat_E(0, j) < eig_thre_[i])
+            if (mat_E(0, j) < eig_thre_(i))
             {
                 mat_V_p.col(j) = Eigen::Matrix<double, 6, 1>::Zero();
                 local_param_ids[i]->is_degenerate_ = true;
@@ -1569,27 +1586,8 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
                 break;
             }
         }
-        if (ESTIMATE_EXTRINSIC != 0)
-        {
-            std::cout << "logdet H: " << common::logDet(mat_H) << std::endl;
-            std::cout << i << ": D factor: " << mat_E(0, 0)
-                      << ", D vector: " << mat_V_f.col(0).transpose() << std::endl;
-        }
+        std::cout << i << " D factor: " << mat_E(0, 0) << ": " << mat_V_f.col(0).transpose() << std::endl;
         Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
-
-        if (i > OPT_WINDOW_SIZE)
-        {
-            cur_eig_calib_[i - OPT_WINDOW_SIZE - 1] = mat_E(0, 0);
-            if (mat_E(0, 0) >= EIG_THRE_CALIB * WINDOW_SIZE)
-            {
-                eig_thre_[i] = EIG_THRE_CALIB * WINDOW_SIZE;
-                d_factor_calib_[i - OPT_WINDOW_SIZE - 1] = mat_E(0, 0);
-            }
-            else if (mat_E(0, 0) > eig_thre_[i])
-                eig_thre_[i] = mat_E(0, 0);
-            else
-                mat_P.setZero(); // not update extrinsics
-        }
         if (local_param_ids[i]->is_degenerate_)
         {
             local_param_ids[i]->V_update_ = mat_P;
@@ -1597,16 +1595,57 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
             // std::cout << mat_P << std::endl;
         }
     }
-
-    if (ESTIMATE_EXTRINSIC != 0)
+    if ((ESTIMATE_EXTRINSIC != 0) && (frame_cnt_ % N_CUMU_FEATURE == 0)) 
     {
-        stringstream ss;
-        ss << "eigen threshold: ";
-        for (size_t i = 0; i < eig_thre_.size(); i++) ss << eig_thre_[i] << " ";
-        std::cout << ss.str() << std::endl;
+        d_factor_calib_ = std::vector<double>(NUM_OF_LASER, 0);
+        for (size_t i = OPT_WINDOW_SIZE + 1; i < local_param_ids.size(); i++)
+        {
+            Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(6 * i, 6 * i, 6, 6);
+            // std::cout << mat_H << std::endl;
+            Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6>> esolver(mat_H);
+            Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real();    // 6*1
+            Eigen::Matrix<double, 6, 6> mat_V_f = esolver.eigenvectors().real(); // 6*6, column is the corresponding eigenvector
+            Eigen::Matrix<double, 6, 6> mat_V_p = mat_V_f;
+            for (auto j = 0; j < mat_E.cols(); j++)
+            {
+                if (mat_E(0, j) < eig_thre_(i))
+                {
+                    mat_V_p.col(j) = Eigen::Matrix<double, 6, 1>::Zero();
+                    local_param_ids[i]->is_degenerate_ = true;
+                }
+                else
+                {
+                    break;
+                }
+            }
+            Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
+
+            std::cout << i << " D factor: " << mat_E(0, 0) << ": " << mat_V_f.col(0).transpose() << std::endl;
+            double lambda = mat_E(0, 0) / N_CUMU_FEATURE / OPT_WINDOW_SIZE;
+            // double lambda = mat_E(0, 0);
+            printf("calib eig: %f\n", lambda);
+            log_lambda_.push_back(lambda);
+            if (lambda >= EIG_THRE_CALIB)
+            {
+                eig_thre_(i) = EIG_THRE_CALIB;
+                d_factor_calib_[i - OPT_WINDOW_SIZE - 1] = lambda;
+            }
+            else if (lambda > eig_thre_(i))
+                eig_thre_(i) = lambda;
+            else
+                mat_P.setZero(); // not update extrinsics
+
+            if (local_param_ids[i]->is_degenerate_)
+            {
+                local_param_ids[i]->V_update_ = mat_P;
+                // std::cout << "param " << i << " is degenerate !" << std::endl;
+                // std::cout << mat_P << std::endl;
+            }
+            Pose tmp_pose(qbl_[i - OPT_WINDOW_SIZE - 1], tbl_[i - OPT_WINDOW_SIZE - 1]);
+            log_extrinsics_.push_back(tmp_pose);
+        }
+        std::cout << eig_thre_.transpose() << std::endl;
     }
-    eval_deg_timer.Stop();
-    // printf("evaluate degeneracy: %fms\n", t_eval_degenracy.toc());
 }
 
 void Estimator::evalCalib()
@@ -1633,6 +1672,7 @@ void Estimator::evalCalib()
             if (pose_calib_[n].size() >= N_CALIB) calib_converge_[n] = true;
                                              else is_converage = false;
         }
+
         if (is_converage)
         {
             std::cout << common::YELLOW << "Finish nonlinear calibration !" << common::RESET << std::endl;

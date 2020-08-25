@@ -74,28 +74,24 @@ void SaveStatistics::saveOdomStatistics(const string &calib_eig_filename,
                                         const string &odom_filename,
                                         const Estimator &estimator)
 {
-    if (estimator.solver_flag_ != Estimator::SolverFlag::NON_LINEAR)
-        return;
     ofstream fout(calib_eig_filename.c_str(), ios::out);
     fout.setf(ios::fixed, ios::floatfield);
     fout.precision(5);
-
-    for (size_t i = 0; i < NUM_OF_LASER; i++)
-        fout << estimator.cur_eig_calib_[i] << ", ";
-    fout << std::endl;
+    fout << "Var1" << std::endl;
+    for (size_t i = 0; i < estimator.log_lambda_.size(); i++)
+        fout << estimator.log_lambda_[i] << std::endl;
     fout.close();
 
     fout.open(calib_result_filename.c_str(), ios::out);
-    for (size_t i = 0; i < NUM_OF_LASER; i++)
+    for (size_t i = 0; i < estimator.log_extrinsics_.size(); i++)
     {
-        fout << estimator.cur_time_ << ", "
-             << estimator.tbl_[i](0) << ", "
-             << estimator.tbl_[i](1) << ", "
-             << estimator.tbl_[i](2) << ", "
-             << estimator.qbl_[i].x() << ", "
-             << estimator.qbl_[i].y() << ", "
-             << estimator.qbl_[i].z() << ", "
-             << estimator.qbl_[i].w() << std::endl;
+        fout << estimator.log_extrinsics_[i].t_(0) << ", "
+             << estimator.log_extrinsics_[i].t_(1) << ", "
+             << estimator.log_extrinsics_[i].t_(2) << ", "
+             << estimator.log_extrinsics_[i].q_.x() << ", "
+             << estimator.log_extrinsics_[i].q_.y() << ", "
+             << estimator.log_extrinsics_[i].q_.z() << ", "
+             << estimator.log_extrinsics_[i].q_.w() << std::endl;
     }
     fout.close();
 

@@ -153,43 +153,45 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
     Eigen::JacobiSVD<Eigen::MatrixXd> svd(Q_[idx_data], Eigen::ComputeFullU | Eigen::ComputeFullV);
     //cout << svd.singularValues().transpose() << endl;
 
-    if (PLANAR_MOVEMENT)
-    {
-        // estimateRyx
-        Eigen::Vector4d t1 = svd.matrixV().block<4,1>(0,2);
-        Eigen::Vector4d t2 = svd.matrixV().block<4,1>(0,3);
-        // solve constraint for q_yz: xy = -zw
-        double s[2];
-        if (!common::solveQuadraticEquation(t1(0) * t1(1) + t1(2) * t1(3),
-                                        t1(0) * t2(1) + t1(1) * t2(0) + t1(2) * t2(3) + t1(3) * t2(2),
-                                        t2(0) * t2(1) + t2(2) * t2(3),
-                                        s[0], s[1]))
-        {
-            std::cout << "# ERROR: Quadratic equation cannot be solved due to negative determinant." << std::endl;
-            return false;
-        }
-        std::vector<Eigen::Quaterniond> q_yx;
-        q_yx.resize(2);
-        double yaw[2];
-        for (auto i = 0; i < 2; ++i)
-        {
-            double t = s[i] * s[i] * t1.dot(t1) + 2 * s[i] * t1.dot(t2) + t2.dot(t2);
-            // solve constraint ||q_yx|| = 1
-            double b = sqrt(1.0 / t);
-            double a = s[i] * b;
-            q_yx[i].coeffs() = a * t1 + b * t2; // [w x y z]
-            Eigen::Vector3d euler_angles = q_yx[i].toRotationMatrix().eulerAngles(2, 1, 0);
-            yaw[0] = euler_angles(0);
-        }
-        if (fabs(yaw[0]) < fabs(yaw[1]))
-            calib_ext_[idx_data].q_ = q_yx[0];
-        else
-            calib_ext_[idx_data].q_ = q_yx[1];
-    } else
-    {
-        Eigen::Matrix<double, 4, 1> x = svd.matrixV().col(3);
-        calib_ext_[idx_data].q_ = Eigen::Quaterniond(x);
-    }
+    // if (PLANAR_MOVEMENT)
+    // {
+    //     // estimateRyx
+    //     Eigen::Vector4d t1 = svd.matrixV().block<4,1>(0,2);
+    //     Eigen::Vector4d t2 = svd.matrixV().block<4,1>(0,3);
+    //     // solve constraint for q_yz: xy = -zw
+    //     double s[2];
+    //     if (!common::solveQuadraticEquation(t1(0) * t1(1) + t1(2) * t1(3),
+    //                                         t1(0) * t2(1) + t1(1) * t2(0) + t1(2) * t2(3) + t1(3) * t2(2),
+    //                                         t2(0) * t2(1) + t2(2) * t2(3),
+    //                                         s[0], s[1]))
+    //     {
+    //         std::cout << "# ERROR: Quadratic equation cannot be solved due to negative determinant." << std::endl;
+    //         return false;
+    //     }
+    //     std::vector<Eigen::Quaterniond> q_yx;
+    //     q_yx.resize(2);
+    //     double yaw[2];
+    //     for (auto i = 0; i < 2; ++i)
+    //     {
+    //         double t = s[i] * s[i] * t1.dot(t1) + 2 * s[i] * t1.dot(t2) + t2.dot(t2);
+    //         // solve constraint ||q_yx|| = 1
+    //         double b = sqrt(1.0 / t);
+    //         double a = s[i] * b;
+    //         q_yx[i].coeffs() = a * t1 + b * t2; // [w x y z]
+    //         Eigen::Vector3d euler_angles = q_yx[i].toRotationMatrix().eulerAngles(2, 1, 0);
+    //         yaw[0] = euler_angles(0);
+    //     }
+    //     if (fabs(yaw[0]) < fabs(yaw[1]))
+    //         calib_ext_[idx_data].q_ = q_yx[0];
+    //     else
+    //         calib_ext_[idx_data].q_ = q_yx[1];
+    // } else
+    // {
+    //     Eigen::Matrix<double, 4, 1> x = svd.matrixV().col(3);
+    //     calib_ext_[idx_data].q_ = Eigen::Quaterniond(x);
+    // }
+    Eigen::Matrix<double, 4, 1> x = svd.matrixV().col(3);
+    calib_ext_[idx_data].q_ = Eigen::Quaterniond(x);
 
     Eigen::Vector3d rot_cov = svd.singularValues().tail<3>(); // singular value
     v_rot_cov_[idx_data].push_back(rot_cov(1));
@@ -198,38 +200,36 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
     {
         calib_result = calib_ext_[idx_data];
         setCovRotation(idx_data);
+        // std::ofstream fout(std::string(OUTPUT_FOLDER + "/others/initialization_rotation.txt").c_str(), std::ios::out);
+        // fout.precision(8);
+        // auto tmp_pq_pose = pq_pose_;
+        // while (!tmp_pq_pose.empty())
+        // {
+        //     auto pose_laser = tmp_pq_pose.top().second;
+        //     fout << pose_laser[idx_ref].q_.w() << " "
+        //          << pose_laser[idx_ref].q_.x() << " "
+        //          << pose_laser[idx_ref].q_.y() << " "
+        //          << pose_laser[idx_ref].q_.z() << " "
+        //          << pose_laser[idx_data].q_.w() << " "
+        //          << pose_laser[idx_data].q_.x() << " "
+        //          << pose_laser[idx_data].q_.y() << " "
+        //          << pose_laser[idx_data].q_.z() << std::endl;
+        //     tmp_pq_pose.pop();
+        // }
+        // fout.close();
 
-        std::ofstream fout(std::string(OUTPUT_FOLDER + "/others/initialization_rotation.txt").c_str(), std::ios::out);
-        fout.precision(8);
-        auto tmp_pq_pose = pq_pose_;
-        while (!tmp_pq_pose.empty())
-        {
-            auto pose_laser = tmp_pq_pose.top().second;
-            fout << pose_laser[idx_ref].q_.w() << " "
-                 << pose_laser[idx_ref].q_.x() << " "
-                 << pose_laser[idx_ref].q_.y() << " "
-                 << pose_laser[idx_ref].q_.z() << " "
-                 << pose_laser[idx_data].q_.w() << " "
-                 << pose_laser[idx_data].q_.x() << " "
-                 << pose_laser[idx_data].q_.y() << " "
-                 << pose_laser[idx_data].q_.z() << std::endl;
-            tmp_pq_pose.pop();
-        }
-        fout.close();
-
-        fout.open(std::string(OUTPUT_FOLDER + "/others/initialization_Q.txt").c_str(), std::ios::out);
-        fout.precision(8);
-        for (size_t i = 0; i < Q_[idx_data].rows(); i++)
-        {
-            for (size_t j = 0; j < Q_[idx_data].cols(); j++)
-            {
-                fout << Q_[idx_data](i, j) << " ";
-            }
-            fout << std::endl;
-        }
-        fout.close(); 
-        std::cout << "saving initialization state" << std::endl;    
-
+        // fout.open(std::string(OUTPUT_FOLDER + "/others/initialization_Q.txt").c_str(), std::ios::out);
+        // fout.precision(8);
+        // for (size_t i = 0; i < Q_[idx_data].rows(); i++)
+        // {
+        //     for (size_t j = 0; j < Q_[idx_data].cols(); j++)
+        //     {
+        //         fout << Q_[idx_data](i, j) << " ";
+        //     }
+        //     fout << std::endl;
+        // }
+        // fout.close(); 
+        // std::cout << "saving initialization state" << std::endl;    
         return true;
     }
     else

@@ -35,8 +35,8 @@
         <group if="$(arg run_mloam_odom)">
             <node pkg="mloam" type="mloam_node_sr" name="mloam_node_sr" 
                 args="-config_file=$(arg config_file)
-                    -result_save=$(arg result_save)
-                    -output_path=$(arg output_path)" output="screen">
+                      -result_save=$(arg result_save)
+                      -output_path=$(arg output_path)" output="screen">
             </node>
         </group>
         <group if="$(arg run_mloam_mapping)">
