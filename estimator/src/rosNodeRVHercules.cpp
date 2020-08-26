@@ -286,6 +286,14 @@ int main(int argc, char **argv)
 
         std::cout << common::YELLOW << "odometry drop frame: " << frame_drop_cnt << common::RESET << std::endl;
         std::cout << "odometry drop frame: " << frame_drop_cnt;
+        if (MLOAM_RESULT_SAVE)
+        {
+            std::cout << common::RED << "saving odometry results" << common::RESET << std::endl;
+            save_statistics.saveSensorPath(MLOAM_GT_PATH, laser_gt_path);
+            save_statistics.saveSensorPath(MLOAM_GPS_PATH, gps_path);
+            save_statistics.saveOdomStatistics(EX_CALIB_EIG_PATH, EX_CALIB_RESULT_PATH, MLOAM_ODOM_PATH, estimator);
+            save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time/time_mloam_odometry_" + std::to_string(ODOM_GF_RATIO) + ".txt", estimator);
+        }
         sync_thread.join();
     }
     else if (!data_source.compare("pcd")) // use pcd as the data source
@@ -483,16 +491,16 @@ int main(int argc, char **argv)
                 loop_rate.sleep();
             }
         }
+        if (MLOAM_RESULT_SAVE)
+        {
+            std::cout << common::RED << "saving odometry results" << common::RESET << std::endl;
+            save_statistics.saveSensorPath(MLOAM_GT_PATH, laser_gt_path);
+            save_statistics.saveSensorPath(MLOAM_GPS_PATH, gps_path);
+            save_statistics.saveOdomStatistics(EX_CALIB_EIG_PATH, EX_CALIB_RESULT_PATH, MLOAM_ODOM_PATH, estimator);
+            save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time/time_mloam_odometry_" + std::to_string(ODOM_GF_RATIO) + ".txt", estimator);
+        }
         // cloud_visualizer_thread.join();
     }
-    if (MLOAM_RESULT_SAVE)
-    {
-        std::cout << common::RED << "saving odometry results" << common::RESET << std::endl;
-        save_statistics.saveSensorPath(MLOAM_GT_PATH, laser_gt_path);
-        save_statistics.saveSensorPath(MLOAM_GPS_PATH, gps_path);
-        save_statistics.saveOdomStatistics(EX_CALIB_EIG_PATH, EX_CALIB_RESULT_PATH, MLOAM_ODOM_PATH, estimator);
-        save_statistics.saveOdomTimeStatistics(OUTPUT_FOLDER + "time/time_mloam_odometry_" + std::to_string(ODOM_GF_RATIO) + ".txt", estimator);
-    }    
     return 0;
 }
 

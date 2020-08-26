@@ -1025,7 +1025,7 @@ void Estimator::buildCalibMap()
             pose_local_[n][i] = Pose(pose_pivot.T_.inverse() * pose_i.T_ * pose_ext.T_);
             PointICloud surf_points_trans, corner_points_trans;
             if (i == WINDOW_SIZE) continue;
-            if ((n != IDX_REF) && (i > pivot_idx)) continue;
+            // if ((n != IDX_REF) && (i > pivot_idx)) continue;
 
             pcl::transformPointCloud(surf_points_stack_[IDX_REF][i], surf_points_trans, pose_local_[IDX_REF][i].T_.cast<float>());
             // for (auto &p: surf_points_trans.points) p.intensity = i;
@@ -1035,7 +1035,6 @@ void Estimator::buildCalibMap()
             // for (auto &p: corner_points_trans.points) p.intensity = i;
             corner_points_local_map_[n] += corner_points_trans;
         }
-
         float ratio = (n == IDX_REF ? 0.4 : 0.2);
         pcl::VoxelGrid<PointI> down_size_filter;
         down_size_filter.setLeafSize(ratio, ratio, ratio);
@@ -1061,7 +1060,7 @@ void Estimator::buildCalibMap()
     pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_points_local_map(new pcl::KdTreeFLANN<PointI>());
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
-        if (calib_converge_[n]) continue;
+        // if (calib_converge_[n]) continue;
         kdtree_surf_points_local_map->setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_filtered_[n]));
         kdtree_corner_points_local_map->setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_filtered_[n]));
         for (size_t i = pivot_idx; i < WINDOW_SIZE + 1; i++)
@@ -1069,7 +1068,6 @@ void Estimator::buildCalibMap()
             if (((n == IDX_REF) && (i == pivot_idx))
              || ((n != IDX_REF) && (i != pivot_idx))) continue;
             int n_neigh = (n == IDX_REF ? 5:10);
-            // int n_neigh = 5;
             f_extract_.matchSurfFromMap(kdtree_surf_points_local_map,
                                         surf_points_local_map_filtered_[n],
                                         surf_points_stack_[n][i],
@@ -1592,12 +1590,12 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
         d_factor_calib_ = std::vector<double>(NUM_OF_LASER, 0);
         for (size_t i = OPT_WINDOW_SIZE + 1; i < local_param_ids.size(); i++)
         {
-            if (frame_cnt_ % N_CUMU_FEATURE == 0)
+            if (frame_cnt_ % N_CUMU_FEATURE == 0) // need to optimize the extriniscs
             {
                 Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(6 * i, 6 * i, 6, 6);
                 Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6>> esolver(mat_H);
                 Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real(); // 6*1
-                double lambda = mat_E(0, 0) / N_CUMU_FEATURE / OPT_WINDOW_SIZE;
+                double lambda = mat_E(0, 0) / N_CUMU_FEATURE;
                 // std::cout << mat_H << std::endl;
                 // double lambda = mat_E(0, 0);
                 printf("%lu: calib eig is %f\n", i - OPT_WINDOW_SIZE - 1, lambda);
@@ -1650,8 +1648,10 @@ void Estimator::evalCalib()
         for (size_t n = 0; n < NUM_OF_LASER; n++)
         {
             if (n == IDX_REF) continue;
-            std::cout << common::YELLOW << "laser_" << n 
-                      << ", eligible calib size: " << pose_calib_[n].size() << common::RESET << std::endl;
+            std::cout << common::YELLOW
+                      << "laser_" << n
+                      << ", eligible calib size: " << pose_calib_[n].size() 
+                      << common::RESET << std::endl;
             if (pose_calib_[n].size() >= N_CALIB) calib_converge_[n] = true;
                                              else is_converage = false;
         }
@@ -1662,16 +1662,18 @@ void Estimator::evalCalib()
             ESTIMATE_EXTRINSIC = 0;
             for (size_t n = 0; n < NUM_OF_LASER; n++)
             {
+                Pose pose_mean;
                 if (n != IDX_REF)
                 {
-                    Pose pose_mean;
+                    LOG(INFO) << n << ":";
                     Eigen::Matrix<double, 6, 6> pose_cov;
                     computeMeanPose(pose_calib_[n], pose_mean, pose_cov); // compute the mean calibration parameters
                     qbl_[n] = pose_mean.q_;
                     tbl_[n] = pose_mean.t_;
                     covbl_[n] = pose_cov.diagonal().asDiagonal();
-                    // std::cout << "laser_" << n << ": " << pose_mean_calib << std::endl;
                 }
+                log_lambda_.push_back(0.0);
+                log_extrinsics_.push_back(pose_mean);
             }
             // ini_fixed_local_map_ = false; // reconstruct new optimized map
             if (last_marginalization_info_ != nullptr) delete last_marginalization_info_;

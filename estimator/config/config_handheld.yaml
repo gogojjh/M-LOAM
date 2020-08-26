@@ -36,22 +36,14 @@ body_T_laser: !!opencv-matrix
    rows: 2
    cols: 7
    dt: d
-# data for 20200201
-   # data: [0, 0, 0, 1, 0, 0, 0,
-   #        0.40093, 0.00536, -0.02534, 0.91574, -0.01571, -0.47446, -0.21247]
-# data for 20200303/ 20200310
-# no prior
    data: [0, 0, 0, 1, 0, 0, 0,
           0, 0, 0, 1, 0, 0, 0] # qx qy qz qw px py pz
-# initialization
    # data: [0, 0, 0, 1, 0, 0, 0,
-   #        0.3113, -0.0103, -0.03334, 0.94956, 0.1130, -0.47195, -0.10341] # qx qy qz qw px py pz    
-# refinement
+   #        0.31744, -0.00431, 0.01186, 0.9468, 0.0308, -0.56911, -0.12243] # initialization
    # data: [0, 0, 0, 1, 0, 0, 0,
-   #        0.3345, -0.0037, 0.0050, 0.9424, 0.025, -0.4510, -0.1472] # qx qy qz qw px py pz                      
-# iv data   
+   #        0.32182, -0.00094, 0.00744, 0.94677, 0.06641, -0.49424, -0.11251] # refinement
    # data: [0, 0, 0, 1, 0, 0, 0,
-   #        0.34087, -0.0101817, 0.0147921, 0.945613, 0.0334837, -0.540249, -0.141798]
+   #        0.34087, -0.0101817, 0.0147921, 0.945613, 0.0334837, -0.540249, -0.141798] # PS-Calib
 
 
 #unsynchronization parameters
@@ -88,17 +80,17 @@ min_plane_dis: 0.2
 marginalization_factor: 1
 point_plane_factor: 1
 point_edge_factor: 1
-prior_factor: 0
-prior_factor_pos: 0.5
-prior_factor_rot: 1
+prior_factor: 1
+prior_factor_pos: 5
+prior_factor_rot: 40
 
 pcl_viewer: 0
 pcl_viewer_normal_ratio: 10
 
 # calibration converage parameters
-n_cumu_feature: 10
-lambda_initial: 120
-lambda_thre_calib: 400
+n_cumu_feature: 20
+lambda_initial: 100
+lambda_thre_calib: 60
 n_calib: 15
 
 # good feature

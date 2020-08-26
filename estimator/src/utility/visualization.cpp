@@ -92,9 +92,9 @@ void pubPointCloud(const Estimator &estimator, const double &time)
     {
         Pose pose_ext = Pose(estimator.qbl_[n], estimator.tbl_[n]);
         cloudFeature cloud_feature_trans = transformCloudFeature(estimator.cur_feature_.second[n], pose_ext.T_.cast<float>(), n);
+        laser_cloud += cloud_feature_trans["laser_cloud"];
         if ((ESTIMATE_EXTRINSIC == 0) || (n == IDX_REF))
         {
-            laser_cloud += cloud_feature_trans["laser_cloud"];
             laser_cloud_outlier += cloud_feature_trans["laser_cloud_outlier"];
             corner_points_less_sharp += cloud_feature_trans["corner_points_less_sharp"];
             surf_points_less_flat += cloud_feature_trans["surf_points_less_flat"];

@@ -1,17 +1,15 @@
 <launch>
-    <!-- <arg name="bag_file_use" default="true" /> -->
-    <arg name="bag_file" default="false" />
-
-    <group if="$(arg bag_file)">
+    <arg name="bag_file_use" default="true" />
+    <group if="$(arg bag_file_use)">
         <param name="use_sim_time" value="true" />
-        <node pkg="rosbag" type="play" name="rosbag" args="--clock -r 0.5 $(arg bag_file)" required="true"/>    
+        <node pkg="rosbag" type="play" name="rosbag" args="--clock -r 0.7 $(arg bag_file)" required="true"/>    
 
         <include file="$(find rviz_car_model)/launch/default.launch" >
             <arg name="fixed_frame" value="base_link" />
             <arg name="transform" value="0 0 -1.5 0 0 0 1" />
         </include>    
     </group>    
-    <group unless="$(arg bag_file)">
+    <group unless="$(arg bag_file_use)">
         <param name="use_sim_time" value="false" />
     </group>
 
@@ -46,7 +44,7 @@
                   -data_path=$(arg data_path)
                   -delta_idx=$(arg delta_idx)
                   -start_idx=$(arg start_idx)
-                  -end_idx=$(arg end_idx)" required="true">
+                  -end_idx=$(arg end_idx)" required="true" output="screen">
             <remap from="/base_odom_gt" to="/current_odom"/>
         </node>
         <group if="$(arg run_mloam_mapping)">
@@ -74,6 +72,8 @@
         args="0 0 -1.5 0 0 0 1 world world_base 10"/>
     <node name="static_tf_world_sensor_into_base_sensor" pkg="tf" type="static_transform_publisher"
         args="0 0 0 0 0 0 1 world laser_0 10"/>
+    <node name="static_tf_laser_0_into_velo" pkg="tf" type="static_transform_publisher"
+        args="0 0 0 0 0 0 1 laser_0 velo 10"/>        
     <node name="static_tf_laser_0_into_laser_1" pkg="tf" type="static_transform_publisher"
         args="0.5355 0.0393 -1.131 -0.0169 0.0575 0.0195 0.998 laser_0 laser_1 10"/>
     <node name="static_tf_laser_0_into_laser_2" pkg="tf" type="static_transform_publisher"

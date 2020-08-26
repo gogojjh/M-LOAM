@@ -55,7 +55,7 @@ void InitialExtrinsics::setParameter()
 
     v_rot_cov_.resize(NUM_OF_LASER);
     v_pos_cov_.resize(NUM_OF_LASER);
-    rot_cov_thre_ = (PLANAR_MOVEMENT) ? 0.08 : 0.25;
+    rot_cov_thre_ = (PLANAR_MOVEMENT) ? 0.05 : 0.25;
     printf("[InitialExtrinsics] rot cov thre: %f\n", rot_cov_thre_);
 
     Q_.resize(NUM_OF_LASER);
@@ -191,6 +191,7 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
     //     calib_ext_[idx_data].q_ = Eigen::Quaterniond(x);
     // }
     Eigen::Matrix<double, 4, 1> x = svd.matrixV().col(3);
+    if (x[0] < 0) x = -x; // use the standard quaternion
     calib_ext_[idx_data].q_ = Eigen::Quaterniond(x);
 
     Eigen::Vector3d rot_cov = svd.singularValues().tail<3>(); // singular value

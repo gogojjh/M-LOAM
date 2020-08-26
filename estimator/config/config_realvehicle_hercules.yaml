@@ -28,36 +28,36 @@ window_size: 6
 opt_window_size: 3
 
 # Extrinsic parameter between IMU and Camera.
-estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+estimate_extrinsic: 2   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
 optimal_extrinsic: 0
 
+# qx qy qz qw px py pz
 body_T_laser: !!opencv-matrix
    rows: 4
    cols: 7
    dt: d
-# no prior
-# qx qy qz qw px py pz
-   # data: [0, 0, 0, 1, 0, 0, 0, 
-   #        0, 0, 0, 1, 0, 0, 0,
-   #        0, 0, 0, 1, 0, 0, 0,
-   #        0, 0, 0, 1, 0, 0, 0]
-# initialization
+   data: [0, 0, 0, 1, 0, 0, 0, 
+          0, 0, 0, 1, 0, 0, 0,
+          0, 0, 0, 1, 0, 0, 0,
+          0, 0, 0, 1, 0, 0, 0] # no prior
    # data: [0, 0, 0, 1, 0, 0, 0, 
    #        -0.0129, 0.0691, 0.0378, 0.9968, -0.1520, -0.9552, 0,
    #        -0.1454, 0.1705, 0.7118, 0.6657, -0.7484, -0.2822, 0,
-   #        0.1149, 0.1064, -0.6298, 0.7608, -0.0866, -1.4654, 0]            
-# refinement
-   data: [0, 0, 0, 1, 0, 0, 0, 
-          -0.0169, 0.0575, 0.0195, 0.998, 0.5355, 0.0393, -1.131,
-          -0.1118, 0.1894, 0.6845, 0.6951, 0.5116, 0.6440, -0.904,
-          0.0745, 0.1312, -0.7449, 0.6496, 0.4406, -0.628, -1.0295]
-# manufactor
+   #        0.1149, 0.1064, -0.6298, 0.7608, -0.0866, -1.4654, 0] # initialization
+   # data: [0, 0, 0, 1, 0, 0, 0, 
+   #        -0.00735, 0.05863, 0.02083, 0.99804, 0.53297, 0.04047, -1.06245,
+   #        -0.10261, 0.18253, 0.68802, 0.69483, 0.42654, 0.66595, -0.82217,
+   #        0.0745, 0.1312, -0.7449, 0.6496, 0.4406, -0.628, -1.0295] # refinement_1
+   # data: [0, 0, 0, 1, 0, 0, 0, 
+   #        -0.0169, 0.0575, 0.0195, 0.998, 0.5355, 0.0393, -1.131,
+   #        -0.1118, 0.1894, 0.6845, 0.6951, 0.5116, 0.6440, -0.904,
+   #        0.0745, 0.1312, -0.7449, 0.6496, 0.4406, -0.628, -1.0295] # refinement_2
    # data: [0, 0, 0, 1, 0, 0, 0,
-   #       [-0.0159, 0.0542, 0.0361, 0.9977, 0.6428, -0.0043, -1.1343,
-   #       [-0.1159, 0.1896, 0.6798, 0.6989, 0.4296,  0.6783, -0.9331,
-   #       [0.0728, 0.1364,-0.7416, 0.6528, 0.4746, -0.7274, -0.9638]
+   #        -0.0159, 0.0542, 0.0361, 0.9977, 0.6428, -0.0043, -1.1343,
+   #        -0.1159, 0.1896, 0.6798, 0.6989, 0.4296,  0.6783, -0.9331,
+   #        0.0728, 0.1364,-0.7416, 0.6528, 0.4746, -0.7274, -0.9638] # CAD
 
 #unsynchronization parameters
 estimate_td: 0                      # 0 have an accurate time offset among sensors
@@ -83,7 +83,7 @@ distance_sq_threshold: 25
 nearby_scan: 2.5
 
 # movement type
-planar_movement: 0
+planar_movement: 1
 
 # feature corresponding paprameters
 min_match_sq_dis: 1.0
@@ -101,9 +101,9 @@ pcl_viewer: 0
 pcl_viewer_normal_ratio: 10
 
 # calibration converage parameters
-n_cumu_feature: 10
-lambda_initial: 120
-lambda_thre_calib: 400
+n_cumu_feature: 20
+lambda_initial: 100
+lambda_thre_calib: 70
 n_calib: 15
 
 # good feature

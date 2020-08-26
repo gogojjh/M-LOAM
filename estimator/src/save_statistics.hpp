@@ -74,26 +74,31 @@ void SaveStatistics::saveOdomStatistics(const string &calib_eig_filename,
                                         const string &odom_filename,
                                         const Estimator &estimator)
 {
-    ofstream fout(calib_eig_filename.c_str(), ios::out);
-    fout.setf(ios::fixed, ios::floatfield);
-    fout.precision(5);
-    fout << "Var1" << std::endl;
-    for (size_t i = 0; i < estimator.log_lambda_.size(); i++)
-        fout << estimator.log_lambda_[i] << std::endl;
-    fout.close();
+    ofstream fout;
 
-    fout.open(calib_result_filename.c_str(), ios::out);
-    for (size_t i = 0; i < estimator.log_extrinsics_.size(); i++)
+    if (estimator.log_lambda_.size() != 0)
     {
-        fout << estimator.log_extrinsics_[i].t_(0) << ", "
-             << estimator.log_extrinsics_[i].t_(1) << ", "
-             << estimator.log_extrinsics_[i].t_(2) << ", "
-             << estimator.log_extrinsics_[i].q_.x() << ", "
-             << estimator.log_extrinsics_[i].q_.y() << ", "
-             << estimator.log_extrinsics_[i].q_.z() << ", "
-             << estimator.log_extrinsics_[i].q_.w() << std::endl;
+        fout.open(calib_eig_filename.c_str(), ios::out);
+        fout.setf(ios::fixed, ios::floatfield);
+        fout.precision(5);
+        fout << "Var1" << std::endl;
+        for (size_t i = 0; i < estimator.log_lambda_.size(); i++)
+            fout << estimator.log_lambda_[i] << std::endl;
+        fout.close();
+
+        fout.open(calib_result_filename.c_str(), ios::out);
+        for (size_t i = 0; i < estimator.log_extrinsics_.size(); i++)
+        {
+            fout << estimator.log_extrinsics_[i].t_(0) << ", "
+                 << estimator.log_extrinsics_[i].t_(1) << ", "
+                 << estimator.log_extrinsics_[i].t_(2) << ", "
+                 << estimator.log_extrinsics_[i].q_.x() << ", "
+                 << estimator.log_extrinsics_[i].q_.y() << ", "
+                 << estimator.log_extrinsics_[i].q_.z() << ", "
+                 << estimator.log_extrinsics_[i].q_.w() << std::endl;
+        }
+        fout.close();
     }
-    fout.close();
 
     fout.open(odom_filename.c_str(), ios::out);
     for (size_t i = 0; i < estimator.v_laser_path_[IDX_REF].poses.size(); i++)

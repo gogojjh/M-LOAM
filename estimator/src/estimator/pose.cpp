@@ -153,6 +153,7 @@ void computeMeanPose(const std::vector<std::pair<double, Pose> > &pose_array,
         weight_total += iter->first;
         xi_total += iter->first * iter->second.se3();
         std::cout << iter->first << ", " << iter->second << std::endl;
+        LOG(INFO) << iter->first << ", " << iter->second;
     }
     Eigen::Matrix<double, 6, 1> xi_mean = xi_total / weight_total;
     pose_mean = Pose(Sophus::SE3d::exp(xi_mean).matrix());
@@ -166,6 +167,8 @@ void computeMeanPose(const std::vector<std::pair<double, Pose> > &pose_array,
 
     std::cout << "calib mean: " << pose_mean << std::endl;
     std::cout << "calib cov: " << std::endl << pose_cov << std::endl;
+    LOG(INFO) << "calib mean: " << pose_mean;
+    LOG(INFO) << "calib cov: " << std::endl << pose_cov;
 }
 
 // 

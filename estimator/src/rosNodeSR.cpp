@@ -128,22 +128,22 @@ void sync_process()
 
         if (!empty_check)
         {
-            if (FLAGS_inject_meas_noise)
-            {
-                std::cout << "Injecting measurement noise" << std::endl;
-                for (size_t i = 0; i < NUM_OF_LASER; i++)
-                {
-                    for (pcl::PointXYZ &point : v_laser_cloud[i])
-                    {
-                        // add measurement noise
-                        float *n_xyz = rgi.geneRandUniformArray(0, 0.05, 3);
-                        point.x += n_xyz[0];
-                        point.y += n_xyz[1];
-                        point.z += n_xyz[2];
-                        delete n_xyz;
-                    }
-                }
-            }
+            // if (FLAGS_inject_meas_noise)
+            // {
+            //     std::cout << "Injecting measurement noise" << std::endl;
+            //     for (size_t i = 0; i < NUM_OF_LASER; i++)
+            //     {
+            //         for (pcl::PointXYZ &point : v_laser_cloud[i])
+            //         {
+            //             // add measurement noise
+            //             float *n_xyz = rgi.geneRandUniformArray(0, 0.05, 3);
+            //             point.x += n_xyz[0];
+            //             point.y += n_xyz[1];
+            //             point.z += n_xyz[2];
+            //             delete n_xyz;
+            //         }
+            //     }
+            // }
             estimator.inputCloud(time, v_laser_cloud);
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(2));

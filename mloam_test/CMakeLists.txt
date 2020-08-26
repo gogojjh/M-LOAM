@@ -81,6 +81,9 @@ target_link_libraries(test_merge_pointcloud_rv_hercules ${catkin_LIBRARIES} ${PC
 add_executable(test_generate_bag_from_data_hercules src/test_generate_bag_from_data_hercules.cpp)
 target_link_libraries(test_generate_bag_from_data_hercules ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
+add_executable(test_generate_noisy_bag src/test_generate_noisy_bag.cpp)
+target_link_libraries(test_generate_noisy_bag ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
 # add_executable(test_parse_bag test_parse_bag.cpp)
 # target_link_libraries(test_parse_bag ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
