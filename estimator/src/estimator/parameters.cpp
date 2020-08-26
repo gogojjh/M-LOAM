@@ -79,8 +79,8 @@ int PCL_VIEWER;
 int PCL_VIEWER_NORMAL_RATIO;
 
 int N_CUMU_FEATURE;
-double EIG_INITIAL;
-double EIG_THRE_CALIB;
+double LAMBDA_INITIAL;
+double LAMBDA_THRE_CALIB;
 int N_CALIB;
 float ODOM_GF_RATIO;
 
@@ -239,8 +239,8 @@ void readParameters(std::string config_file)
     PCL_VIEWER_NORMAL_RATIO = fsSettings["pcl_viewer_normal_ratio"];
 
     N_CUMU_FEATURE = fsSettings["n_cumu_feature"];
-    EIG_INITIAL = fsSettings["eig_initial"];
-    EIG_THRE_CALIB = fsSettings["eig_thre_calib"];
+    LAMBDA_INITIAL = fsSettings["lambda_initial"];
+    LAMBDA_THRE_CALIB = fsSettings["lambda_thre_calib"];
     N_CALIB = fsSettings["n_calib"];
     ODOM_GF_RATIO = fsSettings["odom_gf_ratio"];
     if (ODOM_GF_RATIO == 0) ODOM_GF_RATIO = 1.0;

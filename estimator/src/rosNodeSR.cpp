@@ -38,6 +38,7 @@
 
 #include "save_statistics.hpp"
 #include "common/common.hpp"
+#include "common/random_generator.hpp"
 #include "estimator/estimator.h"
 #include "estimator/parameters.h"
 #include "utility/utility.h"
@@ -64,6 +65,8 @@ ros::Publisher pub_laser_gt_path;
 Pose pose_world_ref_ini;
 
 int frame_drop_cnt = 0;
+
+common::RandomGeneratorFloat<float> rgi;
 
 void dataProcessCallback(const sensor_msgs::PointCloud2ConstPtr &cloud0_msg,
                          const sensor_msgs::PointCloud2ConstPtr &cloud1_msg)
@@ -121,11 +124,28 @@ void sync_process()
 
         bool empty_check = false;
         for (size_t i = 0; i < NUM_OF_LASER; i++)
-            if (v_laser_cloud[i].size() == 0)
-                empty_check = true;
+            empty_check = (v_laser_cloud[i].size() == 0);
 
         if (!empty_check)
+        {
+            if (FLAGS_inject_meas_noise)
+            {
+                std::cout << "Injecting measurement noise" << std::endl;
+                for (size_t i = 0; i < NUM_OF_LASER; i++)
+                {
+                    for (pcl::PointXYZ &point : v_laser_cloud[i])
+                    {
+                        // add measurement noise
+                        float *n_xyz = rgi.geneRandUniformArray(0, 0.05, 3);
+                        point.x += n_xyz[0];
+                        point.y += n_xyz[1];
+                        point.z += n_xyz[2];
+                        delete n_xyz;
+                    }
+                }
+            }
             estimator.inputCloud(time, v_laser_cloud);
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
 }

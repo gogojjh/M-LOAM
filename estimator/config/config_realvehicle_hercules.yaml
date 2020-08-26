@@ -102,8 +102,8 @@ pcl_viewer_normal_ratio: 10
 
 # calibration converage parameters
 n_cumu_feature: 10
-eig_initial: 120
-eig_thre_calib: 400
+lambda_initial: 120
+lambda_thre_calib: 400
 n_calib: 15
 
 # good feature

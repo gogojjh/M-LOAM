@@ -84,7 +84,7 @@ min_plane_dis: 0.2
 marginalization_factor: 1
 point_plane_factor: 1
 point_edge_factor: 1
-prior_factor: 1
+prior_factor: 0
 prior_factor_pos: 0
 prior_factor_rot: 5 
 
@@ -93,8 +93,8 @@ pcl_viewer_normal_ratio: 10
 
 # calibration converage parameters
 n_cumu_feature: 10
-eig_initial: 100
-eig_thre_calib: 10000000
+lambda_initial: 50
+lambda_thre_calib: 10000000
 n_calib: 20
 
 # good feature

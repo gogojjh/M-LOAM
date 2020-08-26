@@ -107,8 +107,8 @@ extern int PCL_VIEWER;
 extern int PCL_VIEWER_NORMAL_RATIO;
 
 extern int N_CUMU_FEATURE;
-extern double EIG_INITIAL;
-extern double EIG_THRE_CALIB;
+extern double LAMBDA_INITIAL;
+extern double LAMBDA_THRE_CALIB;
 extern int N_CALIB;
 extern float ODOM_GF_RATIO;
 

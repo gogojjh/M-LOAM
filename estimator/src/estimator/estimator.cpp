@@ -112,14 +112,14 @@ void Estimator::setParameter()
     }
     para_td_ = new double[NUM_OF_LASER];
 
-    eig_thre_ = Eigen::VectorXd::Constant(OPT_WINDOW_SIZE + 1 + NUM_OF_LASER, 1, EIG_INITIAL);
+    eig_thre_ = Eigen::VectorXd::Constant(OPT_WINDOW_SIZE + 1 + NUM_OF_LASER, 1, LAMBDA_INITIAL);
+    eig_thre_.block(OPT_WINDOW_SIZE + 1, 0, 1, NUM_OF_LASER) = Eigen::VectorXd::Zero(NUM_OF_LASER);
     d_factor_calib_ = std::vector<double>(NUM_OF_LASER, 0);
     cur_eig_calib_ = std::vector<double>(NUM_OF_LASER, 0);
     pose_calib_.resize(NUM_OF_LASER);
     calib_converge_.resize(NUM_OF_LASER, false);
 
     img_segment_.setParameter(N_SCANS, HORIZON_SCAN, MIN_CLUSTER_SIZE, SEGMENT_VALID_POINT_NUM, SEGMENT_VALID_LINE_NUM);
-
     v_laser_path_.resize(NUM_OF_LASER);
 
     m_process_.unlock();
@@ -1036,22 +1036,13 @@ void Estimator::buildCalibMap()
             corner_points_local_map_[n] += corner_points_trans;
         }
 
-        if (n == IDX_REF)
-        {
-            down_size_filter_surf_.setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_[IDX_REF]));
-            down_size_filter_surf_.filter(surf_points_local_map_filtered_[IDX_REF]);
-            down_size_filter_corner_.setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_[IDX_REF]));
-            down_size_filter_corner_.filter(corner_points_local_map_filtered_[IDX_REF]);
-        } 
-        else
-        {
-            pcl::VoxelGrid<PointI> down_size_filter;
-            down_size_filter.setLeafSize(0.2, 0.2, 0.2);
-            down_size_filter.setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_[n]));
-            down_size_filter.filter(surf_points_local_map_filtered_[n]);
-            down_size_filter.setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_[n]));
-            down_size_filter.filter(corner_points_local_map_filtered_[n]);
-        }         
+        float ratio = (n == IDX_REF ? 0.4 : 0.2);
+        pcl::VoxelGrid<PointI> down_size_filter;
+        down_size_filter.setLeafSize(ratio, ratio, ratio);
+        down_size_filter.setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_[n]));
+        down_size_filter.filter(surf_points_local_map_filtered_[n]);
+        down_size_filter.setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_[n]));
+        down_size_filter.filter(corner_points_local_map_filtered_[n]);
     }
 
     // calculate features and correspondences from p+1 to j
@@ -1077,8 +1068,8 @@ void Estimator::buildCalibMap()
         {
             if (((n == IDX_REF) && (i == pivot_idx))
              || ((n != IDX_REF) && (i != pivot_idx))) continue;
-            // int n_neigh = (n == IDX_REF ? 5:10);
-            int n_neigh = 5;
+            int n_neigh = (n == IDX_REF ? 5:10);
+            // int n_neigh = 5;
             f_extract_.matchSurfFromMap(kdtree_surf_points_local_map,
                                         surf_points_local_map_filtered_[n],
                                         surf_points_stack_[n][i],
@@ -1136,17 +1127,14 @@ void Estimator::buildLocalMap()
             // for (auto &p: surf_points_trans.points) p.intensity = i;
             corner_points_local_map_[n] += corner_points_trans;
         }
+
         float ratio;
         pcl::VoxelGrid<PointI> down_size_filter;
-
         ratio = 0.4 * std::min(2.0, std::max(0.75, 1.0 / 192 * float(N_SCANS * NUM_OF_LASER * WINDOW_SIZE)));
-        // ratio = 0.4;
         down_size_filter.setLeafSize(ratio, ratio, ratio);
         down_size_filter.setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_[n]));
         down_size_filter.filter(surf_points_local_map_filtered_[n]);
-
         ratio = 0.2 * std::min(2.0, std::max(0.75, 1.0 / 192 * float(N_SCANS * NUM_OF_LASER * WINDOW_SIZE)));
-        // ratio = 0.2;
         down_size_filter.setLeafSize(ratio, ratio, ratio);
         down_size_filter.setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_[n]));
         down_size_filter.filter(corner_points_local_map_filtered_[n]);
@@ -1568,6 +1556,8 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
     //         std::cout << std::endl;
     //     }
     // }
+
+    // calculate the degeneracy factor of poses
     for (size_t i = 0; i < OPT_WINDOW_SIZE + 1; i++)
     {
         Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(6 * i, 6 * i, 6, 6);
@@ -1595,57 +1585,50 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
             // std::cout << mat_P << std::endl;
         }
     }
-    if ((ESTIMATE_EXTRINSIC != 0) && (frame_cnt_ % N_CUMU_FEATURE == 0)) 
+
+    // calculate the degeneracy factor of extrinsics
+    if (ESTIMATE_EXTRINSIC != 0)
     {
         d_factor_calib_ = std::vector<double>(NUM_OF_LASER, 0);
         for (size_t i = OPT_WINDOW_SIZE + 1; i < local_param_ids.size(); i++)
         {
-            Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(6 * i, 6 * i, 6, 6);
-            // std::cout << mat_H << std::endl;
-            Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6>> esolver(mat_H);
-            Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real();    // 6*1
-            Eigen::Matrix<double, 6, 6> mat_V_f = esolver.eigenvectors().real(); // 6*6, column is the corresponding eigenvector
-            Eigen::Matrix<double, 6, 6> mat_V_p = mat_V_f;
-            for (auto j = 0; j < mat_E.cols(); j++)
+            if (frame_cnt_ % N_CUMU_FEATURE == 0)
             {
-                if (mat_E(0, j) < eig_thre_(i))
+                Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(6 * i, 6 * i, 6, 6);
+                Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6>> esolver(mat_H);
+                Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real(); // 6*1
+                double lambda = mat_E(0, 0) / N_CUMU_FEATURE / OPT_WINDOW_SIZE;
+                // std::cout << mat_H << std::endl;
+                // double lambda = mat_E(0, 0);
+                printf("%lu: calib eig is %f\n", i - OPT_WINDOW_SIZE - 1, lambda);
+                log_lambda_.push_back(lambda);
+                if (lambda >= LAMBDA_THRE_CALIB)
                 {
-                    mat_V_p.col(j) = Eigen::Matrix<double, 6, 1>::Zero();
-                    local_param_ids[i]->is_degenerate_ = true;
+                    eig_thre_(i) = LAMBDA_THRE_CALIB;
+                    d_factor_calib_[i - OPT_WINDOW_SIZE - 1] = lambda;
+                }
+                else if (lambda > eig_thre_(i))
+                {
+                    eig_thre_(i) = lambda;
                 }
                 else
                 {
-                    break;
+                    // degenerate cases for calibration, not update the extrinsics
+                    local_param_ids[i]->is_degenerate_ = true;
+                    local_param_ids[i]->V_update_.setZero();
                 }
+                Pose tmp_pose(qbl_[i - OPT_WINDOW_SIZE - 1], tbl_[i - OPT_WINDOW_SIZE - 1]);
+                log_extrinsics_.push_back(tmp_pose);
             }
-            Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
-
-            std::cout << i << " D factor: " << mat_E(0, 0) << ": " << mat_V_f.col(0).transpose() << std::endl;
-            double lambda = mat_E(0, 0) / N_CUMU_FEATURE / OPT_WINDOW_SIZE;
-            // double lambda = mat_E(0, 0);
-            printf("calib eig: %f\n", lambda);
-            log_lambda_.push_back(lambda);
-            if (lambda >= EIG_THRE_CALIB)
-            {
-                eig_thre_(i) = EIG_THRE_CALIB;
-                d_factor_calib_[i - OPT_WINDOW_SIZE - 1] = lambda;
-            }
-            else if (lambda > eig_thre_(i))
-                eig_thre_(i) = lambda;
             else
-                mat_P.setZero(); // not update extrinsics
-
-            if (local_param_ids[i]->is_degenerate_)
             {
-                local_param_ids[i]->V_update_ = mat_P;
-                // std::cout << "param " << i << " is degenerate !" << std::endl;
-                // std::cout << mat_P << std::endl;
-            }
-            Pose tmp_pose(qbl_[i - OPT_WINDOW_SIZE - 1], tbl_[i - OPT_WINDOW_SIZE - 1]);
-            log_extrinsics_.push_back(tmp_pose);
+                // no enough cumu features for calibration, not update the extrinsics
+                local_param_ids[i]->is_degenerate_ = true;
+                local_param_ids[i]->V_update_.setZero();
+            }           
         }
-        std::cout << eig_thre_.transpose() << std::endl;
     }
+    std::cout << eig_thre_.transpose() << std::endl;
 }
 
 void Estimator::evalCalib()
@@ -1656,7 +1639,7 @@ void Estimator::evalCalib()
         {
             if (d_factor_calib_[n] != 0) // with high constraints
             {
-                double weight = pow(d_factor_calib_[n] / EIG_THRE_CALIB, 1.0);
+                double weight = pow(d_factor_calib_[n] / LAMBDA_THRE_CALIB, 1.0);
                 Pose pose_ext = Pose(qbl_[n], tbl_[n]);
                 pose_calib_[n].push_back(make_pair(weight, pose_ext));
             }
