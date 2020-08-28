@@ -2,7 +2,7 @@
 
 export data_path=$DATA_PATH/lidar_calibration/mloam_dataset/SR01.bag
 export rpg_path=$CATKIN_WS/src/localization/rpg_trajectory_evaluation
-export result_path=$rpg_path/results/simu_jackal_mloam/calib_SR01/
+export result_path=$rpg_path/results/simu_jackal_mloam/debug/
 mkdir -p $result_path/gf_pcd
 mkdir -p $result_path/traj
 mkdir -p $result_path/time

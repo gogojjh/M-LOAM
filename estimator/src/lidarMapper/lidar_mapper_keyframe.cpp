@@ -391,7 +391,6 @@ void downsampleCurrentScan()
             pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
             evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
             if (cov_point.trace() > TRACE_THRESHOLD_BEFORE_MAPPING) continue;
-            // cov_point = COV_MEASUREMENT;
         }
         PointIWithCov point_cov(point_ori, cov_point.cast<float>());
         laser_cloud_surf_cov->push_back(point_cov);
@@ -407,7 +406,6 @@ void downsampleCurrentScan()
             pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
             evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
             if (cov_point.trace() > TRACE_THRESHOLD_BEFORE_MAPPING) continue;
-            // cov_point = COV_MEASUREMENT;
         }
         PointIWithCov point_cov(point_ori, cov_point.cast<float>());
         laser_cloud_corner_cov->push_back(point_cov);
@@ -423,7 +421,6 @@ void downsampleCurrentScan()
             pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
             evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
             if (cov_point.trace() > TRACE_THRESHOLD_BEFORE_MAPPING) continue;
-            // cov_point = COV_MEASUREMENT;
         }
         PointIWithCov point_cov(point_ori, cov_point.cast<float>());
         laser_cloud_outlier_cov->push_back(point_cov);

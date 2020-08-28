@@ -51,6 +51,7 @@ DEFINE_bool(result_save, true, "save or not save the results");
 DEFINE_string(config_file, "config.yaml", "the yaml config file");
 DEFINE_string(output_path, "", "the path ouf saving results");
 DEFINE_bool(inject_meas_noise, false, "inject measurement noise on the raw data");
+DEFINE_int32(mc_trial, 0, "monte carlo trial number");
 
 Estimator estimator;
 SaveStatistics save_statistics;

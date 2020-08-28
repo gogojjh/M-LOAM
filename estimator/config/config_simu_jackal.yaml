@@ -10,7 +10,7 @@ min_cluster_size: 15
 min_line_size: 10
 segment_valid_point_num: 5
 segment_valid_line_num: 3
-segment_theta: 0.53 # Lego-loam: 1.047
+segment_theta: 1.0 # Lego-loam: 1.047
 
 # laser parameters
 idx_ref: 0
@@ -108,6 +108,8 @@ map_surf_res: 0.4
 map_outlier_res: 0.8
 map_eig_thre: 50
 
+uct_ext_ratio: 0.25 
+
 # uncertainty parameter
 # translation, rotation, point (rho, phi, zeta)
 uct_ext: !!opencv-matrix
@@ -123,5 +125,5 @@ uct_measurement: !!opencv-matrix
    dt: d
    data: [0.0025, 0.0025, 0.0025]
 
-trace_threshold_before_mapping: 2.0
-trace_threshold_after_mapping: 2.0
+trace_threshold_before_mapping: 10
+trace_threshold_after_mapping: 10

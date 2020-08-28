@@ -30,8 +30,8 @@ estimate_extrinsic: 2   # 0  Have an accurate extrinsic parameters. We will trus
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
 
-the extrinsics from the base_link to laser_link
-qx qy qz qw px py pz
+# the extrinsics from the base_link to laser_link
+# qx qy qz qw px py pz
 body_T_laser: !!opencv-matrix
    rows: 2
    cols: 7
