@@ -29,7 +29,7 @@ segment_theta: 0.53
 window_size: 4
 opt_window_size: 2
 
-# Extrinsic parameter between IMU and Camera.
+# Extrinsic parameter between multiple LiDARs.
 estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them

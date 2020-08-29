@@ -1,5 +1,5 @@
 <launch>
-    <arg name="bag_file_use" default="true" />
+    <arg name="bag_file_use" default="false" />
     <group if="$(arg bag_file_use)">
         <param name="use_sim_time" value="true" />
         <node pkg="rosbag" type="play" name="rosbag" args="--clock -r 0.7 $(arg bag_file)" required="true"/>    
@@ -84,7 +84,8 @@
     <!-- merge cloud -->
     <group unless="$(arg run_mloam)">
         <node pkg="mloam_test" type="test_merge_pointcloud_rv_hercules" name="test_merge_pointcloud_rv_hercules" 
-            args="$(arg data_source) $(arg data_path) $(arg delta_idx) $(arg start_idx) $(arg end_idx)" required="true"/>
+            args="$(arg data_source) $(arg data_path) $(arg delta_idx) 
+                  $(arg start_idx) $(arg end_idx) $(arg config_file)" required="true"/>
         <node name="static_tf_world_sensor_into_camera" pkg="tf" type="static_transform_publisher"
             args="0 0 0 0 0 0 1 world camera_init 10"/>            
         <node name="static_tf_world_sensor_into_laser" pkg="tf" type="static_transform_publisher"

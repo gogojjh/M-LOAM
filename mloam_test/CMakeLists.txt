@@ -27,7 +27,7 @@ find_package(catkin REQUIRED COMPONENTS
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 find_package(Eigen3 REQUIRED)
 
-# find_package(OpenCV REQUIRED)
+find_package(OpenCV REQUIRED)
 find_package(PCL REQUIRED)
 find_package(Ceres REQUIRED)
 find_package(Gflags REQUIRED)
@@ -70,13 +70,13 @@ catkin_package(
 # target_link_libraries(test_pointiwithcov ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(test_merge_pointcloud_sr src/test_merge_pointcloud_sr.cpp)
-target_link_libraries(test_merge_pointcloud_sr ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(test_merge_pointcloud_sr ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
 add_executable(test_merge_pointcloud_rhd src/test_merge_pointcloud_rhd.cpp)
-target_link_libraries(test_merge_pointcloud_rhd ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(test_merge_pointcloud_rhd ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
 add_executable(test_merge_pointcloud_rv_hercules src/test_merge_pointcloud_rv_hercules.cpp)
-target_link_libraries(test_merge_pointcloud_rv_hercules ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(test_merge_pointcloud_rv_hercules ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
 add_executable(test_generate_bag_from_data_hercules src/test_generate_bag_from_data_hercules.cpp)
 target_link_libraries(test_generate_bag_from_data_hercules ${catkin_LIBRARIES} ${PCL_LIBRARIES})

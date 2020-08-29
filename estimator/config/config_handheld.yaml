@@ -25,27 +25,31 @@ cloud_topic:
 window_size: 6
 opt_window_size: 3
 
-# Extrinsic parameter between IMU and Camera.
-estimate_extrinsic: 2   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
-                        # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
-                        # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
+############################## For normal use
+# Extrinsic parameter between multiple LiDARs.
+# estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+#                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
+#                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
 
-# the extrinsics from the base_link to laser_link
-# qx qy qz qw px py pz
-body_T_laser: !!opencv-matrix
-   rows: 2
-   cols: 7
-   dt: d
-   # data: [0, 0, 0, 1, 0, 0, 0,
-   #        0, 0, 0, 1, 0, 0, 0] # qx qy qz qw px py pz
-   # data: [0, 0, 0, 1, 0, 0, 0,
-   #        0.31744, -0.00431, 0.01186, 0.9468, 0.0308, -0.56911, -0.12243] # initialization
-   data: [0, 0, 0, 1, 0, 0, 0,
-          0.32182, -0.00094, 0.00744, 0.94677, 0.06641, -0.49424, -0.11251] # refinement
-   # data: [0, 0, 0, 1, 0, 0, 0,
-   #        0.34087, -0.0101817, 0.0147921, 0.945613, 0.0334837, -0.540249, -0.141798] # PS-Calib
+# # qx qy qz qw px py pz
+# body_T_laser: !!opencv-matrix
+#    rows: 2
+#    cols: 7
+#    dt: d
+#    data: [0, 0, 0, 1, 0, 0, 0,
+#           0, 0, 0, 1, 0, 0, 0] # w/o initialization
+#    data: [0, 0, 0, 1, 0, 0, 0,
+#           0.31744, -0.00431, 0.01186, 0.9468, 0.0308, -0.56911, -0.12243] # initialization
+#    data: [0, 0, 0, 1, 0, 0, 0,
+#           0.32182, -0.00094, 0.00744, 0.94677, 0.06641, -0.49424, -0.11251] # refinement
+# #    data: [0, 0, 0, 1, 0, 0, 0,
+         #  0.34087, -0.0101817, 0.0147921, 0.945613, 0.0334837, -0.540249, -0.141798] # PS-Calib
 
+############################## For Journal experiments
+# 1
+# parameters for testing the online calibration
 # The extrinsics here are for different-level initialization
+# estimate_extrinsic: 1 
 # body_T_laser: !!opencv-matrix
 #    rows: 2
 #    cols: 7
@@ -59,7 +63,25 @@ body_T_laser: !!opencv-matrix
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
    #        0.00000, 0.0, 0.0, 1.0, 0, -0.5, -0.1] # rough translation: 0deg
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-   #        0.34202, 0, 0, 0.93969, 0, -0.456, -0.122] # CAD
+   #        0.34202, 0, 0, 0.93969, 0, -0.456, -0.122] # CAD model
+
+# 2
+# parameters for testing the SLAM
+# The extrinsics here are for different-level extrinsics
+estimate_extrinsic: 0 
+body_T_laser: !!opencv-matrix
+   rows: 2
+   cols: 7
+   dt: d
+   # data: [0, 0, 0, 1, 0, 0, 0,
+   #        0, 0, 0, 1, 0, 0, 0] # w/o calib
+   # data: [0, 0, 0, 1, 0, 0, 0,
+   #        0.31744, -0.00431, 0.01186, 0.9468, 0.0308, -0.56911, -0.12243] # initialization
+   # data: [0, 0, 0, 1, 0, 0, 0,
+   #        0.34202, 0, 0, 0.93969, 0, -0.456, -0.122] # CAD model
+   data: [0, 0, 0, 1, 0, 0, 0,
+          0.32182, -0.00094, 0.00744, 0.94677, 0.06641, -0.49424, -0.11251] # refinement
+##############################
 
 #unsynchronization parameters
 estimate_td: 0                      # 0 have an accurate time offset among sensors

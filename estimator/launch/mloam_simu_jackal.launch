@@ -5,7 +5,7 @@
     <param name="use_sim_time" value="true" />
     <group if="$(arg bag_file_use)">
         <node pkg="rosbag" type="play" name="rosbag" 
-            args="--clock -r 1.7 $(arg bag_file)" required="true"/>    
+            args="--clock -r 2 $(arg bag_file)" required="true"/>    
     </group>    
 
     <!-- <include file="$(find rviz_car_model)/launch/default.launch" >
@@ -72,7 +72,8 @@
 
     <!-- merge cloud -->
     <group unless="$(arg run_mloam)">
-        <node pkg="mloam_test" type="test_merge_pointcloud_sr" name="test_merge_pointcloud_sr" output="screen" />      
+        <node pkg="mloam_test" type="test_merge_pointcloud_sr" 
+            name="test_merge_pointcloud_sr" args="$(arg config_file)" output="screen" />      
         <node name="static_tf_world_sensor_into_camera" pkg="tf" type="static_transform_publisher"
             args="0 0 0 0 0 0 1 world camera_init 10"/>            
     </group>

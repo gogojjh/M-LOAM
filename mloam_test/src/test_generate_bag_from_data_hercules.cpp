@@ -12,7 +12,7 @@
  *******************************************************/
 
 // Usage: rosrun mloam_test test_generate_bag_from_data_hercules \
-//  /Monster/dataset/lidar_calibration/mloam_rv_dataset/ 7500 25229 1 RV01.bag
+//  /Monster/dataset/lidar_calibration/mloam_rv_dataset/ 7500 25229 1 ../RV01.bag
 
 #include <ros/ros.h>
 #include <rosbag/bag.h>

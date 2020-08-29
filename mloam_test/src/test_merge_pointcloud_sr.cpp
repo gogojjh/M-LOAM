@@ -14,6 +14,9 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/ros/conversions.h>
 
+#include <opencv2/opencv.hpp>
+#include <opencv2/core/eigen.hpp>
+
 #include <iostream>
 
 typedef sensor_msgs::PointCloud2 LidarMsgType;
@@ -21,6 +24,8 @@ typedef message_filters::sync_policies::ApproximateTime<LidarMsgType, LidarMsgTy
 typedef message_filters::Subscriber<LidarMsgType> LidarSubType;
 
 ros::Publisher cloud_fused_pub;
+
+std::vector<Eigen::Matrix4d> TBL;
 
 Eigen::Matrix4d getTransformMatrix(const std::vector<double>& calib)
 {
@@ -93,14 +98,47 @@ void process(const sensor_msgs::PointCloud2ConstPtr& pc2_left,
     publishCloud(cloud_fused_pub, header, cloud_fused);
 }
 
+void readParameters(std::string config_file)
+{
+    FILE *fh = fopen(config_file.c_str(), "r");
+    if (fh == NULL)
+    {
+        std::cout << "config_file dosen't exist; wrong config_file path" << std::endl;
+        ROS_BREAK();
+        return;
+    }
+    fclose(fh);
+
+    cv::FileStorage fsSettings(config_file, cv::FileStorage::READ);
+    if (!fsSettings.isOpened())
+    {
+        std::cerr << "ERROR: Wrong path to settings" << std::endl;
+    }
+
+    size_t NUM_OF_LASER = 2;
+    TBL.resize(NUM_OF_LASER);
+    cv::Mat cv_T;
+    fsSettings["body_T_laser"] >> cv_T;
+    for (int i = 0; i < NUM_OF_LASER; i++)
+    {
+        Eigen::Quaterniond q = Eigen::Quaterniond(cv_T.ptr<double>(i)[3], cv_T.ptr<double>(i)[0], cv_T.ptr<double>(i)[1], cv_T.ptr<double>(i)[2]);
+        Eigen::Vector3d t = Eigen::Vector3d(cv_T.ptr<double>(i)[4], cv_T.ptr<double>(i)[5], cv_T.ptr<double>(i)[6]);
+        TBL[i].setIdentity();
+        TBL[i].topLeftCorner<3, 3>() = q.toRotationMatrix();
+        TBL[i].topRightCorner<3, 1>() = t;
+        std::cout << q.coeffs().transpose() << ", " << t.transpose() << std::endl;
+        std::cout << TBL[i] << std::endl;
+    }
+}
+
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "test_merge_pointcloud");
     ros::NodeHandle nh("~");
 
-    cloud_fused_pub = nh.advertise<LidarMsgType>("/fused/velodyne_points", 1);
+    readParameters(std::string(argv[1]));
 
-    //register fusion callback function
+    cloud_fused_pub = nh.advertise<LidarMsgType>("/fused/velodyne_points", 1);
     LidarSubType* sub_left = new LidarSubType(nh, "/left/velodyne_points", 1);
     LidarSubType* sub_right = new LidarSubType(nh, "/right/velodyne_points", 1);
     message_filters::Synchronizer<LidarSyncPolicy>* lidar_synchronizer =

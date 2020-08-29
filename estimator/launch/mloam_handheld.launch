@@ -72,7 +72,8 @@
 
     <!-- merge cloud -->
     <group unless="$(arg run_mloam)">
-        <node pkg="mloam_test" type="test_merge_pointcloud_rhd" name="test_merge_pointcloud_rhd" output="screen" />      
+        <node pkg="mloam_test" type="test_merge_pointcloud_rhd" 
+            name="test_merge_pointcloud_rhd" args="$(arg config_file)" output="screen" />      
         <node name="static_tf_world_sensor_into_camera" pkg="tf" type="static_transform_publisher"
             args="0 0 0 0 0 0 1 world camera_init 10"/>            
     </group>

@@ -33,4 +33,3 @@ roslaunch mloam mloam_simu_jackal.launch \
     output_path:=$result_path
 sleep 1
 
-

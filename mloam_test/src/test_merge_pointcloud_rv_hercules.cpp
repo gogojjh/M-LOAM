@@ -22,6 +22,9 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/ros/conversions.h>
 
+#include <opencv2/opencv.hpp>
+#include <opencv2/core/eigen.hpp>
+
 #include <iostream>
 
 using namespace std;
@@ -42,6 +45,8 @@ string MLOAM_GT_PATH;
 
 int frame_cnt = 0;
 size_t DELTA_IDX;
+
+std::vector<Eigen::Matrix4d> TBL;
 
 void pauseCallback(std_msgs::StringConstPtr msg)
 {
@@ -87,38 +92,30 @@ void process(const sensor_msgs::PointCloud2ConstPtr& pc2_top,
     pcl::PointCloud<pcl::PointXYZI> cloud, cloud_fused;
     std_msgs::Header header = pc2_top->header;
     {
-        std::vector<double> calib{0, 0, 0, 1, 0, 0, 0};
         pcl::fromROSMsg(*pc2_top, cloud);
-        Eigen::Matrix4d trans = getTransformMatrix(calib);
-        pcl::transformPointCloud(cloud, cloud, trans.cast<float>());
+        pcl::transformPointCloud(cloud, cloud, TBL[0].cast<float>());
         for (auto &p : cloud.points)
             p.intensity = 0;
         cloud_fused += cloud;
         // std::cout << cloud_fused.size() << std::endl;
     }
     {
-        std::vector<double> calib{-0.0169, 0.0575, 0.0195, 0.998, 0.5355, 0.0393, -1.131};
         pcl::fromROSMsg(*pc2_front, cloud);
-        Eigen::Matrix4d trans = getTransformMatrix(calib);
-        pcl::transformPointCloud(cloud, cloud, trans.cast<float>());
+        pcl::transformPointCloud(cloud, cloud, TBL[1].cast<float>());
         for (auto &p : cloud.points) p.intensity = 1;
         cloud_fused += cloud;
         // std::cout << cloud_fused.size() << std::endl;
     }
     {
-        std::vector<double> calib{-0.1118, 0.1894, 0.6845, 0.6951, 0.5116, 0.6440, -0.904};
         pcl::fromROSMsg(*pc2_left, cloud);
-        Eigen::Matrix4d trans = getTransformMatrix(calib);
-        pcl::transformPointCloud(cloud, cloud, trans.cast<float>());
+        pcl::transformPointCloud(cloud, cloud, TBL[2].cast<float>());
         for (auto &p : cloud.points) p.intensity = 2;
         cloud_fused += cloud;
         // std::cout << cloud_fused.size() << std::endl;
     }
     {
-        std::vector<double> calib{0.0745, 0.1312, -0.7449, 0.6496, 0.4406, -0.628, -1.0295};
         pcl::fromROSMsg(*pc2_right, cloud);
-        Eigen::Matrix4d trans = getTransformMatrix(calib);
-        pcl::transformPointCloud(cloud, cloud, trans.cast<float>());
+        pcl::transformPointCloud(cloud, cloud, TBL[3].cast<float>());
         for (auto &p : cloud.points) p.intensity = 3;
         cloud_fused += cloud;
         // std::cout << cloud_fused.size() << std::endl;
@@ -128,6 +125,39 @@ void process(const sensor_msgs::PointCloud2ConstPtr& pc2_top,
     frame_cnt++;
 }
 
+void readParameters(std::string config_file)
+{
+    FILE *fh = fopen(config_file.c_str(), "r");
+    if (fh == NULL)
+    {
+        std::cout << "config_file dosen't exist; wrong config_file path" << std::endl;
+        ROS_BREAK();
+        return;
+    }
+    fclose(fh);
+
+    cv::FileStorage fsSettings(config_file, cv::FileStorage::READ);
+    if (!fsSettings.isOpened())
+    {
+        std::cerr << "ERROR: Wrong path to settings" << std::endl;
+    }
+
+    size_t NUM_OF_LASER = 4;
+    TBL.resize(NUM_OF_LASER);
+    cv::Mat cv_T;
+    fsSettings["body_T_laser"] >> cv_T;
+    for (int i = 0; i < NUM_OF_LASER; i++)
+    {
+        Eigen::Quaterniond q = Eigen::Quaterniond(cv_T.ptr<double>(i)[3], cv_T.ptr<double>(i)[0], cv_T.ptr<double>(i)[1], cv_T.ptr<double>(i)[2]);
+        Eigen::Vector3d t = Eigen::Vector3d(cv_T.ptr<double>(i)[4], cv_T.ptr<double>(i)[5], cv_T.ptr<double>(i)[6]);
+        TBL[i].setIdentity();
+        TBL[i].topLeftCorner<3, 3>() = q.toRotationMatrix();
+        TBL[i].topRightCorner<3, 1>() = t;
+        std::cout << q.coeffs().transpose() << ", " << t.transpose() << std::endl;
+        std::cout << TBL[i] << std::endl;
+    }
+}
+
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "test_merge_pointcloud_rv_hercules");
@@ -135,6 +165,9 @@ int main(int argc, char** argv)
     cloud_fused_pub = nh.advertise<LidarMsgType>("/fused/velodyne_points", 5);
     DELTA_IDX = std::stoi(argv[3]);
     std::string data_source(argv[1]);
+
+    readParameters(std::string(argv[6]));
+
     if (!data_source.compare("bag"))
     {
         //register fusion callback function

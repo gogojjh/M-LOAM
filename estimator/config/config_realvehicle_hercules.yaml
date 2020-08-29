@@ -27,37 +27,60 @@ cloud_topic:
 window_size: 6
 opt_window_size: 3
 
-# Extrinsic parameter between IMU and Camera.
-estimate_extrinsic: 2   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
-                        # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
-                        # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
-optimal_extrinsic: 0
+# # Extrinsic parameter between multiple LiDARs.
+# estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+#                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
+#                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
 
-# qx qy qz qw px py pz
+# # qx qy qz qw px py pz
+# body_T_laser: !!opencv-matrix
+#    rows: 4
+#    cols: 7
+#    dt: d
+#    # data: [0, 0, 0, 1, 0, 0, 0, 
+#    #        0, 0, 0, 1, 0, 0, 0,
+#    #        0, 0, 0, 1, 0, 0, 0,
+#    #        0, 0, 0, 1, 0, 0, 0] # wo initialization
+#    # data: [0, 0, 0, 1, 0, 0, 0, 
+#    #        -0.0129, 0.0691, 0.0378, 0.9968, -0.1520, -0.9552, 0,
+#    #        -0.1454, 0.1705, 0.7118, 0.6657, -0.7484, -0.2822, 0,
+#    #        0.1149, 0.1064, -0.6298, 0.7608, -0.0866, -1.4654, 0] # initialization
+#    data: [0, 0, 0, 1, 0, 0, 0, 
+#           -0.00735, 0.05863, 0.02083, 0.99804, 0.53297, 0.04047, -1.06245,
+#           -0.10261, 0.18253, 0.68802, 0.69483, 0.42654, 0.66595, -0.82217,
+#           0.06044, 0.14175, -0.75835, 0.63337, 0.4406, -0.628, -1.0295] # refinement
+#    # data: [0, 0, 0, 1, 0, 0, 0, 
+#    #        -0.0169, 0.0575, 0.0195, 0.998, 0.5355, 0.0393, -1.131,
+#    #        -0.1118, 0.1894, 0.6845, 0.6951, 0.5116, 0.6440, -0.904,
+#    #        0.0745, 0.1312, -0.7449, 0.6496, 0.4406, -0.628, -1.0295] # PS-calib
+#    # data: [0, 0, 0, 1, 0, 0, 0,
+#    #        0, 0.087150, 0, 0.99679, 0.795, 0, -1.364,
+#    #        -0.061628, 0.061628, 0.70442, 0.70442, 0.503, 0.6185, -1.0912,
+#    #        0.061628, 0.061628, -0.70442, 0.70442, 0.503, -0.6185, -1.0912] # CAD
+
+############################## For Journal experiments
+estimate_extrinsic: 0   
 body_T_laser: !!opencv-matrix
    rows: 4
    cols: 7
    dt: d
-   data: [0, 0, 0, 1, 0, 0, 0, 
-          0, 0, 0, 1, 0, 0, 0,
-          0, 0, 0, 1, 0, 0, 0,
-          0, 0, 0, 1, 0, 0, 0] # no prior
+   # data: [0, 0, 0, 1, 0, 0, 0, 
+   #        0, 0, 0, 1, 0, 0, 0,
+   #        -0.10261, 0.18253, 0.68802, 0.69483, 0.42654, 0.66595, -0.82217,
+   #        0.06044, 0.14175, -0.75835, 0.63337, 0.4406, -0.628, -1.0295] # wo initialization     
    # data: [0, 0, 0, 1, 0, 0, 0, 
    #        -0.0129, 0.0691, 0.0378, 0.9968, -0.1520, -0.9552, 0,
-   #        -0.1454, 0.1705, 0.7118, 0.6657, -0.7484, -0.2822, 0,
-   #        0.1149, 0.1064, -0.6298, 0.7608, -0.0866, -1.4654, 0] # initialization
-   # data: [0, 0, 0, 1, 0, 0, 0, 
-   #        -0.00735, 0.05863, 0.02083, 0.99804, 0.53297, 0.04047, -1.06245,
    #        -0.10261, 0.18253, 0.68802, 0.69483, 0.42654, 0.66595, -0.82217,
-   #        0.06044, 0.14175, -0.75835, 0.63337, 0.4406, -0.628, -1.0295] # refinement_1
+   #        0.06044, 0.14175, -0.75835, 0.63337, 0.4406, -0.628, -1.0295] # initialization   
    # data: [0, 0, 0, 1, 0, 0, 0, 
-   #        -0.0169, 0.0575, 0.0195, 0.998, 0.5355, 0.0393, -1.131,
-   #        -0.1118, 0.1894, 0.6845, 0.6951, 0.5116, 0.6440, -0.904,
-   #        0.0745, 0.1312, -0.7449, 0.6496, 0.4406, -0.628, -1.0295] # refinement_2, more accurate
-   # data: [0, 0, 0, 1, 0, 0, 0,
    #        0, 0.087150, 0, 0.99679, 0.795, 0, -1.364,
-   #        -0.061628, 0.061628, 0.70442, 0.70442, 0.503, 0.6185, -1.0912,
-   #        0.061628, 0.061628, -0.70442, 0.70442, 0.503, -0.6185, -1.0912] # CAD
+   #        -0.10261, 0.18253, 0.68802, 0.69483, 0.42654, 0.66595, -0.82217,
+   #        0.06044, 0.14175, -0.75835, 0.63337, 0.4406, -0.628, -1.0295] # CAD   
+   data: [0, 0, 0, 1, 0, 0, 0, 
+          -0.00735, 0.05863, 0.02083, 0.99804, 0.53297, 0.04047, -1.06245,
+          -0.10261, 0.18253, 0.68802, 0.69483, 0.42654, 0.66595, -0.82217,
+          0.06044, 0.14175, -0.75835, 0.63337, 0.4406, -0.628, -1.0295] # refinement
+################################
 
 #unsynchronization parameters
 estimate_td: 0                      # 0 have an accurate time offset among sensors
