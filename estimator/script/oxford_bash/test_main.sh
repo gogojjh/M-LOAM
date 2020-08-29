@@ -140,6 +140,6 @@ roslaunch mloam mloam_realvehicle_oxford.launch \
 # --recalculate_errors \
 # --est_type \
 #     M-LOAM-gd-float-0.2-huber \
-#     M-LOAM-gd-float-0.2-gmc \
+#     LEGO-LOAM
 # --compare \
 #     $result_path/traj

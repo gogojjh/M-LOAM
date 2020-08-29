@@ -130,7 +130,6 @@ bool is_degenerate;
 bool with_ua_flag;
 
 Eigen::Matrix<double, 6, 6> cov_mapping;
-Eigen::Matrix<double, 6, 6> cov_cp;
 
 pcl::PCDWriter pcd_writer;
 
@@ -716,10 +715,8 @@ void scan2MapOptimization()
 
         // calculate the incremental covariance matrix
         Pose pose_prev_cur = pose_wmap_prev.inverse() * pose_wmap_curr;
-        compoundPoseWithCov(pose_wmap_prev, cov_cp,
-                            pose_prev_cur, cov_mapping,
-                            pose_wmap_curr, cov_cp);
-        pose_wmap_curr.cov_ = cov_cp;
+        pose_prev_cur.cov_ = cov_mapping;
+        compoundPoseWithCov(pose_wmap_prev, pose_prev_cur, pose_wmap_curr);
     }
     else
     {
@@ -756,7 +753,7 @@ void saveKeyframe()
 
     pose_keyframes_3d->push_back(pose_3d);
     pose_keyframes_6d.push_back(std::make_pair(time_laser_odometry, pose_wmap_curr));
-    cov_cp.setZero();
+    pose_wmap_curr.cov_.setZero(); // start a new keyframe, with zero covariance
 
     PointICovCloud::Ptr surf_keyframe_cov(new PointICovCloud());
     PointICovCloud::Ptr corner_keyframe_cov(new PointICovCloud());
@@ -959,11 +956,22 @@ void saveGlobalMap()
     down_size_filter_corner_map_cov.setInputCloud(laser_cloud_corner_map);
     down_size_filter_corner_map_cov.filter(*laser_cloud_corner_map_ds);
 
-    pcd_writer.write("/tmp/mloam_mapping_surf_cloud.pcd", *laser_cloud_surf_map_ds);
-    pcd_writer.write("/tmp/mloam_mapping_corner_cloud.pcd", *laser_cloud_corner_map_ds);
-    // *laser_cloud_map += *laser_cloud_surf_map_ds;
-    // *laser_cloud_map += *laser_cloud_corner_map_ds;
-    // pcd_writer.write("/tmp/mloam_mapping_cloud.pcd", *laser_cloud_map);
+    if (with_ua_flag)
+    {
+        pcd_writer.write("/tmp/mloam_mapping_surf_cloud.pcd", *laser_cloud_surf_map_ds);
+        pcd_writer.write("/tmp/mloam_mapping_corner_cloud.pcd", *laser_cloud_corner_map_ds);
+        // *laser_cloud_map += *laser_cloud_surf_map_ds;
+        // *laser_cloud_map += *laser_cloud_corner_map_ds;
+        // pcd_writer.write("/tmp/mloam_mapping_cloud.pcd", *laser_cloud_map);
+    }
+    else
+    {
+        pcd_writer.write("/tmp/mloam_mapping_surf_cloud_wo_ua.pcd", *laser_cloud_surf_map_ds);
+        pcd_writer.write("/tmp/mloam_mapping_corner_cloud_wo_ua.pcd", *laser_cloud_corner_map_ds);
+        // *laser_cloud_map += *laser_cloud_surf_map_ds;
+        // *laser_cloud_map += *laser_cloud_corner_map_ds;
+        // pcd_writer.write("/tmp/mloam_mapping_cloud.pcd", *laser_cloud_map);
+    }
 }
 
 void clearCloud()
@@ -1125,6 +1133,7 @@ void process()
             saveKeyframe();
             printf("save keyframes time: %fms\n", skf_timer.Stop() * 1000);
 
+            // TODO: using loop info to update keyframes
             if (!loop_info_buf.empty())
             {
                 while (loop_info_buf.size() != 1)
@@ -1386,7 +1395,6 @@ int main(int argc, char **argv)
     down_size_filter_global_map_keyframes.setLeafSize(2.0, 2.0, 2.0);
 
     cov_mapping.setZero();
-    cov_cp.setZero();
 
     pose_ext.resize(NUM_OF_LASER);
 

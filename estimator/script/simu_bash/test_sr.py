@@ -9,6 +9,15 @@ import matplotlib.pyplot as plt
 
 seq_name = []
 
+def debug_eval():
+    print('evaluate debug sequence')
+    os.environ['rpg_path'] = '{}/src/localization/rpg_trajectory_evaluation'.format(os.environ['CATKIN_WS'])
+    os.environ['result_path'] = '{}/results/simu_jackal_mloam/debug/'.format(os.environ['rpg_path'])
+    command = 'python2 $rpg_path/scripts/analyze_trajectory_single_mloam.py '
+    # command += '--recalculate_errors --est_type M-LO M-LOAM-wo-ua M-LOAM --compare $result_path/traj'    
+    command += '--recalculate_errors --est_type M-LO M-LOAM-wo-ua M-LOAM A-LOAM F-LOAM --compare $result_path/traj'
+    os.system(command)         
+
 def debug_test(start_idx, end_idx):
     global seq_name
     for idx in range(start_idx, end_idx + 1):
@@ -49,10 +58,10 @@ def single_test(start_idx, end_idx):
         command = 'bash test_main.sh'
         os.system(command)
 
-        print('evaluate sequence: {}'.format(seq_name[idx]))
-        command = 'python2 $rpg_path/scripts/analyze_trajectory_single_mloam.py '
-        command += '--recalculate_errors --est_type M-LO M-LOAM-wo-ua M-LOAM A-LOAM F-LOAM --compare $result_path/traj'
-        os.system(command)          
+        # print('evaluate sequence: {}'.format(seq_name[idx]))
+        # command = 'python2 $rpg_path/scripts/analyze_trajectory_single_mloam.py '
+        # command += '--recalculate_errors --est_type M-LO M-LOAM-wo-ua M-LOAM A-LOAM F-LOAM --compare $result_path/traj'
+        # os.system(command)          
 
 def single_eval(start_idx, end_idx):
     global seq_name
@@ -83,8 +92,8 @@ def mc_test(start_idx, end_idx, mc_trials):
     
         for trial in range(0, mc_trials):
             print('mc_trial {}'.format(trial))
-            os.environ['data_path'] = '{}/lidar_calibration/mloam_dataset/SR_monte_carlo/group_{}/{}'.format(os.environ['DATA_PATH'], trial, idx)
-            command = 'bash test_main_monte_carlo.sh'
+            os.environ['data_path'] = '{}/lidar_calibration/mloam_dataset/SR_monte_carlo/group_{}/{}.bag'.format(os.environ['DATA_PATH'], trial, seq_name[idx])
+            command = 'bash test_main.sh'
             os.system(command)
             command = 'mv $result_path/traj/stamped_groundtruth.txt $result_path/traj/stamped_groundtruth{}.txt'.format(trial)
             os.system(command)
@@ -103,6 +112,7 @@ def mc_test(start_idx, end_idx, mc_trials):
 
         command = 'cp $result_path/traj/stamped_groundtruth{}.txt $result_path/traj/stamped_groundtruth.txt'.format(0)
         os.system(command)
+
         # command = 'python2 $rpg_path/scripts/analyze_trajectory_single_mloam.py '
         # command += '--recalculate_errors --est_type M-LO M-LOAM-wo-ua M-LOAM A-LOAM F-LOAM --compare $result_path/traj '
         # command += '--mul_trials={}'.format(mc_trials)
@@ -132,12 +142,14 @@ if __name__ == '__main__':
         seq_name = ['SR01', 'SR02', 'SR03', 'SR04', 'SR05']
     elif args.sequence == 'RHD':
         seq_name = ['RHD02lab', 'RHD03garden', 'RHD04building']
-    if args.program == 'single_test':
-        single_test(args.start_idx, args.end_idx)
-    elif args.program == 'debug_test':
+    if args.program == 'debug_test':
         debug_test(args.start_idx, args.end_idx)
+    elif args.program == 'debug_eval':
+        debug_eval()
+    elif args.program == 'single_test':
+        single_test(args.start_idx, args.end_idx)
     elif args.program =='single_eval':
-        single_eval(args.start_idx, args.end_idx)        
+        single_eval(args.start_idx, args.end_idx)
     elif args.program == 'mc_test':
         mc_test(args.start_idx, args.end_idx, args.mc_trials)
     elif args.program =='mc_eval':

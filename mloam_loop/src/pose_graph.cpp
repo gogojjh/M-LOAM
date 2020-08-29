@@ -118,22 +118,25 @@ void PoseGraph::addKeyFrame(KeyFrame *cur_kf, bool flag_detect_loop)
             {
                 skip_cnt_ = 0; // not perform frequent geometric verification
 
+                // set the initial guess using the yaw
+                Eigen::Quaterniond q_ini(Eigen::AngleAxisd(yaw_diff_rad, Eigen::Vector3d::UnitZ()));
+                Eigen::Vector3d t_ini = Eigen::Vector3d::Zero();
+                Pose pose_ini_map_kf(q_ini, t_ini);
+
                 // check geometric consistency
                 TicToc t_check_gc;
-                Eigen::Quaterniond q_relative; 
-                q_relative = Eigen::AngleAxisd(yaw_diff_rad, Eigen::Vector3d::UnitZ());
-                Eigen::Vector3d t_relative = Eigen::Vector3d::Zero();
-                Pose pose_relative(q_relative, t_relative); 
-                std::pair<bool, Pose> loop_opti_result = checkGeometricConsistency(cur_kf, cur_kf->index_, loop_index, pose_relative);
+                std::pair<bool, Pose> reg_result = checkGeometricConsistency(cur_kf, cur_kf->index_,
+                                                                             loop_index,
+                                                                             pose_ini_map_kf);
                 printf("check geoometryc consistency %fs\n", t_check_gc.toc() / 1000);
-                if (!loop_opti_result.first)
+                if (!reg_result.first)
                 {
                     printf("loop reject with geometry verificiation\n");
                 }
                 else 
                 {
                     // perform pose graph optimization
-                    Pose loop_info = loop_opti_result.second;
+                    Pose loop_info = reg_result.second;
                     cur_kf->updateLoopInfo(loop_index, loop_info);
                     if (earliest_loop_index_ > loop_index || earliest_loop_index_ == -1)
                         earliest_loop_index_ = loop_index;
@@ -331,24 +334,24 @@ std::pair<bool, int> PoseGraph::checkTemporalConsistency(const int &que_index,
     int cnt = 0;
     // std::vector<int> all_match_index;
     // all_match_index.push_back(match_index);
-    for (int reque_index = que_index - 5; reque_index < que_index; reque_index++)
-    {
-        QueryResult qr = sc_manager_.detectLoopClosureID(reque_index);
-        std::pair<int, double> redetect_result;
-        redetect_result.first = qr.match_index_;
-        redetect_result.second = qr.yaw_diff_rad_;
-        int rematch_index = redetect_result.first;
-        // std::cout << "reque_index: " << reque_index << std::endl;
-        if ((rematch_index == -1) || (abs(match_index - rematch_index) > LOOP_TEMPORAL_CONSISTENCY_THRESHOLD))
-        {
-            tc_flag = false;
-            printf("%d <-> %d\n", match_index, rematch_index);
-            printf("loop reject since only find %d matchings\n", cnt);
-            break;
-        }
-        cnt++;
-        // all_match_index.push_back(rematch_index);
-    }
+    // for (int reque_index = que_index - 5; reque_index < que_index; reque_index++)
+    // {
+    //     QueryResult qr = sc_manager_.detectLoopClosureID(reque_index);
+    //     std::pair<int, double> redetect_result;
+    //     redetect_result.first = qr.match_index_;
+    //     redetect_result.second = qr.yaw_diff_rad_;
+    //     int rematch_index = redetect_result.first;
+    //     // std::cout << "reque_index: " << reque_index << std::endl;
+    //     if ((rematch_index == -1) || (abs(match_index - rematch_index) > LOOP_TEMPORAL_CONSISTENCY_THRESHOLD))
+    //     {
+    //         tc_flag = false;
+    //         printf("%d <-> %d\n", match_index, rematch_index);
+    //         printf("loop reject since only find %d matchings\n", cnt);
+    //         break;
+    //     }
+    //     cnt++;
+    //     // all_match_index.push_back(rematch_index);
+    // }
     // if (tc_flag)
     // {
     //     for (size_t i = 0; i < all_match_index.size(); i++)
@@ -368,18 +371,18 @@ void PoseGraph::constructLocalMap(const KeyFrame *cur_kf,
     // construct the keyframe point cloud
     laser_cloud_surf_->clear();
     laser_cloud_corner_->clear();
-    for (int j = -2; j <= 0; j++)
+    for (int j = -LOOP_HISTORY_SEARCH_NUM; j <= 0; j++)
     {
         if (que_index + j < 0)
             continue;
         KeyFrame *tmp_kf = getKeyFrame(que_index + j);
         if (!tmp_kf)
             continue;
-        Eigen::Matrix4d T_drift = cur_kf->pose_w_.T_.inverse() * tmp_kf->pose_w_.T_;
-        Eigen::Matrix4d T_map_kf = pose_ini.T_ * T_drift;
-        pcl::transformPointCloud(*tmp_kf->surf_cloud_, surf_trans, T_map_kf.cast<float>());
+        Eigen::Matrix4d T_relative = cur_kf->pose_w_.T_.inverse() * tmp_kf->pose_w_.T_;
+        Eigen::Matrix4d T_ini_map_kf = pose_ini.T_ * T_relative;
+        pcl::transformPointCloud(*tmp_kf->surf_cloud_, surf_trans, T_ini_map_kf.cast<float>());
         *laser_cloud_surf_ += surf_trans;
-        pcl::transformPointCloud(*tmp_kf->corner_cloud_, corner_trans, T_map_kf.cast<float>());
+        pcl::transformPointCloud(*tmp_kf->corner_cloud_, corner_trans, T_ini_map_kf.cast<float>());
         *laser_cloud_corner_ += corner_trans;
     }
     down_size_filter_surf_map_.setInputCloud(laser_cloud_surf_);
@@ -399,10 +402,10 @@ void PoseGraph::constructLocalMap(const KeyFrame *cur_kf,
         KeyFrame *tmp_kf = getKeyFrame(match_index + j);
         if (!tmp_kf)
             continue;
-        Eigen::Matrix4d tmp_T = old_kf->pose_w_.T_.inverse() * tmp_kf->pose_w_.T_;
-        pcl::transformPointCloud(*tmp_kf->surf_cloud_, surf_trans, tmp_T.cast<float>());
+        Eigen::Matrix4d T_relative = old_kf->pose_w_.T_.inverse() * tmp_kf->pose_w_.T_;
+        pcl::transformPointCloud(*tmp_kf->surf_cloud_, surf_trans, T_relative.cast<float>());
         *laser_cloud_surf_from_map_ += surf_trans;
-        pcl::transformPointCloud(*tmp_kf->corner_cloud_, corner_trans, tmp_T.cast<float>());
+        pcl::transformPointCloud(*tmp_kf->corner_cloud_, corner_trans, T_relative.cast<float>());
         *laser_cloud_corner_from_map_ += corner_trans;
     }
     down_size_filter_surf_map_.setInputCloud(laser_cloud_surf_from_map_);
@@ -423,17 +426,17 @@ std::pair<bool, Pose> PoseGraph::checkGeometricConsistency(const KeyFrame *cur_k
     assert(que_index < 0);
     assert(match_index < 0);
 
-    // map constrcution
+    // map constrcution: give initial transformation on the kf
     TicToc t_map_construction;
     constructLocalMap(cur_kf, que_index, match_index, pose_ini);
     printf("[loop_closure] map construction: %fms\n", t_map_construction.toc()); // 47ms
 
-    // global registration
+    // global registration: initial guess is identity
     TicToc t_global_reg;
-    std::pair<bool, Eigen::Matrix4f> global_reg_result = loop_reg_.performGlobalRegistration(laser_cloud_surf_from_map_ds_,
-                                                                                             laser_cloud_surf_ds_);
+    std::pair<bool, Eigen::Matrix4d> global_reg_result =
+        loop_reg_.performGlobalRegistration(laser_cloud_surf_from_map_ds_,
+                                            laser_cloud_surf_ds_);
     printf("global registration: %fs\n", t_global_reg.toc() / 1000);
-
     Pose pose_global(global_reg_result.second.cast<double>());
     if (!global_reg_result.first)
     {
@@ -441,32 +444,33 @@ std::pair<bool, Pose> PoseGraph::checkGeometricConsistency(const KeyFrame *cur_k
         return make_pair(false, pose_global);
     }
 
-    // lobal registration
+    // lobal registration: initial guess is the result of global registration
     TicToc t_local_reg;
-    std::pair<bool, Eigen::Matrix4f> local_reg_result = loop_reg_.performLocalRegistration(laser_cloud_surf_from_map_ds_,
-                                                                                           laser_cloud_corner_from_map_ds_,
-                                                                                           laser_cloud_surf_ds_,
-                                                                                           laser_cloud_corner_ds_,
-                                                                                           global_reg_result.second);
+    std::pair<bool, Eigen::Matrix4d> local_reg_result =
+        loop_reg_.performLocalRegistration(laser_cloud_surf_from_map_ds_,
+                                           laser_cloud_corner_from_map_ds_,
+                                           laser_cloud_surf_ds_,
+                                           laser_cloud_corner_ds_,
+                                           global_reg_result.second);
     printf("local registration: %fs\n", t_local_reg.toc() / 1000);
-
-    Pose pose_local(local_reg_result.second.cast<double>());
+    Pose pose_icp(local_reg_result.second * pose_ini.T_);
     if (!local_reg_result.first)
     {
         printf("loop reject in local registration ...\n");
-        return make_pair(false, pose_local);
+        return make_pair(false, pose_icp);
     }
+    std::cout << "Find loop, relative transformation: " << pose_icp << std::endl;
 
     if (LOOP_SAVE_PCD)
     {
         pcl::PointCloud<pcl::PointXYZI> surf_trans, corner_trans;
-        pcl::transformPointCloud(*laser_cloud_surf_ds_, surf_trans, pose_local.T_.cast<float>());
-        pcl::transformPointCloud(*laser_cloud_corner_ds_, corner_trans, pose_local.T_.cast<float>());
-        pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop/raw_data/" + to_string(que_index) + "_data.pcd", *laser_cloud_surf_ds_ + *laser_cloud_corner_ds_);
-        pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop/raw_data/" + to_string(que_index) + "_data_icp.pcd", surf_trans + corner_trans);    
-        pcd_writer_.write("/home/jjiao/catkin_ws/src/localization/M-LOAM/mloam_loop/data/loop/raw_data/" + to_string(que_index) + "_model.pcd", *laser_cloud_surf_from_map_ds_ + *laser_cloud_corner_from_map_ds_);
+        pcl::transformPointCloud(*laser_cloud_surf_ds_, surf_trans, local_reg_result.second.cast<float>());
+        // pcl::transformPointCloud(*laser_cloud_corner_ds_, corner_trans, local_reg_result.second.cast<float>());
+        pcd_writer_.write(POSE_GRAPH_SAVE_PATH + to_string(que_index) + "_data.pcd", *laser_cloud_surf_ds_);
+        pcd_writer_.write(POSE_GRAPH_SAVE_PATH + to_string(que_index) + "_data_icp.pcd", surf_trans);
+        pcd_writer_.write(POSE_GRAPH_SAVE_PATH + to_string(que_index) + "_model.pcd", *laser_cloud_surf_from_map_ds_);
     }
-    return make_pair(true, pose_local);
+    return make_pair(true, pose_icp);
 }
 
 KeyFrame *PoseGraph::getKeyFrame(int index)
@@ -569,14 +573,27 @@ void PoseGraph::optimizePoseGraph()
                 {
                     assert((*it)->loop_index_ >= first_looped_index);
                     int connected_index = getKeyFrame((*it)->loop_index_)->local_index_;
-                    Pose pose_relative;
-                    pose_relative = (*it)->getLoopRelativePose();
+                    Pose pose_relative = (*it)->getLoopRelativePose();
                     Eigen::Vector3d relative_t = pose_relative.t_;
                     Eigen::Quaterniond relative_q = pose_relative.q_;
                     ceres::CostFunction *loop_function = RelativeRTError::Create(relative_t.x(), relative_t.y(), relative_t.z(),
                                                                                  relative_q.w(), relative_q.x(), relative_q.y(), relative_q.z(),
                                                                                  0.1, 0.01);
                     problem.AddResidualBlock(loop_function, loss_function, q_array[connected_index], t_array[connected_index], q_array[i], t_array[i]);                    
+
+                    {
+                        Pose Twci, Twcj;
+                        (*it)->getPose(Twci);
+                        getKeyFrame((*it)->loop_index_)->getPose(Twcj);
+                        Pose rel_pose = Twcj.inverse() * Twci;
+                        std::cout << "est map-kf rel pose: " << rel_pose << std::endl;
+
+                        Pose pose_relative;
+                        pose_relative = (*it)->getLoopRelativePose();
+                        std::cout << "loop map-kf rel pose: " << pose_relative << std::endl;
+                        std::cout << "they should be equal" << std::endl;
+                    }
+
                 }
                 if ((*it)->index_ == cur_index)
                     break;
@@ -652,14 +669,14 @@ void PoseGraph::savePoseGraph()
         if (LOOP_SAVE_PCD)
         {
             // printf("index: %lu, surf cloud size: %lu\n", (*it)->index_, (*it)->surf_cloud_->size());
-            pcd_path = POSE_GRAPH_SAVE_PATH + to_string((*it)->index_) + "_surf_cloud.pcd";
-            pcd_writer_.write(pcd_path, *(*it)->surf_cloud_);
-            pcd_path = POSE_GRAPH_SAVE_PATH + to_string((*it)->index_) + "_corner_cloud.pcd";
-            pcd_writer_.write(pcd_path, *(*it)->corner_cloud_);
-            pcd_path = POSE_GRAPH_SAVE_PATH + to_string((*it)->index_) + "_full_cloud.pcd";
-            pcd_writer_.write(pcd_path, *(*it)->full_cloud_);
-            pcd_path = POSE_GRAPH_SAVE_PATH + to_string((*it)->index_) + "_outlier_cloud.pcd";
-            pcd_writer_.write(pcd_path, *(*it)->outlier_cloud_);
+            // pcd_path = POSE_GRAPH_SAVE_PATH + to_string((*it)->index_) + "_surf_cloud.pcd";
+            // pcd_writer_.write(pcd_path, *(*it)->surf_cloud_);
+            // pcd_path = POSE_GRAPH_SAVE_PATH + to_string((*it)->index_) + "_corner_cloud.pcd";
+            // pcd_writer_.write(pcd_path, *(*it)->corner_cloud_);
+            // pcd_path = POSE_GRAPH_SAVE_PATH + to_string((*it)->index_) + "_full_cloud.pcd";
+            // pcd_writer_.write(pcd_path, *(*it)->full_cloud_);
+            // pcd_path = POSE_GRAPH_SAVE_PATH + to_string((*it)->index_) + "_outlier_cloud.pcd";
+            // pcd_writer_.write(pcd_path, *(*it)->outlier_cloud_);
         }
         Pose tmp_pose = (*it)->pose_w_;
         Pose loop_info = (*it)->loop_info_; // the relative pose

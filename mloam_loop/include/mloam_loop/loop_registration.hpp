@@ -44,14 +44,14 @@ public:
                    fgr::Points &points,
                    fgr::Feature &features);
 
-    std::pair<bool, Eigen::Matrix4f> performGlobalRegistration(pcl::PointCloud<pcl::PointXYZI>::Ptr &laser_map,
+    std::pair<bool, Eigen::Matrix4d> performGlobalRegistration(pcl::PointCloud<pcl::PointXYZI>::Ptr &laser_map,
                                                                pcl::PointCloud<pcl::PointXYZI>::Ptr &laser_cloud);
 
-    std::pair<bool, Eigen::Matrix4f> performLocalRegistration(const pcl::PointCloud<pcl::PointXYZI>::Ptr &laser_cloud_surf_from_map,
+    std::pair<bool, Eigen::Matrix4d> performLocalRegistration(const pcl::PointCloud<pcl::PointXYZI>::Ptr &laser_cloud_surf_from_map,
                                                               const pcl::PointCloud<pcl::PointXYZI>::Ptr &laser_cloud_corner_from_map,
                                                               const pcl::PointCloud<pcl::PointXYZI>::Ptr &laser_cloud_surf,
                                                               const pcl::PointCloud<pcl::PointXYZI>::Ptr &laser_cloud_corner,
-                                                              const Eigen::Matrix4f &T_ini);
+                                                              const Eigen::Matrix4d &T_ini);
 
     FeatureExtract f_extract_;
 };

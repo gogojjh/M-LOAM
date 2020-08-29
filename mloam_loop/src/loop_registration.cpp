@@ -34,7 +34,7 @@ void LoopRegistration::parseFPFH(const pcl::PointCloud<pcl::PointXYZI>::Ptr &clo
     }
 }
 
-std::pair<bool, Eigen::Matrix4f> LoopRegistration::performGlobalRegistration(pcl::PointCloud<pcl::PointXYZI>::Ptr &laser_map,
+std::pair<bool, Eigen::Matrix4d> LoopRegistration::performGlobalRegistration(pcl::PointCloud<pcl::PointXYZI>::Ptr &laser_map,
                                                                              pcl::PointCloud<pcl::PointXYZI>::Ptr &laser_cloud)
 {
     std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> point_cloud;
@@ -85,10 +85,10 @@ std::pair<bool, Eigen::Matrix4f> LoopRegistration::performGlobalRegistration(pcl
     printf("FGR: %fms\n", t_fgr.toc());
 
     double opti_cost = app.final_cost_normalize_;
-    Eigen::Matrix4f T_relative = app.GetOutputTrans();
+    Eigen::Matrix4d T_relative = app.GetOutputTrans().cast<double>();
     std::cout << "opti_cost: " << opti_cost << ", rlt: \n" << T_relative << std::endl;
 
-    std::pair<bool, Eigen::Matrix4f> result;
+    std::pair<bool, Eigen::Matrix4d> result;
     if (opti_cost <= LOOP_GLOBAL_REGISTRATION_THRESHOLD)
     {
         result = make_pair(true, T_relative);
@@ -101,11 +101,11 @@ std::pair<bool, Eigen::Matrix4f> LoopRegistration::performGlobalRegistration(pcl
 }
 
 // perform loop optimization between the model (as the base frame) to the keyframe point cloud
-std::pair<bool, Eigen::Matrix4f> LoopRegistration::performLocalRegistration(const pcl::PointCloud<pcl::PointXYZI>::Ptr &laser_cloud_surf_from_map,
+std::pair<bool, Eigen::Matrix4d> LoopRegistration::performLocalRegistration(const pcl::PointCloud<pcl::PointXYZI>::Ptr &laser_cloud_surf_from_map,
                                                                             const pcl::PointCloud<pcl::PointXYZI>::Ptr &laser_cloud_corner_from_map,
                                                                             const pcl::PointCloud<pcl::PointXYZI>::Ptr &laser_cloud_surf,
                                                                             const pcl::PointCloud<pcl::PointXYZI>::Ptr &laser_cloud_corner,
-                                                                            const Eigen::Matrix4f &T_ini)
+                                                                            const Eigen::Matrix4d &T_ini)
 {
     pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr kdtree_surf_from_map(new pcl::KdTreeFLANN<pcl::PointXYZI>());
     pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr kdtree_corner_from_map(new pcl::KdTreeFLANN<pcl::PointXYZI>());
@@ -113,7 +113,7 @@ std::pair<bool, Eigen::Matrix4f> LoopRegistration::performLocalRegistration(cons
     kdtree_corner_from_map->setInputCloud(laser_cloud_corner_from_map);
     double opti_cost = 1e7;
 
-    Eigen::Matrix4d T_relative = T_ini.cast<double>();
+    Eigen::Matrix4d T_relative = T_ini;
     for (int iter_cnt = 0; iter_cnt < 2; iter_cnt++)
     {
         double para_pose[SIZE_POSE];
@@ -196,16 +196,16 @@ std::pair<bool, Eigen::Matrix4f> LoopRegistration::performLocalRegistration(cons
         T_relative.block<3, 3>(0, 0) = q_relative.toRotationMatrix();
         T_relative.block<3, 1>(0, 3) = t_relative;
     }
-    std::cout << "opti_cost: " << opti_cost << ", rlt: \n" << T_relative << std::endl;
+    std::cout << "opti_cost: " << opti_cost << "\nrlt: \n" << T_relative << std::endl;
 
-    std::pair<bool, Eigen::Matrix4f> result;
+    std::pair<bool, Eigen::Matrix4d> result;
     if (opti_cost <= LOOP_LOCAL_REGISTRATION_THRESHOLD)
     {
-        result = make_pair(true, T_relative.cast<float>());
+        result = make_pair(true, T_relative);
     }
     else
     {
-        result = make_pair(false, T_relative.cast<float>());
+        result = make_pair(false, T_relative);
     }
     return result;
 }

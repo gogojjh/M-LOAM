@@ -4,8 +4,8 @@ loop_skip_interval: 3
 loop_history_search_num: 20
 loop_distance_threshold: 50.0
 loop_temporal_consistency_threshold: 20 # floam
-loop_global_registration_threshold: 0.5
-loop_local_registration_threshold: 400 # icp normalized cost
+loop_global_registration_threshold: 2.0 # currently too large
+loop_local_registration_threshold: 2000 # icp normalized cost
 
 visualize_image: 1
 load_previous_pose_graph: 0

@@ -96,6 +96,7 @@ inline void compoundPoseWithCov(const Pose &pose_1,
 
     pose_cp.q_ = pose_1.q_ * pose_2.q_;
     pose_cp.t_ = pose_1.q_ * pose_2.t_ + pose_1.t_;
+    pose_cp.update();
     Eigen::Matrix<double, 6, 6> AdT1 = adjointMatrix(pose_1.T_); // the adjoint matrix of T1
     Eigen::Matrix<double, 6, 6> cov_2_prime = AdT1 * cov_2 * AdT1.transpose();
     if (method == 1)
