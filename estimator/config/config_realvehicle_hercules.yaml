@@ -139,8 +139,6 @@ map_corner_res: 0.2
 map_surf_res: 0.4
 map_eig_thre: 100
 
-uct_ext_ratio: 0.5
-
 # uncertainty parameter
 # translation, rotation, point (rho, phi, zeta)
 uct_ext: !!opencv-matrix
@@ -157,6 +155,8 @@ uct_measurement: !!opencv-matrix
    cols: 3
    dt: d
    data: [0.0025, 0.0025, 0.0025]
+
+uct_ext_ratio: 0.5
 
 # RV: 20
 trace_threshold_before_mapping: 20 # min_d: 20
