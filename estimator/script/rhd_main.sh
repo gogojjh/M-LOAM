@@ -7,28 +7,28 @@ roslaunch mloam mloam_handheld.launch \
     result_save:=true \
     bag_file:=$data_path \
     output_path:=$result_path
-sleep 5
+# sleep 5
 
 # without uncertainty-aware
-roslaunch mloam mloam_handheld.launch \
-   run_mloam:=true \
-   with_ua:=false \
-   result_save:=true \
-   bag_file:=$data_path \
-   output_path:=$result_path
-sleep 5
+# roslaunch mloam mloam_handheld.launch \
+#    run_mloam:=true \
+#    with_ua:=false \
+#    result_save:=true \
+#    bag_file:=$data_path \
+#    output_path:=$result_path
+# sleep 5
 
-# different LiDAR SLAM
-roslaunch mloam mloam_handheld.launch \
-    run_mloam:=false \
-    run_aloam:=true \
-    bag_file:=$data_path \
-    output_path:=$result_path
-sleep 5
+# # different LiDAR SLAM
+# roslaunch mloam mloam_handheld.launch \
+#     run_mloam:=false \
+#     run_aloam:=true \
+#     bag_file:=$data_path \
+#     output_path:=$result_path
+# sleep 5
 
-roslaunch mloam mloam_handheld.launch \
-    run_mloam:=false \
-    run_floam:=true \
-    bag_file:=$data_path \
-    output_path:=$result_path
-sleep 5
+# roslaunch mloam mloam_handheld.launch \
+#     run_mloam:=false \
+#     run_floam:=true \
+#     bag_file:=$data_path \
+#     output_path:=$result_path
+# sleep 5
