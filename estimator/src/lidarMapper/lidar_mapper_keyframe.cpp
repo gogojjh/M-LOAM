@@ -586,6 +586,7 @@ void scan2MapOptimization()
                 const PointPlaneFeature &feature = all_surf_features[fid];
                 if (feature.type_ == 'n') continue;
                 Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Zero();
+                // TODO: wrong 
                 // if (with_ua_flag)
                 //     extractCov(laser_cloud_surf_cov->points[feature.idx_], cov_matrix);
                 // else 
@@ -1197,7 +1198,6 @@ void cloudUCTAssociateToMap(const PointICovCloud &cloud_local,
         if (with_ua_flag)
         {
             pointAssociateToMap(point_ori, point_sel, pose_ext[ind].inverse());
-            // evalPointUncertainty(point_sel, cov_point, pose_compound[ind]);
             evalPointUncertainty(point_sel, cov_point, pose_ext[ind]);
             if (cov_point.trace() > TRACE_THRESHOLD_AFTER_MAPPING) continue;
         }
