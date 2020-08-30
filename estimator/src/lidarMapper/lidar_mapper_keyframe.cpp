@@ -586,9 +586,9 @@ void scan2MapOptimization()
                 const PointPlaneFeature &feature = all_surf_features[fid];
                 if (feature.type_ == 'n') continue;
                 Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Zero();
-                if (with_ua_flag)
-                    extractCov(laser_cloud_surf_cov->points[feature.idx_], cov_matrix);
-                else 
+                // if (with_ua_flag)
+                //     extractCov(laser_cloud_surf_cov->points[feature.idx_], cov_matrix);
+                // else 
                     cov_matrix = COV_MEASUREMENT;
                 LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
                 problem.AddResidualBlock(f, loss_function, para_pose);
@@ -607,9 +607,9 @@ void scan2MapOptimization()
                 const PointPlaneFeature &feature = all_corner_features[fid];
                 if (feature.type_ == 'n') continue;
                 Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Zero();
-                if (with_ua_flag)
-                    extractCov(laser_cloud_corner_cov->points[feature.idx_], cov_matrix);
-                else
+                // if (with_ua_flag)
+                //     extractCov(laser_cloud_corner_cov->points[feature.idx_], cov_matrix);
+                // else
                     cov_matrix = COV_MEASUREMENT;
                 LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
                 problem.AddResidualBlock(f, loss_function, para_pose);
@@ -675,13 +675,10 @@ void scan2MapOptimization()
 
             if (iter_cnt == max_iter - 1)
             {
-                double cost = 0.0;
                 common::timing::Timer eval_deg_timer("mapping_eval_deg");
-                problem.Evaluate(ceres::Problem::EvaluateOptions(), &cost, nullptr, nullptr, &jaco);
-                Eigen::Matrix<double, 6, 6> mat_H; // mat_H / 134 = normlized_mat_H
+                problem.Evaluate(ceres::Problem::EvaluateOptions(), nullptr, nullptr, nullptr, &jaco);
                 evalHessian(jaco, mat_H);
                 cov_mapping = mat_H.inverse();
-                // std::cout << cov_mapping * 100 << std::endl;
 
                 double tr = cov_mapping.trace();
                 double logd = common::logDet(mat_H, true);
@@ -712,15 +709,16 @@ void scan2MapOptimization()
             printf("-------------------------------------\n");
         }
         std::cout << "optimization result: " << pose_wmap_curr << std::endl;
+        pose_wmap_curr.cov_ = cov_mapping;
 
         // calculate the incremental covariance matrix
-        Pose pose_prev_cur = pose_wmap_prev.inverse() * pose_wmap_curr;
-        pose_prev_cur.cov_ = cov_mapping;
-        compoundPoseWithCov(pose_wmap_prev, pose_prev_cur, pose_wmap_curr);
+        // pose_prev_cur.cov_ = cov_mapping;
+        // compoundPoseWithCov(pose_wmap_prev, pose_prev_cur, pose_wmap_curr);
     }
     else
     {
         std::cout << "Map surf num is not enough" << std::endl;
+        pose_wmap_curr.cov_.setZero();
     }
 }
 
@@ -753,7 +751,7 @@ void saveKeyframe()
 
     pose_keyframes_3d->push_back(pose_3d);
     pose_keyframes_6d.push_back(std::make_pair(time_laser_odometry, pose_wmap_curr));
-    pose_wmap_curr.cov_.setZero(); // start a new keyframe, with zero covariance
+    // pose_wmap_curr.cov_.setZero(); // start a new keyframe, with zero covariance
 
     PointICovCloud::Ptr surf_keyframe_cov(new PointICovCloud());
     PointICovCloud::Ptr corner_keyframe_cov(new PointICovCloud());
@@ -1175,7 +1173,18 @@ void cloudUCTAssociateToMap(const PointICovCloud &cloud_local,
     // the compound pose: pose_global * pose_ext with uncertainty
     std::vector<Pose> pose_compound(NUM_OF_LASER);
     for (size_t n = 0; n < NUM_OF_LASER; n++) 
+    {
         compoundPoseWithCov(pose_global, pose_ext[n], pose_compound[n]);
+        if (n == IDX_REF) continue;
+        std::cout << "pose global: " << pose_global << std::endl;
+        std::cout << pose_global.cov_ << std::endl;
+        std::cout << "pose ext: " << pose_ext[n] << std::endl;
+        std::cout << pose_ext[n].cov_ << std::endl;
+        std::cout << "pose compound: " << pose_compound[n] << std::endl;
+        std::cout << pose_compound[n].cov_ << std::endl;
+        std::cout << std::endl;
+    }
+    // exit(EXIT_FAILURE);
 
     cloud_global.clear();
     cloud_global.resize(cloud_local.size());
@@ -1185,10 +1194,11 @@ void cloudUCTAssociateToMap(const PointICovCloud &cloud_local,
         int ind = (int)point_ori.intensity;
         PointIWithCov point_sel, point_cov;
         Eigen::Matrix3d cov_point = Eigen::Matrix3d::Zero();
-        if (with_ua_flag) 
+        if (with_ua_flag)
         {
             pointAssociateToMap(point_ori, point_sel, pose_ext[ind].inverse());
-            evalPointUncertainty(point_sel, cov_point, pose_compound[ind]);
+            // evalPointUncertainty(point_sel, cov_point, pose_compound[ind]);
+            evalPointUncertainty(point_sel, cov_point, pose_ext[ind]);
             if (cov_point.trace() > TRACE_THRESHOLD_AFTER_MAPPING) continue;
         }
         pointAssociateToMap(point_ori, point_cov, pose_global);
@@ -1392,7 +1402,7 @@ int main(int argc, char **argv)
 
     down_size_filter_global_map_cov.setLeafSize(MAP_CORNER_RES, MAP_SURF_RES, MAP_SURF_RES);
     down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_AFTER_MAPPING);
-    down_size_filter_global_map_keyframes.setLeafSize(2.0, 2.0, 2.0);
+    down_size_filter_global_map_keyframes.setLeafSize(5.0, 5.0, 5.0);
 
     cov_mapping.setZero();
 

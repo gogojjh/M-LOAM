@@ -92,16 +92,16 @@ inline void compoundPoseWithCov(const Pose &pose_1,
 {
     const Eigen::Matrix<double, 6, 6> &cov_1 = pose_1.cov_;
     const Eigen::Matrix<double, 6, 6> &cov_2 = pose_2.cov_;
-    Eigen::Matrix<double, 6, 6> cov_cp;
-
     pose_cp.q_ = pose_1.q_ * pose_2.q_;
     pose_cp.t_ = pose_1.q_ * pose_2.t_ + pose_1.t_;
     pose_cp.update();
-    Eigen::Matrix<double, 6, 6> AdT1 = adjointMatrix(pose_1.T_); // the adjoint matrix of T1
+
+    // Eigen::Matrix<double, 6, 6> AdT1 = adjointMatrix(pose_1.T_); // the adjoint matrix of T1
+    Eigen::Matrix<double, 6, 6> AdT1 = adjointMatrix(Eigen::Matrix4d::Identity()); 
     Eigen::Matrix<double, 6, 6> cov_2_prime = AdT1 * cov_2 * AdT1.transpose();
     if (method == 1)
     {
-        cov_cp = cov_1 + cov_2_prime;
+        pose_cp.cov_ = cov_1 + cov_2_prime;
     }
     else if (method == 2)
     {
@@ -132,17 +132,16 @@ inline void compoundPoseWithCov(const Pose &pose_1,
         B.bottomLeftCorner<3, 3>() = Brp.transpose();
         B.bottomRightCorner<3, 3>() = Bpp;
 
-        cov_cp = cov_1 + cov_2_prime + (A1 * cov_2_prime + cov_2_prime * A1.transpose() + A2 * cov_1 + cov_1 * A2.transpose()) / 12 + B / 4;
+        pose_cp.cov_ = cov_1 + cov_2_prime + (A1 * cov_2_prime + cov_2_prime * A1.transpose() + A2 * cov_1 + cov_1 * A2.transpose()) / 12 + B / 4;
     }
     else
     {
         printf("[compoundPoseWithCov] No %dth method !\n", method);
-        cov_cp.setZero();
+        pose_cp.cov_.setZero();
     }
-    pose_cp.cov_ = cov_cp;
-    // std::cout << pose_1 << std::endl << cov_1 << std::endl;
-    // std::cout << pose_2 << std::endl << cov_2 << std::endl;
-    // std::cout << pose_cp << std::endl << cov_cp << std::endl;
+    // std::cout << pose_1 << std::endl << pose_1.cov_ << std::endl;
+    // std::cout << pose_2 << std::endl << pose_2.cov_ << std::endl;
+    // std::cout << pose_cp << std::endl << pose_cp.cov_ << std::endl;
     // exit(EXIT_FAILURE);
 }
 
