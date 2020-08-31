@@ -155,9 +155,14 @@ uct_measurement: !!opencv-matrix
    dt: d
    data: [0.0025, 0.0025, 0.0025]
 
-uct_ext_ratio: 1.0 # RHD02: 0 (1 large perturbation), RHD03: 1, RHD04: 1
+uct_ext_ratio: 1.0 
 
-# RHD0 2 (0.1 large perturbation), RHD03: 5, RHD04: 7
-trace_threshold_before_mapping: 10 # min_d: 20
-trace_threshold_after_mapping: 10
+# RHD02: 2 (0.5 large perturbation), RHD03: 12, RHD04: 12
+trace_threshold_before_mapping: 2 # min_d: 20
+trace_threshold_after_mapping: 2
 
+# 1. 10m: 1.25
+# 2. 20m: 7.8
+# 3. 30m: 11.5
+# 4. 40m: 20
+# 5. 50m: 31.25

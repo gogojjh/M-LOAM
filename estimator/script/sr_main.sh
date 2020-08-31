@@ -7,7 +7,7 @@ roslaunch mloam mloam_simu_jackal.launch \
     result_save:=true \
     bag_file:=$data_path \
     output_path:=$result_path
-sleep 1
+sleep 3
 
 # without uncertainty-aware
 roslaunch mloam mloam_simu_jackal.launch \
@@ -16,20 +16,20 @@ roslaunch mloam mloam_simu_jackal.launch \
     result_save:=true \
     bag_file:=$data_path \
     output_path:=$result_path
-sleep 1
+sleep 3
 
 # different LiDAR SLAM
-roslaunch mloam mloam_simu_jackal.launch \
-    run_mloam:=false \
-    run_aloam:=true \
-    bag_file:=$data_path \
-    output_path:=$result_path
-sleep 1
+# roslaunch mloam mloam_simu_jackal.launch \
+#     run_mloam:=false \
+#     run_aloam:=true \
+#     bag_file:=$data_path \
+#     output_path:=$result_path
+# sleep 3
 
-roslaunch mloam mloam_simu_jackal.launch \
-    run_mloam:=false \
-    run_floam:=true \
-    bag_file:=$data_path \
-    output_path:=$result_path
-sleep 1
+# roslaunch mloam mloam_simu_jackal.launch \
+#     run_mloam:=false \
+#     run_floam:=true \
+#     bag_file:=$data_path \
+#     output_path:=$result_path
+# sleep 3
 

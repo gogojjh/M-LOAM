@@ -98,6 +98,13 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
   4. Integrated with high-frequency sensors
   5. cross-domain, cross-modal dataset (simulator) for autonomous driving
 
+* Threshold of UCT (scale = 1.0)
+  1. 10m: 1.25
+  2. 20m: 7.8
+  3. 30m: 11.5
+  4. 40m: 20
+  5. 50m: 31.25
+
 ### 6. System pipeline
 * Pipeline <br>
 ![](picture/mloam_pipeline.png)

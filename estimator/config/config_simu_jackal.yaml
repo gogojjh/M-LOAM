@@ -10,7 +10,7 @@ min_cluster_size: 15
 min_line_size: 10
 segment_valid_point_num: 5
 segment_valid_line_num: 3
-segment_theta: 0.6 # Lego-loam: 1.047
+segment_theta: 1.0 # Lego-loam: 1.047
 
 # laser parameters
 idx_ref: 0
@@ -37,9 +37,11 @@ body_T_laser: !!opencv-matrix
    # data: [0, 0, 0, 1, 0, 0, 0,
    #        0, 0, 0, 1, 0, 0, 0] # qx qy qz qw px py pz
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-   #        0.3746, 0.06042, -0.01488, 0.9251, -0.02708, -0.7192, -0.21286] # initialization   
+   #        0.3746, 0.06042, -0.01488, 0.9251, -0.02708, -0.7192, 0.0] # initialization
    data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-          0.33080, -0.00059, -0.00046, 0.94370, 0.00451, -0.48755, -0.21286] # estimate  
+          0.33080, -0.00059, -0.00046, 0.94370, 0.00451, -0.48755, -0.21286] # estimate
+   # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
+   #        0.32080, -0.00059, -0.00046, 0.94370, 0.00451, -0.2755, -0.20286] # given noise
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
    #        0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220] # gt
 
@@ -104,7 +106,7 @@ skip_num_odom_pub: 1
 
 ######################################################## mapping
 map_corner_res: 0.2
-map_surf_res: 0.4
+map_surf_res: 0.2 # stable parameters: 0.2
 map_outlier_res: 0.8
 map_eig_thre: 100
 
@@ -123,7 +125,13 @@ uct_measurement: !!opencv-matrix
    dt: d
    data: [0.0025, 0.0025, 0.0025]
 
-uct_ext_ratio: 1 # small perturbation: 0.25
+uct_ext_ratio: 1.0
 
-trace_threshold_before_mapping: 10 # small perturbation: 10
-trace_threshold_after_mapping: 10
+trace_threshold_before_mapping: 1.25
+trace_threshold_after_mapping: 1.25
+
+# 1. 10m: 1.25
+# 2. 20m: 7.8
+# 3. 30m: 11.5
+# 4. 40m: 20
+# 5. 50m: 31.25

@@ -53,6 +53,15 @@
                 <remap from="/laser_odom" to="/laser_odom_0"/>
             </node>
         </group>
+        <!-- <group if="$(arg run_mloam_mapping)">
+            <node pkg="mloam" type="lidar_mapper_only_surf" name="lidar_mapper_only_surf"
+                args="$(arg config_file)
+                      1 
+                      $(arg output_path)
+                      0" output="screen">
+                <remap from="/laser_odom" to="/laser_odom_0"/>
+            </node>
+        </group>         -->
     </group>
     
     <!-- publish static tf -->
@@ -85,7 +94,7 @@
             <arg name="skip_frame" value="2" />
             <arg name="s_line" value="16" />
             <arg name="mapping_line_res" value="0.2" />
-            <arg name="mapping_plane_res" value="0.4" />
+            <arg name="mapping_plane_res" value="0.2" />
         </include>       
    </group>        
 
@@ -94,7 +103,7 @@
         <include file="$(find floam)/launch/floam_exp.launch">
             <arg name="output_path" value="$(arg output_path)"/>
             <arg name="s_line" value="16" />
-            <arg name="map_res" value="0.4" />
+            <arg name="map_res" value="0.2" />
         </include>       
    </group>        
 

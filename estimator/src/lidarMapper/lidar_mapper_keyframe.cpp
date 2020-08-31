@@ -128,6 +128,7 @@ std::vector<double> total_mapping;
 
 bool is_degenerate;
 bool with_ua_flag;
+bool with_ua_in_opt;
 
 Eigen::Matrix<double, 6, 6> cov_mapping;
 
@@ -450,7 +451,7 @@ void scan2MapOptimization()
             ceres::LossFunctionWrapper *loss_function;
             if (FLAGS_loss_mode == "huber")
             {
-                loss_function = new ceres::LossFunctionWrapper(new ceres::HuberLoss(0.5), ceres::TAKE_OWNERSHIP);
+                loss_function = new ceres::LossFunctionWrapper(new ceres::HuberLoss(0.1), ceres::TAKE_OWNERSHIP);
             } 
             else if (FLAGS_loss_mode == "gmc")
             {
@@ -586,10 +587,9 @@ void scan2MapOptimization()
                 const PointPlaneFeature &feature = all_surf_features[fid];
                 if (feature.type_ == 'n') continue;
                 Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Zero();
-                // TODO: wrong 
-                // if (with_ua_flag)
-                //     extractCov(laser_cloud_surf_cov->points[feature.idx_], cov_matrix);
-                // else 
+                if (with_ua_in_opt)
+                    extractCov(laser_cloud_surf_cov->points[feature.idx_], cov_matrix);
+                else 
                     cov_matrix = COV_MEASUREMENT;
                 LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
                 problem.AddResidualBlock(f, loss_function, para_pose);
@@ -608,9 +608,9 @@ void scan2MapOptimization()
                 const PointPlaneFeature &feature = all_corner_features[fid];
                 if (feature.type_ == 'n') continue;
                 Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Zero();
-                // if (with_ua_flag)
-                //     extractCov(laser_cloud_corner_cov->points[feature.idx_], cov_matrix);
-                // else
+                if (with_ua_in_opt)
+                    extractCov(laser_cloud_corner_cov->points[feature.idx_], cov_matrix);
+                else
                     cov_matrix = COV_MEASUREMENT;
                 LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
                 problem.AddResidualBlock(f, loss_function, para_pose);
@@ -667,6 +667,7 @@ void scan2MapOptimization()
             }
             else
             {
+
                 options.max_num_iterations = 30;
                 options.max_solver_time_in_seconds = 0.04;
                 ceres::Solve(options, &problem, &summary);
@@ -1176,14 +1177,14 @@ void cloudUCTAssociateToMap(const PointICovCloud &cloud_local,
     for (size_t n = 0; n < NUM_OF_LASER; n++) 
     {
         compoundPoseWithCov(pose_global, pose_ext[n], pose_compound[n]);
-        if (n == IDX_REF) continue;
-        std::cout << "pose global: " << pose_global << std::endl;
-        std::cout << pose_global.cov_ << std::endl;
-        std::cout << "pose ext: " << pose_ext[n] << std::endl;
-        std::cout << pose_ext[n].cov_ << std::endl;
-        std::cout << "pose compound: " << pose_compound[n] << std::endl;
-        std::cout << pose_compound[n].cov_ << std::endl;
-        std::cout << std::endl;
+        // if (n == IDX_REF) continue;
+        // std::cout << "pose global: " << pose_global << std::endl;
+        // std::cout << pose_global.cov_ << std::endl;
+        // std::cout << "pose ext: " << pose_ext[n] << std::endl;
+        // std::cout << pose_ext[n].cov_ << std::endl;
+        // std::cout << "pose compound: " << pose_compound[n] << std::endl;
+        // std::cout << pose_compound[n].cov_ << std::endl;
+        // std::cout << std::endl;
     }
     // exit(EXIT_FAILURE);
 
@@ -1341,6 +1342,7 @@ int main(int argc, char **argv)
     MLOAM_RESULT_SAVE = FLAGS_result_save;
     OUTPUT_FOLDER = FLAGS_output_path;
 	with_ua_flag = FLAGS_with_ua;
+    with_ua_in_opt = false;
     printf("save result (0/1): %d to %s\n", MLOAM_RESULT_SAVE, OUTPUT_FOLDER.c_str());
 	printf("with the awareness of uncertainty (0/1): %d\n", with_ua_flag);
     printf("gf method: %s, gf ratio: %f\n", FLAGS_gf_method.c_str(), FLAGS_gf_ratio_ini);
@@ -1352,6 +1354,7 @@ int main(int argc, char **argv)
         ss << OUTPUT_FOLDER << "traj/stamped_mloam_map_estimate_"
            << FLAGS_gf_method << "_" << to_string(FLAGS_gf_ratio_ini)
            << "_" << FLAGS_loss_mode << "_" << int(FLAGS_gnc) << ".txt";
+        if ((MAP_SURF_RES <= 0.2) || (UCT_EXT_RATIO >= 1.0)) with_ua_in_opt = true;
     }
     else
     {
@@ -1398,8 +1401,7 @@ int main(int argc, char **argv)
     down_size_filter_corner_map_cov.setTraceThreshold(TRACE_THRESHOLD_AFTER_MAPPING);
     down_size_filter_outlier_map_cov.setLeafSize(MAP_OUTLIER_RES, MAP_OUTLIER_RES, MAP_OUTLIER_RES);
     down_size_filter_outlier_map_cov.setTraceThreshold(TRACE_THRESHOLD_AFTER_MAPPING);    
-    // down_size_filter_surrounding_keyframes.setLeafSize(1.0, 1.0, 1.0);
-    down_size_filter_surrounding_keyframes.setLeafSize(0.3, 0.3, 0.3);
+    down_size_filter_surrounding_keyframes.setLeafSize(1.0, 1.0, 1.0);
 
     down_size_filter_global_map_cov.setLeafSize(MAP_CORNER_RES, MAP_SURF_RES, MAP_SURF_RES);
     down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_AFTER_MAPPING);

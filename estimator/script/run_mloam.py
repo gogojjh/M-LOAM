@@ -30,9 +30,12 @@ def debug_eval():
     print('evaluate debug sequence')
     os.environ['rpg_path'] = '{}/src/localization/rpg_trajectory_evaluation'.format(os.environ['CATKIN_WS'])
     os.environ['result_path'] = '{}/results/{}/debug/'.format(os.environ['rpg_path'], platform)
+    # command = 'python2 $rpg_path/scripts/analyze_trajectory_single_mloam.py \
+    #            --recalculate_errors --est_type M-LO M-LOAM-wo-ua M-LOAM A-LOAM F-LOAM LEGO-LOAM \
+    #            --compare $result_path/traj'
     command = 'python2 $rpg_path/scripts/analyze_trajectory_single_mloam.py \
-               --recalculate_errors --est_type M-LO M-LOAM-wo-ua M-LOAM A-LOAM F-LOAM LEGO-LOAM \
-               --compare $result_path/traj'
+               --recalculate_errors --est_type M-LO M-LOAM-wo-ua M-LOAM \
+               --compare $result_path/traj'    
     os.system(command)         
 
 # python2 run_mloam.py -sequence=SR -program=single_test \
@@ -56,9 +59,14 @@ def single_eval(start_idx, end_idx):
         print('evaluate sequence: {}'.format(seq_name[idx]))
         os.environ['rpg_path'] = '{}/src/localization/rpg_trajectory_evaluation'.format(os.environ['CATKIN_WS'])
         os.environ['result_path'] = '{}/results/{}/{}/'.format(os.environ['rpg_path'], platform, seq_name[idx])
-        command = 'python2 $rpg_path/scripts/analyze_trajectory_single_mloam.py \
-                   --recalculate_errors --est_type M-LO M-LOAM-wo-ua M-LOAM A-LOAM F-LOAM LEGO-LOAM \
-                   --compare $result_path/traj'
+        if 'SR' in seq_name[idx]:
+            command = 'python2 $rpg_path/scripts/analyze_trajectory_single_mloam.py \
+                       --recalculate_errors --est_type M-LO M-LOAM-wo-ua M-LOAM A-LOAM F-LOAM \
+                       --compare $result_path/traj'
+        else:
+            command = 'python2 $rpg_path/scripts/analyze_trajectory_single_mloam.py \
+                       --recalculate_errors --est_type M-LO M-LOAM-wo-ua M-LOAM A-LOAM F-LOAM LEGO-LOAM \
+                       --compare $result_path/traj'        
         os.system(command)            
 
 # python2 run_mloam.py -sequence=SR -program=mc_test \
@@ -67,31 +75,31 @@ def mc_test(start_idx, end_idx, mc_trials):
     for idx in range(start_idx, end_idx + 1):
         print('testing sequence: {}'.format(seq_name[idx]))
         os.environ['rpg_path'] = '{}/src/localization/rpg_trajectory_evaluation'.format(os.environ['CATKIN_WS'])
-        os.environ['result_path'] = '{}/results/{}/monte_carlo_{}_lowres/'.format(os.environ['rpg_path'], platform, seq_name[idx])
+        os.environ['result_path'] = '{}/results/{}/monte_carlo_{}_highres_nonoise/'.format(os.environ['rpg_path'], platform, seq_name[idx])
         print(os.environ['result_path'])
         command = 'mkdir -p $result_path/gf_pcd $result_path/traj $result_path/time \
                             $result_path/pose_graph $result_path/others $result_path/gf_pcd'
         os.system(command)
         for trial in range(0, mc_trials):
             print('mc_trial {}'.format(trial))
-            os.environ['data_path'] = '{}/lidar_calibration/mloam_dataset/SR_monte_carlo/group_{}/{}.bag'.format(os.environ['DATA_PATH'], trial, seq_name[idx])
-            # os.environ['data_path'] = '{}/lidar_calibration/mloam_dataset/{}.bag'.format(os.environ['DATA_PATH'], seq_name[idx])
+            # os.environ['data_path'] = '{}/lidar_calibration/mloam_dataset/SR_monte_carlo/group_{}/{}.bag'.format(os.environ['DATA_PATH'], trial, seq_name[idx])
+            os.environ['data_path'] = '{}/lidar_calibration/mloam_dataset/{}.bag'.format(os.environ['DATA_PATH'], seq_name[idx])
             command = 'bash {}'.format(seq_main_name)
             os.system(command)        
-            command = 'mv $result_path/traj/stamped_groundtruth.txt $result_path/traj/stamped_groundtruth{}.txt'.format(trial)
-            os.system(command)
-            command = 'mv $result_path/traj/stamped_mloam_odom_estimate_1.000000.txt $result_path/traj/stamped_mloam_odom_estimate_1.000000{}.txt'.format(trial)
-            os.system(command)
-            command = 'mv $result_path/traj/stamped_mloam_map_estimate_wo_gf_1.000000_huber_0.txt $result_path/traj/stamped_mloam_map_estimate_wo_gf_1.000000_huber_0{}.txt'.format(trial)
-            os.system(command)
-            command = 'mv $result_path/traj/stamped_mloam_map_wo_ua_estimate_wo_gf_1.000000_huber_0.txt $result_path/traj/stamped_mloam_map_wo_ua_estimate_wo_gf_1.000000_huber_0{}.txt'.format(trial)
-            os.system(command)
-            command = 'mv $result_path/traj/stamped_aloam_odom_estimate.txt $result_path/traj/stamped_aloam_odom_estimate{}.txt'.format(trial)
-            os.system(command)
-            command = 'mv $result_path/traj/stamped_aloam_map_estimate.txt $result_path/traj/stamped_aloam_map_estimate{}.txt'.format(trial)
-            os.system(command)
-            command = 'mv $result_path/traj/stamped_floam_map_estimate.txt $result_path/traj/stamped_floam_map_estimate{}.txt'.format(trial)
-            os.system(command)
+            # command = 'mv $result_path/traj/stamped_groundtruth.txt $result_path/traj/stamped_groundtruth{}.txt'.format(trial)
+            # os.system(command)
+            # command = 'mv $result_path/traj/stamped_mloam_odom_estimate_1.000000.txt $result_path/traj/stamped_mloam_odom_estimate_1.000000{}.txt'.format(trial)
+            # os.system(command)
+            # command = 'mv $result_path/traj/stamped_mloam_map_estimate_wo_gf_1.000000_huber_0.txt $result_path/traj/stamped_mloam_map_estimate_wo_gf_1.000000_huber_0{}.txt'.format(trial)
+            # os.system(command)
+            # command = 'mv $result_path/traj/stamped_mloam_map_wo_ua_estimate_wo_gf_1.000000_huber_0.txt $result_path/traj/stamped_mloam_map_wo_ua_estimate_wo_gf_1.000000_huber_0{}.txt'.format(trial)
+            # os.system(command)
+            # command = 'mv $result_path/traj/stamped_aloam_odom_estimate.txt $result_path/traj/stamped_aloam_odom_estimate{}.txt'.format(trial)
+            # os.system(command)
+            # command = 'mv $result_path/traj/stamped_aloam_map_estimate.txt $result_path/traj/stamped_aloam_map_estimate{}.txt'.format(trial)
+            # os.system(command)
+            # command = 'mv $result_path/traj/stamped_floam_map_estimate.txt $result_path/traj/stamped_floam_map_estimate{}.txt'.format(trial)
+            # os.system(command)
 
         command = 'cp $result_path/traj/stamped_groundtruth{}.txt $result_path/traj/stamped_groundtruth.txt'.format(0)
         os.system(command)
@@ -102,11 +110,15 @@ def mc_eval(start_idx, end_idx, mc_trials):
     for idx in range(start_idx, end_idx + 1):
         print('evaluate sequence: {}'.format(seq_name[idx]))
         os.environ['rpg_path'] = '{}/src/localization/rpg_trajectory_evaluation'.format(os.environ['CATKIN_WS'])
-        os.environ['result_path'] = '{}/results/{}/monte_carlo_{}/'.format(os.environ['rpg_path'], platform, seq_name[idx])
+        os.environ['result_path'] = '{}/results/{}/monte_carlo_{}_highres_nonoise/'.format(os.environ['rpg_path'], platform, seq_name[idx])
         command = 'python2 $rpg_path/scripts/analyze_trajectory_single_mloam.py \
                    --recalculate_errors --est_type M-LO M-LOAM-wo-ua M-LOAM A-LOAM F-LOAM \
                    --compare $result_path/traj \
                    --mul_trials={}'.format(mc_trials)
+        # command = 'python2 $rpg_path/scripts/analyze_trajectory_single_mloam.py \
+        #            --est_type M-LO M-LOAM-wo-ua M-LOAM\
+        #            --compare $result_path/traj \
+        #            --mul_trials={}'.format(mc_trials)        
         os.system(command)    
 
 # python2 run_mloam.py -sequence=RHD -program=inject_ext_uct_test \
@@ -136,6 +148,10 @@ def inject_ext_uct_test(start_idx, end_idx, ext_level):
         os.system(command)
         command = 'mv $result_path/traj/stamped_floam_map_estimate.txt $result_path/traj/stamped_floam_map_estimate_{}.txt'.format(ext_level)
         os.system(command)        
+        command = 'mv $result_path/traj/stamped_legoloam_odom_estimate.txt $result_path/traj/stamped_legoloam_odom_estimate_{}.txt'.format(ext_level)
+        os.system(command)                        
+        command = 'mv $result_path/traj/stamped_legoloam_map_estimate.txt $result_path/traj/stamped_legoloam_map_estimate_{}.txt'.format(ext_level)
+        os.system(command)                
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description = 'run mloam sr test')

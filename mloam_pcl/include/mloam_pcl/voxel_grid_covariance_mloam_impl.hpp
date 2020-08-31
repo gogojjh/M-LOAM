@@ -292,8 +292,7 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
         // https://math.stackexchange.com/questions/195911/calculation-of-the-covariance-of-gaussian-mixtures
         if (cov_index >= 0)
         {
-            // Eigen::VectorXf weight_vec(last_index - first_index);
-            // weight_vec.setZero();
+            // revised version
             Eigen::Vector3f mu = Eigen::Vector3f::Zero();
             float ity = 0;
             Eigen::Matrix<float, 7, 1> cov = Eigen::Matrix<float, 7, 1>::Zero();
@@ -307,9 +306,10 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
                     valid_cnt--;
                     continue;
                 }
-                // weight_vec[i - first_index] = (w < trace_threshold_ / 2.0) ? w : trace_threshold_ / 2.0;
-                // weight_vec[i - first_index] = w;
-                float w = trace_threshold_ - (temporary[4] + temporary[7] + temporary[9]);
+                // float w = trace_threshold_ - (temporary[4] + temporary[7] + temporary[9]);
+                float dis = trace_threshold_ - (temporary[4] + temporary[7] + temporary[9]);
+                // float w = dis > (trace_threshold_ / 2) ? (trace_threshold_ / 2) / dis : 1.0;
+                float w = dis * dis;
                 mu.head(3) += w * temporary.head(3); // mu
                 ity = w > w_max ? temporary[3] : ity; // intensity
                 w_max = w > w_max ? w : w_max;
@@ -331,6 +331,63 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
             centroid[3] = ity;
             centroid.tail(7) = cov;
             centroid[10] = centroid[4] + centroid[7] + centroid[9];
+
+            // // old version 
+            // Eigen::VectorXf weight_vec(last_index - first_index);
+            // weight_vec.setZero();
+            // Eigen::Vector4f mu = Eigen::Vector4f::Zero();
+            // float w_max = 0;
+            // float ity = 0;
+            // for (unsigned int i = first_index; i < last_index; ++i)
+            // {
+            //     pcl::for_each_type<FieldList>(NdCopyPointEigenFunctor<PointT>(input_->points[index_vector[i].cloud_point_index], temporary));
+            //     if (abs(temporary[4] + temporary[7] + temporary[9]) >= trace_threshold_) // filter the point with the trace of the covariance > 2
+            //     {
+            //         valid_cnt--;
+            //         continue;
+            //     }
+            //     double w = trace_threshold_ - (temporary[4] + temporary[7] + temporary[9]);
+            //     // weight_vec[i - first_index] = (w < trace_threshold_ / 2.0) ? w : trace_threshold_ / 2.0;
+            //     weight_vec[i - first_index] = w;
+            //     mu.head(3) += weight_vec[i - first_index] * temporary.head(3);
+            //     mu[3] = temporary[3];
+            //     ity = w > w_max ? temporary[3] : ity; // intensity
+            //     w_max = w > w_max ? w : w_max;
+            // }
+            // if (valid_cnt == 0)
+            //     valid_cnt = 1;
+
+            // // index is centroid final position in resulting PointCloud
+            // if (save_leaf_layout_)
+            //     leaf_layout_[index_vector[first_index].idx] = index;
+
+            // // compute the centroid
+            // float weight_total = weight_vec.sum();
+            // if (weight_total == 0)
+            //     weight_total = 1.0;
+            // mu.head(3) /= static_cast<float>(weight_total);
+
+            // Eigen::Matrix3f cov = Eigen::Matrix3f::Zero();
+            // for (unsigned int i = first_index; i < last_index; ++i)
+            // {
+            //     pcl::for_each_type<FieldList>(NdCopyPointEigenFunctor<PointT>(input_->points[index_vector[i].cloud_point_index], temporary));
+            //     Eigen::Matrix3f cov_tmp;
+            //     cov_tmp << temporary[4], temporary[5], temporary[6],
+            //         temporary[5], temporary[7], temporary[8],
+            //         temporary[6], temporary[8], temporary[9];
+            //     cov += weight_vec[i - first_index] * (cov_tmp + (temporary.head(3) - mu.head(3)) * (temporary.head(3) - mu.head(3)).transpose());
+            // }
+            // cov /= static_cast<float>(weight_total);
+
+            // centroid.head(3) = mu;
+            // centroid[3] = ity;
+            // centroid[4] = cov(0, 0);
+            // centroid[5] = cov(0, 1);
+            // centroid[6] = cov(0, 2);
+            // centroid[7] = cov(1, 1);
+            // centroid[8] = cov(1, 2);
+            // centroid[9] = cov(2, 2);
+            // centroid[10] = cov(0, 0) + cov(1, 1) + cov(2, 2);
         } 
         else
         {

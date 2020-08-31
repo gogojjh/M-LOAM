@@ -66,8 +66,8 @@ catkin_package(
 # add_executable(test_ceres test_ceres.cpp)
 # target_link_libraries(test_ceres ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-# add_executable(test_pointiwithcov test_pointiwithcov.cpp)
-# target_link_libraries(test_pointiwithcov ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+add_executable(test_pointiwithcov src/test_pointiwithcov.cpp)
+target_link_libraries(test_pointiwithcov ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(test_merge_pointcloud_sr src/test_merge_pointcloud_sr.cpp)
 target_link_libraries(test_merge_pointcloud_sr ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
