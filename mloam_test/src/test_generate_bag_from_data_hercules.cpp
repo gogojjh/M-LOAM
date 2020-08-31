@@ -114,7 +114,7 @@ int main(int argc, char** argv)
             ss << setfill('0') << setw(6) << i;
 
             // load cloud
-            printf("size of finding cloud: ");
+            printf("size of finding cloud\n");
             std::vector<pcl::PointCloud<pcl::PointXYZI> > laser_cloud_list(4);
             for (size_t j = 0; j < 4; j++)
             {
@@ -213,6 +213,15 @@ int main(int argc, char** argv)
                 laser_gt_odom.pose.pose.position.x = t_ref_ini_cur(0);
                 laser_gt_odom.pose.pose.position.y = t_ref_ini_cur(1);
                 laser_gt_odom.pose.pose.position.z = t_ref_ini_cur(2);
+
+                geometry_msgs::PoseStamped laser_pose;
+                laser_pose.header = laser_gt_odom.header;
+                laser_pose.header.frame_id = "/world";
+                laser_pose.pose = laser_gt_odom.pose.pose;
+                laser_gt_path.header = laser_pose.header;
+                laser_gt_path.poses.push_back(laser_pose);
+                // std::cout << q_ref_ini_cur.coeffs().transpose() << std::endl;
+                // std::cout << t_ref_ini_cur.transpose() << std::endl;
                 bag.write("/current_odom", ros::Time(cloud_time), laser_gt_odom);
             }
 

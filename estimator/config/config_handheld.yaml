@@ -4,7 +4,7 @@
 multiple_thread: 0
 
 # segmmentation
-segment_cloud: 1
+segment_cloud: 0 # RHD02lab: 0, RHD03garden: 1, RHD04building: 1
 horizon_scan: 1800
 min_cluster_size: 30
 min_line_size: 10
@@ -137,7 +137,7 @@ skip_num_odom_pub: 2
 
 ######################################################## mapping
 map_corner_res: 0.2
-map_surf_res: 0.4 # RV:0.4, RHD03:0.4, RHD04:0.4
+map_surf_res: 0.3 # RHD02:0.4, RHD03:0.4, RHD04:0.4
 map_eig_thre: 100
 
 # uncertainty parameter
@@ -147,7 +147,7 @@ uct_ext: !!opencv-matrix
    cols: 6
    dt: d
    data: [0, 0, 0, 0, 0, 0,
-          0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01] 
+          0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01] # variance: 0.05m, 5deg
 
 uct_measurement: !!opencv-matrix
    rows: 1
@@ -155,9 +155,9 @@ uct_measurement: !!opencv-matrix
    dt: d
    data: [0.0025, 0.0025, 0.0025]
 
-uct_ext_ratio: 0.0 # RHD02:0, RHD03:0.25, RHD04:0.25
+uct_ext_ratio: 1.0 # RHD02: 0 (1 large perturbation), RHD03: 1, RHD04: 1
 
-# RHD02:5, RHD03:5, RHD04:7
-trace_threshold_before_mapping: 7 # min_d: 20
-trace_threshold_after_mapping: 7
+# RHD0 2 (0.1 large perturbation), RHD03: 5, RHD04: 7
+trace_threshold_before_mapping: 10 # min_d: 20
+trace_threshold_after_mapping: 10
 
