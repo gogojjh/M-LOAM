@@ -135,6 +135,10 @@ def inject_ext_uct_test(start_idx, end_idx, ext_level):
         os.system(command)
         command = 'mv $result_path/traj/stamped_floam_map_estimate.txt $result_path/traj/stamped_floam_map_estimate_{}.txt'.format(ext_level)
         os.system(command)        
+        command = 'mv $result_path/traj/stamped_legoloam_odom_estimate.txt $result_path/traj/stamped_legoloam_odom_estimate_{}.txt'.format(ext_level)
+        os.system(command)                        
+        command = 'mv $result_path/traj/stamped_legoloam_map_estimate.txt $result_path/traj/stamped_legoloam_map_estimate_{}.txt'.format(ext_level)
+        os.system(command)                
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description = 'run mloam sr test')
