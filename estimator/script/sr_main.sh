@@ -19,12 +19,12 @@ roslaunch mloam mloam_simu_jackal.launch \
 sleep 5
 
 # different LiDAR SLAM
-roslaunch mloam mloam_simu_jackal.launch \
-    run_mloam:=false \
-    run_aloam:=true \
-    bag_file:=$data_path \
-    output_path:=$result_path
-sleep 5
+# roslaunch mloam mloam_simu_jackal.launch \
+#     run_mloam:=false \
+#     run_aloam:=true \
+#     bag_file:=$data_path \
+#     output_path:=$result_path
+# sleep 5
 
 # roslaunch mloam mloam_simu_jackal.launch \
 #     run_mloam:=false \
