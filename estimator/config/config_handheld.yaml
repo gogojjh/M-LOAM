@@ -10,7 +10,7 @@ min_cluster_size: 30
 min_line_size: 10
 segment_valid_point_num: 5
 segment_valid_line_num: 3
-segment_theta: 0.6 # Lego-loam: 1.0
+segment_theta: 0.53 # Lego-loam: 1.0
 
 # laser parameters
 idx_ref: 0
@@ -39,7 +39,9 @@ opt_window_size: 3
 #    data: [0, 0, 0, 1, 0, 0, 0,
 #           0, 0, 0, 1, 0, 0, 0] # w/o initialization
 #    data: [0, 0, 0, 1, 0, 0, 0,
-#           0.31744, -0.00431, 0.01186, 0.9468, 0.0308, -0.56911, -0.12243] # initialization
+#           0.3113, -0.0103, -0.03334, 0.94956, 0.1130, -0.47195, -0.10341] # initialization (old)
+#    data: [0, 0, 0, 1, 0, 0, 0,
+#           0.31744, -0.00431, 0.01186, 0.9468, 0.0308, -0.56911, -0.12243] # initialization (new)
 #    data: [0, 0, 0, 1, 0, 0, 0,
 #           0.32182, -0.00094, 0.00744, 0.94677, 0.06641, -0.49424, -0.11251] # refinement
 # #    data: [0, 0, 0, 1, 0, 0, 0,
@@ -75,8 +77,10 @@ body_T_laser: !!opencv-matrix
    dt: d
    # data: [0, 0, 0, 1, 0, 0, 0,
    #        0, 0, 0, 1, 0, 0, 0] # w/o calib
-   # data: [0, 0, 0, 1, 0, 0, 0,
-   #        0.31744, -0.00431, 0.01186, 0.9468, 0.0308, -0.56911, -0.12243] # initialization
+#    data: [0, 0, 0, 1, 0, 0, 0,
+#           0.3113, -0.0103, -0.03334, 0.94956, 0.1130, -0.47195, -0.10341] # initialization (old)
+#    data: [0, 0, 0, 1, 0, 0, 0,
+#           0.31744, -0.00431, 0.01186, 0.9468, 0.0308, -0.56911, -0.12243] # initialization (new)
    # data: [0, 0, 0, 1, 0, 0, 0,
    #        0.34202, 0, 0, 0.93969, 0, -0.456, -0.122] # CAD model
    data: [0, 0, 0, 1, 0, 0, 0,
@@ -137,7 +141,7 @@ skip_num_odom_pub: 2
 
 ######################################################## mapping
 map_corner_res: 0.2
-map_surf_res: 0.3 # RHD02:0.4, RHD03:0.4, RHD04:0.4
+map_surf_res: 0.4 # RHD02:0.4, RHD03:0.4, RHD04:0.4
 map_eig_thre: 100
 
 # uncertainty parameter
@@ -147,7 +151,8 @@ uct_ext: !!opencv-matrix
    cols: 6
    dt: d
    data: [0, 0, 0, 0, 0, 0,
-          0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01] # variance: 0.05m, 5deg
+          0.0025, 0.0025, 0.0025, 0.00030461, 0.00030461, 0.00030461]
+         #  0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01] # variance: 0.05m, 5deg
 
 uct_measurement: !!opencv-matrix
    rows: 1
@@ -158,8 +163,7 @@ uct_measurement: !!opencv-matrix
 uct_ext_ratio: 1.0 
 
 # RHD02: 2 (0.5 large perturbation), RHD03: 12, RHD04: 12
-trace_threshold_before_mapping: 2 # min_d: 20
-trace_threshold_after_mapping: 2
+trace_threshold_mapping: 1 # min_d: 20
 
 # 1. 10m: 1.25
 # 2. 20m: 7.8

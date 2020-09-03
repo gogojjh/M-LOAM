@@ -306,10 +306,10 @@ pcl::VoxelGridCovarianceMLOAM<PointT>::applyFilter (PointCloud &output)
                     valid_cnt--;
                     continue;
                 }
-                // float w = trace_threshold_ - (temporary[4] + temporary[7] + temporary[9]);
-                float dis = trace_threshold_ - (temporary[4] + temporary[7] + temporary[9]);
+                float w = trace_threshold_ - (temporary[4] + temporary[7] + temporary[9]);
+                // float dis = trace_threshold_ - (temporary[4] + temporary[7] + temporary[9]);
                 // float w = dis > (trace_threshold_ / 2) ? (trace_threshold_ / 2) / dis : 1.0;
-                float w = dis * dis;
+                // float w = dis * dis;
                 mu.head(3) += w * temporary.head(3); // mu
                 ity = w > w_max ? temporary[3] : ity; // intensity
                 w_max = w > w_max ? w : w_max;

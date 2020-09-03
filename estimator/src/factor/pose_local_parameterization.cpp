@@ -25,20 +25,21 @@ void PoseLocalParameterization::setParameter()
 // The pointer coeffs must reference the four coefficients of Quaternion in the following order: *coeffs == {x, y, z, w}
 bool PoseLocalParameterization::Plus(const double *x, const double *delta, double *x_plus_delta) const
 {
-    Eigen::Map<const Eigen::Vector3d> _p(x);
-    Eigen::Map<const Eigen::Quaterniond> _q(x + 3);
-    Eigen::Map<const Eigen::Matrix<double, 6, 1> > dx(delta); // dx = [dp, dq]
+    Eigen::Map<const Eigen::Vector3d> p(x);
+    Eigen::Map<const Eigen::Quaterniond> q(x + 3);
 
+    Eigen::Map<const Eigen::Matrix<double, 6, 1> > dx(delta); // dx = [dp, dq]
     Eigen::Matrix<double, 6, 1> dx_update = V_update_ * dx;
     Eigen::Vector3d dp(dx_update.head<3>());
     Eigen::Quaterniond dq = Utility::deltaQ(dx_update.tail<3>());
+
     // Eigen::Map<const Eigen::Vector3d> dp(delta);
     // Eigen::Quaterniond dq = Utility::deltaQ(Eigen::Map<const Eigen::Vector3d>(delta + 3)); // using theta to approximate q
 
-    Eigen::Map<Eigen::Vector3d> p(x_plus_delta);
-    Eigen::Map<Eigen::Quaterniond> q(x_plus_delta + 3);
-    p = _p + dp;
-    q = (_q * dq).normalized(); // q = _q * [0.5*delta, 1]
+    Eigen::Map<Eigen::Vector3d> p_plus(x_plus_delta);
+    Eigen::Map<Eigen::Quaterniond> q_plus(x_plus_delta + 3);
+    p_plus = p + dp;
+    q_plus = (q * dq).normalized(); // q = _q * [0.5*delta, 1]
 
     return true;
 }

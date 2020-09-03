@@ -381,6 +381,7 @@ void downsampleCurrentScan()
     laser_cloud_outlier_cov->clear();
 
     // propagate the extrinsic uncertainty on points
+    float max_d = 0;
     for (PointI &point_ori : *laser_cloud_surf_last_ds)
     {
         int idx = int(point_ori.intensity); // indicate the lidar id
@@ -390,11 +391,18 @@ void downsampleCurrentScan()
         {
             pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
             evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
-            if (cov_point.trace() > TRACE_THRESHOLD_BEFORE_MAPPING) continue;
+            if (cov_point.trace() > TRACE_THRESHOLD_MAPPING) continue;
+            if (idx != IDX_REF)
+            {
+                float dis = sqrt(point_sel.x * point_sel.x + point_sel.y * point_sel.y + point_sel.z * point_sel.z);
+                max_d = dis > max_d ? dis : max_d;
+            }
         }
         PointIWithCov point_cov(point_ori, cov_point.cast<float>());
         laser_cloud_surf_cov->push_back(point_cov);
     }
+    if (with_ua_flag)
+        std::cout << "maximum distance: " << max_d << std::endl;
 
     for (PointI &point_ori : *laser_cloud_corner_last_ds)
     {
@@ -405,7 +413,7 @@ void downsampleCurrentScan()
         {
             pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
             evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
-            if (cov_point.trace() > TRACE_THRESHOLD_BEFORE_MAPPING) continue;
+            if (cov_point.trace() > TRACE_THRESHOLD_MAPPING) continue;
         }
         PointIWithCov point_cov(point_ori, cov_point.cast<float>());
         laser_cloud_corner_cov->push_back(point_cov);
@@ -420,7 +428,7 @@ void downsampleCurrentScan()
         {
             pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
             evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
-            if (cov_point.trace() > TRACE_THRESHOLD_BEFORE_MAPPING) continue;
+            if (cov_point.trace() > TRACE_THRESHOLD_MAPPING) continue;
         }
         PointIWithCov point_cov(point_ori, cov_point.cast<float>());
         laser_cloud_outlier_cov->push_back(point_cov);
@@ -451,7 +459,7 @@ void scan2MapOptimization()
             ceres::LossFunctionWrapper *loss_function;
             if (FLAGS_loss_mode == "huber")
             {
-                loss_function = new ceres::LossFunctionWrapper(new ceres::HuberLoss(0.1), ceres::TAKE_OWNERSHIP);
+                loss_function = new ceres::LossFunctionWrapper(new ceres::HuberLoss(1), ceres::TAKE_OWNERSHIP);
             } 
             else if (FLAGS_loss_mode == "gmc")
             {
@@ -587,8 +595,12 @@ void scan2MapOptimization()
                 const PointPlaneFeature &feature = all_surf_features[fid];
                 if (feature.type_ == 'n') continue;
                 Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Zero();
-                if (with_ua_in_opt)
+                if (with_ua_flag)
+                { 
                     extractCov(laser_cloud_surf_cov->points[feature.idx_], cov_matrix);
+                    // if (cov_matrix.trace() < TRACE_THRESHOLD_MAPPING / 2.0)
+                    //     cov_matrix = COV_MEASUREMENT;
+                }
                 else 
                     cov_matrix = COV_MEASUREMENT;
                 LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
@@ -608,8 +620,12 @@ void scan2MapOptimization()
                 const PointPlaneFeature &feature = all_corner_features[fid];
                 if (feature.type_ == 'n') continue;
                 Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Zero();
-                if (with_ua_in_opt)
+                if (with_ua_flag)
+                {
                     extractCov(laser_cloud_corner_cov->points[feature.idx_], cov_matrix);
+                    // if (cov_matrix.trace() < TRACE_THRESHOLD_MAPPING / 2.0)
+                    //     cov_matrix = COV_MEASUREMENT;
+                }                    
                 else
                     cov_matrix = COV_MEASUREMENT;
                 LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
@@ -669,7 +685,8 @@ void scan2MapOptimization()
             {
 
                 options.max_num_iterations = 30;
-                options.max_solver_time_in_seconds = 0.04;
+                options.max_solver_time_in_seconds = 0.03;
+                // options.max_solver_time_in_seconds = 0.04;
                 ceres::Solve(options, &problem, &summary);
                 std::cout << summary.BriefReport() << std::endl;
             }
@@ -1177,13 +1194,13 @@ void cloudUCTAssociateToMap(const PointICovCloud &cloud_local,
     for (size_t n = 0; n < NUM_OF_LASER; n++) 
     {
         compoundPoseWithCov(pose_global, pose_ext[n], pose_compound[n]);
-        // if (n == IDX_REF) continue;
+        if (n == IDX_REF) continue;
         // std::cout << "pose global: " << pose_global << std::endl;
         // std::cout << pose_global.cov_ << std::endl;
         // std::cout << "pose ext: " << pose_ext[n] << std::endl;
         // std::cout << pose_ext[n].cov_ << std::endl;
-        // std::cout << "pose compound: " << pose_compound[n] << std::endl;
-        // std::cout << pose_compound[n].cov_ << std::endl;
+        std::cout << "pose compound: " << pose_compound[n] << std::endl;
+        std::cout << pose_compound[n].cov_ << std::endl;
         // std::cout << std::endl;
     }
     // exit(EXIT_FAILURE);
@@ -1199,8 +1216,8 @@ void cloudUCTAssociateToMap(const PointICovCloud &cloud_local,
         if (with_ua_flag)
         {
             pointAssociateToMap(point_ori, point_sel, pose_ext[ind].inverse());
-            evalPointUncertainty(point_sel, cov_point, pose_ext[ind]);
-            if (cov_point.trace() > TRACE_THRESHOLD_AFTER_MAPPING) continue;
+            evalPointUncertainty(point_sel, cov_point, pose_compound[ind]); // TODO
+            if (cov_point.trace() > TRACE_THRESHOLD_MAPPING) continue;
         }
         pointAssociateToMap(point_ori, point_cov, pose_global);
         updateCov(point_cov, cov_point);
@@ -1354,7 +1371,7 @@ int main(int argc, char **argv)
         ss << OUTPUT_FOLDER << "traj/stamped_mloam_map_estimate_"
            << FLAGS_gf_method << "_" << to_string(FLAGS_gf_ratio_ini)
            << "_" << FLAGS_loss_mode << "_" << int(FLAGS_gnc) << ".txt";
-        if ((MAP_SURF_RES <= 0.2) || (UCT_EXT_RATIO >= 1.0)) with_ua_in_opt = true;
+        if (UCT_EXT_RATIO >= 1.0) with_ua_in_opt = true;
     }
     else
     {
@@ -1389,22 +1406,22 @@ int main(int argc, char **argv)
     pub_keyframes_6d = nh.advertise<mloam_msgs::Keyframes>("/laser_map_keyframes_6d", 5);
 
     down_size_filter_surf.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
-    down_size_filter_surf.setTraceThreshold(TRACE_THRESHOLD_AFTER_MAPPING);
+    down_size_filter_surf.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_corner.setLeafSize(MAP_CORNER_RES, MAP_CORNER_RES, MAP_CORNER_RES);
-    down_size_filter_corner.setTraceThreshold(TRACE_THRESHOLD_AFTER_MAPPING);
+    down_size_filter_corner.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_outlier.setLeafSize(MAP_OUTLIER_RES, MAP_OUTLIER_RES, MAP_OUTLIER_RES);
-    down_size_filter_outlier.setTraceThreshold(TRACE_THRESHOLD_AFTER_MAPPING);    
+    down_size_filter_outlier.setTraceThreshold(TRACE_THRESHOLD_MAPPING);    
 
     down_size_filter_surf_map_cov.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
-    down_size_filter_surf_map_cov.setTraceThreshold(TRACE_THRESHOLD_AFTER_MAPPING);
+    down_size_filter_surf_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_corner_map_cov.setLeafSize(MAP_CORNER_RES, MAP_CORNER_RES, MAP_CORNER_RES);
-    down_size_filter_corner_map_cov.setTraceThreshold(TRACE_THRESHOLD_AFTER_MAPPING);
+    down_size_filter_corner_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_outlier_map_cov.setLeafSize(MAP_OUTLIER_RES, MAP_OUTLIER_RES, MAP_OUTLIER_RES);
-    down_size_filter_outlier_map_cov.setTraceThreshold(TRACE_THRESHOLD_AFTER_MAPPING);    
+    down_size_filter_outlier_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_surrounding_keyframes.setLeafSize(1.0, 1.0, 1.0);
 
     down_size_filter_global_map_cov.setLeafSize(MAP_CORNER_RES, MAP_SURF_RES, MAP_SURF_RES);
-    down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_AFTER_MAPPING);
+    down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_global_map_keyframes.setLeafSize(5.0, 5.0, 5.0);
 
     cov_mapping.setZero();

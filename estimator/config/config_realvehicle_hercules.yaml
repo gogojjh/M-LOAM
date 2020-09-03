@@ -161,6 +161,5 @@ uct_measurement: !!opencv-matrix
 uct_ext_ratio: 1
 
 # RV: 20
-trace_threshold_before_mapping: 20 # min_d: 20
-trace_threshold_after_mapping: 20
+trace_threshold_mapping: 20 # min_d: 20
 

@@ -31,7 +31,8 @@ inline Eigen::Matrix3d covop2(const Eigen::Matrix3d &B, const Eigen::Matrix3d &C
 // dynamic: topLeftCorner(3, 3)
 inline void compoundPoseWithCov(const Pose &pose_1, const Eigen::Matrix<double, 6, 6> &cov_1,
                                 const Pose &pose_2, const Eigen::Matrix<double, 6, 6> &cov_2,
-                                Pose &pose_cp, Eigen::Matrix<double, 6, 6> &cov_cp, const int &method = 2)
+                                Pose &pose_cp, Eigen::Matrix<double, 6, 6> &cov_cp, 
+                                const int &method = 2)
 {
     pose_cp.q_ = pose_1.q_ * pose_2.q_;
     pose_cp.t_ = pose_1.q_ * pose_2.t_ + pose_1.t_;
@@ -96,8 +97,7 @@ inline void compoundPoseWithCov(const Pose &pose_1,
     pose_cp.t_ = pose_1.q_ * pose_2.t_ + pose_1.t_;
     pose_cp.update();
 
-    // Eigen::Matrix<double, 6, 6> AdT1 = adjointMatrix(pose_1.T_); // the adjoint matrix of T1
-    Eigen::Matrix<double, 6, 6> AdT1 = adjointMatrix(Eigen::Matrix4d::Identity()); 
+    Eigen::Matrix<double, 6, 6> AdT1 = adjointMatrix(pose_1.T_); // the adjoint matrix of T1
     Eigen::Matrix<double, 6, 6> cov_2_prime = AdT1 * cov_2 * AdT1.transpose();
     if (method == 1)
     {
@@ -161,7 +161,10 @@ inline Eigen::Matrix<double, 4, 6> pointToFS(const Eigen::Vector4d &point)
  * cov_pose: associated covariance of the pose
  */
 template <typename PointType>
-inline void evalPointUncertainty(const PointType &pi, Eigen::Matrix3d &cov_point, const Pose &pose, const Eigen::Matrix<double, 6, 6> &cov_pose)
+inline void evalPointUncertainty(const PointType &pi,
+                                 Eigen::Matrix3d &cov_point,
+                                 const Pose &pose,
+                                 const Eigen::Matrix<double, 6, 6> &cov_pose)
 {
     // THETA: diag(P, Phi, Z) includes the translation, rotation, measurement uncertainty
     Eigen::Matrix<double, 9, 9> cov_input = Eigen::Matrix<double, 9, 9>::Zero();

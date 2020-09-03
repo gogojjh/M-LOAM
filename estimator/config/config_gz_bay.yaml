@@ -134,11 +134,11 @@ uct_measurement: !!opencv-matrix
    data: [0.0025, 0.0025, 0.0025]
 
 # for indoor office
-# trace_threshold_before_mapping: 1
-# trace_threshold_after_mapping: 0.3
+# trace_threshold_mapping: 1
+# trace_threshold_mapping: 0.3
 
 # for outdoor building
-trace_threshold_before_mapping: 1
-trace_threshold_after_mapping: 1
+trace_threshold_mapping: 1
+trace_threshold_mapping: 1
 
 skip_num_odom: 1

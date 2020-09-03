@@ -17,6 +17,7 @@
 #include <ceres/rotation.h>
 
 #include <eigen3/Eigen/Dense>
+#include <unsupported/Eigen/MatrixFunctions>
 
 #include "../utility/utility.h"
 
@@ -27,7 +28,12 @@ public:
 	LidarMapPlaneNormFactor(const Eigen::Vector3d &point, const Eigen::Vector4d &coeff, const Eigen::Matrix3d &cov_matrix = Eigen::Matrix3d::Identity())
 		: point_(point), coeff_(coeff), cov_matrix_(cov_matrix)
 	{
+		// is a upper triangular matrix
 		sqrt_info_ = Eigen::LLT<Eigen::Matrix<double, 3, 3> >(cov_matrix_.inverse()).matrixL().transpose();
+		// std::cout << sqrt_info_ << std::endl << std::endl;
+		// Eigen::matrix_sqrt_triangular(sqrt_info_, sqrt_info_);
+		// std::cout << sqrt_info_ << std::endl;
+		// exit(EXIT_FAILURE);
 	}
 
 	bool Evaluate(double const *const *param, double *residuals, double **jacobians) const

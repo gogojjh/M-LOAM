@@ -558,7 +558,7 @@ void process()
 				pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
 				evalPointUncertainty(point_sel, cov_point, pose_ext[idx], cov_ext[idx]);
 				if (!UNCER_AWARE_ON) cov_point = COV_MEASUREMENT; // add extrinsic perturbation
-				if (cov_point.trace() <= TRACE_THRESHOLD_BEFORE_MAPPING)
+				if (cov_point.trace() <= TRACE_THRESHOLD_MAPPING)
 				{
 					PointIWithCov point_cov(point_ori, cov_point.cast<float>());
 					laser_cloud_surf_split_cov[idx].push_back(point_cov);
@@ -572,7 +572,7 @@ void process()
 				pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
 				evalPointUncertainty(point_sel, cov_point, pose_ext[idx], cov_ext[idx]);
 				if (!UNCER_AWARE_ON) cov_point = COV_MEASUREMENT; // add extrinsic perturbation
-				if (cov_point.trace() <= TRACE_THRESHOLD_BEFORE_MAPPING)
+				if (cov_point.trace() <= TRACE_THRESHOLD_MAPPING)
 				{
 					PointIWithCov point_cov(point_ori, cov_point.cast<float>());
 					laser_cloud_corner_split_cov[idx].push_back(point_cov);
@@ -755,7 +755,7 @@ void process()
 						// 0.01 for RHD02lab
 						// if (!UNCER_AWARE_ON || cov_mapping.trace() < 0.03) cov_point = COV_MEASUREMENT; // add pose and extrinsic perturbation 
 						if (!UNCER_AWARE_ON) cov_point = COV_MEASUREMENT; // add pose and extrinsic perturbation 
-						if (cov_point.trace() > TRACE_THRESHOLD_AFTER_MAPPING) continue;
+						if (cov_point.trace() > TRACE_THRESHOLD_MAPPING) continue;
 						pointAssociateToMap(point_ori, point_cov, pose_wmap_curr);
 						updateCov(point_cov, cov_point);
 
@@ -782,7 +782,7 @@ void process()
 						pointAssociateToMap(point_ori, point_sel, pose_ext[n].inverse());
 						evalPointUncertainty(point_sel, cov_point, pose_compound[n], cov_compound[n]);
 						if (!UNCER_AWARE_ON) cov_point = COV_MEASUREMENT; // add pose and extrinsic perturbation
-						if (cov_point.trace() > TRACE_THRESHOLD_AFTER_MAPPING) continue;
+						if (cov_point.trace() > TRACE_THRESHOLD_MAPPING) continue;
 						pointAssociateToMap(point_ori, point_cov, pose_wmap_curr);
 						updateCov(point_cov, cov_point);
 
@@ -1039,14 +1039,14 @@ int main(int argc, char **argv)
 	printf("Mapping as %fhz\n", 10.0 / SKIP_NUM_ODOM_PUB);
 
 	down_size_filter_surf.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
-	down_size_filter_surf.trace_threshold_ = TRACE_THRESHOLD_AFTER_MAPPING;	
+	down_size_filter_surf.trace_threshold_ = TRACE_THRESHOLD_MAPPING;	
 	down_size_filter_surf_map_cov.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
-	down_size_filter_surf_map_cov.trace_threshold_ = TRACE_THRESHOLD_AFTER_MAPPING;
+	down_size_filter_surf_map_cov.trace_threshold_ = TRACE_THRESHOLD_MAPPING;
 
 	down_size_filter_corner.setLeafSize(MAP_CORNER_RES, MAP_CORNER_RES, MAP_CORNER_RES);
-	down_size_filter_corner.trace_threshold_ = TRACE_THRESHOLD_AFTER_MAPPING;
+	down_size_filter_corner.trace_threshold_ = TRACE_THRESHOLD_MAPPING;
 	down_size_filter_corner_map_cov.setLeafSize(MAP_CORNER_RES, MAP_CORNER_RES, MAP_CORNER_RES);
-	down_size_filter_corner_map_cov.trace_threshold_ = TRACE_THRESHOLD_AFTER_MAPPING;
+	down_size_filter_corner_map_cov.trace_threshold_ = TRACE_THRESHOLD_MAPPING;
 
 	ros::Subscriber sub_laser_cloud_full_res = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud", 2, laserCloudFullResHandler);
 	ros::Subscriber sub_laser_cloud_surf_last = nh.subscribe<sensor_msgs::PointCloud2>("/surf_points_less_flat", 2, laserCloudSurfLastHandler);

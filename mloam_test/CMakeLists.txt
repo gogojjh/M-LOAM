@@ -139,6 +139,10 @@ add_executable(ceres_robust_curve_fitting_2
 target_link_libraries(ceres_robust_curve_fitting_2 ${catkin_LIBRARIES} 
 	${CERES_LIBRARIES} ${GLOG_LIBRARIES})
 
+add_executable(ceres_fitting_uct src/ceres_fitting_uct.cpp)
+target_link_libraries(ceres_fitting_uct ${catkin_LIBRARIES} 
+	${CERES_LIBRARIES} ${GLOG_LIBRARIES})
+
 # add_executable(ceres_simple_bundle_adjustment
 #     src/ceres_simple_bundle_adjustment.cpp src/impl_loss_function.cpp)
 # target_link_libraries(ceres_simple_bundle_adjustment ${catkin_LIBRARIES} 

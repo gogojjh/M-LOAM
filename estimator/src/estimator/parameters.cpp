@@ -98,7 +98,7 @@ float LAMBDA_2;
 float UCT_EXT_RATIO;
 std::vector<Eigen::Matrix<double, 6, 6> > COV_EXT;
 Eigen::Matrix<double, 3, 3> COV_MEASUREMENT;
-double TRACE_THRESHOLD_BEFORE_MAPPING, TRACE_THRESHOLD_AFTER_MAPPING;
+double TRACE_THRESHOLD_MAPPING;
 
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
@@ -278,8 +278,7 @@ void readParameters(std::string config_file)
     vec_uct_measurement << cv_uct.ptr<double>(0)[0], cv_uct.ptr<double>(0)[1], cv_uct.ptr<double>(0)[2];
     COV_MEASUREMENT = vec_uct_measurement.asDiagonal();
 
-    TRACE_THRESHOLD_BEFORE_MAPPING = fsSettings["trace_threshold_before_mapping"];
-    TRACE_THRESHOLD_AFTER_MAPPING = fsSettings["trace_threshold_after_mapping"];
+    TRACE_THRESHOLD_MAPPING = fsSettings["trace_threshold_mapping"];
 
     fsSettings.release();
 }

@@ -69,7 +69,8 @@
         "set": "cpp",
         "string": "cpp",
         "forward_list": "cpp",
-        "filesystem": "cpp"
+        "filesystem": "cpp",
+        "matrixfunctions": "cpp"
     },
     "cmake.configureOnOpen": true,
     "C_Cpp.errorSquiggles": "Disabled"

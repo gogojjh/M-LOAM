@@ -131,7 +131,6 @@ uct_measurement: !!opencv-matrix
    dt: d
    data: [0.0025, 0.0025, 0.0025]
 
-trace_threshold_before_mapping: 1.5
-trace_threshold_after_mapping: 1.5
+trace_threshold_mapping: 1.5
 
 skip_num_odom_pub: 2
