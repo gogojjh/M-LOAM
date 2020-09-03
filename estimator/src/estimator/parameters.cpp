@@ -142,11 +142,10 @@ void readParameters(std::string config_file)
 
     cv::FileNode node_cloud_topic = fsSettings["cloud_topic"];
     CLOUD_TOPIC.resize(NUM_OF_LASER);
-    for (size_t i = 0; i < node_cloud_topic.size(); i++)
+    for (size_t i = 0; i < NUM_OF_LASER; i++)
     {
         CLOUD_TOPIC[i] = (std::string)node_cloud_topic[i];
         printf("cloud_topic: %s\n", CLOUD_TOPIC[i].c_str());
-        if (int(i) == NUM_OF_LASER) break;
     }
 
     WINDOW_SIZE = fsSettings["window_size"];
@@ -184,14 +183,16 @@ void readParameters(std::string config_file)
         }
     }
 
-    cv::Mat cv_TD;
-    fsSettings["td"] >> cv_TD;
-    for (size_t i = 0; i < NUM_OF_LASER; i++) TDBL.push_back(cv_TD.ptr<double>(0)[i]);
     ESTIMATE_TD = fsSettings["estimate_td"];
     if (ESTIMATE_TD)
-        ROS_INFO_STREAM("Unsynchronized sensors, online estimate time offset");
+        std::cout << "Unsynchronized sensors, online estimate time offset" << std::endl;
     else
-        ROS_INFO_STREAM("Synchronized sensors, fix time offset");
+        std::cout << "Synchronized sensors, fix time offset" << std::endl;
+
+    cv::Mat cv_TD;
+    fsSettings["td"] >> cv_TD;
+    TDBL.resize(NUM_OF_LASER);
+    for (size_t i = 0; i < NUM_OF_LASER; i++) TDBL[i] = cv_TD.ptr<double>(0)[i]; 
 
     LASER_SYNC_THRESHOLD = fsSettings["laser_sync_threshold"];
 

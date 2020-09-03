@@ -425,7 +425,7 @@ public:
                                                               all_features[que_idx],
                                                               que_idx,
                                                               n_neigh,
-                                                              true);
+                                                              false);
                 }
                 else if (feature_type == 'c')
                 {
@@ -436,7 +436,7 @@ public:
                                                                 all_features[que_idx],
                                                                 que_idx,
                                                                 n_neigh,
-                                                                true);
+                                                                false);
                 }
                 if (b_match)
                 {

@@ -402,7 +402,7 @@ void downsampleCurrentScan()
         laser_cloud_surf_cov->push_back(point_cov);
     }
     if (with_ua_flag)
-        std::cout << "maximum distance: " << max_d << std::endl;
+        printf("maximum distance: %fm\n", max_d);
 
     for (PointI &point_ori : *laser_cloud_corner_last_ds)
     {
@@ -459,7 +459,7 @@ void scan2MapOptimization()
             ceres::LossFunctionWrapper *loss_function;
             if (FLAGS_loss_mode == "huber")
             {
-                loss_function = new ceres::LossFunctionWrapper(new ceres::HuberLoss(1), ceres::TAKE_OWNERSHIP);
+                loss_function = new ceres::LossFunctionWrapper(new ceres::HuberLoss(0.5), ceres::TAKE_OWNERSHIP);
             } 
             else if (FLAGS_loss_mode == "gmc")
             {
@@ -685,8 +685,7 @@ void scan2MapOptimization()
             {
 
                 options.max_num_iterations = 30;
-                options.max_solver_time_in_seconds = 0.03;
-                // options.max_solver_time_in_seconds = 0.04;
+                options.max_solver_time_in_seconds = 0.04;
                 ceres::Solve(options, &problem, &summary);
                 std::cout << summary.BriefReport() << std::endl;
             }
@@ -697,7 +696,7 @@ void scan2MapOptimization()
                 common::timing::Timer eval_deg_timer("mapping_eval_deg");
                 problem.Evaluate(ceres::Problem::EvaluateOptions(), nullptr, nullptr, nullptr, &jaco);
                 evalHessian(jaco, mat_H);
-                cov_mapping = mat_H.inverse();
+                cov_mapping = (mat_H / 134).inverse();
 
                 double tr = cov_mapping.trace();
                 double logd = common::logDet(mat_H, true);
@@ -1199,8 +1198,9 @@ void cloudUCTAssociateToMap(const PointICovCloud &cloud_local,
         // std::cout << pose_global.cov_ << std::endl;
         // std::cout << "pose ext: " << pose_ext[n] << std::endl;
         // std::cout << pose_ext[n].cov_ << std::endl;
-        std::cout << "pose compound: " << pose_compound[n] << std::endl;
-        std::cout << pose_compound[n].cov_ << std::endl;
+        std::cout << "pose compound: " << pose_compound[n] << ", "
+                  << pose_compound[n].cov_.trace() << std::endl;
+        // std::cout << pose_compound[n].cov_ << std::endl;
         // std::cout << std::endl;
     }
     // exit(EXIT_FAILURE);

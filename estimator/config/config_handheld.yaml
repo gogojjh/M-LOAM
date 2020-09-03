@@ -4,7 +4,7 @@
 multiple_thread: 0
 
 # segmmentation
-segment_cloud: 0 # RHD02lab: 0, RHD03garden: 1, RHD04building: 1
+segment_cloud: 1 # RHD02lab: 1, RHD03garden: 1, RHD04building: 1
 horizon_scan: 1800
 min_cluster_size: 30
 min_line_size: 10
@@ -26,7 +26,7 @@ window_size: 6
 opt_window_size: 3
 
 ############################## For normal use
-# Extrinsic parameter between multiple LiDARs.
+# # Extrinsic parameter between multiple LiDARs.
 # estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
 #                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
 #                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
@@ -42,10 +42,10 @@ opt_window_size: 3
 #           0.3113, -0.0103, -0.03334, 0.94956, 0.1130, -0.47195, -0.10341] # initialization (old)
 #    data: [0, 0, 0, 1, 0, 0, 0,
 #           0.31744, -0.00431, 0.01186, 0.9468, 0.0308, -0.56911, -0.12243] # initialization (new)
-#    data: [0, 0, 0, 1, 0, 0, 0,
-#           0.32182, -0.00094, 0.00744, 0.94677, 0.06641, -0.49424, -0.11251] # refinement
-# #    data: [0, 0, 0, 1, 0, 0, 0,
-         #  0.34087, -0.0101817, 0.0147921, 0.945613, 0.0334837, -0.540249, -0.141798] # PS-Calib
+   # data: [0, 0, 0, 1, 0, 0, 0,
+   #        0.32182, -0.00094, 0.00744, 0.94677, 0.06641, -0.49424, -0.11251] # refinement
+   # data: [0, 0, 0, 1, 0, 0, 0,
+   #        0.34087, -0.0101817, 0.0147921, 0.945613, 0.0334837, -0.540249, -0.141798] # PS-Calib
 
 ############################## For Journal experiments
 # 1
@@ -77,14 +77,16 @@ body_T_laser: !!opencv-matrix
    dt: d
    # data: [0, 0, 0, 1, 0, 0, 0,
    #        0, 0, 0, 1, 0, 0, 0] # w/o calib
-#    data: [0, 0, 0, 1, 0, 0, 0,
-#           0.3113, -0.0103, -0.03334, 0.94956, 0.1130, -0.47195, -0.10341] # initialization (old)
-#    data: [0, 0, 0, 1, 0, 0, 0,
-#           0.31744, -0.00431, 0.01186, 0.9468, 0.0308, -0.56911, -0.12243] # initialization (new)
+   # data : [0, 0, 0, 1, 0, 0, 0,
+   #         0.41025, 0.10569, 0.058295, 0.90395, 0.133, -0.440, -0.042] # inject noise
+   # data: [0, 0, 0, 1, 0, 0, 0,
+   #        0.3113, -0.0103, -0.03334, 0.94956, 0.1130, -0.47195, -0.10341] # initialization 
    # data: [0, 0, 0, 1, 0, 0, 0,
    #        0.34202, 0, 0, 0.93969, 0, -0.456, -0.122] # CAD model
+   # data: [0, 0, 0, 1, 0, 0, 0,
+   #        0.32182, -0.00094, 0.00744, 0.94677, 0.06641, -0.49424, -0.11251] # refinement
    data: [0, 0, 0, 1, 0, 0, 0,
-          0.32182, -0.00094, 0.00744, 0.94677, 0.06641, -0.49424, -0.11251] # refinement
+          0.34087, -0.0101817, 0.0147921, 0.945613, 0.0334837, -0.540249, -0.141798] # PS-Calib
 ##############################
 
 #unsynchronization parameters
@@ -151,8 +153,9 @@ uct_ext: !!opencv-matrix
    cols: 6
    dt: d
    data: [0, 0, 0, 0, 0, 0,
-          0.0025, 0.0025, 0.0025, 0.00030461, 0.00030461, 0.00030461]
-         #  0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01] # variance: 0.05m, 5deg
+          0.0025, 0.0025, 0.0025, 0.00030461, 0.00030461, 0.00030461] # small and medium
+         #  0.0025, 0.0025, 0.0025, 0.00273, 0.00273, 0.00273]
+         #  0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01] # variance: 0.05m, 5deg # large
 
 uct_measurement: !!opencv-matrix
    rows: 1
@@ -160,10 +163,10 @@ uct_measurement: !!opencv-matrix
    dt: d
    data: [0.0025, 0.0025, 0.0025]
 
-uct_ext_ratio: 1.0 
+uct_ext_ratio: 0.1 # small: 0.1, medium: 1, large: 10
 
-# RHD02: 2 (0.5 large perturbation), RHD03: 12, RHD04: 12
-trace_threshold_mapping: 1 # min_d: 20
+# RHD02: 10, RHD03: 10, RHD04: 10
+trace_threshold_mapping: 10 # min_d: 20
 
 # 1. 10m: 1.25
 # 2. 20m: 7.8

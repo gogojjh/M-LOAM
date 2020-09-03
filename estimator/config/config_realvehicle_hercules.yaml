@@ -10,12 +10,12 @@ min_cluster_size: 30
 min_line_size: 10
 segment_valid_point_num: 5
 segment_valid_line_num: 3
-segment_theta: 1.0 # Lego-loam: 1.0
+segment_theta: 0.53 # Lego-loam: 1.0
 
 # laser parameters
 idx_ref: 0
 n_scans: 16
-num_of_laser: 4
+num_of_laser: 2
 
 cloud_topic:
    - "/top/rslidar_points"
@@ -24,8 +24,8 @@ cloud_topic:
    - "/right/rslidar_points"
 
 # window sizes
-window_size: 6
-opt_window_size: 3
+window_size: 4
+opt_window_size: 2
 
 # # Extrinsic parameter between multiple LiDARs.
 # estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
@@ -62,25 +62,21 @@ opt_window_size: 3
 # only concern the top-front calibration error
 estimate_extrinsic: 0   
 body_T_laser: !!opencv-matrix
-   rows: 4
+   rows: 2
    cols: 7
    dt: d
+   # data: [0, 0, 0, 1, 0, 0, 0, 
+   #        0, 0, 0, 1, 0, 0, 0] # wocalib
+   # data: [0, 0, 0, 1, 0, 0, 0, 
+   #        0.054959, 0.15089, 0.094054, 0.98253, 0.636, 0.139, -1.031] # inject noise
+   # data: [0, 0, 0, 1, 0, 0, 0, 
+   #        -0.0129, 0.0691, 0.0378, 0.9968, -0.1520, -0.9552, 0] # initialization
+   # data: [0, 0, 0, 1, 0, 0, 0, 
+   #        0, 0.087150, 0, 0.99679, 0.795, 0, -1.364] # CAD
+   # data: [0, 0, 0, 1, 0, 0, 0, 
+   #        -0.00735, 0.05863, 0.02083, 0.99804, 0.53297, 0.04047, -1.06245] # refinement   
    data: [0, 0, 0, 1, 0, 0, 0, 
-          0, 0, 0, 1, 0, 0, 0,
-          -0.1118, 0.1894, 0.6845, 0.6951, 0.5116, 0.6440, -0.904,
-          0.0745, 0.1312, -0.7449, 0.6496, 0.4406, -0.628, -1.0295] # wocalib
-   # data: [0, 0, 0, 1, 0, 0, 0, 
-   #        -0.0129, 0.0691, 0.0378, 0.9968, -0.1520, -0.9552, 0,
-   #        -0.1118, 0.1894, 0.6845, 0.6951, 0.5116, 0.6440, -0.904,
-   #        0.0745, 0.1312, -0.7449, 0.6496, 0.4406, -0.628, -1.0295] # initialization
-   # data: [0, 0, 0, 1, 0, 0, 0, 
-   #        0, 0.087150, 0, 0.99679, 0.795, 0, -1.364,
-   #        -0.1118, 0.1894, 0.6845, 0.6951, 0.5116, 0.6440, -0.904,
-   #        0.0745, 0.1312, -0.7449, 0.6496, 0.4406, -0.628, -1.0295] # CAD
-   # data: [0, 0, 0, 1, 0, 0, 0, 
-   #        -0.0169, 0.0575, 0.0195, 0.998, 0.5355, 0.0393, -1.131,
-   #        -0.1118, 0.1894, 0.6845, 0.6951, 0.5116, 0.6440, -0.904,
-   #        0.0745, 0.1312, -0.7449, 0.6496, 0.4406, -0.628, -1.0295] # PS-calib
+          -0.0169, 0.0575, 0.0195, 0.998, 0.5355, 0.0393, -1.131] # PS-calib
 
 ################################
 
@@ -148,9 +144,12 @@ uct_ext: !!opencv-matrix
    cols: 6
    dt: d
    data: [0, 0, 0, 0, 0, 0,
-          0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01,
-          0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01,
-          0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01] 
+          0.0025, 0.0025, 0.0025, 0.00030461, 0.00030461, 0.00030461,
+          0.0025, 0.0025, 0.0025, 0.00030461, 0.00030461, 0.00030461,
+          0.0025, 0.0025, 0.0025, 0.00030461, 0.00030461, 0.00030461]
+         #  0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01,
+         #  0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01,
+         #  0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01] 
 
 uct_measurement: !!opencv-matrix
    rows: 1
@@ -158,8 +157,7 @@ uct_measurement: !!opencv-matrix
    dt: d
    data: [0.0025, 0.0025, 0.0025]
 
-uct_ext_ratio: 1
+uct_ext_ratio: 0.1 # small: 0.1, medium: 1, large: 10
 
-# RV: 20
-trace_threshold_mapping: 20 # min_d: 20
+trace_threshold_mapping: 10 
 

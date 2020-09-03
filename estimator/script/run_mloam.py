@@ -12,6 +12,7 @@ seq_name = []
 platform = ''
 seq_main_name = ''
 est_type = ''
+yaml_name = ''
 
 # python2 run_mloam.py -sequence=SR -program=debug_test -start_idx=0 
 def debug_test(start_idx):
@@ -25,6 +26,8 @@ def debug_test(start_idx):
     os.system(command)
     command = 'bash {}'.format(seq_main_name)
     os.system(command)
+    command = 'cp ~/catkin_ws/src/localization/M-LOAM/estimator/config/{} {}'.format(yaml_name, os.environ['result_path'])
+    os.system(command)    
 
 # python2 run_mloam.py -sequence=SR -program=debug_eval 
 def debug_eval():
@@ -49,6 +52,14 @@ def single_test(start_idx, end_idx):
         os.system(command)
         command = 'bash {}'.format(seq_main_name)
         os.system(command)
+        command = 'cp ~/catkin_ws/src/localization/M-LOAM/estimator/config/{} {}'.format(yaml_name, os.environ['result_path'])
+        os.system(command)               
+        command = 'cp /tmp/mloam_mapping_surf_cloud.pcd {}'.format(os.environ['result_path'])
+        os.system(command)
+        command = 'cp /tmp/mloam_mapping_surf_cloud_wo_ua.pcd {}'.format(os.environ['result_path'])
+        os.system(command)
+        command = 'cp /tmp/aloam_mapping.pcd {}'.format(os.environ['result_path'])
+        os.system(command)        
 
 # python2 run_mloam.py -sequence=SR -program=single_eval \
 #   -start_idx=0 -end_idx=4
@@ -96,6 +107,14 @@ def mc_test(start_idx, end_idx, mc_trials):
 
         command = 'cp $result_path/traj/stamped_groundtruth{}.txt $result_path/traj/stamped_groundtruth.txt'.format(0)
         os.system(command)
+        command = 'cp ~/catkin_ws/src/localization/M-LOAM/estimator/config/{} {}'.format(yaml_name, os.environ['result_path'])
+        os.system(command)
+        command = 'cp /tmp/mloam_mapping_surf_cloud.pcd {}'.format(os.environ['result_path'])
+        os.system(command)
+        command = 'cp /tmp/mloam_mapping_surf_cloud_wo_ua.pcd {}'.format(os.environ['result_path'])
+        os.system(command)
+        command = 'cp /tmp/aloam_mapping.pcd {}'.format(os.environ['result_path'])
+        os.system(command)           
 
 # python2 run_mloam.py -sequence=SR -program=mc_eval \
 #   -start_idx=0 -end_idx=4 -mc_trials=10
@@ -140,7 +159,15 @@ def inject_ext_uct_test(start_idx, end_idx, ext_level):
         command = 'mv $result_path/traj/stamped_legoloam_odom_estimate.txt $result_path/traj/stamped_legoloam_odom_estimate_{}.txt'.format(ext_level)
         os.system(command)                        
         command = 'mv $result_path/traj/stamped_legoloam_map_estimate.txt $result_path/traj/stamped_legoloam_map_estimate_{}.txt'.format(ext_level)
-        os.system(command)                
+        os.system(command)
+        command = 'cp ~/catkin_ws/src/localization/M-LOAM/estimator/config/{} {}/config_{}.yaml'.format(yaml_name, os.environ['result_path'], ext_level)
+        os.system(command)        
+        command = 'cp /tmp/mloam_mapping_surf_cloud.pcd {}/mloam_mapping_{}.pcd'.format(os.environ['result_path'], ext_level)
+        os.system(command)
+        command = 'cp /tmp/mloam_mapping_surf_cloud_wo_ua.pcd {}/mloam_mapping_wo_ua_{}.pcd'.format(os.environ['result_path'], ext_level)
+        os.system(command)
+        command = 'cp /tmp/aloam_mapping.pcd {}/aloam_mapping_{}.pcd'.format(os.environ['result_path'], ext_level)
+        os.system(command)                        
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='run mloam sr test')
@@ -150,7 +177,7 @@ if __name__ == '__main__':
     parser.add_argument('-start_idx', type=int, help='idx')
     parser.add_argument('-end_idx', type=int, help='idx')
     parser.add_argument('-mc_trials', type=int, help='mc_trials=n')
-    parser.add_argument('-ext_level', help='ref, cad, ini, wocalib')
+    parser.add_argument('-ext_level', help='ref, cad, ini, inj')
     parser.add_argument('-est_type', help='xx_xx')
     args = parser.parse_args()
 
@@ -158,14 +185,17 @@ if __name__ == '__main__':
         seq_name = ['SR01', 'SR02', 'SR03', 'SR04', 'SR05']
         platform = 'simu_jackal_mloam'
         seq_main_name = 'sr_main.sh'
+        yaml_name = 'config_simu_jackel.yaml'
     elif args.sequence == 'RHD':
         seq_name = ['RHD02lab', 'RHD03garden', 'RHD04building']
         platform = 'handheld'
         seq_main_name = 'rhd_main.sh'
+        yaml_name = 'config_handheld.yaml'
     elif args.sequence == 'RV':
         seq_name = ['RV01', 'RV02']
         platform = 'real_vehicle/pingshan'
         seq_main_name = 'rv_pingshan_main.sh'
+        yaml_name = 'config_realvehicle_hercules.yaml'
 
     if len(seq_name) < args.end_idx:
         print('exit! end_idx is too large: {} > {}'.format(args.end_idx, len(seq_name)))
@@ -175,37 +205,34 @@ if __name__ == '__main__':
         print('exit! start_idx > end_idx: {} > {}'.format(args.start_idx, args.end_idx))
         sys.exit(0)        
 
-    est_list = args.est_type.split(',')
-    for str in est_list:
-        est_type += str + ' '
-    print('estimate method: {}'.format(est_type))
-    if 'eval' in args.program and est_type == '':
-        print('exit! no est_type')
-        sys.exit(0)
-
     if args.program == 'debug_test':
         debug_test(args.start_idx)
     elif args.program == 'debug_eval':
+        if not args.est_type:
+            print('exit! no est_type')
+            sys.exit(0)
+        est_list = args.est_type.split(',')
+        for str in est_list:
+            est_type += str + ' '
+        print('eval method: {}'.format(est_type))
         debug_eval()
     elif args.program == 'single_test':
         single_test(args.start_idx, args.end_idx)
     elif args.program == 'single_eval':
-        single_eval(args.start_idx, args.end_idx)
+        est_list = args.est_type.split(',')
+        for str in est_list:
+            est_type += str + ' '
+        print('eval method: {}'.format(est_type))
+        single_eval(args.start_idx, args.end_idx)        
     elif args.program == 'mc_test':
         mc_test(args.start_idx, args.end_idx, args.mc_trials)
     elif args.program == 'mc_eval':
+        est_list = args.est_type.split(',')
+        for str in est_list:
+            est_type += str + ' '
+        print('eval method: {}'.format(est_type))
         mc_eval(args.start_idx, args.end_idx, args.mc_trials)
     elif args.program == 'inject_ext_uct_test':
         inject_ext_uct_test(args.start_idx, args.end_idx, args.ext_level)
-
-
-
-
-
-
-
-
-
-
 
 
