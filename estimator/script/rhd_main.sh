@@ -7,7 +7,7 @@ roslaunch mloam mloam_handheld.launch \
     result_save:=true \
     bag_file:=$data_path \
     output_path:=$result_path
-# sleep 10
+sleep 10
 
 # # without uncertainty-aware
 # roslaunch mloam mloam_handheld.launch \
@@ -18,7 +18,7 @@ roslaunch mloam mloam_handheld.launch \
 #    output_path:=$result_path
 # sleep 10
 
-# # different LiDAR SLAM
+# # # different LiDAR SLAM
 # roslaunch mloam mloam_handheld.launch \
 #     run_mloam:=false \
 #     run_aloam:=true \

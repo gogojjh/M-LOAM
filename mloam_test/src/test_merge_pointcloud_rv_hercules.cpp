@@ -48,6 +48,8 @@ size_t DELTA_IDX;
 
 std::vector<Eigen::Matrix4d> TBL;
 
+size_t NUM_OF_LASER;
+
 void pauseCallback(std_msgs::StringConstPtr msg)
 {
     printf("%s\n", msg->data.c_str());
@@ -99,6 +101,7 @@ void process(const sensor_msgs::PointCloud2ConstPtr& pc2_top,
         cloud_fused += cloud;
         // std::cout << cloud_fused.size() << std::endl;
     }
+    if (NUM_OF_LASER >= 2) 
     {
         pcl::fromROSMsg(*pc2_front, cloud);
         pcl::transformPointCloud(cloud, cloud, TBL[1].cast<float>());
@@ -106,6 +109,7 @@ void process(const sensor_msgs::PointCloud2ConstPtr& pc2_top,
         cloud_fused += cloud;
         // std::cout << cloud_fused.size() << std::endl;
     }
+    if (NUM_OF_LASER >= 3) 
     {
         pcl::fromROSMsg(*pc2_left, cloud);
         pcl::transformPointCloud(cloud, cloud, TBL[2].cast<float>());
@@ -113,6 +117,7 @@ void process(const sensor_msgs::PointCloud2ConstPtr& pc2_top,
         cloud_fused += cloud;
         // std::cout << cloud_fused.size() << std::endl;
     }
+    if (NUM_OF_LASER >= 4) 
     {
         pcl::fromROSMsg(*pc2_right, cloud);
         pcl::transformPointCloud(cloud, cloud, TBL[3].cast<float>());
@@ -142,7 +147,11 @@ void readParameters(std::string config_file)
         std::cerr << "ERROR: Wrong path to settings" << std::endl;
     }
 
-    size_t NUM_OF_LASER = 4;
+    int num_of_laser = fsSettings["num_of_laser"];
+    assert(num_of_laser >= 0);
+    NUM_OF_LASER = (size_t)num_of_laser;
+    printf("laser number %lu\n", NUM_OF_LASER);
+
     TBL.resize(NUM_OF_LASER);
     cv::Mat cv_T;
     fsSettings["body_T_laser"] >> cv_T;
@@ -251,33 +260,28 @@ int main(int argc, char** argv)
                 pcl::PointCloud<pcl::PointXYZI> cloud_fused;
                 {
                     pcl::PointCloud<pcl::PointXYZI> cloud;
-                    std::vector<double> calib{0, 0, 0, 1, 0, 0, 0};
-                    Eigen::Matrix4d trans = getTransformMatrix(calib);
-                    pcl::transformPointCloud(laser_cloud_list[0], cloud, trans.cast<float>());
+                    pcl::transformPointCloud(laser_cloud_list[0], cloud, TBL[0].cast<float>());
                     for (auto &p : cloud.points) p.intensity = 0;
                     cloud_fused += cloud;
                 }
+                if (NUM_OF_LASER >= 2) 
                 {
                     pcl::PointCloud<pcl::PointXYZI> cloud;
-                    std::vector<double> calib{-0.0169, 0.0575, 0.0195, 0.998, 0.5355, 0.0393, -1.131};
-                    Eigen::Matrix4d trans = getTransformMatrix(calib);
-                    pcl::transformPointCloud(laser_cloud_list[1], cloud, trans.cast<float>());
+                    pcl::transformPointCloud(laser_cloud_list[1], cloud, TBL[1].cast<float>());
                     for (auto &p : cloud.points) p.intensity = 1;
                     cloud_fused += cloud;
                 }
+                if (NUM_OF_LASER >= 3) 
                 {
                     pcl::PointCloud<pcl::PointXYZI> cloud;
-                    std::vector<double> calib{-0.1118, 0.1894, 0.6845, 0.6951, 0.5116, 0.6440, -0.904};
-                    Eigen::Matrix4d trans = getTransformMatrix(calib);
-                    pcl::transformPointCloud(laser_cloud_list[2], cloud, trans.cast<float>());
+                    pcl::transformPointCloud(laser_cloud_list[2], cloud, TBL[2].cast<float>());
                     for (auto &p : cloud.points) p.intensity = 2;
                     cloud_fused += cloud;
                 }
+                if (NUM_OF_LASER >= 4)
                 {
                     pcl::PointCloud<pcl::PointXYZI> cloud;
-                    std::vector<double> calib{0.0745, 0.1312, -0.7449, 0.6496, 0.4406, -0.628, -1.0295};
-                    Eigen::Matrix4d trans = getTransformMatrix(calib);
-                    pcl::transformPointCloud(laser_cloud_list[3], cloud, trans.cast<float>());
+                    pcl::transformPointCloud(laser_cloud_list[3], cloud, TBL[3].cast<float>());
                     for (auto &p : cloud.points) p.intensity = 3;
                     cloud_fused += cloud;
                 }

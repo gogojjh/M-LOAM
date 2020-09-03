@@ -159,5 +159,4 @@ uct_measurement: !!opencv-matrix
 
 uct_ext_ratio: 0.1 # small: 0.1, medium: 1, large: 10
 
-trace_threshold_mapping: 10 
-
+trace_threshold_mapping: 5 

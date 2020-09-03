@@ -19,6 +19,7 @@ def debug_test(start_idx):
     idx = start_idx
     print('testing sequence: {}'.format(seq_name[idx]))
     os.environ['data_path'] = '{}/lidar_calibration/mloam_dataset/SR_monte_carlo/group_1/{}.bag'.format(os.environ['DATA_PATH'], seq_name[idx])
+    # os.environ['data_path'] = '{}/lidar_calibration/mloam_dataset/{}.bag'.format(os.environ['DATA_PATH'], seq_name[idx])
     os.environ['rpg_path'] = '{}/src/localization/rpg_trajectory_evaluation'.format(os.environ['CATKIN_WS'])
     os.environ['result_path'] = '{}/results/{}/debug/'.format(os.environ['rpg_path'], platform)
     command = 'mkdir -p $result_path/gf_pcd $result_path/traj $result_path/time \
@@ -167,7 +168,9 @@ def inject_ext_uct_test(start_idx, end_idx, ext_level):
         command = 'cp /tmp/mloam_mapping_surf_cloud_wo_ua.pcd {}/mloam_mapping_wo_ua_{}.pcd'.format(os.environ['result_path'], ext_level)
         os.system(command)
         command = 'cp /tmp/aloam_mapping.pcd {}/aloam_mapping_{}.pcd'.format(os.environ['result_path'], ext_level)
-        os.system(command)                        
+        os.system(command)                           
+        command = 'cp /tmp/legoloam_map_surf_cloud.pcd {}/legoloam_mapping_{}.pcd'.format(os.environ['result_path'], ext_level)
+        os.system(command)                                
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='run mloam sr test')

@@ -85,7 +85,7 @@
     <group unless="$(arg run_mloam)">
         <node pkg="mloam_test" type="test_merge_pointcloud_rv_hercules" name="test_merge_pointcloud_rv_hercules" 
             args="$(arg data_source) $(arg data_path) $(arg delta_idx) 
-                  $(arg start_idx) $(arg end_idx) $(arg config_file)" required="true"/>
+                  $(arg start_idx) $(arg end_idx) $(arg config_file)" required="true" output="screen"/>
         <node name="static_tf_world_sensor_into_camera" pkg="tf" type="static_transform_publisher"
             args="0 0 0 0 0 0 1 world camera_init 10"/>            
         <node name="static_tf_world_sensor_into_laser" pkg="tf" type="static_transform_publisher"

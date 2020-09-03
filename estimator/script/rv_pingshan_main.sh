@@ -10,7 +10,7 @@ roslaunch mloam mloam_realvehicle_hercules.launch \
     bag_file:=$data_path \
     data_source:=$data_source \
     output_path:=$result_path
-# sleep 5
+sleep 5
 
 # without uncertainty-aware
 roslaunch mloam mloam_realvehicle_hercules.launch \
