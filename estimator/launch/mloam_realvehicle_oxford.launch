@@ -6,7 +6,7 @@
     <param name="use_sim_time" value="true" />
     <group if="$(arg bag_file_use)">
         <node pkg="rosbag" type="play" name="rosbag" 
-            args="--clock -r 1 $(arg bag_file)" required="true"/>    
+            args="--clock -r 0.5 $(arg bag_file)" required="true"/>    
     </group>    
 
     <include file="$(find rviz_car_model)/launch/default.launch" />
@@ -73,7 +73,8 @@
     <!-- -->
     <!-- merge cloud -->
     <group unless="$(arg run_mloam)">
-        <node pkg="mloam_test" type="test_merge_pointcloud_oxford" name="test_merge_pointcloud_oxford"/>      
+        <node pkg="mloam_test" type="test_merge_pointcloud_oxford" 
+            args="$(arg config_file)" name="test_merge_pointcloud_oxford" output="screen"/>
         <node name="static_tf_world_sensor_into_camera" pkg="tf" type="static_transform_publisher"
             args="0 0 0 0 0 0 1 world camera_init 10"/>            
     </group>
@@ -81,22 +82,28 @@
     <!-- run aloam  -->
     <group if="$(arg run_aloam)">
         <include file="$(find aloam_velodyne)/launch/aloam_exp.launch">
-            <arg name="output_path" default="$(arg output_path)"/>
+            <arg name="output_path" value="$(arg output_path)"/>
+            <arg name="skip_frame" value="2" />
+            <arg name="s_line" value="32" />
+            <arg name="mapping_line_res" value="0.2" />
+            <arg name="mapping_plane_res" value="0.4" />
         </include>       
    </group>        
 
     <!-- run floam  -->
     <group if="$(arg run_floam)">
         <include file="$(find floam)/launch/floam_exp.launch">
-            <arg name="output_path" default="$(arg output_path)"/>
+            <arg name="output_path" value="$(arg output_path)"/>
+            <arg name="s_line" value="32" />
+            <arg name="map_res" value="0.4" />
         </include>       
    </group>        
 
     <!-- run legoloam  -->
     <group if="$(arg run_legoloam)">
         <include file="$(find lego_loam)/launch/legoloam_exp.launch">
-            <arg name="output_path" default="$(arg output_path)"/>
+            <arg name="output_path" value="$(arg output_path)"/>
         </include>
-    </group>  
+    </group>           
 
  </launch>

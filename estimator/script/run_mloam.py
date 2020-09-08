@@ -18,8 +18,8 @@ yaml_name = ''
 def debug_test(start_idx):
     idx = start_idx
     print('testing sequence: {}'.format(seq_name[idx]))
-    os.environ['data_path'] = '{}/lidar_calibration/mloam_dataset/SR_monte_carlo/group_1/{}.bag'.format(os.environ['DATA_PATH'], seq_name[idx])
-    # os.environ['data_path'] = '{}/lidar_calibration/mloam_dataset/{}.bag'.format(os.environ['DATA_PATH'], seq_name[idx])
+    # os.environ['data_path'] = '{}/lidar_calibration/mloam_dataset/SR_monte_carlo/group_1/{}.bag'.format(os.environ['DATA_PATH'], seq_name[idx])
+    os.environ['data_path'] = '{}/lidar_calibration/mloam_dataset/{}.bag'.format(os.environ['DATA_PATH'], seq_name[idx])
     os.environ['rpg_path'] = '{}/src/localization/rpg_trajectory_evaluation'.format(os.environ['CATKIN_WS'])
     os.environ['result_path'] = '{}/results/{}/debug/'.format(os.environ['rpg_path'], platform)
     command = 'mkdir -p $result_path/gf_pcd $result_path/traj $result_path/time \
@@ -143,7 +143,7 @@ def inject_ext_uct_test(start_idx, end_idx, ext_level):
         os.system(command)
         command = 'bash {}'.format(seq_main_name)
         os.system(command)
-        command = 'mv $result_path/traj/stamped_groundtruth.txt $result_path/traj/stamped_groundtruth_{}.txt'.format(ext_level)
+        command = 'cp $result_path/traj/stamped_groundtruth.txt $result_path/traj/stamped_groundtruth_{}.txt'.format(ext_level)
         os.system(command)
         command = 'mv $result_path/traj/stamped_mloam_odom_estimate_1.000000.txt $result_path/traj/stamped_mloam_odom_estimate_1.000000_{}.txt'.format(ext_level)
         os.system(command)
@@ -180,7 +180,7 @@ if __name__ == '__main__':
     parser.add_argument('-start_idx', type=int, help='idx')
     parser.add_argument('-end_idx', type=int, help='idx')
     parser.add_argument('-mc_trials', type=int, help='mc_trials=n')
-    parser.add_argument('-ext_level', help='ref, cad, ini, inj')
+    parser.add_argument('-ext_level', help='gt, ref, cad, ini, inj')
     parser.add_argument('-est_type', help='xx_xx')
     args = parser.parse_args()
 
@@ -195,10 +195,10 @@ if __name__ == '__main__':
         seq_main_name = 'rhd_main.sh'
         yaml_name = 'config_handheld.yaml'
     elif args.sequence == 'RV':
-        seq_name = ['RV01', 'RV02']
+        seq_name = ['RV01', 'RV02', 'RV01_filter']
         platform = 'real_vehicle/pingshan'
         seq_main_name = 'rv_pingshan_main.sh'
-        yaml_name = 'config_realvehicle_hercules.yaml'
+        yaml_name = 'config_realvehicle_hercules.yaml'  
 
     if len(seq_name) < args.end_idx:
         print('exit! end_idx is too large: {} > {}'.format(args.end_idx, len(seq_name)))

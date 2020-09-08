@@ -77,20 +77,15 @@ void process(const sensor_msgs::PointCloud2ConstPtr& pc2_left,
     pcl::PointCloud<pcl::PointXYZI> cloud_left, cloud_right, cloud_fused;
     std_msgs::Header header = pc2_left->header;
     {
-        std::vector<double> calib{0, 0, 0, 1, 0, 0, 0};
         pcl::fromROSMsg(*pc2_left, cloud_left);
-        Eigen::Matrix4d trans = getTransformMatrix(calib);
-        pcl::transformPointCloud(cloud_left, cloud_left, trans.cast<float>());
+        pcl::transformPointCloud(cloud_left, cloud_left, TBL[0].cast<float>());
         for (auto &p : cloud_left.points) p.intensity = 0;
         cloud_fused += cloud_left;
         // std::cout << cloud_fused.size() << std::endl;
     }
     {
-        // std::vector<double> calib{0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220};
-        std::vector<double> calib{0.33080, -0.00059, -0.00046, 0.94370, 0.00451, -0.48755, -0.21286};
         pcl::fromROSMsg(*pc2_right, cloud_right);
-        Eigen::Matrix4d trans = getTransformMatrix(calib);
-        pcl::transformPointCloud(cloud_right, cloud_right, trans.cast<float>());
+        pcl::transformPointCloud(cloud_right, cloud_right, TBL[1].cast<float>());
         for (auto &p : cloud_right.points) p.intensity = 1;
         cloud_fused += cloud_right;
         // std::cout << cloud_fused.size() << std::endl;

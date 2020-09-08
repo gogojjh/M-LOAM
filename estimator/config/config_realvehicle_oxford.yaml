@@ -9,12 +9,12 @@ horizon_scan: 1800
 min_cluster_size: 30
 segment_valid_point_num: 5
 segment_valid_line_num: 3
-segment_theta: 1.047 # Lego-loam: 1.047
+segment_theta: 1.0 # Lego-loam: 1.047
 
 # laser parameters
 idx_ref: 0
 n_scans: 32
-num_of_laser: 2
+num_of_laser: 1
 
 cloud_topic:
    - "/left/velodyne_points"
@@ -95,7 +95,7 @@ n_calib: 30
 # good feature
 odom_gf_ratio: 1.0
 
-skip_num_odom_pub: 4
+skip_num_odom_pub: 2
 
 ######################################################## mapping
 map_corner_res: 0.2
@@ -115,7 +115,8 @@ uct_ext: !!opencv-matrix
    cols: 6
    dt: d
    data: [0, 0, 0, 0, 0, 0,
-          0.0025, 0.0025, 0.0025, 0.0025, 0.0025, 0.0025]
+         #  0.0025, 0.0025, 0.0025, 0.0025, 0.0025, 0.0025]
+          0.0025, 0.0025, 0.0025, 0.00030461, 0.00030461, 0.00030461]
          #  0, 0, 0, 0, 0, 0]
 
 uct_measurement: !!opencv-matrix
@@ -124,5 +125,7 @@ uct_measurement: !!opencv-matrix
    dt: d
    data: [0.0025, 0.0025, 0.0025]
 
-uct_ext_ratio: 0
-trace_threshold_mapping: 20
+uct_ext_ratio: 0.05 # small: 0.1, medium: 1, large: 10
+
+trace_threshold_mapping: 100 # small: 10, large: 5, long distance: 100
+

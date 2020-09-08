@@ -24,6 +24,8 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/ros/conversions.h>
 
+#include <opencv2/opencv.hpp>
+
 #include <iostream>
 
 using namespace std;
@@ -36,6 +38,8 @@ ros::Publisher cloud_fused_pub;
 nav_msgs::Path laser_gt_path;
 ros::Publisher pub_laser_gt_path;
 Pose pose_world_ref_ini;
+
+std::vector<Eigen::Matrix4d> TBL;
 
 Eigen::Matrix4d getTransformMatrix(const std::vector<double>& calib)
 {
@@ -107,38 +111,71 @@ void gtCallback(const nav_msgs::OdometryConstPtr &gt_odom_msg)
     pub_laser_gt_path.publish(laser_gt_path);
 }
 
-void process(const sensor_msgs::PointCloud2ConstPtr& pc2_left,
-             const sensor_msgs::PointCloud2ConstPtr& pc2_right)
+void process(const sensor_msgs::PointCloud2ConstPtr &pc2_left,
+             const sensor_msgs::PointCloud2ConstPtr &pc2_right)
 {
-    pcl::PointCloud<pcl::PointXYZI> cloud, cloud_fused;
+    pcl::PointCloud<pcl::PointXYZI> cloud_left, cloud_right, cloud_fused;
     std_msgs::Header header = pc2_left->header;
     {
-        std::vector<double> calib{0, 0, 0, 1, 0, 0, 0};
-        pcl::fromROSMsg(*pc2_left, cloud);
-        Eigen::Matrix4d trans = getTransformMatrix(calib);
-        pcl::transformPointCloud(cloud, cloud, trans.cast<float>());
-        for (auto &p : cloud.points) p.intensity = 0;
-        cloud_fused += cloud;
+        pcl::fromROSMsg(*pc2_left, cloud_left);
+        pcl::transformPointCloud(cloud_left, cloud_left, TBL[0].cast<float>());
+        for (auto &p : cloud_left.points)
+            p.intensity = 0;
+        cloud_fused += cloud_left;
         // std::cout << cloud_fused.size() << std::endl;
     }
     {
-        std::vector<double> calib{-0.004008, 0.000008, 0.00099912, 0.9999, -0.0036645, -0.89756, 0.006857};
-        pcl::fromROSMsg(*pc2_right, cloud);
-        Eigen::Matrix4d trans = getTransformMatrix(calib);
-        pcl::transformPointCloud(cloud, cloud, trans.cast<float>());
-        for (auto &p : cloud.points) p.intensity = 1;
-        cloud_fused += cloud;
+        pcl::fromROSMsg(*pc2_right, cloud_right);
+        pcl::transformPointCloud(cloud_right, cloud_right, TBL[1].cast<float>());
+        for (auto &p : cloud_right.points)
+            p.intensity = 1;
+        cloud_fused += cloud_right;
         // std::cout << cloud_fused.size() << std::endl;
     }
     common::publishCloud(cloud_fused_pub, header, cloud_fused);
+}
+
+void readParameters(std::string config_file)
+{
+    FILE *fh = fopen(config_file.c_str(), "r");
+    if (fh == NULL)
+    {
+        std::cout << "config_file dosen't exist; wrong config_file path" << std::endl;
+        ROS_BREAK();
+        return;
+    }
+    fclose(fh);
+
+    cv::FileStorage fsSettings(config_file, cv::FileStorage::READ);
+    if (!fsSettings.isOpened())
+    {
+        std::cerr << "ERROR: Wrong path to settings" << std::endl;
+    }
+
+    size_t NUM_OF_LASER = 2;
+    TBL.resize(NUM_OF_LASER);
+    cv::Mat cv_T;
+    fsSettings["body_T_laser"] >> cv_T;
+    for (int i = 0; i < NUM_OF_LASER; i++)
+    {
+        Eigen::Quaterniond q = Eigen::Quaterniond(cv_T.ptr<double>(i)[3], cv_T.ptr<double>(i)[0], cv_T.ptr<double>(i)[1], cv_T.ptr<double>(i)[2]);
+        Eigen::Vector3d t = Eigen::Vector3d(cv_T.ptr<double>(i)[4], cv_T.ptr<double>(i)[5], cv_T.ptr<double>(i)[6]);
+        TBL[i].setIdentity();
+        TBL[i].topLeftCorner<3, 3>() = q.toRotationMatrix();
+        TBL[i].topRightCorner<3, 1>() = t;
+        std::cout << q.coeffs().transpose() << ", " << t.transpose() << std::endl;
+        std::cout << TBL[i] << std::endl;
+    }
 }
 
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "test_merge_pointcloud");
     ros::NodeHandle nh("~");
-    cloud_fused_pub = nh.advertise<LidarMsgType>("/fused/velodyne_points", 5);
 
+    readParameters(std::string(argv[1]));
+
+    cloud_fused_pub = nh.advertise<LidarMsgType>("/fused/velodyne_points", 5);
     LidarSubType *sub_left = new LidarSubType(nh, "/left/velodyne_points", 1);
     LidarSubType *sub_right = new LidarSubType(nh, "/right/velodyne_points", 1);
     message_filters::Synchronizer<LidarSyncPolicy> *lidar_synchronizer =
