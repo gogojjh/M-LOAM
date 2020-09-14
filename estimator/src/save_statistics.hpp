@@ -89,13 +89,18 @@ void SaveStatistics::saveOdomStatistics(const string &calib_eig_filename,
         fout.open(calib_result_filename.c_str(), ios::out);
         for (size_t i = 0; i < estimator.log_extrinsics_.size(); i++)
         {
-            fout << estimator.log_extrinsics_[i].t_(0) << ", "
-                 << estimator.log_extrinsics_[i].t_(1) << ", "
-                 << estimator.log_extrinsics_[i].t_(2) << ", "
-                 << estimator.log_extrinsics_[i].q_.x() << ", "
+            fout << estimator.log_extrinsics_[i].q_.x() << ", "
                  << estimator.log_extrinsics_[i].q_.y() << ", "
                  << estimator.log_extrinsics_[i].q_.z() << ", "
-                 << estimator.log_extrinsics_[i].q_.w() << std::endl;
+                 << estimator.log_extrinsics_[i].q_.w() << ", "
+                 << estimator.log_extrinsics_[i].t_(0) << ", "
+                 << estimator.log_extrinsics_[i].t_(1) << ", "
+                 << estimator.log_extrinsics_[i].t_(2) << std::endl;
+        }
+        for (size_t i = 0; i < estimator.covbl_.size(); i++)
+        {
+            fout << "extrinsic covariance for the " << i << " LiDAR: " << std::endl
+                 << estimator.covbl_[i] << std::endl << std::endl;
         }
         fout.close();
     }

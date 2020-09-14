@@ -146,24 +146,31 @@ void computeMeanPose(const std::vector<std::pair<double, Pose> > &pose_array,
         return;
     }
 
-    double weight_total = 0;
-    Eigen::Matrix<double, 6, 1> xi_total = Eigen::Matrix<double, 6, 1>::Zero();
-    for (auto iter = pose_array.begin(); iter != pose_array.end(); iter ++)
+    const std::vector<std::pair<double, Pose>> pose_array_filter(
+        pose_array.begin() + size_t(pose_array.size() / 3), pose_array.end());
+
+    // double weight_total = 0;
+    // Eigen::Matrix<double, 6, 1> xi_total = Eigen::Matrix<double, 6, 1>::Zero();
+    // Eigen::Matrix<double, 6, 1> xi_mean = xi_total / weight_total;
+    Eigen::Matrix<double, 6, 1> xi_mean = Eigen::Matrix<double, 6, 1>::Zero();
+    for (auto iter = pose_array_filter.begin(); iter != pose_array_filter.end(); iter ++)
     {
-        weight_total += iter->first;
-        xi_total += iter->first * iter->second.se3();
-        std::cout << iter->first << ", " << iter->second << std::endl;
-        LOG(INFO) << iter->first << ", " << iter->second;
+        // weight_total += iter->first;
+        // xi_total += iter->first * iter->second.se3();
+        // std::cout << iter->first << ", " << iter->second << std::endl;
+        // LOG(INFO) << iter->first << ", " << iter->second;
+        std::cout << iter->second << std::endl;
+        LOG(INFO) << iter->second;
+        xi_mean += iter->second.se3() / pose_array_filter.size();
     }
-    Eigen::Matrix<double, 6, 1> xi_mean = xi_total / weight_total;
     pose_mean = Pose(Sophus::SE3d::exp(xi_mean).matrix());
 
-    for (auto iter = pose_array.begin(); iter != pose_array.end(); iter++)
+    for (auto iter = pose_array_filter.begin(); iter != pose_array_filter.end(); iter++)
     {
         Eigen::Matrix<double, 6, 1> xi = iter->second.se3();
-        pose_cov += iter->first * iter->first * (xi - xi_mean) * (xi - xi_mean).transpose();
+        // pose_cov += iter->first * iter->first * (xi - xi_mean) * (xi - xi_mean).transpose();
+        pose_cov += (pose_array_filter.size() - 1) * (xi - xi_mean) * (xi - xi_mean).transpose();
     }
-    pose_cov /= (pose_array.size() - 1);
 
     std::cout << "calib mean: " << pose_mean << std::endl;
     std::cout << "calib cov: " << std::endl << pose_cov << std::endl;
