@@ -114,34 +114,34 @@ void saveStatistics()
         }
         fout.close();
 
-        if (UNCER_AWARE_ON)
-        {
-            fout.open(std::string(OUTPUT_FOLDER + "mapping_factor.txt").c_str(), std::ios::out);
-            fout.precision(8);
-            for (size_t i = 0; i < d_factor_list.size(); i++)
-                fout << d_factor_list[i] << std::endl;
-            fout.close();
+        // if (UNCER_AWARE_ON)
+        // {
+        //     fout.open(std::string(OUTPUT_FOLDER + "mapping_factor.txt").c_str(), std::ios::out);
+        //     fout.precision(8);
+        //     for (size_t i = 0; i < d_factor_list.size(); i++)
+        //         fout << d_factor_list[i] << std::endl;
+        //     fout.close();
 
-            fout.open(std::string(OUTPUT_FOLDER + "mapping_d_eigvec.txt").c_str(), std::ios::out);
-            fout.precision(8);
-            for (size_t i = 0; i < d_eigvec_list.size(); i++)
-                fout << d_eigvec_list[i] << std::endl;
-            fout.close();
-        }
+        //     fout.open(std::string(OUTPUT_FOLDER + "mapping_d_eigvec.txt").c_str(), std::ios::out);
+        //     fout.precision(8);
+        //     for (size_t i = 0; i < d_eigvec_list.size(); i++)
+        //         fout << d_eigvec_list[i] << std::endl;
+        //     fout.close();
+        // }
 
-        fout.open(std::string(OUTPUT_FOLDER + "mapping_pose_uncertainty.txt").c_str(), std::ios::out);
-        fout << "cov_mapping_uncertainty" << std::endl;
-        fout.precision(8);
-        for (size_t i = 0; i < cov_mapping_list.size(); i++)
-            fout << cov_mapping_list[i] << std::endl;
-        fout.close();
+        // fout.open(std::string(OUTPUT_FOLDER + "mapping_pose_uncertainty.txt").c_str(), std::ios::out);
+        // fout << "cov_mapping_uncertainty" << std::endl;
+        // fout.precision(8);
+        // for (size_t i = 0; i < cov_mapping_list.size(); i++)
+        //     fout << cov_mapping_list[i] << std::endl;
+        // fout.close();
 
-        fout.open(std::string(OUTPUT_FOLDER + "time_mapping.txt").c_str(), std::ios::out);
-        fout.precision(15);
-        fout << "frame, total_mapping_time" << std::endl;
-        fout << frame_cnt << ", " << total_mapping << std::endl;
-        fout.close();
-        ROS_WARN("Frame: %d, mean mapping time: %fms", frame_cnt, total_mapping / frame_cnt);
+        // fout.open(std::string(OUTPUT_FOLDER + "time_mapping.txt").c_str(), std::ios::out);
+        // fout.precision(15);
+        // fout << "frame, total_mapping_time" << std::endl;
+        // fout << frame_cnt << ", " << total_mapping << std::endl;
+        // fout.close();
+        // ROS_WARN("Frame: %d, mean mapping time: %fms", frame_cnt, total_mapping / frame_cnt);
     }
 
     printf("Saving laser_map cloud to /tmp/mloam_mapping_cloud.pcd\n");
@@ -150,7 +150,7 @@ void saveStatistics()
     {
         laser_cloud_map += *laser_cloud_surf_array_cov[i];
     }
-    pcl::io::savePCDFileASCII("/tmp/mloam_mapping_cloud.pcd", laser_cloud_map);
+    pcl::io::savePCDFileASCII("/tmp/mloam_mapping_surf_cloud_wo_ua.pcd", laser_cloud_map);
 }
 
 int toCubeIndex(const int &i, const int &j, const int &k)
@@ -557,7 +557,7 @@ void process()
                     options.linear_solver_type = ceres::DENSE_SCHUR;
                     options.max_num_iterations = 30;
                     options.max_solver_time_in_seconds = 0.07;
-                    options.num_threads = 4;
+                    // options.num_threads = 4;
                     options.minimizer_progress_to_stdout = false;
                     options.check_gradients = false;
                     options.gradient_check_relative_precision = 1e-4;
@@ -917,9 +917,9 @@ int main(int argc, char **argv)
     UNCER_AWARE_ON = std::stoi(argv[4]);
     printf("uncertainty propagation on (0/1): %d\n", UNCER_AWARE_ON);
     if (UNCER_AWARE_ON)
-        MLOAM_MAP_PATH = OUTPUT_FOLDER + "stamped_mloam_map_estimate_wo_gf_1.000000_huber_0.txt";
+        MLOAM_MAP_PATH = OUTPUT_FOLDER + "traj/stamped_mloam_map_estimate_wo_gf_1.000000_huber_0.txt";
     else
-        MLOAM_MAP_PATH = OUTPUT_FOLDER + "stamped_mloam_map_wo_ua_estimate_wo_gf_1.000000_huber_0.txt";
+        MLOAM_MAP_PATH = OUTPUT_FOLDER + "traj/stamped_mloam_map_wo_ua_estimate_wo_gf_1.000000_huber_0.txt";
     // if (MLOAM_RESULT_SAVE)
     // {
     // 	std::cout << "output path: " << OUTPUT_FOLDER << std::endl;

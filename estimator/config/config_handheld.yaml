@@ -22,8 +22,8 @@ cloud_topic:
    - "/right/velodyne_points"
 
 # window sizes
-window_size: 6
-opt_window_size: 3
+window_size: 4
+opt_window_size: 2
 
 ############################## For normal use
 # # Extrinsic parameter between multiple LiDARs.
@@ -70,7 +70,7 @@ opt_window_size: 3
 # 2
 # parameters for testing the SLAM
 # The extrinsics here are for different-level extrinsics
-estimate_extrinsic: 0 
+estimate_extrinsic: 0
 body_T_laser: !!opencv-matrix
    rows: 2
    cols: 7
@@ -81,10 +81,10 @@ body_T_laser: !!opencv-matrix
    #         0.41025, 0.10569, 0.058295, 0.90395, 0.133, -0.440, -0.042] # inject noise
    # data: [0, 0, 0, 1, 0, 0, 0,
    #        0.3113, -0.0103, -0.03334, 0.94956, 0.1130, -0.47195, -0.10341] # initialization 
-   data: [0, 0, 0, 1, 0, 0, 0,
-          0.34202, 0, 0, 0.93969, 0, -0.456, -0.122] # CAD model
    # data: [0, 0, 0, 1, 0, 0, 0,
-   #        0.32182, -0.00094, 0.00744, 0.94677, 0.06641, -0.49424, -0.11251] # refinement
+   #        0.34202, 0, 0, 0.93969, 0, -0.456, -0.122] # CAD model
+   data: [0, 0, 0, 1, 0, 0, 0,
+          0.32182, -0.00094, 0.00744, 0.94677, 0.06641, -0.49424, -0.11251] # refinement
    # data: [0, 0, 0, 1, 0, 0, 0,
    #        0.34087, -0.0101817, 0.0147921, 0.945613, 0.0334837, -0.540249, -0.141798] # PS-Calib
 ##############################
@@ -134,7 +134,7 @@ pcl_viewer_normal_ratio: 10
 n_cumu_feature: 20
 lambda_initial: 100
 lambda_thre_calib: 70
-n_calib: 15
+n_calib: 25
 
 # good feature
 odom_gf_ratio: 1.0
@@ -153,9 +153,10 @@ uct_ext: !!opencv-matrix
    cols: 6
    dt: d
    data: [0, 0, 0, 0, 0, 0,
-          0.0025, 0.0025, 0.0025, 0.00030461, 0.00030461, 0.00030461] # small and medium
-         #  0.0025, 0.0025, 0.0025, 0.00273, 0.00273, 0.00273]
+          0.00270, 0.00330, 0.00624, 0.00018, 0.00005, 0.00014] # after calibration 
+         #  0.0025, 0.0025, 0.0025, 0.00030461, 0.00030461, 0.00030461] # manual setting for large perturbation
          #  0.0025, 0.0025, 0.0025, 0.01, 0.01, 0.01] # variance: 0.05m, 5deg # large
+
 
 uct_measurement: !!opencv-matrix
    rows: 1
@@ -163,7 +164,7 @@ uct_measurement: !!opencv-matrix
    dt: d
    data: [0.0025, 0.0025, 0.0025]
 
-uct_ext_ratio: 0.05 # small or other RHD: 0.1, little: 0.5, medium: 1, large: 15
+uct_ext_ratio: 1.0 # small or other RHD: 0.1, little: 0.5, medium: 1, large: 15
 
 # RHD02: 10, RHD03: 10, RHD04: 10
 trace_threshold_mapping: 10 # min_d: 20

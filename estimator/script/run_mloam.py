@@ -14,6 +14,21 @@ seq_main_name = ''
 est_type = ''
 yaml_name = ''
 
+# python2 run_mloam.py -sequence=SR -program=calib_test -start_idx=0 
+def calib_test(start_idx, end_idx):
+    for idx in range(start_idx, end_idx + 1):
+        print('testing sequence: {}'.format(seq_name[idx]))
+        os.environ['data_path'] = '{}/lidar_calibration/mloam_dataset/{}.bag'.format(os.environ['DATA_PATH'], seq_name[idx])
+        os.environ['rpg_path'] = '{}/src/localization/rpg_trajectory_evaluation'.format(os.environ['CATKIN_WS'])
+        os.environ['result_path'] = '{}/results/{}/calib_{}/'.format(os.environ['rpg_path'], platform, seq_name[idx])
+        command = 'mkdir -p $result_path/gf_pcd $result_path/traj $result_path/time \
+                            $result_path/pose_graph $result_path/others $result_path/gf_pcd'
+        os.system(command)
+        command = 'bash {}'.format(seq_main_name)
+        os.system(command)
+        command = 'cp ~/catkin_ws/src/localization/M-LOAM/estimator/config/{} {}'.format(yaml_name, os.environ['result_path'])
+        os.system(command)
+
 # python2 run_mloam.py -sequence=SR -program=debug_test -start_idx=0 
 def debug_test(start_idx):
     idx = start_idx
@@ -45,6 +60,7 @@ def debug_eval():
 def single_test(start_idx, end_idx):
     for idx in range(start_idx, end_idx + 1):
         print('testing sequence: {}'.format(seq_name[idx]))
+        # os.environ['data_path'] = '{}/lidar_calibration/mloam_dataset/SR_monte_carlo/group_1/{}.bag'.format(os.environ['DATA_PATH'], seq_name[idx])
         os.environ['data_path'] = '{}/lidar_calibration/mloam_dataset/{}.bag'.format(os.environ['DATA_PATH'], seq_name[idx])
         os.environ['rpg_path'] = '{}/src/localization/rpg_trajectory_evaluation'.format(os.environ['CATKIN_WS'])
         os.environ['result_path'] = '{}/results/{}/{}/'.format(os.environ['rpg_path'], platform, seq_name[idx])
@@ -87,8 +103,8 @@ def mc_test(start_idx, end_idx, mc_trials):
         os.system(command)
         for trial in range(0, mc_trials):
             print('mc_trial {}'.format(trial))
-            os.environ['data_path'] = '{}/lidar_calibration/mloam_dataset/SR_monte_carlo/group_{}/{}.bag'.format(os.environ['DATA_PATH'], trial, seq_name[idx])
-            # os.environ['data_path'] = '{}/lidar_calibration/mloam_dataset/{}.bag'.format(os.environ['DATA_PATH'], seq_name[idx])
+            # os.environ['data_path'] = '{}/lidar_calibration/mloam_dataset/SR_monte_carlo/group_{}/{}.bag'.format(os.environ['DATA_PATH'], trial, seq_name[idx])
+            os.environ['data_path'] = '{}/lidar_calibration/mloam_dataset/{}.bag'.format(os.environ['DATA_PATH'], seq_name[idx])
             command = 'bash {}'.format(seq_main_name)
             os.system(command)        
             command = 'mv $result_path/traj/stamped_groundtruth.txt $result_path/traj/stamped_groundtruth{}.txt'.format(trial)
@@ -105,6 +121,10 @@ def mc_test(start_idx, end_idx, mc_trials):
             os.system(command)
             command = 'mv $result_path/traj/stamped_floam_map_estimate.txt $result_path/traj/stamped_floam_map_estimate{}.txt'.format(trial)
             os.system(command)
+            command = 'mv $result_path/traj/stamped_legoloam_odom_estimate.txt $result_path/traj/stamped_legoloam_odom_estimate{}.txt'.format(trial)
+            os.system(command)
+            command = 'mv $result_path/traj/stamped_legoloam_map_estimate.txt $result_path/traj/stamped_legoloam_map_estimate{}.txt'.format(trial)
+            os.system(command)                        
 
         command = 'cp $result_path/traj/stamped_groundtruth{}.txt $result_path/traj/stamped_groundtruth.txt'.format(0)
         os.system(command)
@@ -115,7 +135,7 @@ def mc_test(start_idx, end_idx, mc_trials):
         command = 'cp /tmp/mloam_mapping_surf_cloud_wo_ua.pcd {}'.format(os.environ['result_path'])
         os.system(command)
         command = 'cp /tmp/aloam_mapping.pcd {}'.format(os.environ['result_path'])
-        os.system(command)           
+        os.system(command)
 
 # python2 run_mloam.py -sequence=SR -program=mc_eval \
 #   -start_idx=0 -end_idx=4 -mc_trials=10
@@ -190,12 +210,12 @@ if __name__ == '__main__':
         seq_main_name = 'sr_main.sh'
         yaml_name = 'config_simu_jackel.yaml'
     elif args.sequence == 'RHD':
-        seq_name = ['RHD02lab', 'RHD03garden', 'RHD04building']
+        seq_name = ['RHD02lab', 'RHD03garden', 'RHD04building', 'RHD06calib']
         platform = 'handheld'
         seq_main_name = 'rhd_main.sh'
         yaml_name = 'config_handheld.yaml'
     elif args.sequence == 'RV':
-        seq_name = ['RV01', 'RV02', 'RV01_filter']
+        seq_name = ['RV00_calib', 'RV01', 'RV02']
         platform = 'real_vehicle/pingshan'
         seq_main_name = 'rv_pingshan_main.sh'
         yaml_name = 'config_realvehicle_hercules.yaml'  
@@ -206,9 +226,11 @@ if __name__ == '__main__':
 
     if args.start_idx > args.end_idx:
         print('exit! start_idx > end_idx: {} > {}'.format(args.start_idx, args.end_idx))
-        sys.exit(0)        
+        sys.exit(0)      
 
-    if args.program == 'debug_test':
+    if args.program == 'calib_test':
+        calib_test(args.start_idx, args.end_idx)
+    elif args.program == 'debug_test':
         debug_test(args.start_idx)
     elif args.program == 'debug_eval':
         if not args.est_type:

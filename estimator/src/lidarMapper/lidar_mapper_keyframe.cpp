@@ -469,12 +469,12 @@ void scan2MapOptimization()
 
             vector2Double();
 
-            // std::vector<double *> para_ids;
-            // std::vector<ceres::internal::ResidualBlock *> res_ids_proj;
+            std::vector<double *> para_ids;
+            std::vector<ceres::internal::ResidualBlock *> res_ids_proj;
             PoseLocalParameterization *local_parameterization = new PoseLocalParameterization();
             local_parameterization->setParameter();
             problem.AddParameterBlock(para_pose, SIZE_POSE, local_parameterization);
-            // para_ids.push_back(para_pose);
+            para_ids.push_back(para_pose);
 
             // ******************************************************
             // evaluate the full hessian matrix
@@ -585,8 +585,8 @@ void scan2MapOptimization()
             }
             printf("matching features time: %fms\n", gfs_timer.Stop() * 1000);
             
-            if (MLOAM_RESULT_SAVE && frame_cnt == 100)
-                afs.writeFeature(*laser_cloud_surf_cov, sel_surf_feature_idx, all_surf_features);
+            // if (MLOAM_RESULT_SAVE && frame_cnt == 100)
+            //     afs.writeFeature(*laser_cloud_surf_cov, sel_surf_feature_idx, all_surf_features);
             // printf("matching surf & corner num: %lu, %lu\n", surf_num, corner_num);
 
             CHECK_JACOBIAN = 0;
@@ -596,15 +596,12 @@ void scan2MapOptimization()
                 if (feature.type_ == 'n') continue;
                 Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Zero();
                 if (with_ua_flag)
-                { 
                     extractCov(laser_cloud_surf_cov->points[feature.idx_], cov_matrix);
-                    // if (cov_matrix.trace() < TRACE_THRESHOLD_MAPPING / 2.0)
-                    //     cov_matrix = COV_MEASUREMENT;
-                }
                 else 
                     cov_matrix = COV_MEASUREMENT;
                 LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
-                problem.AddResidualBlock(f, loss_function, para_pose);
+                ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
+                res_ids_proj.push_back(res_id);
                 if (CHECK_JACOBIAN)
                 {
                     double **tmp_param = new double *[1];
@@ -621,15 +618,12 @@ void scan2MapOptimization()
                 if (feature.type_ == 'n') continue;
                 Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Zero();
                 if (with_ua_flag)
-                {
                     extractCov(laser_cloud_corner_cov->points[feature.idx_], cov_matrix);
-                    // if (cov_matrix.trace() < TRACE_THRESHOLD_MAPPING / 2.0)
-                    //     cov_matrix = COV_MEASUREMENT;
-                }                    
                 else
                     cov_matrix = COV_MEASUREMENT;
                 LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
-                problem.AddResidualBlock(f, loss_function, para_pose);
+                ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
+                res_ids_proj.push_back(res_id);
             }
             // printf("add constraints: %fms\n", t_add_constraints.toc());
 
@@ -642,8 +636,11 @@ void scan2MapOptimization()
             //                      frame_cnt);
 
             // ******************************************************
+            ceres::Problem::EvaluateOptions e_option;
+            e_option.parameter_blocks = para_ids;
+            e_option.residual_blocks = res_ids_proj;
             ceres::CRSMatrix jaco;
-            problem.Evaluate(ceres::Problem::EvaluateOptions(), nullptr, nullptr, nullptr, &jaco);
+            problem.Evaluate(e_option, nullptr, nullptr, nullptr, &jaco);
             Eigen::Matrix<double, 6, 6> mat_H; // mat_H / 134 = normlized_mat_H
             evalHessian(jaco, mat_H);
             evalDegenracy(mat_H / 134, local_parameterization); // the hessian matrix is already normized to evaluate degeneracy
@@ -683,7 +680,6 @@ void scan2MapOptimization()
             }
             else
             {
-
                 options.max_num_iterations = 30;
                 options.max_solver_time_in_seconds = 0.04;
                 ceres::Solve(options, &problem, &summary);
@@ -694,7 +690,7 @@ void scan2MapOptimization()
             if (iter_cnt == max_iter - 1)
             {
                 common::timing::Timer eval_deg_timer("mapping_eval_deg");
-                problem.Evaluate(ceres::Problem::EvaluateOptions(), nullptr, nullptr, nullptr, &jaco);
+                problem.Evaluate(e_option, nullptr, nullptr, nullptr, &jaco);
                 evalHessian(jaco, mat_H);
                 cov_mapping = (mat_H / 134).inverse();
 

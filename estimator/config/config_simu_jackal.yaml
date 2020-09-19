@@ -26,9 +26,9 @@ window_size: 6
 opt_window_size: 3
 
 # Extrinsic parameter between multiple LiDARs.
-estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
-                        # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
-                        # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
+estimate_extrinsic: 0  # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+                       # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
+                       # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
 
 body_T_laser: !!opencv-matrix
    rows: 2
@@ -39,11 +39,13 @@ body_T_laser: !!opencv-matrix
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
    #        0.3746, 0.06042, -0.01488, 0.9251, -0.02708, -0.7192, 0.0] # initialization
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-   #        0.33080, -0.00059, -0.00046, 0.94370, 0.00451, -0.48755, -0.21286] # estimate_1
+   #        0.33080, -0.00059, -0.00046, 0.94370, 0.00451, -0.48755, -0.21286] # ref_1
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-   #        0.3173, 0.0, 0.0, 0.9483, 0.009, -0.4939, -0.2226] # estimate_2
+   #        0.3173, 0.0, 0.0, 0.9483, 0.009, -0.4939, -0.2226] # ref_2
    data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-          0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220] # gt
+          0.34913, 0.00397, 0.000073, 0.93706, -0.01155, -0.47502, -0.20598] # ref_3
+   # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
+   #        0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220] # gt
 
    # <!-- laser_0 to laser_1 -->
    # <!-- 0.342, 0.0, 0.0, 0.940, 0, -0.477, -0.220 -->
@@ -96,8 +98,8 @@ pcl_viewer_normal_ratio: 10
 # calibration converage parameters
 n_cumu_feature: 20
 lambda_initial: 50
-lambda_thre_calib: 100
-n_calib: 15
+lambda_thre_calib: 70
+n_calib: 25
 
 # good feature
 odom_gf_ratio: 1.0
@@ -117,8 +119,8 @@ uct_ext: !!opencv-matrix
    cols: 6
    dt: d
    data: [0, 0, 0, 0, 0, 0,
-          0.0025, 0.0025, 0.0025, 0.00030461, 0.00030461, 0.00030461]
-         #  0.0025, 0.0025, 0.0025, 0.0027, 0.0027, 0.0027]
+            0.00276, 0.00039, 0.00131, 0.00257, 0.00047, 0.00011] # after calibration
+#           0.0025, 0.0025, 0.0025, 0.00030461, 0.00030461, 0.00030461] # manual set
 
 uct_measurement: !!opencv-matrix
    rows: 1
@@ -127,7 +129,7 @@ uct_measurement: !!opencv-matrix
    data: [0.0025, 0.0025, 0.0025]
    # data: [0.01, 0.01, 0.01]
 
-uct_ext_ratio: 0.025
+uct_ext_ratio: 1.0
 
 trace_threshold_mapping: 10
 
