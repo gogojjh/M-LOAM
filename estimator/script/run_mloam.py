@@ -195,7 +195,7 @@ def inject_ext_uct_test(start_idx, end_idx, ext_level):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='run mloam sr test')
     parser.add_argument('-program', help='debug_test, debug_eval, \
-        single_test, single_eval, mc_test, mc_eval, inject_ext_uct_test')
+        calib_test, single_test, single_eval, mc_test, mc_eval, inject_ext_uct_test')
     parser.add_argument('-sequence', help='SR, RHD, RV')
     parser.add_argument('-start_idx', type=int, help='idx')
     parser.add_argument('-end_idx', type=int, help='idx')
@@ -210,7 +210,7 @@ if __name__ == '__main__':
         seq_main_name = 'sr_main.sh'
         yaml_name = 'config_simu_jackel.yaml'
     elif args.sequence == 'RHD':
-        seq_name = ['RHD02lab', 'RHD03garden', 'RHD04building', 'RHD06calib']
+        seq_name = ['RHD02lab', 'RHD03garden', 'RHD04building', 'RHD06calib_filter']
         platform = 'handheld'
         seq_main_name = 'rhd_main.sh'
         yaml_name = 'config_handheld.yaml'

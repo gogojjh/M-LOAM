@@ -667,12 +667,12 @@ bool FeatureExtract::matchCornerPointFromMap(const typename pcl::KdTreeFLANN<Poi
                 point_on_z_axis.z = 10.0;
                 pointAssociateToMap(point_on_z_axis, point_on_z_axis_trans, pose_local);
                 float squared_side1 = sqrSum(pose_local.t_(0) - point_sel.x,
-                                                pose_local.t_(1) - point_sel.y,
-                                                pose_local.t_(2) - point_sel.z);
+                                             pose_local.t_(1) - point_sel.y,
+                                             pose_local.t_(2) - point_sel.z);
                 float squared_side2 = sqrSum(point_on_z_axis_trans.x - point_sel.x,
-                                                point_on_z_axis_trans.y - point_sel.y,
-                                                point_on_z_axis_trans.z - point_sel.z);
-
+                                             point_on_z_axis_trans.y - point_sel.y,
+                                             point_on_z_axis_trans.z - point_sel.z);
+ 
                 float check1 = 100.0f + squared_side1 - squared_side2 - 10.0f * sqrt(3.0f) * sqrt(squared_side1);
                 float check2 = 100.0f + squared_side1 - squared_side2 + 10.0f * sqrt(3.0f) * sqrt(squared_side1);
                 // within +-60 degree
@@ -683,7 +683,6 @@ bool FeatureExtract::matchCornerPointFromMap(const typename pcl::KdTreeFLANN<Poi
             {
                 is_in_laser_fov = true;
             }
-            // if (s > 0.1 && is_in_laser_fov)
             if (is_in_laser_fov)
             {
                 // Eigen::Vector4d coeff1(w1.x(), w1.y(), w1.z(), ld_p1);
@@ -707,6 +706,7 @@ bool FeatureExtract::matchCornerPointFromMap(const typename pcl::KdTreeFLANN<Poi
                 feature.coeffs_ = coeff1;
                 feature.laser_idx_ = (size_t)point_ori.intensity;
                 feature.type_ = 'c';
+
                 return true;
             }
         }
@@ -793,7 +793,6 @@ bool FeatureExtract::matchSurfPointFromMap(const typename pcl::KdTreeFLANN<Point
             {
                 is_in_laser_fov = true;
             }
-            // if (s > 0.1 && is_in_laser_fov)
             if (is_in_laser_fov)
             {
                 Eigen::Vector4d coeff(norm(0), norm(1), norm(2), negative_OA_dot_norm);

@@ -356,7 +356,7 @@ public:
                                                         all_features[i],
                                                         i,
                                                         n_neigh,
-                                                        false);
+                                                        true);
             } else if (feature_type == 'c')
             {
                 b_match = f_extract.matchCornerPointFromMap(kdtree_from_map,
@@ -366,7 +366,7 @@ public:
                                                             all_features[i],
                                                             i,
                                                             n_neigh,
-                                                            false);
+                                                            true);
             }
             if (!b_match) continue;
             Eigen::Matrix3d cov_matrix;
@@ -425,7 +425,7 @@ public:
                                                               all_features[que_idx],
                                                               que_idx,
                                                               n_neigh,
-                                                              false);
+                                                              true);
                 }
                 else if (feature_type == 'c')
                 {
@@ -436,7 +436,7 @@ public:
                                                                 all_features[que_idx],
                                                                 que_idx,
                                                                 n_neigh,
-                                                                false);
+                                                                true);
                 }
                 if (b_match)
                 {
@@ -467,7 +467,7 @@ public:
                                                             all_features[que_idx],
                                                             que_idx,
                                                             n_neigh,
-                                                            false);
+                                                            true);
                 }
                 else if (feature_type == 'c')
                 {
@@ -478,7 +478,7 @@ public:
                                                                 all_features[que_idx],
                                                                 que_idx,
                                                                 n_neigh,
-                                                                false);
+                                                                true);
                 }
                 if (b_match)
                 {
@@ -501,7 +501,7 @@ public:
                                                         all_features[k],
                                                         k,
                                                         n_neigh,
-                                                        false);
+                                                        true);
             if (b_match)
             {
                 sel_feature_idx[num_sel_features] = k;
@@ -522,8 +522,8 @@ public:
                     if (feature_visited[j] == 1) continue;
                     const PointIWithCov &point_new = laser_cloud.points[j];
                     float d = sqrt(common::sqrSum(point_old.x - point_new.x,
-                                                point_old.y - point_new.y,
-                                                point_old.z - point_new.z));
+                                                  point_old.y - point_new.y,
+                                                  point_old.z - point_new.z));
                     float d2 = std::min(d, dist[j]);
                     dist[j] = d2;
                     best_j = d2 > best_d ? j : best_j;
@@ -543,7 +543,7 @@ public:
                                                             all_features[que_idx],
                                                             que_idx,
                                                             n_neigh,
-                                                            false);
+                                                            true);
                 }
                 else if (feature_type == 'c')
                 {
@@ -554,7 +554,7 @@ public:
                                                                 all_features[que_idx],
                                                                 que_idx,
                                                                 n_neigh,
-                                                                false);
+                                                                true);
                 }
                 if (b_match)
                 {
@@ -612,7 +612,7 @@ public:
                                                                           all_features[que_idx],
                                                                           que_idx,
                                                                           n_neigh,
-                                                                          false);
+                                                                          true);
                             } else if (feature_type == 'c')
                             {
                                 b_match = f_extract.matchCornerPointFromMap(kdtree_from_map,
@@ -622,7 +622,7 @@ public:
                                                                             all_features[que_idx],
                                                                             que_idx,
                                                                             n_neigh,
-                                                                            false);
+                                                                            true);
                             }
                             if (b_match) 
                             {

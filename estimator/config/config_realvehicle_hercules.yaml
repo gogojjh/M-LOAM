@@ -10,12 +10,12 @@ min_cluster_size: 30
 min_line_size: 10
 segment_valid_point_num: 5
 segment_valid_line_num: 3
-segment_theta: 1.0 # Lego-loam: 1.0
+segment_theta: 0.53 # Lego-loam: 1.0
 
 # laser parameters
 idx_ref: 0
 n_scans: 16
-num_of_laser: 2
+num_of_laser: 4
 
 cloud_topic:
    - "/top/rslidar_points"
@@ -28,15 +28,15 @@ window_size: 4
 opt_window_size: 2
 
 # Extrinsic parameter between multiple LiDARs.
-# estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
 
 # qx qy qz qw px py pz
-# body_T_laser: !!opencv-matrix
-#    rows: 4
-#    cols: 7
-#    dt: d
+body_T_laser: !!opencv-matrix
+   rows: 4
+   cols: 7
+   dt: d
    # data: [0, 0, 0, 1, 0, 0, 0, 
    #        0, 0, 0, 1, 0, 0, 0,
    #        0, 0, 0, 1, 0, 0, 0,
@@ -49,10 +49,10 @@ opt_window_size: 2
    #        0, 0.087150, 0, 0.99679, 0.795, 0, -1.364,
    #        -0.061628, 0.061628, 0.70442, 0.70442, 0.503, 0.6185, -1.0912,
    #        0.061628, 0.061628, -0.70442, 0.70442, 0.503, -0.6185, -1.0912] # CAD
-   # data: [0, 0, 0, 1, 0, 0, 0, 
-   #        -0.01897, 0.05630, 0.01960, 0.99804, 0.52786, -0.0356, -1.1015,
-   #        -0.1118, 0.1894, 0.6845, 0.6951, 0.5116, 0.6440, -0.904,
-   #        0.06044, 0.14175, -0.75835, 0.63337, 0.4406, -0.628, -1.0295] # refinement
+   data: [0, 0, 0, 1, 0, 0, 0, 
+          -0.01897, 0.05630, 0.01960, 0.99804, 0.52786, -0.0356, -1.1015,
+          -0.1118, 0.1894, 0.6845, 0.6951, 0.5116, 0.6440, -0.904,
+          0.06044, 0.14175, -0.75835, 0.63337, 0.4406, -0.628, -1.0295] # refinement
    # data: [0, 0, 0, 1, 0, 0, 0, 
    #        -0.0169, 0.0575, 0.0195, 0.998, 0.5355, 0.0393, -1.131,
    #        -0.1118, 0.1894, 0.6845, 0.6951, 0.5116, 0.6440, -0.904,
@@ -60,21 +60,21 @@ opt_window_size: 2
 
 ############################## For Journal experiments
 # only concern the top-front calibration error
-estimate_extrinsic: 0   
-body_T_laser: !!opencv-matrix
-   rows: 2
-   cols: 7
-   dt: d
-   # data: [0, 0, 0, 1, 0, 0, 0, 
-   #        0, 0, 0, 1, 0, 0, 0] # wocalib
-   # data: [0, 0, 0, 1, 0, 0, 0, 
-   #        0.054959, 0.15089, 0.094054, 0.98253, 0.636, 0.139, -1.031] # inject noise
-   # data: [0, 0, 0, 1, 0, 0, 0, 
-   #        0.00983, 0.0636, 0.0255, 0.9976,  -0.3240, 0.2270, 0] # initialization
-   # data: [0, 0, 0, 1, 0, 0, 0, 
-   #        0, 0.087150, 0, 0.99679, 0.795, 0, -1.364] # CAD
-   data: [0, 0, 0, 1, 0, 0, 0, 
-          -0.01897, 0.05630, 0.01960, 0.99804, 0.52786, -0.0356, -1.1015] # refinement   
+# estimate_extrinsic: 0   
+# body_T_laser: !!opencv-matrix
+#    rows: 2
+#    cols: 7
+#    dt: d
+#    # data: [0, 0, 0, 1, 0, 0, 0, 
+#    #        0, 0, 0, 1, 0, 0, 0] # wocalib
+#    # data: [0, 0, 0, 1, 0, 0, 0, 
+#    #        0.054959, 0.15089, 0.094054, 0.98253, 0.636, 0.139, -1.031] # inject noise
+#    # data: [0, 0, 0, 1, 0, 0, 0, 
+#    #        0.00983, 0.0636, 0.0255, 0.9976,  -0.3240, 0.2270, 0] # initialization
+#    # data: [0, 0, 0, 1, 0, 0, 0, 
+#    #        0, 0.087150, 0, 0.99679, 0.795, 0, -1.364] # CAD
+#    data: [0, 0, 0, 1, 0, 0, 0, 
+#           -0.01897, 0.05630, 0.01960, 0.99804, 0.52786, -0.0356, -1.1015] # refinement   
    # data: [0, 0, 0, 1, 0, 0, 0, 
    #        -0.0169, 0.0575, 0.0195, 0.998, 0.5355, 0.0393, -1.131] # PS-calib
 
@@ -158,6 +158,6 @@ uct_measurement: !!opencv-matrix
    dt: d
    data: [0.0025, 0.0025, 0.0025]
 
-uct_ext_ratio: 0.1 # small: 0.1, medium: 1, large: 10
+uct_ext_ratio: 10.0 # small: 0.1, medium: 1, large: 10
 
 trace_threshold_mapping: 100 # small: 10, large: 5, long distance: 100

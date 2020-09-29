@@ -1074,14 +1074,14 @@ void Estimator::buildCalibMap()
                                         pose_local_[n][i],
                                         surf_map_features_[n][i],
                                         n_neigh,
-                                        false);
+                                        true);
             f_extract_.matchCornerFromMap(kdtree_corner_points_local_map,
                                           corner_points_local_map_filtered_[n],
                                           corner_points_stack_[n][i],
                                           pose_local_[n][i],
                                           corner_map_features_[n][i],
                                           n_neigh,
-                                          false);
+                                          true);
         }
     }
     // LOG_EVERY_N(INFO, 20) << "build map(extract map): " << t_build_map.toc() << "ms("
@@ -1309,7 +1309,7 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
                                                            all_features[que_idx],
                                                            que_idx,
                                                            n_neigh,
-                                                           false);
+                                                           true);
             }
             else if (feature_type == 'c')
             {
@@ -1320,7 +1320,7 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
                                                              all_features[que_idx],
                                                              que_idx,
                                                              n_neigh,
-                                                             false);
+                                                             true);
             }
             if (b_match)
             {
@@ -1369,7 +1369,7 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
                                                                    all_features[que_idx],
                                                                    que_idx,
                                                                    n_neigh,
-                                                                   false);
+                                                                   true);
                     }
                     else if (feature_type == 'c')
                     {
@@ -1380,7 +1380,7 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
                                                                     all_features[que_idx],
                                                                     que_idx,
                                                                     n_neigh,
-                                                                    false);
+                                                                    true);
                     }
                     if (b_match)
                     {

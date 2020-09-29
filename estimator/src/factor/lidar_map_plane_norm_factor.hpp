@@ -57,7 +57,7 @@ public:
 			if (jacobians[0])
 			{
 				Eigen::Map<Eigen::Matrix<double, 3, 7, Eigen::RowMajor> > jacobian_pose(jacobians[0]);
-				Eigen::Matrix<double, 3, 6> jaco; // [dy/dt, dy/dR, 1]
+				Eigen::Matrix<double, 3, 6> jaco; // [dy/dt, dy/dq, 1]
 				jaco.setZero();
 				jaco.leftCols<3>() = W;
 				jaco.rightCols<3>() = -W * R * Utility::skewSymmetric(point_);
