@@ -9,7 +9,9 @@ system can start with several extrinsic-uncalibrated LiDARs, automatically calib
 [Yilong Zhu](https://scholar.google.com/citations?user=x8n6v2oAAAAJ&hl=zh-CN),
 [Linxin Jiang](),
 [Ming Liu](https://scholar.google.com/citations?user=CdV5LfQAAAAJ&hl=zh-CN)
-from [RAM-LAB](https://www.ramlab.com)
+from [RAM-LAB](https://www.ramlab.com), [HKUST](http://www.ust.hk/)
+
+**Project website:** https://ram-lab.com/file/site/m-loam
 
 ### 1. Prerequisites
 #### 1.1 **Ubuntu** and **ROS**
@@ -44,51 +46,35 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 ```catkin build mloam```
 
 ### 3. Example
-* Dataset 
-  1. dataset 1: [Four LiDAR dataset for testing on pingshan, ShenZhen](http://gofile.me/4jm56/NNFbLc5cn)
-  2. dataset 2: [Simulation Robot](http://gofile.me/4jm56/HzMDz6cvK)
-  3. dataset 3: [Real Handheld Robot](http://gofile.me/4jm56/wJRrdgBwM)
+* Datasets collected with different platforms:
+  1. [Simulation Robot (SR)](http://gofile.me/4jm56/k8xoztYes)
+  2. [Real Handheld Device (RHD)](http://gofile.me/4jm56/2t7jU8PJ5)
+  3. [Real Vechile (RV)](http://gofile.me/4jm56/ZcX6m8vZV)
+  4. [Oxford RoboCar](http://gofile.me/4jm56/i2oWOo9Gy)
 
-* Run M-LOAM
-  1. We provide a series of script to perform batch testing of M-LOAM with baselines
-  2. Enter the script folder: ``roscd mloam/script/dataset_bash``
-  3. Modify the shell files in ``test_main.sh`` with correct path, an example is shown as below:
-    ```
-    export data_path=$DATA_PATH/xxx/
-    export rpg_path=$CATKIN_WS/src/localization/rpg_trajectory_evaluation
-    export result_path=$rpg_path/results/xxx/
-    mkdir -p $result_path/gf_pcd
-    mkdir -p $result_path/traj
-    mkdir -p $result_path/time
-    mkdir -p $result_path/pose_graph
-    mkdir -p $result_path/others
-    bash test_main.sh
-    ```
-  4. ``bash test_debug.sh``
-  5. Run mloam_loop: ```roslaunch mloam_loop mloam_loop_realvehicle.launch```
-
-* Compare with baselines: M-LOAM-wo-ua, A-LOAM, F-LOAM, LEGO-LOAM
-  1. Also modify the shell files in ``test_main.sh`` with correct commond, an example is shown as below:
-  ```
-  roslaunch mloam mloam_realvehicle_hercules.launch \
-      run_mloam:=false \
-      run_aloam:=true \
-      data_path:=$data_path \
-      data_source:=$data_source \
-      delta_idx:=$delta_idx \
-      start_idx:=$start_idx \
-      end_idx:=$end_idx \
-      output_path:=$result_path
-  ```
+* Run M-LOAM and baseline methods
+  1. We provide a script to perform batch testing of M-LOAM with baseline methods
+  2. Enter the script folder: ``roscd mloam/script/``
+  3. Modify the python script: ``run_mloam.py`` for specific platforms with correct path
+  4. Modify the shell files for methods in ``xx_main.sh``
+  5. Run the python script: ``python2 run_mloam.py -program=single_test -sequence=xx -start_idx=0 -end_idx=0``
 
 ### 5. Results
-**red**: odometry; **green**: mapping; **blue**: gt
+<!-- **red**: odometry; **green**: mapping; **blue**: gt -->
+<!-- <a href="https://www.youtube.com/embed/WDpH80nfZes" target="_blank"><img src="http://img.youtube.com/vi/WDpH80nfZes/0.jpg" alt="cla" width="240" height="180" border="10" /></a> -->
 
-* Test in Simulation <br>
-![](picture/simulation.png)
+* Test with SR <br>
+<img src="picture/sr_trajectory.png" height="180"/>
 
-* Test in HKUST <br>
-![](picture/hkust.png)
+* Test in HKUST with RHD <br>
+<img src="picture/rhd03garden.png" height="180"/>
+<img src="picture/rhd04building.png" height="180"/>
+
+* Test with RV <br>
+<img src="picture/rv01.png" height="180"/>
+
+* Test with Oxford RoboCar <br>
+<img src="picture/oxford_traj.png" height="180"/>
 
 ### 6. Additional Features (have not fixed)
 * Future research
@@ -98,23 +84,24 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
   4. Integrated with high-frequency sensors
   5. cross-domain, cross-modal dataset (simulator) for autonomous driving
 
-* Threshold of UCT (scale = 1.0)
-  1. 10m: 1.25
-  2. 20m: 7.8
-  3. 30m: 11.5
-  4. 40m: 20
-  5. 50m: 31.25
-
 ### 6. System pipeline
 * Pipeline <br>
 ![](picture/mloam_pipeline.png)
 
 ### 7. Acknowledgements
-Thanks for 
+Thanks for these great works from which we learned to write M-LOAM
 
 * LOAM (J. Zhang and S. Singh. LOAM: Lidar Odometry and Mapping in Real-time) and its advanced version: [A-LOAM](https://github.com/HKUST-Aerial-Robotics/A-LOAM);
-* [LIO-MAPPING](https://github.com/hyye/lio-mapping) (Haoyang Ye, Yuying Chen, and Ming Liu. Tightly Coupled 3D Lidar Inertial Odometry and Mapping).
-* VINS-MONO
+* [LEGO-LOAM](https://github.com/RobustFieldAutonomyLab/LeGO-LOAM)
+* [LIO-MAPPING](https://github.com/hyye/lio-mapping)
+* [VINS-MONO](https://github.com/HKUST-Aerial-Robotics/VINS-Mono)
+
+### 8. Licence
+The source code is released under GPLv3 license.
+
+We are still working on improving the code reliability. For any technical issues, please contact Jianhao JIAO \<jjiao@ust.hk>, Haoyang Ye \<hyeab@ust.hk>, and Yilong Zhu \<yzhubr@ust.hk>
+
+For commercial inquiries, please contact Prof.Ming Liu \<eelium@ust.hk>
 
 <!-- ### 8. Compared with LEGO-LOAM
 * Note: 0.2/0.4 (corner/surf resolution)

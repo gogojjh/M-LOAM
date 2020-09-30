@@ -1284,7 +1284,7 @@ void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameteri
 	}
 	d_factor_list.push_back(mat_E);
 	d_eigvec_list.push_back(mat_V_f);
- 	mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
+ 	mat_P = mat_V_f.transpose().inverse() * mat_V_p.transpose(); // 6*6
 
     LOG_EVERY_N(INFO, 20) << "D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose();
     // std::cout << "jjiao:" << std::endl;
