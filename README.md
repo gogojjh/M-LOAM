@@ -64,17 +64,17 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 <!-- <a href="https://www.youtube.com/embed/WDpH80nfZes" target="_blank"><img src="http://img.youtube.com/vi/WDpH80nfZes/0.jpg" alt="cla" width="240" height="180" border="10" /></a> -->
 
 * Test with SR <br>
-<img src="./picture/sr_trajectory.png" height="180"/>
+![](./picture/sr_trajectory.png)
 
 * Test in HKUST with RHD <br>
-<img src="./picture/rhd03garden.png" height="180"/>
-<img src="./picture/rhd04building.png" height="180"/>
+![](./picture/rhd03garden.png)
+![](./picture/rhd04building.png)
 
 * Test with RV <br>
-<img src="./picture/rv01.png" height="180"/>
+![](./picture/rv01.png)
 
 * Test with Oxford RoboCar <br>
-<img src="./picture/oxford_traj.png" height="180"/>
+![](./picture/oxford_traj.png)
 
 ### 6. Additional Features (have not fixed)
 * Future research
@@ -86,7 +86,7 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 
 ### 6. System pipeline
 * Pipeline <br>
-<img src="picture/mloam_pipeline.png" height="300"/>
+![](picture/mloam_pipeline.png)
 
 ### 7. Acknowledgements
 Thanks for these great works from which we learned to write M-LOAM
