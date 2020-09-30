@@ -64,17 +64,17 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 <!-- <a href="https://www.youtube.com/embed/WDpH80nfZes" target="_blank"><img src="http://img.youtube.com/vi/WDpH80nfZes/0.jpg" alt="cla" width="240" height="180" border="10" /></a> -->
 
 * Test with SR <br>
-<img src="../M-LOAM/picture/sr_trajectory.png" height="180"/>
+<img src="./picture/sr_trajectory.png" height="180"/>
 
 * Test in HKUST with RHD <br>
-<img src="../M-LOAM/picture/rhd03garden.png" height="180"/>
-<img src="../M-LOAM/picture/rhd04building.png" height="180"/>
+<img src="./picture/rhd03garden.png" height="180"/>
+<img src="./picture/rhd04building.png" height="180"/>
 
 * Test with RV <br>
-<img src="../M-LOAM/picture/rv01.png" height="180"/>
+<img src="./picture/rv01.png" height="180"/>
 
 * Test with Oxford RoboCar <br>
-<img src="../M-LOAM/picture/oxford_traj.png" height="180"/>
+<img src="./picture/oxford_traj.png" height="180"/>
 
 ### 6. Additional Features (have not fixed)
 * Future research
