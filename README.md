@@ -7,7 +7,7 @@ system can start with several extrinsic-uncalibrated LiDARs, automatically calib
 [Jianhao Jiao](http://gogojjh.github.io), 
 [Haoyang Ye](https://github.com/hyye),
 [Yilong Zhu](https://scholar.google.com/citations?user=x8n6v2oAAAAJ&hl=zh-CN),
-[Linxin Jiang](),
+[Linxin Jiang](xxx),
 [Ming Liu](https://scholar.google.com/citations?user=CdV5LfQAAAAJ&hl=zh-CN)
 from [RAM-LAB](https://www.ramlab.com), [HKUST](http://www.ust.hk/)
 
@@ -64,29 +64,29 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 <!-- <a href="https://www.youtube.com/embed/WDpH80nfZes" target="_blank"><img src="http://img.youtube.com/vi/WDpH80nfZes/0.jpg" alt="cla" width="240" height="180" border="10" /></a> -->
 
 * Test with SR <br>
-<img src="picture/sr_trajectory.png" height="180"/>
+<img src="../M-LOAM/picture/sr_trajectory.png" height="180"/>
 
 * Test in HKUST with RHD <br>
-<img src="picture/rhd03garden.png" height="180"/>
-<img src="picture/rhd04building.png" height="180"/>
+<img src="../M-LOAM/picture/rhd03garden.png" height="180"/>
+<img src="../M-LOAM/picture/rhd04building.png" height="180"/>
 
 * Test with RV <br>
-<img src="picture/rv01.png" height="180"/>
+<img src="../M-LOAM/picture/rv01.png" height="180"/>
 
 * Test with Oxford RoboCar <br>
-<img src="picture/oxford_traj.png" height="180"/>
+<img src="../M-LOAM/picture/oxford_traj.png" height="180"/>
 
 ### 6. Additional Features (have not fixed)
 * Future research
-  1. Add a loop closure
-  2. Object-centric SLAM
-  3. Use more representative features
-  4. Integrated with high-frequency sensors
-  5. cross-domain, cross-modal dataset (simulator) for autonomous driving
+  1. [on-going] Add a loop closure
+  2. [] Object-centric SLAM
+  3. [] Use more representative features
+  4. [] Integrated with high-frequency sensors
+  5. [] cross-domain, cross-modal dataset (simulator) for autonomous driving
 
 ### 6. System pipeline
 * Pipeline <br>
-![](picture/mloam_pipeline.png)
+<img src="picture/mloam_pipeline.png" height="300"/>
 
 ### 7. Acknowledgements
 Thanks for these great works from which we learned to write M-LOAM
