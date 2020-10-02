@@ -219,6 +219,11 @@ if __name__ == '__main__':
         platform = 'real_vehicle/pingshan'
         seq_main_name = 'rv_pingshan_main.sh'
         yaml_name = 'config_realvehicle_hercules.yaml'  
+    elif args.sequence == 'OR':
+        seq_name = ['OR01', 'OR02', 'OR03', 'OR03']
+        platform = 'real_vehicle/oxford'
+        seq_main_name = 'rv_oxford_main.sh'
+        yaml_name = 'config_realvehicle_oxford.yaml'
 
     if len(seq_name) < args.end_idx:
         print('exit! end_idx is too large: {} > {}'.format(args.end_idx, len(seq_name)))

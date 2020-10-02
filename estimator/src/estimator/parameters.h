@@ -119,9 +119,6 @@ extern float MAP_CORNER_RES;
 extern float MAP_SURF_RES;
 extern float MAP_OUTLIER_RES;
 extern float MAP_EIG_THRE;
-extern float MAP_GF_RATIO;
-extern float LAMBDA_1;
-extern float LAMBDA_2;
 
 extern float UCT_EXT_RATIO;
 extern std::vector<Eigen::Matrix<double, 6, 6> > COV_EXT;

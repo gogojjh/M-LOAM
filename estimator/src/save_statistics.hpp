@@ -33,15 +33,11 @@ public:
     void saveOdomTimeStatistics(const string &filename, const Estimator &estimator);
 
     void saveMapStatistics(const string &map_filename,
-                           const string &map_factor_filename,
-                           const string &map_eig_filename,
-                           const string &map_sp_filename,
-                           const string &map_logdet_filename,
+                           const string &gf_deg_factor_filename,
+                           const string &gf_logdet_filename,
                            const nav_msgs::Path &laser_aft_mapped_path,
-                           const std::vector<Eigen::Matrix<double, 1, 6>> &d_factor_list,
-                           const std::vector<Eigen::Matrix<double, 6, 6>> &d_eigvec_list,
-                           const std::vector<std::vector<double> > &mapping_sp_list,
-                           const std::vector<double> &logdet_H_list);
+                           const std::vector<double> &gf_deg_factor_list,
+                           const std::vector<double> &gf_logdet_H_list);
 
     void saveMapTimeStatistics(const string &map_time_filename);
 };
@@ -141,15 +137,11 @@ void SaveStatistics::saveOdomTimeStatistics(const string &filename, const Estima
 }
 
 void SaveStatistics::saveMapStatistics(const string &map_filename,
-                                       const string &map_factor_filename,
-                                       const string &map_eig_filename,
-                                       const string &map_sp_filename,
-                                       const string &map_logdet_filename,
+                                       const string &gf_deg_factor_filename,
+                                       const string &gf_logdet_filename,
                                        const nav_msgs::Path &laser_aft_mapped_path,
-                                       const std::vector<Eigen::Matrix<double, 1, 6>> &d_factor_list,
-                                       const std::vector<Eigen::Matrix<double, 6, 6>> &d_eigvec_list,
-                                       const std::vector<std::vector<double> > &mapping_sp_list,
-                                       const std::vector<double> &logdet_H_list)
+                                       const std::vector<double> &gf_deg_factor_list,
+                                       const std::vector<double> &gf_logdet_H_list)
 {
     printf("Saving mapping statistics\n");
     std::ofstream fout(map_filename.c_str(), std::ios::out);
@@ -169,43 +161,18 @@ void SaveStatistics::saveMapStatistics(const string &map_filename,
     }
     fout.close();
 
-    fout.open(map_factor_filename.c_str(), std::ios::out);
-    fout << "d_factor" << std::endl;
+    fout.open(gf_deg_factor_filename.c_str(), std::ios::out);
+    fout << "gf_deg_factor_list" << std::endl;
     fout.precision(8);
-    for (size_t i = 0; i < d_factor_list.size(); i++)
-        fout << d_factor_list[i] << std::endl;
+    for (size_t i = 0; i < gf_deg_factor_list.size(); i++)
+        fout << gf_deg_factor_list[i] << std::endl;
     fout.close();
 
-    fout.open(map_eig_filename.c_str(), std::ios::out);
-    fout << "d_eigvec" << std::endl;
+    fout.open(gf_logdet_filename.c_str(), std::ios::out);
+    fout << "gf_logdet_H_list" << std::endl;
     fout.precision(8);
-    for (size_t i = 0; i < d_eigvec_list.size(); i++)
-        fout << d_eigvec_list[i] << std::endl;
-    fout.close();
-
-    fout.open(map_sp_filename.c_str(), std::ios::out);
-    fout << "mapping spectral property: trace, logdet, minimun eigenvalue (first row as the mean)" << std::endl;
-    fout.precision(8);
-    double m_trace = 0, m_logdet = 0, m_eig = 0;
-    for (size_t i = 0; i < mapping_sp_list.size(); i++)
-    {
-        m_trace += mapping_sp_list[i][0] / mapping_sp_list.size();
-        m_logdet += mapping_sp_list[i][1] / mapping_sp_list.size();
-        m_eig += mapping_sp_list[i][2] / mapping_sp_list.size();
-    }
-    fout << m_trace << ", " << m_logdet << ", " << m_eig << ", " << std::endl;
-    for (size_t i = 0; i < mapping_sp_list.size(); i++)
-    {
-        for (const double data : mapping_sp_list[i]) fout << data << ", ";
-        fout << std::endl;
-    }    
-    fout.close();
-
-    fout.open(map_logdet_filename.c_str(), std::ios::out);
-    fout << "logdet_H_list" << std::endl;
-    fout.precision(8);
-    for (size_t i = 0; i < logdet_H_list.size(); i++)
-        fout << logdet_H_list[i] << std::endl;
+    for (size_t i = 0; i < gf_logdet_H_list.size(); i++)
+        fout << gf_logdet_H_list[i] << std::endl;
     fout.close();
 }
 

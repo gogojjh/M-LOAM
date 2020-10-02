@@ -120,7 +120,8 @@ std::vector<Eigen::Matrix<double, 6, 6> > d_eigvec_list;
 
 Eigen::Matrix<double, 6, 6> mat_P;
 
-std::vector<double> logdet_H_list;
+std::vector<double> gf_logdet_H_list;
+std::vector<double> gf_deg_factor_list;
 std::vector<std::vector<double> > mapping_sp_list;
 std::vector<double> total_match_feature;
 std::vector<double> total_solver;
@@ -128,7 +129,6 @@ std::vector<double> total_mapping;
 
 bool is_degenerate;
 bool with_ua_flag;
-bool with_ua_in_opt;
 
 Eigen::Matrix<double, 6, 6> cov_mapping;
 
@@ -231,13 +231,6 @@ void laserOdometryHandler(const nav_msgs::Odometry::ConstPtr &laser_odom)
 	odom_aft_mapped.pose.pose.position.y = pose_wmap_curr_ini.t_.y();
 	odom_aft_mapped.pose.pose.position.z = pose_wmap_curr_ini.t_.z();
 	pub_odom_aft_mapped_high_frec.publish(odom_aft_mapped); // publish (k-1)th oldest map * kth newest odom
-
-    // geometry_msgs::PoseStamped laser_after_mapped_pose;
-    // laser_after_mapped_pose.header = odom_aft_mapped.header;
-    // laser_after_mapped_pose.pose = odom_aft_mapped.pose.pose;
-    // laser_after_mapped_path.header = odom_aft_mapped.header;
-    // laser_after_mapped_path.poses.push_back(laser_after_mapped_pose);
-    // pub_laser_after_mapped_path.publish(laser_after_mapped_path);
 }
 
 void vector2Double()
@@ -268,15 +261,11 @@ void extractSurroundingKeyFrames()
     pose_point_cur.z = pose_wmap_curr.t_[2];
 
     surrounding_keyframes->clear();
-    // surrounding_keyframes_ds->clear();
     kdtree_surrounding_keyframes->setInputCloud(pose_keyframes_3d);
     kdtree_surrounding_keyframes->radiusSearch(pose_point_cur, (double)SURROUNDING_KF_RADIUS, point_search_ind, point_search_sq_dis, 0);
-
     for (size_t i = 0; i < point_search_ind.size(); i++)
         surrounding_keyframes->push_back(pose_keyframes_3d->points[point_search_ind[i]]);
-    // down_size_filter_surrounding_keyframes.setInputCloud(surrounding_keyframes);
-    // down_size_filter_surrounding_keyframes.filter(*surrounding_keyframes_ds);
-
+    
     for (int i = 0; i < surrounding_existing_keyframes_id.size(); i++) // existing keyframes id
     {
         bool existing_flag = false;
@@ -346,12 +335,6 @@ void extractSurroundingKeyFrames()
         *laser_cloud_corner_from_map_cov += *surrounding_corner_cloud_keyframes[j];
     }
 
-    // for (int i = 0; i < surrounding_existing_keyframes_id.size(); i++)
-    // {
-    //     *laser_cloud_surf_from_map_cov += *surrounding_surf_cloud_keyframes[i];
-    //     *laser_cloud_corner_from_map_cov += *surrounding_corner_cloud_keyframes[i];
-    // }
-
     common::timing::Timer filter_timer("mapping_filter");
     down_size_filter_surf_map_cov.setInputCloud(laser_cloud_surf_from_map_cov);
     down_size_filter_surf_map_cov.filter(*laser_cloud_surf_from_map_cov_ds);
@@ -395,14 +378,13 @@ void downsampleCurrentScan()
             if (idx != IDX_REF)
             {
                 float dis = sqrt(point_sel.x * point_sel.x + point_sel.y * point_sel.y + point_sel.z * point_sel.z);
-                max_d = dis > max_d ? dis : max_d;
+                max_d = std::max(max_d, dis);
             }
         }
         PointIWithCov point_cov(point_ori, cov_point.cast<float>());
         laser_cloud_surf_cov->push_back(point_cov);
     }
-    if (with_ua_flag)
-        printf("maximum distance: %fm\n", max_d);
+    printf("maximum distance: %fm\n", max_d);
 
     for (PointI &point_ori : *laser_cloud_corner_last_ds)
     {
@@ -454,19 +436,8 @@ void scan2MapOptimization()
         for (int iter_cnt = 0; iter_cnt < max_iter; iter_cnt++)
         {
             ceres::Problem problem;
-            double gmc_s = 1.0;
-            double gmc_mu = 5.0;
-            ceres::LossFunctionWrapper *loss_function;
-            if (FLAGS_loss_mode == "huber")
-            {
-                loss_function = new ceres::LossFunctionWrapper(new ceres::HuberLoss(0.5), ceres::TAKE_OWNERSHIP);
-            } 
-            else if (FLAGS_loss_mode == "gmc")
-            {
-                loss_function = new ceres::LossFunctionWrapper(new ceres::SurrogateGemanMcClureLoss(gmc_s, gmc_mu), ceres::TAKE_OWNERSHIP);
-            }
+            ceres::LossFunction *loss_function = new ceres::HuberLoss(0.5);
             afs.loss_function_ = loss_function;
-
             vector2Double();
 
             std::vector<double *> para_ids;
@@ -478,85 +449,49 @@ void scan2MapOptimization()
 
             // ******************************************************
             // evaluate the full hessian matrix
-            // bool ratio_change_flag = false;
-            // if (iter_cnt == 0)
-            // {
-            //     if (frame_cnt % 10 == 0)
-            //     {
-            //         int total_feat_num = 0;
-            //         Eigen::Matrix<double, 6, 6> mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
-            //         if (POINT_PLANE_FACTOR)
-            //         {
-            //             afs.evalFullHessian(kdtree_surf_from_map, *laser_cloud_surf_from_map_cov_ds,
-            //                                 *laser_cloud_surf_cov, pose_wmap_curr, 's', mat_H, total_feat_num);
-            //         }
-            //         if (POINT_EDGE_FACTOR)
-            //         {
-            //             afs.evalFullHessian(kdtree_corner_from_map, *laser_cloud_corner_from_map_cov_ds,
-            //                                 *laser_cloud_corner_cov, pose_wmap_curr, 'c', mat_H, total_feat_num);
-            //         }
-            //         double normalize_logdet_H = common::logDet(mat_H, true) - mat_H.rows() * std::log(1.0 * total_feat_num);
-            //         logdet_H_list.push_back(normalize_logdet_H);
-
-            //         if (FLAGS_gf_method == "wo_gf") 
-            //         {
-            //             gf_ratio_cur = 1.0;
-            //         }
-            //         if (FLAGS_gf_method == "rnd" || FLAGS_gf_method == "fps" || FLAGS_gf_method == "gd_fix") 
-            //         {
-            //             gf_ratio_cur = FLAGS_gf_ratio_ini;
-            //         } 
-            //         else if (FLAGS_gf_method == "gd_float") 
-            //         {
-            //             if (normalize_logdet_H > 35)
-            //             {
-            //                 gf_ratio_cur = FLAGS_gf_ratio_ini;
-            //             } 
-            //             else if (normalize_logdet_H <= 35)
-            //             {
-            //                 gf_ratio_cur = 0.8;
-            //             }
-            //             // else 
-            //             // {
-            //             //     gf_ratio_cur = FLAGS_gf_ratio_ini + (1.0 - FLAGS_gf_ratio_ini) * (72 - normalize_logdet_H) / 7.0;
-            //             // }
-            //         } 
-
-            //         // else if (normalize_logdet_H >= 70)
-            //         // {
-            //         //     gf_ratio_cur = 0.4;
-            //         // }
-            //         // else if (normalize_logdet_H >= 67.5)
-            //         // {
-            //         //     gf_ratio_cur = 0.6;
-            //         // }
-            //         // else if (normalize_logdet_H >= 65)
-            //         // {
-            //         //     gf_ratio_cur = 0.8;
-            //         // }
-
-            //         // if (normalize_logdet_H >= LOGDET_H_THRESHOLD)
-            //         // {
-            //         //     // constraint_state = "wc";
-            //         //     lambda = LAMBDA_1;
-            //         // } else 
-            //         // {
-            //         //     // constraint_state = "dg";
-            //         //     lambda = LAMBDA_2;
-            //         // }
-            //         // std::cout << common::YELLOW << "lambda: " << lambda << common::RESET << std::endl;
-            //         // ratio_change_flag = true; 
-            //         // gf_ratio_cur = std::min(1.0, FLAGS_gf_ratio_ini);
-            //         std::cout << common::YELLOW << "current lambda: " << normalize_logdet_H << ", gf_ratio: " << gf_ratio_cur << common::RESET << std::endl;
-            //         LOG_EVERY_N(INFO, 1) << "normalize_logd: " << normalize_logdet_H;
-            //     }
-            // }
+            if (iter_cnt == 0)
+            {
+                if (frame_cnt % 10 == 0)
+                {
+                    int total_feat_num = 0;
+                    Eigen::Matrix<double, 6, 6> mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
+                    if (POINT_PLANE_FACTOR)
+                        afs.evalFullHessian(kdtree_surf_from_map, *laser_cloud_surf_from_map_cov_ds,
+                                            *laser_cloud_surf_cov, pose_wmap_curr, 's', mat_H, total_feat_num);
+                    if (POINT_EDGE_FACTOR)
+                        afs.evalFullHessian(kdtree_corner_from_map, *laser_cloud_corner_from_map_cov_ds,
+                                            *laser_cloud_surf_cov, pose_wmap_curr, 's', mat_H, total_feat_num);
+                    double gf_deg_factor = common::logDet(mat_H, true) - mat_H.rows() * std::log(1.0 * total_feat_num);
+                    gf_deg_factor_list.push_back(gf_deg_factor);
+                    if (FLAGS_gf_method == "wo_gf") 
+                    {
+                        gf_ratio_cur = 1.0;
+                    }
+                    if (FLAGS_gf_method == "gd_fix") 
+                    {
+                        gf_ratio_cur = FLAGS_gf_ratio_ini;
+                    }
+                    else if (FLAGS_gf_method == "rnd" || FLAGS_gf_method == "fps" || FLAGS_gf_method == "gd_float")
+                    {
+                        if (gf_deg_factor > 35)
+                        {
+                            gf_ratio_cur = FLAGS_gf_ratio_ini;
+                        } 
+                        else if (gf_deg_factor <= 35)
+                        {
+                            gf_ratio_cur = 0.8;
+                        }
+                    }
+                    std::cout << common::YELLOW << "gf_deg_factor: " << gf_deg_factor << ", gf_ratio: " << gf_ratio_cur << common::RESET << std::endl;
+                }
+            }
 
             // ******************************************************
             std::vector<PointPlaneFeature> all_surf_features, all_corner_features;
             std::vector<size_t> sel_surf_feature_idx, sel_corner_feature_idx;
             size_t surf_num = 0, corner_num = 0;
             common::timing::Timer gfs_timer("mapping_match_feat");
+            Eigen::Matrix<double, 6, 6> sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
             if (POINT_PLANE_FACTOR)
             {
                 afs.goodFeatureMatching(kdtree_surf_from_map,
@@ -567,7 +502,8 @@ void scan2MapOptimization()
                                         sel_surf_feature_idx,
                                         's',
                                         FLAGS_gf_method,
-                                        gf_ratio_cur);
+                                        gf_ratio_cur, 
+                                        sub_mat_H);
                 surf_num = sel_surf_feature_idx.size();
             }
             if (POINT_EDGE_FACTOR)
@@ -580,14 +516,16 @@ void scan2MapOptimization()
                                         sel_corner_feature_idx,
                                         'c',
                                         FLAGS_gf_method,
-                                        gf_ratio_cur);
+                                        gf_ratio_cur, 
+                                        sub_mat_H);
                 corner_num = sel_corner_feature_idx.size();
             }
+            gf_logdet_H_list.push_back(common::logDet(sub_mat_H, true));
             printf("matching features time: %fms\n", gfs_timer.Stop() * 1000);
             
-            // if (MLOAM_RESULT_SAVE && frame_cnt == 100)
-            //     afs.writeFeature(*laser_cloud_surf_cov, sel_surf_feature_idx, all_surf_features);
-            // printf("matching surf & corner num: %lu, %lu\n", surf_num, corner_num);
+            if (MLOAM_RESULT_SAVE && frame_cnt == 300)
+                afs.writeFeature(*laser_cloud_surf_cov, sel_surf_feature_idx, all_surf_features);
+            printf("matching surf & corner num: %lu, %lu\n", surf_num, corner_num);
 
             CHECK_JACOBIAN = 0;
             for (const size_t &fid : sel_surf_feature_idx)
@@ -627,14 +565,6 @@ void scan2MapOptimization()
             }
             // printf("add constraints: %fms\n", t_add_constraints.toc());
 
-            // if (FLAGS_debug_mode && frame_cnt % 20 == 0)
-            //     afs.evaluateLoss(all_surf_features,
-            //                      sel_surf_feature_idx,
-            //                      all_corner_features,
-            //                      sel_corner_feature_idx,
-            //                      pose_wmap_curr,
-            //                      frame_cnt);
-
             // ******************************************************
             ceres::Problem::EvaluateOptions e_option;
             e_option.parameter_blocks = para_ids;
@@ -655,36 +585,10 @@ void scan2MapOptimization()
             options.check_gradients = false;
             options.gradient_check_relative_precision = 1e-4;
             options.update_state_every_iteration = true;
-            // ceres::IterationCallback *state_update_callback = 
-            //     new ceres::StateUpdatingCovarianceCallback(&problem, para_pose);
-            // options.callbacks.push_back(state_update_callback);
-            if (FLAGS_gnc)
-            {
-                while (gmc_mu >= 2)
-                {
-                    if (gmc_mu <= 3)
-                    {
-                        options.max_num_iterations = 20;
-                        options.max_solver_time_in_seconds = 0.02;
-                        ceres::Solve(options, &problem, &summary);
-                        std::cout << summary.BriefReport() << std::endl;
-                    }
-                    else
-                    {
-                        options.max_num_iterations = 1;
-                        ceres::Solve(options, &problem, &summary);
-                    }
-                    gmc_mu /= 1.4;
-                    loss_function->Reset(new ceres::SurrogateGemanMcClureLoss(gmc_s, gmc_mu), ceres::TAKE_OWNERSHIP);
-                }
-            }
-            else
-            {
-                options.max_num_iterations = 30;
-                options.max_solver_time_in_seconds = 0.04;
-                ceres::Solve(options, &problem, &summary);
-                std::cout << summary.BriefReport() << std::endl;
-            }
+            options.max_num_iterations = 30;
+            options.max_solver_time_in_seconds = 0.04;
+            ceres::Solve(options, &problem, &summary);
+            std::cout << summary.BriefReport() << std::endl;
             printf("mapping solver time: %fms\n", solver_timer.Stop() * 1000);
 
             if (iter_cnt == max_iter - 1)
@@ -695,28 +599,11 @@ void scan2MapOptimization()
                 cov_mapping = (mat_H / 134).inverse();
 
                 double tr = cov_mapping.trace();
-                double logd = common::logDet(mat_H, true);
-                Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6>> esolver(mat_H);
-                Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real();
-                double mini_ev = mat_E(0, 0);
-                std::vector<double> sp{tr, logd, mini_ev};
+                std::vector<double> sp{tr};
                 mapping_sp_list.push_back(sp);
-                LOG_EVERY_N(INFO, 20) << "trace: " << tr << ", logdet: " << logd << ", min_ev: " << mini_ev;
+                LOG_EVERY_N(INFO, 20) << "trace: " << tr;
                 std::cout << common::YELLOW << "trace: " << tr << common::RESET << std::endl;
                 printf("evaluate H: %fms\n", eval_deg_timer.Stop() * 1000);
-
-                // ceres::Covariance::Options cov_options;
-                // ceres::Covariance covariance(cov_options);
-                // std::vector<std::pair<const double *, const double *>> covariance_blocks;
-                // covariance_blocks.push_back(std::make_pair(para_pose, para_pose));
-                // CHECK(covariance.Compute(covariance_blocks, &problem));
-                // double covariance_pose[SIZE_POSE * SIZE_POSE];
-                // covariance.GetCovarianceBlock(para_pose, para_pose, covariance_pose);
-                // Eigen::Map<Eigen::Matrix<double, 7, 7> > cov_ceres(covariance_pose);
-                // cov_mapping = cov_ceres.topLeftCorner<6, 6>();
-                // std::cout << "ceres covariance: \n"
-                //           << cov_ceres.topLeftCorner<6, 6>() << std::endl;
-                // printf("ceres evaluate covariance: %fms\n", eval_deg_timer.Stop() * 1000);
             }         
 
             double2Vector();
@@ -724,10 +611,6 @@ void scan2MapOptimization()
         }
         std::cout << "optimization result: " << pose_wmap_curr << std::endl;
         pose_wmap_curr.cov_ = cov_mapping;
-
-        // calculate the incremental covariance matrix
-        // pose_prev_cur.cov_ = cov_mapping;
-        // compoundPoseWithCov(pose_wmap_prev, pose_prev_cur, pose_wmap_curr);
     }
     else
     {
@@ -765,7 +648,6 @@ void saveKeyframe()
 
     pose_keyframes_3d->push_back(pose_3d);
     pose_keyframes_6d.push_back(std::make_pair(time_laser_odometry, pose_wmap_curr));
-    // pose_wmap_curr.cov_.setZero(); // start a new keyframe, with zero covariance
 
     PointICovCloud::Ptr surf_keyframe_cov(new PointICovCloud());
     PointICovCloud::Ptr corner_keyframe_cov(new PointICovCloud());
@@ -789,7 +671,7 @@ void updateKeyframe()
 void pubPointCloud()
 {
     // publish registrated laser cloud
-    // *laser_cloud_full_res += *laser_cloud_outlier;
+    *laser_cloud_full_res += *laser_cloud_outlier;
     for (PointI &point : *laser_cloud_full_res) pointAssociateToMap(point, point, pose_wmap_curr);
     sensor_msgs::PointCloud2 laser_cloud_full_res_msg;
     pcl::toROSMsg(*laser_cloud_full_res, laser_cloud_full_res_msg);
@@ -978,6 +860,7 @@ void saveGlobalMap()
         *laser_cloud_corner_map += corner_trans;
     }
 
+    // adpatively change the resolution of the global map by checking the range
     Eigen::Vector4f min_p, max_p;
     pcl::getMinMax3D(*laser_cloud_corner_map, min_p, max_p);
     float dx = max_p[0] - min_p[0];
@@ -1282,16 +1165,10 @@ void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameteri
 			break;
 		}
 	}
-	d_factor_list.push_back(mat_E);
-	d_eigvec_list.push_back(mat_V_f);
+	// d_factor_list.push_back(mat_E);
+	// d_eigvec_list.push_back(mat_V_f);
  	mat_P = mat_V_f.transpose().inverse() * mat_V_p.transpose(); // 6*6
-
-    LOG_EVERY_N(INFO, 20) << "D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose();
-    // std::cout << "jjiao:" << std::endl;
-	// std::cout << "mat_E: " << mat_E << std::endl;
-	// std::cout << "mat_V_f: " << std::endl << mat_V_f << std::endl;
-	// std::cout << "mat_V_p: " << std::endl << mat_V_p << std::endl;
-	// std::cout << "mat_P: " << std::endl << mat_P.transpose() << std::endl;
+    // LOG_EVERY_N(INFO, 20) << "D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose();
 	if (local_parameterization->is_degenerate_)
 	{
 		local_parameterization->V_update_ = mat_P;
@@ -1301,41 +1178,6 @@ void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameteri
 	{
 		is_degenerate = false;
 	}
-	
-	// {
-	// 	Eigen::Matrix<float, 6, 6> mat_H = mat_JtJ.cast<float>().block(0, 0, 6, 6) / 400.0;
-	// 	cv::Mat matP(6, 6, CV_32F, cv::Scalar::all(0));
-	// 	cv::Mat matAtA(6, 6, CV_32F, cv::Scalar::all(0));
-	// 	cv::Mat matE(1, 6, CV_32F, cv::Scalar::all(0));
-	// 	cv::Mat matV(6, 6, CV_32F, cv::Scalar::all(0));
-	// 	cv::Mat matV2(6, 6, CV_32F, cv::Scalar::all(0));
-	//
-	// 	cv::eigen2cv(mat_H, matAtA);
-	// 	cv::eigen(matAtA, matE, matV);
-	// 	matV.copyTo(matV2);
-	// 	bool isDegenerate;
-	// 	for (int i = 5; i >= 0; i--)
-	// 	{
-	// 		if (matE.at<float>(0, i) < 100.0)
-	// 		{
-	// 			for (int j = 0; j < 6; j++)
-	// 			{
-	// 				matV2.at<float>(i, j) = 0;
-	// 			}
-	// 			isDegenerate = true;
-	// 		} else
-	// 		{
-	// 			break;
-	// 		}
-	// 	}
-	// 	std::cout << "Zhang:" << std::endl;
-	// 	std::cout << "mat_E: " << matE.t() << std::endl;
-	// 	std::cout << "mat_V_f: " << std::endl << matV.t() << std::endl;
-	// 	std::cout << "mat_V_p: " << std::endl << matV2.t() << std::endl;
-	// 	matP = matV.inv() * matV2;
-	// 	std::cout << "mat_P: " << std::endl << matP << std::endl;
-	// }
-	// printf("evaluate degeneracy: %fms\n", t_eval_degenracy.toc());
 }
 
 void sigintHandler(int sig)
@@ -1345,23 +1187,15 @@ void sigintHandler(int sig)
     if (MLOAM_RESULT_SAVE)
     {
         save_statistics.saveMapStatistics(MLOAM_MAP_PATH,
-                                          OUTPUT_FOLDER + "others/mapping_factor.txt",
-                                          OUTPUT_FOLDER + "others/mapping_d_eigvec.txt",
-                                          OUTPUT_FOLDER + "others/mapping_sp_" + FLAGS_gf_method + "_" + std::to_string(FLAGS_gf_ratio_ini) + ".txt",
-                                          OUTPUT_FOLDER + "others/mapping_logdet_H.txt",
+                                          OUTPUT_FOLDER + "others/mapping_gf_deg_factor_" + FLAGS_gf_method + "_" + std::to_string(FLAGS_gf_ratio_ini) + ".txt",
+                                          OUTPUT_FOLDER + "others/mapping_gf_logdet_H_" + FLAGS_gf_method + "_" + std::to_string(FLAGS_gf_ratio_ini) + ".txt",
                                           laser_after_mapped_path,
-                                          d_factor_list,
-                                          d_eigvec_list,
-                                          mapping_sp_list,
-                                          logdet_H_list);
+                                          gf_deg_factor_list,
+                                          gf_logdet_H_list);
         if (with_ua_flag)                                          
-        {
-            save_statistics.saveMapTimeStatistics(OUTPUT_FOLDER + "time/time_mloam_mapping_" + FLAGS_gf_method + "_" + std::to_string(FLAGS_gf_ratio_ini) + "_" + FLAGS_loss_mode + "_" + std::to_string(int(FLAGS_gnc)) + ".txt");
-        } 
+            save_statistics.saveMapTimeStatistics(OUTPUT_FOLDER + "time/time_mloam_mapping_" + FLAGS_gf_method + "_" + std::to_string(FLAGS_gf_ratio_ini) + ".txt");
         else
-        {
-            save_statistics.saveMapTimeStatistics(OUTPUT_FOLDER + "time/time_mloam_mapping_wo_ua_" + FLAGS_gf_method + "_" + std::to_string(FLAGS_gf_ratio_ini) + "_" + FLAGS_loss_mode + "_" + std::to_string(int(FLAGS_gnc)) + ".txt");
-        }
+            save_statistics.saveMapTimeStatistics(OUTPUT_FOLDER + "time/time_mloam_mapping_wo_ua_" + FLAGS_gf_method + "_" + std::to_string(FLAGS_gf_ratio_ini) + ".txt");
     }
     saveGlobalMap();
     ros::shutdown();
@@ -1385,29 +1219,16 @@ int main(int argc, char **argv)
     MLOAM_RESULT_SAVE = FLAGS_result_save;
     OUTPUT_FOLDER = FLAGS_output_path;
 	with_ua_flag = FLAGS_with_ua;
-    with_ua_in_opt = false;
     printf("save result (0/1): %d to %s\n", MLOAM_RESULT_SAVE, OUTPUT_FOLDER.c_str());
 	printf("with the awareness of uncertainty (0/1): %d\n", with_ua_flag);
     printf("gf method: %s, gf ratio: %f\n", FLAGS_gf_method.c_str(), FLAGS_gf_ratio_ini);
-
     gf_ratio_cur = std::min(1.0, FLAGS_gf_ratio_ini);
-    stringstream ss;
 	if (with_ua_flag)
-    {
-        ss << OUTPUT_FOLDER << "traj/stamped_mloam_map_estimate_"
-           << FLAGS_gf_method << "_" << to_string(FLAGS_gf_ratio_ini)
-           << "_" << FLAGS_loss_mode << "_" << int(FLAGS_gnc) << ".txt";
-        if (UCT_EXT_RATIO >= 1.0) with_ua_in_opt = true;
-    }
+        MLOAM_MAP_PATH = OUTPUT_FOLDER + "traj/stamped_mloam_map_estimate_" + FLAGS_gf_method + "_" + to_string(FLAGS_gf_ratio_ini) + ".txt";
     else
-    {
-        ss << OUTPUT_FOLDER << "traj/stamped_mloam_map_wo_ua_estimate_"
-           << FLAGS_gf_method << "_" << to_string(FLAGS_gf_ratio_ini)
-           << "_" << FLAGS_loss_mode << "_" << int(FLAGS_gnc) << ".txt";
-    }
-    MLOAM_MAP_PATH = ss.str(); 
+        MLOAM_MAP_PATH = OUTPUT_FOLDER + "traj/stamped_mloam_map_wo_ua_estimate_" + FLAGS_gf_method + "_" + to_string(FLAGS_gf_ratio_ini) + ".txt";
 
-	std::cout << "config file: " << FLAGS_config_file << std::endl;
+    std::cout << "config file: " << FLAGS_config_file << std::endl;
 	readParameters(FLAGS_config_file);
 	printf("Mapping as %fhz\n", 1.0 / (SCAN_PERIOD * SKIP_NUM_ODOM_PUB));
 
@@ -1445,7 +1266,6 @@ int main(int argc, char **argv)
     down_size_filter_outlier_map_cov.setLeafSize(MAP_OUTLIER_RES, MAP_OUTLIER_RES, MAP_OUTLIER_RES);
     down_size_filter_outlier_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_surrounding_keyframes.setLeafSize(1.0, 1.0, 1.0);
-
     down_size_filter_global_map_keyframes.setLeafSize(5.0, 5.0, 5.0);
 
     cov_mapping.setZero();

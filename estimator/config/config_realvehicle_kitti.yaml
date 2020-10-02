@@ -94,10 +94,6 @@ map_surf_res: 0.8
 map_outlier_res: 0.8
 map_eig_thre: 100
 
-# good feature
-lambda_1: 7
-lambda_2: 3
-
 # uncertainty parameter
 # translation, rotation, point (s, phi, zeta)
 uct_ext: !!opencv-matrix

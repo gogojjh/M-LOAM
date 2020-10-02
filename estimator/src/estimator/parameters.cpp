@@ -254,11 +254,6 @@ void readParameters(std::string config_file)
     MAP_SURF_RES = fsSettings["map_surf_res"];
     MAP_OUTLIER_RES = fsSettings["map_outlier_res"];
     MAP_EIG_THRE = fsSettings["map_eig_thre"];
-    MAP_GF_RATIO = fsSettings["map_gf_ratio"];
-
-    LAMBDA_1 = fsSettings["lambda_1"];
-    LAMBDA_2 = fsSettings["lambda_2"];    
-
     printf("map corner resolution:%f, surf resolution:%f\n", MAP_CORNER_RES, MAP_SURF_RES);
 
     UCT_EXT_RATIO = fsSettings["uct_ext_ratio"];

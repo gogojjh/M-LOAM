@@ -1328,8 +1328,7 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
                 num_sel_features++;
             }
         }
-    } 
-    else
+    } else
     {
         while (true)
         {

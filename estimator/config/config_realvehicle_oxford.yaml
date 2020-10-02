@@ -103,11 +103,6 @@ map_surf_res: 0.4
 map_outlier_res: 0.8
 map_eig_thre: 100
 
-# good feature
-map_gf_ratio: 0.2
-lambda_1: 7
-lambda_2: 3
-
 # uncertainty parameter
 # translation, rotation, point (s, phi, zeta)
 uct_ext: !!opencv-matrix
@@ -125,7 +120,7 @@ uct_measurement: !!opencv-matrix
    dt: d
    data: [0.0025, 0.0025, 0.0025]
 
-uct_ext_ratio: 0.05 # small: 0.1, medium: 1, large: 10
+uct_ext_ratio: 1.0 # small: 0.1, medium: 1, large: 10
 
 trace_threshold_mapping: 100 # small: 10, large: 5, long distance: 100
 
