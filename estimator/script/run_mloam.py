@@ -111,9 +111,9 @@ def mc_test(start_idx, end_idx, mc_trials):
             os.system(command)
             command = 'mv $result_path/traj/stamped_mloam_odom_estimate_1.000000.txt $result_path/traj/stamped_mloam_odom_estimate_1.000000{}.txt'.format(trial)
             os.system(command)
-            command = 'mv $result_path/traj/stamped_mloam_map_estimate_wo_gf_1.000000_huber_0.txt $result_path/traj/stamped_mloam_map_estimate_wo_gf_1.000000_huber_0{}.txt'.format(trial)
+            command = 'mv $result_path/traj/stamped_mloam_map_estimate_wo_gf_1.000000.txt $result_path/traj/stamped_mloam_map_estimate_wo_gf_1.000000{}.txt'.format(trial)
             os.system(command)
-            command = 'mv $result_path/traj/stamped_mloam_map_wo_ua_estimate_wo_gf_1.000000_huber_0.txt $result_path/traj/stamped_mloam_map_wo_ua_estimate_wo_gf_1.000000_huber_0{}.txt'.format(trial)
+            command = 'mv $result_path/traj/stamped_mloam_map_wo_ua_estimate_wo_gf_1.000000.txt $result_path/traj/stamped_mloam_map_wo_ua_estimate_wo_gf_1.000000{}.txt'.format(trial)
             os.system(command)
             command = 'mv $result_path/traj/stamped_aloam_odom_estimate.txt $result_path/traj/stamped_aloam_odom_estimate{}.txt'.format(trial)
             os.system(command)
@@ -196,7 +196,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='run mloam sr test')
     parser.add_argument('-program', help='debug_test, debug_eval, \
         calib_test, single_test, single_eval, mc_test, mc_eval, inject_ext_uct_test')
-    parser.add_argument('-sequence', help='SR, RHD, RV')
+    parser.add_argument('-sequence', help='SR, RHD, RV, OR')
     parser.add_argument('-start_idx', type=int, help='idx')
     parser.add_argument('-end_idx', type=int, help='idx')
     parser.add_argument('-mc_trials', type=int, help='mc_trials=n')
@@ -220,10 +220,15 @@ if __name__ == '__main__':
         seq_main_name = 'rv_pingshan_main.sh'
         yaml_name = 'config_realvehicle_hercules.yaml'  
     elif args.sequence == 'OR':
-        seq_name = ['OR01', 'OR02', 'OR03', 'OR03']
+        seq_name = ['OR01', 'OR02', 'OR03', 'OR04', 'OR05', 'OR06']
         platform = 'real_vehicle/oxford'
         seq_main_name = 'rv_oxford_main.sh'
         yaml_name = 'config_realvehicle_oxford.yaml'
+    elif args.sequence == 'KITTI':
+        seq_name = ['KITTI04']
+        platform = 'real_vehicle/kitti'
+        seq_main_name = 'rv_kitti_main.sh'
+        yaml_name = 'config_realvehicle_kitti.yaml'        
 
     if len(seq_name) < args.end_idx:
         print('exit! end_idx is too large: {} > {}'.format(args.end_idx, len(seq_name)))

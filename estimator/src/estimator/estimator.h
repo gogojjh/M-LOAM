@@ -60,7 +60,7 @@
 
 #include "mloam_pcl/point_with_time.hpp"
 
-#define MAX_FEATURE_SELECT_TIME 5 // 7ms
+#define MAX_FEATURE_SELECT_TIME 7 // 7ms
 #define MAX_RANDOM_QUEUE_TIME 10
 
 class Estimator
@@ -103,7 +103,7 @@ class Estimator
                              const Pose &pose_pivot,
                              const Pose &pose_i,
                              const Pose &pose_ext,
-                             const double gf_ratio = 0.5);
+                             const double &gf_ratio = 0.5);
 
     void vector2Double();
     void double2Vector();

@@ -216,6 +216,7 @@ void sync_process()
         if (frame_cnt % DELTA_IDX == 0)
             if (!empty_check) estimator.inputCloud(time, v_laser_cloud);
         frame_cnt++;
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
 }
 

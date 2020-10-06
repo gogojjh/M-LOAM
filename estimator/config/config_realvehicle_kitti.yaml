@@ -84,9 +84,9 @@ lambda_thre_calib: 1000
 n_calib: 30
 
 # good feature
-odom_gf_ratio: 0.4
+odom_gf_ratio: 0.8
 
-skip_num_odom_pub: 4
+skip_num_odom_pub: 2
 
 ######################################################## mapping
 map_corner_res: 0.4
@@ -108,4 +108,6 @@ uct_measurement: !!opencv-matrix
    dt: d
    data: [0.0025]
 
-trace_threshold_mapping: 2
+uct_ext_ratio: 0.0
+
+trace_threshold_mapping: 300

@@ -83,8 +83,8 @@
 #define SURROUNDING_KF_RADIUS 50.0
 #define GLOBALMAP_KF_RADIUS 1000.0
 #define DISTANCE_KEYFRAMES 1
-#define ORIENTATION_KEYFRAMES 2
-#define MAX_FEATURE_SELECT_TIME 25 // 10ms
+#define ORIENTATION_KEYFRAMES 3
+#define MAX_FEATURE_SELECT_TIME 15  // 10ms
 #define MAX_RANDOM_QUEUE_TIME 20
 
 DEFINE_bool(result_save, true, "save or not save the results");
@@ -317,10 +317,10 @@ public:
 
         Eigen::Map<Eigen::Matrix<double, 3, 7, Eigen::RowMajor>> mat_jacobian(jaco[0]);
         feature.jaco_ = mat_jacobian.topLeftCorner<3, 6>();
-        // feature.jaco_ *= sqrt(std::max(0.0, rho[1])); // TODO
+        feature.jaco_ *= sqrt(std::max(0.0, rho[1])); // TODO
+        // LOG_EVERY_N(INFO, 2000) << "error: " << sqrt(sqr_error) << ", rho_der: " << rho[1] 
+        //                         << ", logd: " << common::logDet(feature.jaco_.transpose() * feature.jaco_, true);
 
-        LOG_EVERY_N(INFO, 2000) << "error: " << sqrt(sqr_error) << ", rho_der: " << rho[1] 
-                                << ", logd: " << common::logDet(feature.jaco_.transpose() * feature.jaco_, true);
         delete[] rho;
         delete[] jaco[0];
         delete[] jaco;
@@ -408,7 +408,9 @@ public:
         size_t n_neigh = 5;
         bool b_match;
         double cur_det;
-        if (gf_ratio == 1.0)
+        size_t num_rnd_que;
+        TicToc t_sel_feature;
+        if (gf_method == "wo_gf")
         {
             for (size_t j = 0; j < all_feature_idx.size(); j++)
             {
@@ -453,27 +455,25 @@ public:
         }  
         else if (gf_method == "rnd")
         {
-            size_t num_rnd_que;
-            TicToc t_sel_feature;
             while (true)
             {
                 if (num_sel_features >= num_use_features ||
                     t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME ||
                     all_feature_idx.size() == 0)
-                    break;
+                        break;
                 size_t j = rgi_.geneRandUniform(0, all_feature_idx.size() - 1);
                 size_t que_idx = all_feature_idx[j];
                 b_match = false;
                 if (feature_type == 's')
                 {
                     b_match = f_extract.matchSurfPointFromMap(kdtree_from_map,
-                                                            laser_map,
-                                                            laser_cloud.points[que_idx],
-                                                            pose_local,
-                                                            all_features[que_idx],
-                                                            que_idx,
-                                                            n_neigh,
-                                                            true);
+                                                              laser_map,
+                                                              laser_cloud.points[que_idx],
+                                                              pose_local,
+                                                              all_features[que_idx],
+                                                              que_idx,
+                                                              n_neigh,
+                                                              true);
                 }
                 else if (feature_type == 'c')
                 {
@@ -522,13 +522,17 @@ public:
                 num_sel_features++;
             }            
 
-            TicToc t_sel_feature;
             std::vector<float> dist(num_all_features, 1e5); // record the minimum distance of each point in set A to each point in set B
             while (true)
             {
-                if (num_sel_features >= num_use_features ||
-                    t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
-                    break;            
+                if ((num_sel_features >= num_use_features) ||
+                    (all_feature_idx.size() == 0) ||
+                    (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
+                        break;
+                // if ((num_sel_features >= num_use_features) ||
+                //     (all_feature_idx.size() == 0))
+                //         break;
+
                 float best_d = -1;
                 size_t best_j = 1;
                 for (size_t j = 0; j < num_all_features; j++)
@@ -588,8 +592,6 @@ public:
         else if (gf_method == "gd_fix" || gf_method == "gd_float")
         {
             stringstream ss;
-            TicToc t_sel_feature;
-            size_t num_rnd_que;
             while (true)
             {
                 if ((num_sel_features >= num_use_features) ||
@@ -597,12 +599,13 @@ public:
                     (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
                         break;
 
-                size_t size_rnd_subset = static_cast<size_t>(1.6 * num_all_features / num_use_features); // 1.0/2.3
+                size_t size_rnd_subset = static_cast<size_t>(1.0 * num_all_features / num_use_features); // 1.0/2.3
                 // LOG_EVERY_N(INFO, 20) << "[goodFeatureMatching] size of matrix subset: " << size_rnd_subset;
                 std::priority_queue<FeatureWithScore, std::vector<FeatureWithScore>, std::less<FeatureWithScore>> heap_subset;
 
                 while (true)
                 {
+                    if (all_feature_idx.size() == 0) break;
                     num_rnd_que = 0;
                     size_t j;
                     while (num_rnd_que < MAX_RANDOM_QUEUE_TIME)
@@ -661,7 +664,6 @@ public:
                     const Eigen::MatrixXd &jaco = all_features[que_idx].jaco_;
                     cur_det = common::logDet(sub_mat_H + jaco.transpose() * jaco, true);
                     heap_subset.push(FeatureWithScore(que_idx, cur_det, jaco));
-                    // printf("heap_subset size: %lu\n", heap_subset.size());
                     if (heap_subset.size() >= size_rnd_subset)
                     {
                         const FeatureWithScore &fws = heap_subset.top();
@@ -671,9 +673,7 @@ public:
                             std::cerr << "[goodFeatureMatching]: not exist feature idx !" << std::endl;
                             break;
                         }
-
-                        const Eigen::MatrixXd &jaco = fws.jaco_;
-                        sub_mat_H += jaco.transpose() * jaco;
+                        sub_mat_H += fws.jaco_.transpose() * fws.jaco_;
 
                         size_t position = iter - all_feature_idx.begin();
                         all_feature_idx.erase(all_feature_idx.begin() + position);
@@ -687,14 +687,12 @@ public:
                 if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
                     break;
             }
-
-            if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
-            {
-                std::cerr << "[goodFeatureMatching]: early termination!" << std::endl;
-                LOG(INFO) << "early termination: feature_type " << feature_type << ", " << num_rnd_que << ", " << t_sel_feature.toc();
-                // num_sel_features = static_cast<size_t>(num_all_features * gf_ratio);
-            }
         } 
+        if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
+        {
+            std::cerr << "mapping [goodFeatureMatching]: early termination!" << std::endl;
+            LOG_EVERY_N(INFO, 100) << "early termination: feature_type " << feature_type << ", " << num_rnd_que << ", " << t_sel_feature.toc();
+        }
 
         sel_feature_idx.resize(num_sel_features);
         printf("gf_method: %s, num of all features: %lu, sel features: %lu\n", gf_method.c_str(), num_all_features, num_sel_features);

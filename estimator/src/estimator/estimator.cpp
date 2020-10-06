@@ -308,7 +308,7 @@ void Estimator::processMeasurements()
 
             m_process_.lock();
             common::timing::Timer odom_process_timer("odom_process");
-            process();
+            // process();
             double time_process = odom_process_timer.Stop() * 1000;
             std::cout << common::RED << "frame: " << frame_cnt_
                       << ", odom process time: " << time_process << "ms" << common::RESET << std::endl << std::endl;
@@ -1273,7 +1273,7 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
                                     const Pose &pose_pivot,
                                     const Pose &pose_i,
                                     const Pose &pose_ext,
-                                    const double gf_ratio)
+                                    const double &gf_ratio)
 {
     Pose pose_local(pose_pivot.T_.inverse() * pose_i.T_ * pose_ext.T_);
 
@@ -1294,6 +1294,7 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
 
     size_t n_neigh = 5;
     bool b_match;  
+    size_t num_rnd_que;
     if (gf_ratio == 1.0)
     {
         for (size_t j = 0; j < all_feature_idx.size(); j++)
@@ -1328,7 +1329,8 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
                 num_sel_features++;
             }
         }
-    } else
+    } 
+    else
     {
         while (true)
         {
@@ -1336,10 +1338,11 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
                 (all_feature_idx.size() == 0) ||
                 (gfm_timer.GetCountTime() * 1000 > MAX_FEATURE_SELECT_TIME))
                     break;
-            size_t num_rnd_que;
+
             std::priority_queue<FeatureWithScore, std::vector<FeatureWithScore>, std::less<FeatureWithScore>> heap_subset;
             while (true)
             {
+                if (all_feature_idx.size() == 0) break;
                 num_rnd_que = 0;
                 size_t j;
                 while (num_rnd_que < MAX_RANDOM_QUEUE_TIME)
@@ -1405,7 +1408,7 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
                     std::vector<size_t>::iterator iter = std::find(all_feature_idx.begin(), all_feature_idx.end(), fws.idx_);
                     if (iter == all_feature_idx.end())
                     {
-                        std::cerr << "[estimator::goodFeatureMatching]: not exist feature idx !" << std::endl;
+                        std::cerr << "odometry [goodFeatureMatching]: not exist feature idx !" << std::endl;
                         break;
                     }
                     sub_mat_H += fws.jaco_.transpose() * fws.jaco_;
@@ -1418,11 +1421,13 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
                     // printf("position: %lu, num: %lu\n", position, num_rnd_que);
                     break;
                 }
+                if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || gfm_timer.GetCountTime() * 1000 > MAX_FEATURE_SELECT_TIME)
+                    break;
             }
             if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || gfm_timer.GetCountTime() * 1000 > MAX_FEATURE_SELECT_TIME)
             {
-                // std::cerr << "[goodFeatureMatching]: early termination!" << std::endl;
-                break;
+                std::cout << "odometry [goodFeatureMatching]: early termination!" << std::endl;
+                LOG(INFO) << "early termination: feature_type " << feature_type << ", " << num_rnd_que << ", " << gfm_timer.GetCountTime() * 1000;
             }
         }
     }

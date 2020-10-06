@@ -53,19 +53,12 @@
 #include "utility/cloud_visualizer.h"
 #include "mloam_pcl/point_with_time.hpp"
 
-#define MAX_BUF_LENGTH 5
-
 using namespace std;
 
 DEFINE_bool(result_save, true, "save or not save the results");
 DEFINE_string(config_file, "config.yaml", "the yaml config file");
 DEFINE_string(data_source, "bag", "the data source: bag or bag");
-DEFINE_string(data_path, "", "the data path");
 DEFINE_string(output_path, "", "the path ouf saving results");
-DEFINE_int32(start_idx, 0, "the start idx of the data");
-DEFINE_int32(end_idx, 0, "the end idx of the data");
-DEFINE_int32(delta_idx, 1, "the delta idx of reading the data");
-DEFINE_bool(time_now, true, "use current time or data time");
 
 Estimator estimator;
 
@@ -172,18 +165,16 @@ void sync_process()
 {
     while (1)
     {
-        std::vector<pcl::PointCloud<pcl::PointXYZ> > v_laser_cloud;
+        std::vector<pcl::PointCloud<pcl::PointXYZ> > v_laser_cloud(NUM_OF_LASER);
         std_msgs::Header header;
         double time = 0;
         m_buf.lock();
         if (!cloud_buf.empty())
         {
-            printf("test ...");
             time = cloud_buf.front()->header.stamp.toSec();
             header = cloud_buf.front()->header;
-            pcl::PointCloud<pcl::PointXYZ> laser_cloud = getCloudFromMsg(cloud_buf.front());
-            v_laser_cloud.push_back(laser_cloud);
-            printf("size of finding laser_cloud: %s\n", laser_cloud.size());
+            v_laser_cloud[0] = getCloudFromMsg(cloud_buf.front());
+            printf("size of finding laser_cloud: %lu\n", v_laser_cloud[0].size());
             cloud_buf.pop();
         }
         while (!cloud_buf.empty())
@@ -194,7 +185,11 @@ void sync_process()
                       << common::RESET << std::endl;
         }
         m_buf.unlock();
-        // if estimator.inputCloud(time, v_laser_cloud);
+
+        bool empty_check = false;
+        if (v_laser_cloud[0].size() == 0) empty_check = true;
+
+        if (!empty_check) estimator.inputCloud(time, v_laser_cloud);
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
 }
@@ -221,15 +216,11 @@ int main(int argc, char **argv)
     MLOAM_RESULT_SAVE = FLAGS_result_save;
     OUTPUT_FOLDER = FLAGS_output_path;
     MLOAM_ODOM_PATH = OUTPUT_FOLDER + "traj/stamped_mloam_odom_estimate_" + to_string(ODOM_GF_RATIO) + ".txt";
-    MLOAM_GPS_PATH = OUTPUT_FOLDER + "traj/stamped_gps.txt";
     MLOAM_GT_PATH = OUTPUT_FOLDER + "traj/stamped_groundtruth.txt";
+    MLOAM_GPS_PATH = OUTPUT_FOLDER + "traj/stamped_gps.txt";
     EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "others/extrinsic_parameter.txt";
     EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "others/calib_eig.txt";
     printf("save result (0/1): %d\n", MLOAM_RESULT_SAVE);
-    size_t START_IDX = FLAGS_start_idx;
-    size_t END_IDX = FLAGS_end_idx;
-    size_t DELTA_IDX = FLAGS_delta_idx;
-    bool TIME_NOW = FLAGS_time_now;
     ROS_WARN("waiting for cloud...");
 
     string data_source = FLAGS_data_source;
@@ -237,9 +228,9 @@ int main(int argc, char **argv)
 
     // ******************************************
     // use bag as the data source
-    ros::Subscriber sub_cloud = nh.subscribe<sensor_msgs::PointCloud2>(CLOUD_TOPIC[0], 10, dataProcessCallback);
-    ros::Subscriber sub_gt = nh.subscribe<nav_msgs::Odometry>("/base_pose_gt", 10, gtCallback);
+    ros::Subscriber sub_cloud = nh.subscribe<sensor_msgs::PointCloud2>(CLOUD_TOPIC[0], 5, dataProcessCallback);
     ros::Subscriber sub_gps = nh.subscribe<sensor_msgs::NavSatFix>("/novatel718d/pos", 10, gpsCallback);
+    ros::Subscriber sub_gt = nh.subscribe<nav_msgs::Odometry>("/base_pose_gt", 10, gtCallback);
     pub_laser_gt_path = nh.advertise<nav_msgs::Path>("/laser_gt_path", 10);
     pub_gps_odom = nh.advertise<nav_msgs::Odometry>("/gps/odom", 10);
     pub_gps_path = nh.advertise<nav_msgs::Path>("/gps/path", 10);

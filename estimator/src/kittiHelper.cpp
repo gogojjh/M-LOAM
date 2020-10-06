@@ -77,9 +77,10 @@ int main(int argc, char** argv)
     
     Eigen::Matrix3d R_transform;
     // R_transform << 0, 0, 1, -1, 0, 0, 0, -1, 0;
-    R_transform << 1, 0, 0, 0, 1, 0, 0, 0, 1;
-    Eigen::Quaterniond q_transform(R_transform);
-    Eigen::Vector3d t_transform(0.8105, -0.3070, 0.80272);
+    // R_transform << 1, 0, 0, 0, 1, 0, 0, 0, 1;
+    // Eigen::Quaterniond q_transform(R_transform);
+    Eigen::Quaterniond q_transform(0.99997, 0.0074121, -0.0010151, -0.00038519);
+    Eigen::Vector3d t_transform(0.8105, -0.3070, 0.80272); // imu to velo
 
     std::string line;
     std::size_t line_num = 0;

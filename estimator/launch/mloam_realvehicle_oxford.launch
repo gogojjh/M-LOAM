@@ -89,7 +89,7 @@
         <include file="$(find floam)/launch/floam_exp.launch">
             <arg name="output_path" value="$(arg output_path)"/>
             <arg name="s_line" value="32" />
-            <arg name="map_res" value="0.4" />
+            <arg name="map_res" value="0.2" />
         </include>       
    </group>        
 

@@ -436,7 +436,7 @@ void scan2MapOptimization()
         for (int iter_cnt = 0; iter_cnt < max_iter; iter_cnt++)
         {
             ceres::Problem problem;
-            ceres::LossFunction *loss_function = new ceres::HuberLoss(0.5);
+            ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1);
             afs.loss_function_ = loss_function;
             vector2Double();
 
@@ -460,7 +460,7 @@ void scan2MapOptimization()
                                             *laser_cloud_surf_cov, pose_wmap_curr, 's', mat_H, total_feat_num);
                     if (POINT_EDGE_FACTOR)
                         afs.evalFullHessian(kdtree_corner_from_map, *laser_cloud_corner_from_map_cov_ds,
-                                            *laser_cloud_surf_cov, pose_wmap_curr, 's', mat_H, total_feat_num);
+                                            *laser_cloud_surf_cov, pose_wmap_curr, 'c', mat_H, total_feat_num);
                     double gf_deg_factor = common::logDet(mat_H, true) - mat_H.rows() * std::log(1.0 * total_feat_num);
                     gf_deg_factor_list.push_back(gf_deg_factor);
                     if (FLAGS_gf_method == "wo_gf") 
@@ -473,11 +473,11 @@ void scan2MapOptimization()
                     }
                     else if (FLAGS_gf_method == "rnd" || FLAGS_gf_method == "fps" || FLAGS_gf_method == "gd_float")
                     {
-                        if (gf_deg_factor > 35)
+                        if (gf_deg_factor > 25)
                         {
                             gf_ratio_cur = FLAGS_gf_ratio_ini;
                         } 
-                        else if (gf_deg_factor <= 35)
+                        else if (gf_deg_factor <= 25)
                         {
                             gf_ratio_cur = 0.8;
                         }
@@ -491,23 +491,10 @@ void scan2MapOptimization()
             std::vector<size_t> sel_surf_feature_idx, sel_corner_feature_idx;
             size_t surf_num = 0, corner_num = 0;
             common::timing::Timer gfs_timer("mapping_match_feat");
-            Eigen::Matrix<double, 6, 6> sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
-            if (POINT_PLANE_FACTOR)
-            {
-                afs.goodFeatureMatching(kdtree_surf_from_map,
-                                        *laser_cloud_surf_from_map_cov_ds,
-                                        *laser_cloud_surf_cov,
-                                        pose_wmap_curr,
-                                        all_surf_features,
-                                        sel_surf_feature_idx,
-                                        's',
-                                        FLAGS_gf_method,
-                                        gf_ratio_cur, 
-                                        sub_mat_H);
-                surf_num = sel_surf_feature_idx.size();
-            }
+            Eigen::Matrix<double, 6, 6> sub_mat_H;
             if (POINT_EDGE_FACTOR)
             {
+                sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
                 afs.goodFeatureMatching(kdtree_corner_from_map,
                                         *laser_cloud_corner_from_map_cov_ds,
                                         *laser_cloud_corner_cov,
@@ -520,10 +507,25 @@ void scan2MapOptimization()
                                         sub_mat_H);
                 corner_num = sel_corner_feature_idx.size();
             }
+            if (POINT_PLANE_FACTOR)
+            {
+                sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
+                afs.goodFeatureMatching(kdtree_surf_from_map,
+                                        *laser_cloud_surf_from_map_cov_ds,
+                                        *laser_cloud_surf_cov,
+                                        pose_wmap_curr,
+                                        all_surf_features,
+                                        sel_surf_feature_idx,
+                                        's',
+                                        FLAGS_gf_method,
+                                        gf_ratio_cur, 
+                                        sub_mat_H);
+                surf_num = sel_surf_feature_idx.size();
+            }
             gf_logdet_H_list.push_back(common::logDet(sub_mat_H, true));
             printf("matching features time: %fms\n", gfs_timer.Stop() * 1000);
             
-            if (MLOAM_RESULT_SAVE && frame_cnt == 300)
+            if (MLOAM_RESULT_SAVE && frame_cnt == 1000)
                 afs.writeFeature(*laser_cloud_surf_cov, sel_surf_feature_idx, all_surf_features);
             printf("matching surf & corner num: %lu, %lu\n", surf_num, corner_num);
 
@@ -818,7 +820,7 @@ void pubGlobalMap()
                 down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
             } else
             {
-                down_size_filter_global_map_cov.setLeafSize(0.8, 0.8, 0.8);
+                down_size_filter_global_map_cov.setLeafSize(0.4, 0.4, 0.4);
                 down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
             }
             down_size_filter_global_map_cov.setInputCloud(laser_cloud_map);
@@ -1102,13 +1104,13 @@ void cloudUCTAssociateToMap(const PointICovCloud &cloud_local,
     for (size_t n = 0; n < NUM_OF_LASER; n++) 
     {
         compoundPoseWithCov(pose_global, pose_ext[n], pose_compound[n]);
-        if (n == IDX_REF) continue;
+        // if (n == IDX_REF) continue;
         // std::cout << "pose global: " << pose_global << std::endl;
         // std::cout << pose_global.cov_ << std::endl;
         // std::cout << "pose ext: " << pose_ext[n] << std::endl;
         // std::cout << pose_ext[n].cov_ << std::endl;
-        std::cout << "pose compound: " << pose_compound[n] << ", "
-                  << pose_compound[n].cov_.trace() << std::endl;
+        // std::cout << "pose compound: " << pose_compound[n] << ", "
+        //           << pose_compound[n].cov_.trace() << std::endl;
         // std::cout << pose_compound[n].cov_ << std::endl;
         // std::cout << std::endl;
     }
@@ -1265,7 +1267,7 @@ int main(int argc, char **argv)
     down_size_filter_corner_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_outlier_map_cov.setLeafSize(MAP_OUTLIER_RES, MAP_OUTLIER_RES, MAP_OUTLIER_RES);
     down_size_filter_outlier_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
-    down_size_filter_surrounding_keyframes.setLeafSize(1.0, 1.0, 1.0);
+    down_size_filter_surrounding_keyframes.setLeafSize(2.0, 2.0, 2.0);
     down_size_filter_global_map_keyframes.setLeafSize(5.0, 5.0, 5.0);
 
     cov_mapping.setZero();
