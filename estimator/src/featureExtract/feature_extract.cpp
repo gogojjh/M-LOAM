@@ -152,8 +152,7 @@ void FeatureExtract::extractCloud(const PointICloud &laser_cloud_in,
     comp_object.cloud_curvature = cloud_curvature;
     for (size_t i = 0; i < N_SCANS; i++)
     {
-        if (scan_info.scan_end_ind_[i] - scan_info.scan_start_ind_[i] < 6)
-            continue;
+        if (scan_info.scan_end_ind_[i] - scan_info.scan_start_ind_[i] < 6) continue;
         PointICloud::Ptr surf_points_less_flat_scan(new PointICloud);
         // split the points at each scan into 6 pieces to select features averagely
         for (int j = 0; j < 6; j++)

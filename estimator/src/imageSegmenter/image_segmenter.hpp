@@ -95,7 +95,7 @@ void ImageSegmenter::projectCloud(const typename pcl::PointCloud<PointType> &las
         vertical_angle = atan2(point.z, sqrt(point.x * point.x + point.y * point.y)) * 180 / M_PI;
         horizon_angle = atan2(point.x, point.y) * 180 / M_PI;
 
-        if (vertical_scans_ == 64 && ang_res_y_ == FLT_MAX) // VLP-64
+        if ((vertical_scans_ == 64) && (ang_res_y_ == FLT_MAX)) // VLP-64
         {
             if (vertical_angle >= -8.83)
                 row_id = static_cast<size_t>((2 - vertical_angle) * 3.0 + 0.5);
@@ -251,6 +251,13 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
                         this_indy = from_indy + iter->second;
                         if (this_indx < 0 || this_indx >= vertical_scans_)
                             continue;
+                        if ((vertical_scans_ == 64) && (ang_res_y_ == FLT_MAX))
+                        {
+                            if (this_indx <= 32)
+                                segment_alphay_ = 0.333 / 180.0 * M_PI;
+                            else
+                                segment_alphay_ = 0.5 / 180.0 * M_PI;
+                        }
                         if (this_indy < 0)
                             this_indy = horizon_scans_ - 1;
                         if (this_indy >= horizon_scans_)

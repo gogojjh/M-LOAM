@@ -30,6 +30,11 @@ void ImageSegmenter::setParameter(const int &vertical_scans,
         ang_res_y_ = 2.0;
         ang_bottom_ = 15.0 + 0.1;
         ground_scan_id_ = 7;
+        
+        segment_alphax_ = ang_res_x_ / 180.0 * M_PI;
+        segment_alphay_ = ang_res_y_ / 180.0 * M_PI;
+        segment_valid_point_num_ = segment_valid_point_num;
+        segment_valid_line_num_ = segment_valid_line_num;
     }
     else if (vertical_scans_ == 32)
     {
@@ -37,17 +42,22 @@ void ImageSegmenter::setParameter(const int &vertical_scans,
         ang_res_y_ = 41.33 / float(vertical_scans_ - 1);
         ang_bottom_ = 30.0 + 0.67;
         ground_scan_id_ = 20;
+        
+        segment_alphax_ = ang_res_x_ / 180.0 * M_PI;
+        segment_alphay_ = ang_res_y_ / 180.0 * M_PI;
+        segment_valid_point_num_ = segment_valid_point_num;
+        segment_valid_line_num_ = segment_valid_line_num;
     }
     else if (vertical_scans_ == 64)
     {
         ang_res_x_ = 360.0 / horizon_scans_;
         ang_res_y_ = FLT_MAX;
-        ground_scan_id_ = 8; // 8-64 is ground
+        ground_scan_id_ = 10; // 7-64 is ground
+        
+        segment_alphax_ = ang_res_x_ / 180.0 * M_PI;
+        segment_valid_point_num_ = segment_valid_point_num;
+        segment_valid_line_num_ = segment_valid_line_num;
     }
-    segment_alphax_ = ang_res_x_ / 180.0 * M_PI;
-    segment_alphay_ = ang_res_y_ / 180.0 * M_PI;
-    segment_valid_point_num_ = segment_valid_point_num;
-    segment_valid_line_num_ = segment_valid_line_num;
     printf("[ImageSegmenter param] v_scans:%d, h_scans:%d, c_size:%d\n", 
         vertical_scans, horizon_scans_, min_cluster_size_);
 }

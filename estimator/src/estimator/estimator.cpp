@@ -215,36 +215,54 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
     assert(v_laser_cloud_in.size() == NUM_OF_LASER);
  
     common::timing::Timer mea_pre_timer("odom_mea_pre");
-    std::vector<cloudFeature *> feature_frame_ptr(NUM_OF_LASER);
     std::vector<cloudFeature> feature_frame(NUM_OF_LASER);
 
-    #pragma omp parallel for num_threads(NUM_OF_LASER)
-    for (size_t i = 0; i < v_laser_cloud_in.size(); i++)
+    if (NUM_OF_LASER == 1)
     {
         PointICloud laser_cloud;
-        f_extract_.calTimestamp(v_laser_cloud_in[i], laser_cloud);
+        f_extract_.calTimestamp(v_laser_cloud_in[0], laser_cloud);
 
         PointICloud laser_cloud_segment, laser_cloud_outlier;
         ScanInfo scan_info(N_SCANS, SEGMENT_CLOUD);
         if (ESTIMATE_EXTRINSIC != 0) scan_info.segment_flag_ = false;
         img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, laser_cloud_outlier, scan_info);
 
-        feature_frame_ptr[i] = new cloudFeature;
-        f_extract_.extractCloud(laser_cloud_segment, scan_info, *feature_frame_ptr[i]);
-        feature_frame_ptr[i]->insert(pair<std::string, PointICloud>("laser_cloud_outlier", laser_cloud_outlier));
+        f_extract_.extractCloud(laser_cloud_segment, scan_info, feature_frame[0]);
+        feature_frame[0].insert(pair<std::string, PointICloud>("laser_cloud_outlier", laser_cloud_outlier));
+        total_corner_feature_ += feature_frame[0]["corner_points_less_sharp"].size();
+        total_surf_feature_ += feature_frame[0]["surf_points_less_flat"].size();
+    } 
+    else 
+    {
+        std::vector<cloudFeature *> feature_frame_ptr(NUM_OF_LASER);
+        #pragma omp parallel for num_threads(NUM_OF_LASER)
+        for (size_t i = 0; i < v_laser_cloud_in.size(); i++)
+        {
+            PointICloud laser_cloud;
+            f_extract_.calTimestamp(v_laser_cloud_in[i], laser_cloud);
+
+            PointICloud laser_cloud_segment, laser_cloud_outlier;
+            ScanInfo scan_info(N_SCANS, SEGMENT_CLOUD);
+            if (ESTIMATE_EXTRINSIC != 0) scan_info.segment_flag_ = false;
+            img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, laser_cloud_outlier, scan_info);
+
+            feature_frame_ptr[i] = new cloudFeature;
+            f_extract_.extractCloud(laser_cloud_segment, scan_info, *feature_frame_ptr[i]);
+            feature_frame_ptr[i]->insert(pair<std::string, PointICloud>("laser_cloud_outlier", laser_cloud_outlier));
+        }
+
+        for (size_t i = 0; i < NUM_OF_LASER; i++) 
+        {
+            feature_frame[i] = *feature_frame_ptr[i];
+            total_corner_feature_ += feature_frame[i]["corner_points_less_sharp"].size();
+            total_surf_feature_ += feature_frame[i]["surf_points_less_flat"].size();
+        }
+        for (auto &frame_ptr : feature_frame_ptr) delete frame_ptr;    
     }
 
-    for (size_t i = 0; i < NUM_OF_LASER; i++) 
-    {
-        feature_frame[i] = *feature_frame_ptr[i];
-        total_corner_feature_ += feature_frame[i]["corner_points_less_sharp"].size();
-        total_surf_feature_ += feature_frame[i]["surf_points_less_flat"].size();
-    }
-    for (auto &frame_ptr : feature_frame_ptr) delete frame_ptr;    
     double mea_pre_time = mea_pre_timer.Stop();
     printf("meaPre time: %fms (%lu*%fms)\n", mea_pre_time * 1000, v_laser_cloud_in.size(), 
                                              mea_pre_time * 1000 / v_laser_cloud_in.size());
-
     m_buf_.lock();
     feature_buf_.push(make_pair(t, feature_frame));
     m_buf_.unlock();
@@ -256,32 +274,51 @@ void Estimator::inputCloud(const double &t, const std::vector<PointITimeCloud> &
     assert(v_laser_cloud_in.size() == NUM_OF_LASER);
 
     common::timing::Timer mea_pre_timer("odom_mea_pre");
-    std::vector<cloudFeature *> feature_frame_ptr(NUM_OF_LASER);
     std::vector<cloudFeature> feature_frame(NUM_OF_LASER);
 
-    #pragma omp parallel for num_threads(NUM_OF_LASER)
-    for (size_t i = 0; i < v_laser_cloud_in.size(); i++)
+    if (NUM_OF_LASER == 1)
     {
         PointICloud laser_cloud;
-        f_extract_.calTimestamp(v_laser_cloud_in[i], laser_cloud);
+        f_extract_.calTimestamp(v_laser_cloud_in[0], laser_cloud);
 
         PointICloud laser_cloud_segment, laser_cloud_outlier;
         ScanInfo scan_info(N_SCANS, SEGMENT_CLOUD);
         if (ESTIMATE_EXTRINSIC != 0) scan_info.segment_flag_ = false;
         img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, laser_cloud_outlier, scan_info);
 
-        feature_frame_ptr[i] = new cloudFeature;
-        f_extract_.extractCloud(laser_cloud_segment, scan_info, *feature_frame_ptr[i]);
-        feature_frame_ptr[i]->insert(pair<std::string, PointICloud>("laser_cloud_outlier", laser_cloud_outlier));
+        f_extract_.extractCloud(laser_cloud_segment, scan_info, feature_frame[0]);
+        feature_frame[0].insert(pair<std::string, PointICloud>("laser_cloud_outlier", laser_cloud_outlier));
+        total_corner_feature_ += feature_frame[0]["corner_points_less_sharp"].size();
+        total_surf_feature_ += feature_frame[0]["surf_points_less_flat"].size();
+    } 
+    else
+    {
+        std::vector<cloudFeature *> feature_frame_ptr(NUM_OF_LASER);
+        #pragma omp parallel for num_threads(NUM_OF_LASER)
+        for (size_t i = 0; i < v_laser_cloud_in.size(); i++)
+        {
+            PointICloud laser_cloud;
+            f_extract_.calTimestamp(v_laser_cloud_in[i], laser_cloud);
+
+            PointICloud laser_cloud_segment, laser_cloud_outlier;
+            ScanInfo scan_info(N_SCANS, SEGMENT_CLOUD);
+            if (ESTIMATE_EXTRINSIC != 0) scan_info.segment_flag_ = false;
+            img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, laser_cloud_outlier, scan_info);
+
+            feature_frame_ptr[i] = new cloudFeature;
+            f_extract_.extractCloud(laser_cloud_segment, scan_info, *feature_frame_ptr[i]);
+            feature_frame_ptr[i]->insert(pair<std::string, PointICloud>("laser_cloud_outlier", laser_cloud_outlier));
+        }
+
+        for (size_t i = 0; i < NUM_OF_LASER; i++)
+        {
+            feature_frame[i] = *feature_frame_ptr[i];
+            total_corner_feature_ += feature_frame[i]["corner_points_less_sharp"].size();
+            total_surf_feature_ += feature_frame[i]["surf_points_less_flat"].size();
+        }
+        for (auto &frame_ptr : feature_frame_ptr) delete frame_ptr;
     }
 
-    for (size_t i = 0; i < NUM_OF_LASER; i++)
-    {
-        feature_frame[i] = *feature_frame_ptr[i];
-        total_corner_feature_ += feature_frame[i]["corner_points_less_sharp"].size();
-        total_surf_feature_ += feature_frame[i]["surf_points_less_flat"].size();
-    }
-    for (auto &frame_ptr : feature_frame_ptr) delete frame_ptr;
     double mea_pre_time = mea_pre_timer.Stop();
     printf("meaPre time: %fms (%lu*%fms)\n", mea_pre_time * 1000, v_laser_cloud_in.size(), 
                                              mea_pre_time * 1000 / v_laser_cloud_in.size());
@@ -308,7 +345,7 @@ void Estimator::processMeasurements()
 
             m_process_.lock();
             common::timing::Timer odom_process_timer("odom_process");
-            // process();
+            process();
             double time_process = odom_process_timer.Stop() * 1000;
             std::cout << common::RED << "frame: " << frame_cnt_
                       << ", odom process time: " << time_process << "ms" << common::RESET << std::endl << std::endl;

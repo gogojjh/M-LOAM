@@ -104,10 +104,10 @@ uct_ext: !!opencv-matrix
 
 uct_measurement: !!opencv-matrix
    rows: 1
-   cols: 1
+   cols: 3
    dt: d
-   data: [0.0025]
-
+   data: [0.0025, 0.0025, 0.0025]
+   
 uct_ext_ratio: 0.0
 
-trace_threshold_mapping: 300
+trace_threshold_mapping: 100

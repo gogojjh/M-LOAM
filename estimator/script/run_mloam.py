@@ -225,7 +225,7 @@ if __name__ == '__main__':
         seq_main_name = 'rv_oxford_main.sh'
         yaml_name = 'config_realvehicle_oxford.yaml'
     elif args.sequence == 'KITTI':
-        seq_name = ['KITTI04']
+        seq_name = ['KITTI03', 'KITTI04', 'KITTI09']
         platform = 'real_vehicle/kitti'
         seq_main_name = 'rv_kitti_main.sh'
         yaml_name = 'config_realvehicle_kitti.yaml'        

@@ -820,7 +820,7 @@ void pubGlobalMap()
                 down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
             } else
             {
-                down_size_filter_global_map_cov.setLeafSize(0.4, 0.4, 0.4);
+                down_size_filter_global_map_cov.setLeafSize(0.8, 0.8, 0.8);
                 down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
             }
             down_size_filter_global_map_cov.setInputCloud(laser_cloud_map);
