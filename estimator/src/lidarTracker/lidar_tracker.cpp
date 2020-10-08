@@ -44,16 +44,16 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
     {
         ceres::Problem problem;
         ceres::Solver::Summary summary;
-        ceres::LossFunction *loss_function = new ceres::HuberLoss(0.5);
+        ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1);
         // ceres::LossFunction *loss_function = new ceres::GemanMcClureLoss(1.0);
 
         ceres::Solver::Options options;
         options.linear_solver_type = ceres::DENSE_SCHUR;
         options.max_num_iterations = 4;
-        options.max_solver_time_in_seconds = 0.005;
+        // options.max_solver_time_in_seconds = 0.005;
         options.minimizer_progress_to_stdout = false;
-        options.check_gradients = false;
-        options.gradient_check_relative_precision = 1e-3;
+        // options.check_gradients = false;
+        // options.gradient_check_relative_precision = 1e-3;
 
         PoseLocalParameterization *local_parameterization = new PoseLocalParameterization();      
         local_parameterization->setParameter();

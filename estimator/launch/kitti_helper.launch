@@ -4,10 +4,10 @@
 
     <node name="kittiHelper" pkg="mloam" type="kittiHelper" output="screen"> 
         <param name="dataset_folder" type="string" value="/Monster/dataset/KITTI/odometry/" />
-        <param name="sequence_number" type="string" value="09" />
+        <param name="sequence_number" type="string" value="07" />
         <param name="to_bag" type="bool" value="true" />
         <!-- replace with your output folder -->
-        <param name="output_bag_file" type="string" value="/Monster/dataset/KITTI/odometry/09.bag" /> 
+        <param name="output_bag_file" type="string" value="/Monster/dataset/KITTI/odometry/07.bag" /> 
         <param name="publish_delay" type="int" value="1" />
     </node>
     

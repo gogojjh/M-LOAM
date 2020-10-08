@@ -588,7 +588,7 @@ void Estimator::optimizeMap()
     ceres::Solver::Summary summary;
     ceres::LossFunction *loss_function;
     // loss_function = new ceres::GemanMcClureLoss(1.0);
-    loss_function = new ceres::HuberLoss(0.5);
+    loss_function = new ceres::HuberLoss(0.1);
     // loss_function = new ceres::CauchyLoss(1.0);
     // ceres: set options and solve the non-linear equation
     ceres::Solver::Options options;

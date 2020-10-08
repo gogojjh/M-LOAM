@@ -341,8 +341,8 @@ void extractSurroundingKeyFrames()
     down_size_filter_corner_map_cov.setInputCloud(laser_cloud_corner_from_map_cov);
     down_size_filter_corner_map_cov.filter(*laser_cloud_corner_from_map_cov_ds);
     printf("corner/surf: before ds: %lu, %lu; after ds: %lu, %lu\n", 
-            laser_cloud_corner_from_map_cov->size(), laser_cloud_surf_from_map_cov->size(),
-            laser_cloud_corner_from_map_cov_ds->size(), laser_cloud_surf_from_map_cov_ds->size());
+           laser_cloud_corner_from_map_cov->size(), laser_cloud_surf_from_map_cov->size(),
+           laser_cloud_corner_from_map_cov_ds->size(), laser_cloud_surf_from_map_cov_ds->size());
     printf("filter time: %fms\n", filter_timer.Stop() * 1000); // 10ms
 }
 
@@ -436,7 +436,7 @@ void scan2MapOptimization()
         for (int iter_cnt = 0; iter_cnt < max_iter; iter_cnt++)
         {
             ceres::Problem problem;
-            ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1);
+            ceres::LossFunction *loss_function = new ceres::HuberLoss(0.5);
             afs.loss_function_ = loss_function;
             vector2Double();
 
@@ -581,14 +581,13 @@ void scan2MapOptimization()
             common::timing::Timer solver_timer("mapping_solver");
             ceres::Solver::Summary summary;
             ceres::Solver::Options options;
-            options.linear_solver_type = ceres::DENSE_SCHUR;
+            options.linear_solver_type = ceres::DENSE_QR;
             // options.num_threads = 2;
             options.minimizer_progress_to_stdout = false;
             options.check_gradients = false;
             options.gradient_check_relative_precision = 1e-4;
-            options.update_state_every_iteration = true;
             options.max_num_iterations = 30;
-            options.max_solver_time_in_seconds = 0.04;
+            options.max_solver_time_in_seconds = 0.03;
             ceres::Solve(options, &problem, &summary);
             std::cout << summary.BriefReport() << std::endl;
             printf("mapping solver time: %fms\n", solver_timer.Stop() * 1000);
@@ -913,8 +912,11 @@ void process()
 	{
 		if (!ros::ok()) break;
 		while (!surf_last_buf.empty() && !corner_last_buf.empty() &&
-			   !full_res_buf.empty() && !outlier_buf.empty() &&
-               !ext_buf.empty() && !odometry_buf.empty())
+			   !full_res_buf.empty())
+               
+            // && !outlier_buf.empty())
+            //     &&
+            //    !ext_buf.empty() && !odometry_buf.empty())
 		{
 			//********************* * 100******************************************************
 			// step 1: pop up subscribed data
@@ -935,13 +937,13 @@ void process()
 				break;
 			}
 
-			while (!outlier_buf.empty() && outlier_buf.front()->header.stamp.toSec() < surf_last_buf.front()->header.stamp.toSec())
-				outlier_buf.pop();
-			if (outlier_buf.empty())
-			{
-				m_buf.unlock();
-				break;
-			}            
+			// while (!outlier_buf.empty() && outlier_buf.front()->header.stamp.toSec() < surf_last_buf.front()->header.stamp.toSec())
+			// 	outlier_buf.pop();
+			// if (outlier_buf.empty())
+			// {
+			// 	m_buf.unlock();
+			// 	break;
+			// }            
 
 			while (!odometry_buf.empty() && odometry_buf.front()->header.stamp.toSec() < surf_last_buf.front()->header.stamp.toSec())
 				odometry_buf.pop();
@@ -951,20 +953,22 @@ void process()
 				break;
 			}
 
-			while (!ext_buf.empty() && ext_buf.front()->header.stamp.toSec() < surf_last_buf.front()->header.stamp.toSec())
-				ext_buf.pop();
-			if (ext_buf.empty())
-			{
-				m_buf.unlock();
-				break;
-			}
+			// while (!ext_buf.empty() && ext_buf.front()->header.stamp.toSec() < surf_last_buf.front()->header.stamp.toSec())
+			// 	ext_buf.pop();
+			// if (ext_buf.empty())
+			// {
+			// 	m_buf.unlock();
+			// 	break;
+			// }
 
 			time_laser_cloud_surf_last = surf_last_buf.front()->header.stamp.toSec();
 			time_laser_cloud_corner_last = corner_last_buf.front()->header.stamp.toSec();
 			time_laser_cloud_full_res = full_res_buf.front()->header.stamp.toSec();
-            time_laser_cloud_outlier = outlier_buf.front()->header.stamp.toSec();
-			time_laser_odometry = odometry_buf.front()->header.stamp.toSec();
-			time_ext = ext_buf.front()->header.stamp.toSec();
+            // time_laser_cloud_outlier = outlier_buf.front()->header.stamp.toSec();
+            time_laser_cloud_outlier = odometry_buf.front()->header.stamp.toSec();
+            time_laser_odometry = odometry_buf.front()->header.stamp.toSec();
+			// time_ext = ext_buf.front()->header.stamp.toSec();
+            time_ext = odometry_buf.front()->header.stamp.toSec();
 
             if (std::abs(time_laser_cloud_surf_last - time_laser_cloud_corner_last) > 0.005 ||
                 std::abs(time_laser_cloud_surf_last - time_laser_cloud_full_res) > 0.005 ||
@@ -994,8 +998,8 @@ void process()
 			full_res_buf.pop();
 
             laser_cloud_outlier->clear();
-            pcl::fromROSMsg(*outlier_buf.front(), *laser_cloud_outlier);
-            outlier_buf.pop();
+            // pcl::fromROSMsg(*outlier_buf.front(), *laser_cloud_outlier);
+            // outlier_buf.pop();
 
             pose_wodom_curr.q_ = Eigen::Quaterniond(odometry_buf.front()->pose.pose.orientation.w,
 													odometry_buf.front()->pose.pose.orientation.x,
@@ -1006,27 +1010,38 @@ void process()
 												 odometry_buf.front()->pose.pose.position.z);
 			odometry_buf.pop();
 
-			extrinsics = *ext_buf.front();
-			if (!extrinsics.status)
-			{
-				std::cout << common::YELLOW << "Accurate extrinsic calibration!" << common::RESET << std::endl;
-				for (size_t n = 0; n < NUM_OF_LASER; n++)
-				{
-					pose_ext[n].q_ = Eigen::Quaterniond(extrinsics.odoms[n].pose.pose.orientation.w,
-														extrinsics.odoms[n].pose.pose.orientation.x,
-														extrinsics.odoms[n].pose.pose.orientation.y,
-														extrinsics.odoms[n].pose.pose.orientation.z);
-					pose_ext[n].t_ = Eigen::Vector3d(extrinsics.odoms[n].pose.pose.position.x,
-													 extrinsics.odoms[n].pose.pose.position.y,
-													 extrinsics.odoms[n].pose.pose.position.z);
-					for (size_t i = 0; i < 6; i++)
-						for (size_t j = 0; j < 6; j++)
-							pose_ext[n].cov_(i, j) = double(extrinsics.odoms[n].pose.covariance[i * 6 + j]);
-				}
-			}
-			ext_buf.pop();
+			// extrinsics = *ext_buf.front();
+			// if (!extrinsics.status)
+			// {
+			// 	std::cout << common::YELLOW << "Accurate extrinsic calibration!" << common::RESET << std::endl;
+			// 	for (size_t n = 0; n < NUM_OF_LASER; n++)
+			// 	{
+			// 		pose_ext[n].q_ = Eigen::Quaterniond(extrinsics.odoms[n].pose.pose.orientation.w,
+			// 											extrinsics.odoms[n].pose.pose.orientation.x,
+			// 											extrinsics.odoms[n].pose.pose.orientation.y,
+			// 											extrinsics.odoms[n].pose.pose.orientation.z);
+			// 		pose_ext[n].t_ = Eigen::Vector3d(extrinsics.odoms[n].pose.pose.position.x,
+			// 										 extrinsics.odoms[n].pose.pose.position.y,
+			// 										 extrinsics.odoms[n].pose.pose.position.z);
+			// 		for (size_t i = 0; i < 6; i++)
+			// 			for (size_t j = 0; j < 6; j++)
+			// 				pose_ext[n].cov_(i, j) = double(extrinsics.odoms[n].pose.covariance[i * 6 + j]);
+			// 	}
+			// }
+			// ext_buf.pop();
 
-			while (!surf_last_buf.empty())
+            std::cout << common::YELLOW << "Accurate extrinsic calibration!" << common::RESET << std::endl;
+            for (size_t n = 0; n < NUM_OF_LASER; n++)
+            {
+                pose_ext[n].q_ = Eigen::Quaterniond(1, 0, 0, 0);
+                pose_ext[n].t_ = Eigen::Vector3d(0, 0, 0);
+                for (size_t i = 0; i < 6; i++)
+                    for (size_t j = 0; j < 6; j++)
+                        pose_ext[n].cov_(i, j) = 0;
+                std::cout << pose_ext[n] << std::endl;
+            }
+
+            while (!surf_last_buf.empty())
             {
 				surf_last_buf.pop();
                 frame_drop_cnt++;
@@ -1034,7 +1049,7 @@ void process()
 			}
 			m_buf.unlock();
 			
-			if (extrinsics.status) continue; // calibration is not finish
+			// if (extrinsics.status) continue; // calibration is not finish
             std::lock_guard<std::mutex> lock(m_process);
 
 			frame_cnt++;
@@ -1170,7 +1185,7 @@ void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameteri
 	// d_factor_list.push_back(mat_E);
 	// d_eigvec_list.push_back(mat_V_f);
  	mat_P = mat_V_f.transpose().inverse() * mat_V_p.transpose(); // 6*6
-    // LOG_EVERY_N(INFO, 20) << "D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose();
+    LOG_EVERY_N(INFO, 20) << "D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose();
 	if (local_parameterization->is_degenerate_)
 	{
 		local_parameterization->V_update_ = mat_P;
@@ -1234,25 +1249,33 @@ int main(int argc, char **argv)
 	readParameters(FLAGS_config_file);
 	printf("Mapping as %fhz\n", 1.0 / (SCAN_PERIOD * SKIP_NUM_ODOM_PUB));
 
-	ros::Subscriber sub_laser_cloud_full_res = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud", 2, laserCloudFullResHandler);
-    ros::Subscriber sub_laser_cloud_outlier = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud_outlier", 2, laserCloudOutlierResHandler);
-    ros::Subscriber sub_laser_cloud_surf_last = nh.subscribe<sensor_msgs::PointCloud2>("/surf_points_less_flat", 2, laserCloudSurfLastHandler);
-	ros::Subscriber sub_laser_cloud_corner_last = nh.subscribe<sensor_msgs::PointCloud2>("/corner_points_less_sharp", 2, laserCloudCornerLastHandler);
-	ros::Subscriber sub_laser_odometry = nh.subscribe<nav_msgs::Odometry>("/laser_odom", 5, laserOdometryHandler);
-	ros::Subscriber sub_extrinsic = nh.subscribe<mloam_msgs::Extrinsics>("/extrinsics", 5, extrinsicsHandler);
-    ros::Subscriber sub_loop_info = nh.subscribe<mloam_msgs::Keyframes>("/loop_info", 5, loopInfoHandler);
+	ros::Subscriber sub_laser_cloud_full_res = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud", 10, laserCloudFullResHandler);
+    ros::Subscriber sub_laser_cloud_outlier = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud_outlier", 10, laserCloudOutlierResHandler);
+    ros::Subscriber sub_laser_cloud_surf_last = nh.subscribe<sensor_msgs::PointCloud2>("/surf_points_less_flat", 10, laserCloudSurfLastHandler);
+	ros::Subscriber sub_laser_cloud_corner_last = nh.subscribe<sensor_msgs::PointCloud2>("/corner_points_less_sharp", 10, laserCloudCornerLastHandler);
+	ros::Subscriber sub_laser_odometry = nh.subscribe<nav_msgs::Odometry>("/laser_odom", 10, laserOdometryHandler);
+	ros::Subscriber sub_extrinsic = nh.subscribe<mloam_msgs::Extrinsics>("/extrinsics", 10, extrinsicsHandler);
 
-	pub_laser_cloud_full_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_registered", 2);
-	pub_laser_cloud_surf_last_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surf_registered", 2);
-	pub_laser_cloud_corner_last_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_corner_registered", 2);
-	pub_laser_cloud_surrounding = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surround", 2);
-	pub_laser_cloud_map = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_map", 2);
+    // for aloam test
+    // ros::Subscriber sub_laser_cloud_full_res = nh.subscribe<sensor_msgs::PointCloud2>("/velodyne_cloud_3", 10, laserCloudFullResHandler);
+    // ros::Subscriber sub_laser_cloud_outlier = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud_outlier", 10, laserCloudOutlierResHandler);
+    // ros::Subscriber sub_laser_cloud_surf_last = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud_surf_last", 10, laserCloudSurfLastHandler);
+    // ros::Subscriber sub_laser_cloud_corner_last = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud_corner_last", 10, laserCloudCornerLastHandler);
+    // ros::Subscriber sub_laser_odometry = nh.subscribe<nav_msgs::Odometry>("/laser_odom", 10, laserOdometryHandler);
+    // ros::Subscriber sub_extrinsic = nh.subscribe<mloam_msgs::Extrinsics>("/extrinsics", 10, extrinsicsHandler);
+    // ros::Subscriber sub_loop_info = nh.subscribe<mloam_msgs::Keyframes>("/loop_info", 10, loopInfoHandler);
 
-	pub_odom_aft_mapped = nh.advertise<nav_msgs::Odometry>("/laser_map", 5); // raw pose from odometry in the world
-	pub_odom_aft_mapped_high_frec = nh.advertise<nav_msgs::Odometry>("/laser_map_high_frec", 5); // optimized pose in the world
-	pub_laser_after_mapped_path = nh.advertise<nav_msgs::Path>("/laser_map_path", 5);
-    pub_keyframes = nh.advertise<sensor_msgs::PointCloud2>("/laser_map_keyframes", 5);
-    pub_keyframes_6d = nh.advertise<mloam_msgs::Keyframes>("/laser_map_keyframes_6d", 5);
+	pub_laser_cloud_full_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_registered", 10);
+	pub_laser_cloud_surf_last_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surf_registered", 10);
+	pub_laser_cloud_corner_last_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_corner_registered", 10);
+	pub_laser_cloud_surrounding = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surround", 10);
+	pub_laser_cloud_map = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_map", 10);
+
+	pub_odom_aft_mapped = nh.advertise<nav_msgs::Odometry>("/laser_map", 10); // raw pose from odometry in the world
+	pub_odom_aft_mapped_high_frec = nh.advertise<nav_msgs::Odometry>("/laser_map_high_frec", 10); // optimized pose in the world
+	pub_laser_after_mapped_path = nh.advertise<nav_msgs::Path>("/laser_map_path", 10);
+    pub_keyframes = nh.advertise<sensor_msgs::PointCloud2>("/laser_map_keyframes", 10);
+    pub_keyframes_6d = nh.advertise<mloam_msgs::Keyframes>("/laser_map_keyframes_6d", 10);
 
     down_size_filter_surf.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
     down_size_filter_surf.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
@@ -1267,7 +1290,7 @@ int main(int argc, char **argv)
     down_size_filter_corner_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_outlier_map_cov.setLeafSize(MAP_OUTLIER_RES, MAP_OUTLIER_RES, MAP_OUTLIER_RES);
     down_size_filter_outlier_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
-    down_size_filter_surrounding_keyframes.setLeafSize(2.0, 2.0, 2.0);
+    down_size_filter_surrounding_keyframes.setLeafSize(1.0, 1.0, 1.0);
     down_size_filter_global_map_keyframes.setLeafSize(5.0, 5.0, 5.0);
 
     cov_mapping.setZero();

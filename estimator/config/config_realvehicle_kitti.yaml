@@ -4,9 +4,9 @@
 multiple_thread: 0
 
 # segmmentation
-segment_cloud: 1
+segment_cloud: 0
 horizon_scan: 1800
-min_cluster_size: 30
+min_cluster_size: 10
 segment_valid_point_num: 5
 segment_valid_line_num: 3
 segment_theta: 1.047 # Lego-loam: 1.047
@@ -47,13 +47,13 @@ td: !!opencv-matrix                 # initial value of time offset. unit: s. rea
    data: [0]
 
 distortion: 0
-scan_period: 0.05
+scan_period: 0.1
 laser_sync_threshold: 0.07
 
 ######################################################## odometry
 # optimization 
 max_solver_time: 0.02  # max solver itration time (s), to guarantee real time
-max_num_iterations: 7   # max solver itrations, to guarantee real time
+max_num_iterations: 6   # max solver itrations, to guarantee real time
 
 roi_range: 1
 distance_sq_threshold: 25
@@ -79,7 +79,7 @@ pcl_viewer_normal_ratio: 10
 
 # calibration converage parameters
 n_cumu_feature: 10
-lambda_initial: 400
+lambda_initial: 100
 lambda_thre_calib: 1000
 n_calib: 30
 
@@ -107,7 +107,7 @@ uct_measurement: !!opencv-matrix
    cols: 3
    dt: d
    data: [0.0025, 0.0025, 0.0025]
-   
+
 uct_ext_ratio: 0.0
 
-trace_threshold_mapping: 100
+trace_threshold_mapping: 10

@@ -105,7 +105,6 @@ void pubPointCloud(const Estimator &estimator, const double &time)
     publishCloud(pub_corner_points_less_sharp, header, corner_points_less_sharp);
     publishCloud(pub_surf_points_less_flat, header, surf_points_less_flat);
 
-
     // publish local map
     if (estimator.solver_flag_ == Estimator::SolverFlag::NON_LINEAR)
     {

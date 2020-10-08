@@ -35,6 +35,7 @@
                       -gf_method=$(arg gf_method)
                       -gf_ratio_ini=$(arg gf_ratio_ini)" output="screen">
                 <remap from="/laser_odom" to="/laser_odom_0"/>
+                <!-- <remap from="/laser_odom" to="/laser_odom_to_init"/> -->
             </node>
         </group>
     </group>

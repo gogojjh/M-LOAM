@@ -83,7 +83,7 @@
 #define SURROUNDING_KF_RADIUS 50.0
 #define GLOBALMAP_KF_RADIUS 1000.0
 #define DISTANCE_KEYFRAMES 1
-#define ORIENTATION_KEYFRAMES 3
+#define ORIENTATION_KEYFRAMES 2
 #define MAX_FEATURE_SELECT_TIME 15  // 10ms
 #define MAX_RANDOM_QUEUE_TIME 20
 
@@ -690,7 +690,7 @@ public:
         } 
         if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
         {
-            std::cerr << "mapping [goodFeatureMatching]: early termination!" << std::endl;
+            // std::cerr << "mapping [goodFeatureMatching]: early termination!" << std::endl;
             LOG_EVERY_N(INFO, 100) << "early termination: feature_type " << feature_type << ", " << num_rnd_que << ", " << t_sel_feature.toc();
         }
 
