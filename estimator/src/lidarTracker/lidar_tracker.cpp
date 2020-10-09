@@ -40,7 +40,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
     double para_pose[SIZE_POSE] = {pose_ini.t_(0), pose_ini.t_(1), pose_ini.t_(2),
                                    pose_ini.q_.x(), pose_ini.q_.y(), pose_ini.q_.z(), pose_ini.q_.w()};
 
-    for (size_t iter_cnt = 0; iter_cnt < 1; iter_cnt++)
+    for (size_t iter_cnt = 0; iter_cnt < 2; iter_cnt++)
     {
         ceres::Problem problem;
         ceres::Solver::Summary summary;
@@ -53,7 +53,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         // options.max_solver_time_in_seconds = 0.005;
         options.minimizer_progress_to_stdout = false;
         // options.check_gradients = false;
-        // options.gradient_check_relative_precision = 1e-3;
+        // options.gradient_check_relative_precision = 1e-4;
 
         PoseLocalParameterization *local_parameterization = new PoseLocalParameterization();      
         local_parameterization->setParameter();
@@ -98,7 +98,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
                 double **tmp_param = new double *[1];
                 tmp_param[0] = para_pose;
                 f->check(tmp_param);
-                CHECK_JACOBIAN = 0; 
+                CHECK_JACOBIAN = 0;
                 delete[] tmp_param;
             }
         }

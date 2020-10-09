@@ -80,7 +80,7 @@
 #include "associate_uct.hpp"
 
 // #define MAX_BUF_LENGTH 3
-#define SURROUNDING_KF_RADIUS 50.0
+#define SURROUNDING_KF_RADIUS 100.0
 #define GLOBALMAP_KF_RADIUS 1000.0
 #define DISTANCE_KEYFRAMES 1
 #define ORIENTATION_KEYFRAMES 2
@@ -425,7 +425,7 @@ public:
                                                               all_features[que_idx],
                                                               que_idx,
                                                               n_neigh,
-                                                              true);
+                                                              false);
                 }
                 else if (feature_type == 'c')
                 {
@@ -436,7 +436,7 @@ public:
                                                                 all_features[que_idx],
                                                                 que_idx,
                                                                 n_neigh,
-                                                                true);
+                                                                false);
                 }
                 if (b_match)
                 {
@@ -473,7 +473,7 @@ public:
                                                               all_features[que_idx],
                                                               que_idx,
                                                               n_neigh,
-                                                              true);
+                                                              false);
                 }
                 else if (feature_type == 'c')
                 {
@@ -484,7 +484,7 @@ public:
                                                                 all_features[que_idx],
                                                                 que_idx,
                                                                 n_neigh,
-                                                                true);
+                                                                false);
                 }
                 if (b_match)
                 {
@@ -515,7 +515,7 @@ public:
                                                         all_features[k],
                                                         k,
                                                         n_neigh,
-                                                        true);
+                                                        false);
             if (b_match)
             {
                 sel_feature_idx[num_sel_features] = k;
@@ -561,7 +561,7 @@ public:
                                                             all_features[que_idx],
                                                             que_idx,
                                                             n_neigh,
-                                                            true);
+                                                            false);
                 }
                 else if (feature_type == 'c')
                 {
@@ -572,7 +572,7 @@ public:
                                                                 all_features[que_idx],
                                                                 que_idx,
                                                                 n_neigh,
-                                                                true);
+                                                                false);
                 }
                 if (b_match)
                 {
@@ -634,7 +634,7 @@ public:
                                                                       all_features[que_idx],
                                                                       que_idx,
                                                                       n_neigh,
-                                                                      true);
+                                                                      false);
                         } else if (feature_type == 'c')
                         {
                             b_match = f_extract.matchCornerPointFromMap(kdtree_from_map,
@@ -644,7 +644,7 @@ public:
                                                                         all_features[que_idx],
                                                                         que_idx,
                                                                         n_neigh,
-                                                                        true);
+                                                                        false);
                         }
                         if (b_match) 
                         {

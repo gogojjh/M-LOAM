@@ -266,9 +266,9 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
                             continue;
 
                         d1 = std::max(range_mat(from_indx, from_indy),
-                                      range_mat(this_indx, this_indy));
+                                    range_mat(this_indx, this_indy));
                         d2 = std::min(range_mat(from_indx, from_indy),
-                                      range_mat(this_indx, this_indy));
+                                    range_mat(this_indx, this_indy));
                         dist = sqrt(d1 * d1 + d2 * d2 - 2 * d1 * d2 * cos(alpha));
                         alpha = iter->first == 0 ? segment_alphax_ : segment_alphay_;
                         angle = atan2(d2 * sin(alpha), (d1 - d2 * cos(alpha)));
@@ -355,7 +355,7 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
             if (label_mat(i, j) > 0)
             {
                 PointType point = cloud_matrix.points[j + i * horizon_scans_];
-                point.intensity += i; // intensity = scan_id.timestamp
+                point.intensity += float(i); // intensity = scan_id.timestamp
                 bool ground_flag = (label_mat(i, j) == 1) ? true : false;
                 if (scan_info.segment_flag_) 
                 {
@@ -378,7 +378,9 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
             }
         }
         scan_info.scan_end_ind_[i] = laser_cloud_out.size() - 6;
+        // std::cout << i << " " << scan_info.scan_start_ind_[i] << " " << scan_info.scan_end_ind_[i] << std::endl;
     }
+    // std::cout << laser_cloud_out.size() << std::endl;
     assert(laser_cloud_out.size() == scan_info.ground_flag_.size());
 }
 

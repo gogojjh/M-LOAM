@@ -90,6 +90,7 @@ int SKIP_NUM_ODOM_PUB;
 float MAP_CORNER_RES;
 float MAP_SURF_RES;
 float MAP_OUTLIER_RES;
+float MAP_SUR_KF_RES;
 float MAP_EIG_THRE;
 float MAP_GF_RATIO;
 float LAMBDA_1;
@@ -253,8 +254,10 @@ void readParameters(std::string config_file)
     MAP_CORNER_RES = fsSettings["map_corner_res"];
     MAP_SURF_RES = fsSettings["map_surf_res"];
     MAP_OUTLIER_RES = fsSettings["map_outlier_res"];
+    MAP_SUR_KF_RES = fsSettings["map_sur_kf_res"];
     MAP_EIG_THRE = fsSettings["map_eig_thre"];
-    printf("map corner resolution:%f, surf resolution:%f\n", MAP_CORNER_RES, MAP_SURF_RES);
+    printf("map corner resolution:%f, surf resolution:%f, surround kf resolution:%f\n", 
+        MAP_CORNER_RES, MAP_SURF_RES, MAP_SUR_KF_RES);
 
     UCT_EXT_RATIO = fsSettings["uct_ext_ratio"];
     printf("uct ext ratio: %f\n", UCT_EXT_RATIO);

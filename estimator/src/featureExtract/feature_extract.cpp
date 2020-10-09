@@ -24,8 +24,7 @@ void FeatureExtract::findStartEndAngle(const PointCloud &laser_cloud_in,
     int cloud_size = laser_cloud_in.points.size();
     start_ori = -atan2(laser_cloud_in.points[0].y, laser_cloud_in.points[0].x);
     end_ori = -atan2(laser_cloud_in.points[cloud_size - 1].y,
-                     laser_cloud_in.points[cloud_size - 1].x) +
-              2 * M_PI;
+                     laser_cloud_in.points[cloud_size - 1].x) + 2 * M_PI;
     if (end_ori - start_ori > 3 * M_PI)
     {
         end_ori -= 2 * M_PI;
@@ -282,6 +281,10 @@ void FeatureExtract::extractCloud(const PointICloud &laser_cloud_in,
     cloud_feature.insert(pair<std::string, PointICloud>("corner_points_less_sharp", corner_points_less_sharp)); // more corner points
     cloud_feature.insert(pair<std::string, PointICloud>("surf_points_flat", surf_points_flat)); // subset: the most distinctive planar points
     cloud_feature.insert(pair<std::string, PointICloud>("surf_points_less_flat", surf_points_less_flat)); // more planar points
+
+    std::cout << "feature size: " << laser_cloud->size() << " " 
+              << corner_points_sharp.size() << " " << corner_points_less_sharp.size() << " "
+              << surf_points_flat.size() << " " << surf_points_less_flat.size() << std::endl;
 
     delete[] cloud_curvature;
     delete[] cloud_sort_ind;

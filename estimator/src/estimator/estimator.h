@@ -51,8 +51,8 @@
 #include "../utility/cloud_visualizer.h"
 #include "../utility/tic_toc.h"
 #include "../utility/CircularBuffer.h"
-#include "../factor/lidar_pivot_plane_norm_factor.hpp"
-#include "../factor/lidar_pivot_target_plane_norm_factor.hpp"
+#include "../factor/lidar_online_calib_factor.hpp"
+#include "../factor/lidar_pure_odom_factor.hpp"
 #include "../factor/pose_local_parameterization.h"
 #include "../factor/marginalization_factor.h"
 #include "../factor/prior_factor.hpp"
@@ -60,7 +60,7 @@
 
 #include "mloam_pcl/point_with_time.hpp"
 
-#define MAX_FEATURE_SELECT_TIME 7 // 7ms
+#define MAX_FEATURE_SELECT_TIME 10 // 7ms
 #define MAX_RANDOM_QUEUE_TIME 10
 
 class Estimator

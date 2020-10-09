@@ -20,10 +20,10 @@
 
 #include "../utility/utility.h"
 
-class LidarPivotTargetPlaneNormFactor: public ceres::SizedCostFunction<1, 7>
+class LidarOnlineCalibFactor: public ceres::SizedCostFunction<1, 7>
 {
 public:
-	LidarPivotTargetPlaneNormFactor(const Eigen::Vector3d &point, const Eigen::Vector4d &coeff, double sqrt_info = 1.0)
+	LidarOnlineCalibFactor(const Eigen::Vector3d &point, const Eigen::Vector4d &coeff, double sqrt_info = 1.0)
     	: point_(point), coeff_(coeff), sqrt_info_(sqrt_info){}
 
 	// TODO: jacobian derivation
@@ -48,7 +48,7 @@ public:
                 jaco_ext.leftCols<3>() = w.transpose();
 				jaco_ext.rightCols<3>() = -w.transpose() * Rext * Utility::skewSymmetric(point_);
 
-                jacobian_pose_ext.setZero();
+				jacobian_pose_ext.setZero();
                 jacobian_pose_ext.leftCols<6>() = sqrt_info_ * jaco_ext;
                 jacobian_pose_ext.rightCols<1>().setZero();
             }
@@ -63,10 +63,10 @@ public:
         double **jaco = new double *[1];
         jaco[0] = new double[1 * 7];
         Evaluate(param, res, jaco);
-        std::cout << "[LidarPivotTargetPlaneNormFactor] check begins" << std::endl;
+        std::cout << "[LidarOnlineCalibFactor] check begins" << std::endl;
         std::cout << "analytical:" << std::endl;
 
-        std::cout << *res << std::endl;
+        std::cout << res[0] << std::endl;
         std::cout << Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> >(jaco[0]) << std::endl;
 
 		delete[] jaco[0];

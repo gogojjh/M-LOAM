@@ -57,16 +57,22 @@ public:
         return true;
     }
 
+    // TODO: check if derived jacobian == perturbation on the raw function
     void check(double **param)
     {
-        double *res = new double[3];
+        double *res = new double[1];
         double **jaco = new double *[1];
         jaco[0] = new double[1 * 7];
         Evaluate(param, res, jaco);
         std::cout << "[LidarScanPlaneNormFactor] check begins" << std::endl;
         std::cout << "analytical:" << std::endl;
-        std::cout << res[0] << " " << res[1] << " " << res[2] << std::endl;
-        std::cout << Eigen::Map<Eigen::Matrix<double, 3, 7, Eigen::RowMajor>>(jaco[0]) << std::endl;
+
+        std::cout << res[0] << std::endl;
+        std::cout << Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor>>(jaco[0]) << std::endl;
+
+        delete[] jaco[0];
+        delete[] jaco;
+        delete[] res;
 
         Eigen::Quaterniond q_last_curr(param[0][6], param[0][3], param[0][4], param[0][5]);
         Eigen::Vector3d t_last_curr(param[0][0], param[0][1], param[0][2]);

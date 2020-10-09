@@ -26,10 +26,11 @@ class LidarMapPlaneNormFactor : public ceres::SizedCostFunction<3, 7>
 {
 public:
 	LidarMapPlaneNormFactor(const Eigen::Vector3d &point, const Eigen::Vector4d &coeff, const Eigen::Matrix3d &cov_matrix = Eigen::Matrix3d::Identity())
-		: point_(point), coeff_(coeff), cov_matrix_(cov_matrix)
+		: point_(point),
+		  coeff_(coeff),
+		  sqrt_info_(Eigen::LLT<Eigen::Matrix<double, 3, 3>>(cov_matrix.inverse()).matrixL().transpose())
 	{
 		// is a upper triangular matrix
-		sqrt_info_ = Eigen::LLT<Eigen::Matrix<double, 3, 3> >(cov_matrix_.inverse()).matrixL().transpose();
 		// std::cout << sqrt_info_ << std::endl << std::endl;
 		// Eigen::matrix_sqrt_triangular(sqrt_info_, sqrt_info_);
 		// std::cout << sqrt_info_ << std::endl;
@@ -82,7 +83,7 @@ public:
 
 		delete[] jaco[0];
 		delete[] jaco;
-		delete[] res;		
+		delete[] res;	
 
 		Eigen::Quaterniond q_w_curr(param[0][6], param[0][3], param[0][4], param[0][5]);
 		Eigen::Vector3d t_w_curr(param[0][0], param[0][1], param[0][2]);
@@ -123,9 +124,8 @@ public:
 		std::cout << num_jacobian.block<1, 6>(2, 0) << std::endl;
     }
 
-	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 private:
-	Eigen::Vector3d point_;
-	Eigen::Vector4d coeff_;
-	Eigen::Matrix3d cov_matrix_, sqrt_info_;
+	const Eigen::Vector3d point_;
+	const Eigen::Vector4d coeff_;
+	const Eigen::Matrix3d sqrt_info_;
 };

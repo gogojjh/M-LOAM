@@ -23,11 +23,13 @@
 
 using namespace common;
 
-class LidarPivotPlaneNormFactor : public ceres::SizedCostFunction<1, 7, 7, 7>
+class LidarPureOdomFactor : public ceres::SizedCostFunction<1, 7, 7, 7>
 {
 public:
-	LidarPivotPlaneNormFactor(const Eigen::Vector3d &point, const Eigen::Vector4d &coeff, double sqrt_info = 1.0)
-    	: point_(point), coeff_(coeff), sqrt_info_(sqrt_info){}
+	LidarPureOdomFactor(const Eigen::Vector3d &point,
+						const Eigen::Vector4d &coeff, 
+						const double sqrt_info = 1.0)
+		: point_(point), coeff_(coeff), sqrt_info_(sqrt_info) {}
 
 	// residual = sum(w^(T) * (R * p + t) + d)
 	bool Evaluate(double const *const *param, double *residuals, double **jacobians) const
@@ -61,10 +63,10 @@ public:
                 Eigen::Matrix<double, 1, 6> jaco_pivot;
 
 				jaco_pivot.leftCols<3>() = -w.transpose() * Rp.transpose();
-				jaco_pivot.rightCols<3>() = w.transpose() * (
-					Utility::skewSymmetric(Rp.transpose() * (Ri * Rext * point_ + Ri * t_ext + t_i - t_pivot)));
+				jaco_pivot.rightCols<3>() = w.transpose() * (Rp.transpose() *
+															 Utility::skewSymmetric(Ri * Rext * point_ + Ri * t_ext + t_i - t_pivot));
 
-                jacobian_pose_pivot.setZero();
+				jacobian_pose_pivot.setZero();
                 jacobian_pose_pivot.leftCols<6>() = sqrt_info_ * jaco_pivot;
                 jacobian_pose_pivot.rightCols<1>().setZero();
             }
@@ -75,9 +77,10 @@ public:
                 Eigen::Matrix<double, 1, 6> jaco_i;
 
 				jaco_i.leftCols<3>() = w.transpose() * Rp.transpose();
-				jaco_i.rightCols<3>() = -w.transpose() * Rp.transpose() * Ri * Utility::skewSymmetric(Rext * point_ + t_ext);
+				jaco_i.rightCols<3>() = -w.transpose() * Rp.transpose() *
+										Ri * Utility::skewSymmetric(Rext * point_ + t_ext);
 
-                jacobian_pose_i.setZero();
+				jacobian_pose_i.setZero();
                 jacobian_pose_i.leftCols<6>() = sqrt_info_ * jaco_i;
                 jacobian_pose_i.rightCols<1>().setZero();
             }
@@ -89,9 +92,9 @@ public:
 
 				Eigen::Matrix<double, 1, 6> jaco_ex;
 				jaco_ex.leftCols<3>() = w.transpose() * Rp.transpose() * Ri;
-				jaco_ex.rightCols<3>() = -w.transpose() * Rp.transpose() * Ri * Rext * Utility::skewSymmetric(point_);
+				jaco_ex.rightCols<3>() = -w.transpose() * Rp.transpose() * Ri * Utility::skewSymmetric(Rext * point_);
 
-                jacobian_pose_ex.setZero();
+				jacobian_pose_ex.setZero();
                 jacobian_pose_ex.leftCols<6>() = sqrt_info_ * jaco_ex;
                 jacobian_pose_ex.rightCols<1>().setZero();
             }
@@ -103,16 +106,15 @@ public:
     void check(double **param)
     {
         double *res = new double[1];
-        //  double **jaco = new double *[1];
         double **jaco = new double *[3];
         jaco[0] = new double[1 * 7];
         jaco[1] = new double[1 * 7];
         jaco[2] = new double[1 * 7];
         Evaluate(param, res, jaco);
-		std::cout << "[LidarPivotPlaneNormFactor] check begins" << std::endl;
+		std::cout << "[LidarPureOdomFactor] check begins" << std::endl;
         std::cout << "analytical:" << std::endl;
 
-        std::cout << *res << std::endl;
+        std::cout << res[0] << std::endl;
         std::cout << Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> >(jaco[0]) << std::endl;
         std::cout << Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> >(jaco[1]) << std::endl;
         std::cout << Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> >(jaco[2]) << std::endl;

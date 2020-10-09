@@ -118,6 +118,7 @@ extern int SKIP_NUM_ODOM_PUB;
 extern float MAP_CORNER_RES;
 extern float MAP_SURF_RES;
 extern float MAP_OUTLIER_RES;
+extern float MAP_SUR_KF_RES;
 extern float MAP_EIG_THRE;
 
 extern float UCT_EXT_RATIO;

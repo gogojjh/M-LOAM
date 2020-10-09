@@ -22,7 +22,7 @@
                 args="-config_file=$(arg config_file)
                     -data_source=$(arg data_source)
                     -result_save=$(arg result_save)
-                    -output_path=$(arg output_path)" >
+                    -output_path=$(arg output_path)">
                 <remap from="/base_pose_gt" to="/odometry_gt" />
             </node>
         </group>
@@ -35,9 +35,17 @@
                       -gf_method=$(arg gf_method)
                       -gf_ratio_ini=$(arg gf_ratio_ini)" output="screen">
                 <remap from="/laser_odom" to="/laser_odom_0"/>
-                <!-- <remap from="/laser_odom" to="/laser_odom_to_init"/> -->
             </node>
         </group>
+        <!-- <group if="$(arg run_mloam_mapping)">
+            <node pkg="mloam" type="lidar_mapper_only_surf" name="lidar_mapper_only_surf"
+                args="$(arg config_file)
+                      0 
+                      $(arg output_path)
+                      1" output="screen">
+                <remap from="/laser_odom" to="/laser_odom_0"/>
+            </node>
+        </group>         -->
     </group>
 
     <!-- publish static tf -->
@@ -51,11 +59,8 @@
         args="0 0 0 0 0 0 1 /laser_0 /velo 10"/>        
     <node name="static_tf_base_sensor_into_base_link" pkg="tf" type="static_transform_publisher"
         args="-0.81 0.31 -0.80 0 0 0 /aft_mapped /base_link 10"/>                          
-
-    <group unless="$(arg run_mloam)">
-        <node name="static_tf_world_sensor_into_camera" pkg="tf" type="static_transform_publisher"
-            args="0 0 0 0 0 0 1 /world /camera_init 10"/>
-    </group>
+    <node name="static_tf_world_sensor_into_camera" pkg="tf" type="static_transform_publisher"
+        args="0 0 0 0 0 0 1 /world /camera_init 10"/>
 
     <!-- run aloam  -->
     <group if="$(arg run_aloam)">
@@ -75,7 +80,7 @@
             <arg name="output_path" value="$(arg output_path)"/>
             <arg name="s_line" value="64" />
             <arg name="map_res" value="0.4" />
-            <!-- <arg name="velo_topic" value="/velodyne_points" /> -->
+            <arg name="velo_topic" value="/velodyne_points" />
         </include>       
    </group>        
 

@@ -1,14 +1,14 @@
 <launch>
 
-    <param name="use_sim_time" value="false" />
+    <arg name="use_sim_time" value="false" />
 
     <node name="kittiHelper" pkg="mloam" type="kittiHelper" output="screen"> 
-        <param name="dataset_folder" type="string" value="/Monster/dataset/KITTI/odometry/" />
-        <param name="sequence_number" type="string" value="07" />
-        <param name="to_bag" type="bool" value="true" />
+        <arg name="dataset_folder" value="/Monster/dataset/KITTI/odometry/" />
+        <arg name="sequence_number" value="00" />
+        <arg name="to_bag" value="true" />
         <!-- replace with your output folder -->
-        <param name="output_bag_file" type="string" value="/Monster/dataset/KITTI/odometry/07.bag" /> 
-        <param name="publish_delay" type="int" value="1" />
+        <arg name="output_bag_file" value="/Monster/dataset/KITTI/odometry/$(arg sequence_name).bag" /> 
+        <arg name="publish_delay" value="1" />
     </node>
     
 </launch>
