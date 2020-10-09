@@ -5,8 +5,8 @@ multiple_thread: 0
 
 # segmmentation
 segment_cloud: 0
-horizon_scan: 1800
-min_cluster_size: 10
+horizon_scan: 4500 # 0.08°-0.35°
+min_cluster_size: 30
 segment_valid_point_num: 5
 segment_valid_line_num: 3
 segment_theta: 1.047 # Lego-loam: 1.047
@@ -55,7 +55,7 @@ laser_sync_threshold: 0.07
 max_solver_time: 0.02  # max solver itration time (s), to guarantee real time
 max_num_iterations: 6   # max solver itrations, to guarantee real time
 
-roi_range: 1
+roi_range: 0.3
 distance_sq_threshold: 25
 nearby_scan: 2.5
 
@@ -110,4 +110,4 @@ uct_measurement: !!opencv-matrix
 
 uct_ext_ratio: 0.0
 
-trace_threshold_mapping: 10
+trace_threshold_mapping: 100
