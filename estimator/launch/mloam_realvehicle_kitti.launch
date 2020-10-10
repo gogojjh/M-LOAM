@@ -22,7 +22,7 @@
                 args="-config_file=$(arg config_file)
                     -data_source=$(arg data_source)
                     -result_save=$(arg result_save)
-                    -output_path=$(arg output_path)">
+                    -output_path=$(arg output_path)" >
                 <remap from="/base_pose_gt" to="/odometry_gt" />
             </node>
         </group>
@@ -98,7 +98,7 @@
     <param name="use_sim_time" value="true" />
     <group if="$(arg bag_file_use)">
         <node pkg="rosbag" type="play" name="rosbag" 
-            args="--clock -r 0.7 $(arg bag_file)" required="true"/>    
+            args="--clock -r 1.0 $(arg bag_file)" required="true"/>    
     </group>    
 
  </launch>

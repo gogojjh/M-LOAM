@@ -79,11 +79,10 @@
 #include "../factor/impl_callback.hpp"
 #include "associate_uct.hpp"
 
-// #define MAX_BUF_LENGTH 3
-#define SURROUNDING_KF_RADIUS 50.0
+#define SURROUNDING_KF_RADIUS 100.0
 #define GLOBALMAP_KF_RADIUS 1000.0
-#define DISTANCE_KEYFRAMES 1
-#define ORIENTATION_KEYFRAMES 1
+#define DISTANCE_KEYFRAMES 2
+#define ORIENTATION_KEYFRAMES 2
 #define MAX_FEATURE_SELECT_TIME 15  // 10ms
 #define MAX_RANDOM_QUEUE_TIME 20
 
@@ -361,6 +360,7 @@ public:
                                                             laser_cloud.points[i],
                                                             pose_local,
                                                             all_features[i],
+                                                            all_features[i + num_all_features],
                                                             i,
                                                             n_neigh,
                                                             true);
@@ -394,7 +394,6 @@ public:
                              Eigen::Matrix<double, 6, 6> &sub_mat_H)
     {
         size_t num_all_features = laser_cloud.size();
-        all_features.resize(num_all_features);
 
         std::vector<size_t> all_feature_idx(num_all_features);
         std::vector<int> feature_visited(num_all_features, -1);
@@ -434,6 +433,7 @@ public:
                                                                 laser_cloud.points[que_idx],
                                                                 pose_local,
                                                                 all_features[que_idx],
+                                                                all_features[que_idx + num_all_features],
                                                                 que_idx,
                                                                 n_neigh,
                                                                 false);
@@ -482,6 +482,7 @@ public:
                                                                 laser_cloud.points[que_idx],
                                                                 pose_local,
                                                                 all_features[que_idx],
+                                                                all_features[que_idx + num_all_features],
                                                                 que_idx,
                                                                 n_neigh,
                                                                 false);
@@ -508,14 +509,14 @@ public:
             size_t k = rgi_.geneRandUniform(0, all_feature_idx.size() - 1); // randomly select a starting point
             feature_visited[k] = 1;
             PointIWithCov point_old = laser_cloud.points[k]; 
-            b_match = f_extract.matchCornerPointFromMap(kdtree_from_map,
-                                                        laser_map,
-                                                        point_old,
-                                                        pose_local,
-                                                        all_features[k],
-                                                        k,
-                                                        n_neigh,
-                                                        false);
+            b_match = f_extract.matchSurfPointFromMap(kdtree_from_map,
+                                                      laser_map,
+                                                      point_old,
+                                                      pose_local,
+                                                      all_features[k],
+                                                      k,
+                                                      n_neigh,
+                                                      false);
             if (b_match)
             {
                 sel_feature_idx[num_sel_features] = k;
@@ -555,13 +556,13 @@ public:
                 if (feature_type == 's')
                 {
                     b_match = f_extract.matchSurfPointFromMap(kdtree_from_map,
-                                                            laser_map,
-                                                            point_old,
-                                                            pose_local,
-                                                            all_features[que_idx],
-                                                            que_idx,
-                                                            n_neigh,
-                                                            false);
+                                                              laser_map,
+                                                              point_old,
+                                                              pose_local,
+                                                              all_features[que_idx],
+                                                              que_idx,
+                                                              n_neigh,
+                                                              false);
                 }
                 else if (feature_type == 'c')
                 {
@@ -570,6 +571,7 @@ public:
                                                                 point_old,
                                                                 pose_local,
                                                                 all_features[que_idx],
+                                                                all_features[que_idx + num_all_features],
                                                                 que_idx,
                                                                 n_neigh,
                                                                 false);
@@ -635,13 +637,15 @@ public:
                                                                       que_idx,
                                                                       n_neigh,
                                                                       false);
-                        } else if (feature_type == 'c')
+                        } 
+                        else if (feature_type == 'c')
                         {
                             b_match = f_extract.matchCornerPointFromMap(kdtree_from_map,
                                                                         laser_map,
                                                                         laser_cloud.points[que_idx],
                                                                         pose_local,
                                                                         all_features[que_idx],
+                                                                        all_features[que_idx + num_all_features],
                                                                         que_idx,
                                                                         n_neigh,
                                                                         false);

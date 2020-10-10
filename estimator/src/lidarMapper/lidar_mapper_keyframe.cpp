@@ -254,6 +254,11 @@ void double2Vector()
 void extractSurroundingKeyFrames()
 {
     if (pose_keyframes_6d.size() == 0) return;
+    if ((!laser_cloud_surf_from_map_cov_ds->size() == 0) && (!laser_cloud_corner_from_map_cov_ds->size() == 0)) 
+    {
+        printf("not need to construct the map\n");
+        return;
+    }
 
     // update the current point
     pose_point_cur.x = pose_wmap_curr.t_[0];
@@ -336,8 +341,8 @@ void extractSurroundingKeyFrames()
     }
 
     common::timing::Timer filter_timer("mapping_filter");
-    down_size_filter_surf_map_cov.setInputCloud(laser_cloud_surf_from_map_cov);
-    down_size_filter_surf_map_cov.filter(*laser_cloud_surf_from_map_cov_ds);
+    down_size_filter_corner_map_cov.setInputCloud(laser_cloud_surf_from_map_cov);
+    down_size_filter_corner_map_cov.filter(*laser_cloud_surf_from_map_cov_ds);
     down_size_filter_corner_map_cov.setInputCloud(laser_cloud_corner_from_map_cov);
     down_size_filter_corner_map_cov.filter(*laser_cloud_corner_from_map_cov_ds);
     printf("corner/surf: before ds: %lu, %lu; after ds: %lu, %lu\n", 
@@ -364,7 +369,6 @@ void downsampleCurrentScan()
     laser_cloud_outlier_cov->clear();
 
     // propagate the extrinsic uncertainty on points
-    float max_d = 0;
     for (PointI &point_ori : *laser_cloud_surf_last_ds)
     {
         int idx = int(point_ori.intensity); // indicate the lidar id
@@ -375,16 +379,10 @@ void downsampleCurrentScan()
             pointAssociateToMap(point_ori, point_sel, pose_ext[idx].inverse());
             evalPointUncertainty(point_sel, cov_point, pose_ext[idx]);
             if (cov_point.trace() > TRACE_THRESHOLD_MAPPING) continue;
-            if (idx != IDX_REF)
-            {
-                float dis = sqrt(point_sel.x * point_sel.x + point_sel.y * point_sel.y + point_sel.z * point_sel.z);
-                max_d = std::max(max_d, dis);
-            }
         }
         PointIWithCov point_cov(point_ori, cov_point.cast<float>());
         laser_cloud_surf_cov->push_back(point_cov);
     }
-    printf("maximum distance: %fm\n", max_d);
 
     for (PointI &point_ori : *laser_cloud_corner_last_ds)
     {
@@ -432,7 +430,11 @@ void scan2MapOptimization()
         kdtree_corner_from_map->setInputCloud(laser_cloud_corner_from_map_cov_ds);
         printf("build time %fms\n", t_timer.Stop() * 1000);
         printf("********************************\n");
-        int max_iter = 4;
+        int max_iter;
+        if (pose_keyframes_6d.size() <= 5)
+            max_iter = 5;
+        else
+            max_iter = 2;
         for (int iter_cnt = 0; iter_cnt < max_iter; iter_cnt++)
         {
             ceres::Problem problem;
@@ -495,6 +497,7 @@ void scan2MapOptimization()
             if (POINT_EDGE_FACTOR)
             {
                 sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
+                all_corner_features.resize(laser_cloud_corner_cov->size() * 2);
                 afs.goodFeatureMatching(kdtree_corner_from_map,
                                         *laser_cloud_corner_from_map_cov_ds,
                                         *laser_cloud_corner_cov,
@@ -510,6 +513,7 @@ void scan2MapOptimization()
             if (POINT_PLANE_FACTOR)
             {
                 sub_mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
+                all_surf_features.resize(laser_cloud_surf_cov->size() * 2);
                 afs.goodFeatureMatching(kdtree_surf_from_map,
                                         *laser_cloud_surf_from_map_cov_ds,
                                         *laser_cloud_surf_cov,
@@ -527,13 +531,13 @@ void scan2MapOptimization()
             
             // if (MLOAM_RESULT_SAVE && frame_cnt == 1000)
             //     afs.writeFeature(*laser_cloud_surf_cov, sel_surf_feature_idx, all_surf_features);
-            printf("matching surf & corner num: %lu, %lu\n", surf_num, corner_num);
+            // printf("matching surf & corner num: %lu, %lu\n", surf_num, corner_num);
 
             CHECK_JACOBIAN = 0;
             for (const size_t &fid : sel_surf_feature_idx)
             {
                 const PointPlaneFeature &feature = all_surf_features[fid];
-                if (feature.type_ == 'n') continue;
+                // if (feature.type_ == 'n') continue;
                 Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Zero();
                 if (with_ua_flag)
                     extractCov(laser_cloud_surf_cov->points[feature.idx_], cov_matrix);
@@ -551,18 +555,33 @@ void scan2MapOptimization()
                     delete[] tmp_param;
                 }
             }
+
             for (const size_t &fid : sel_corner_feature_idx)
             {
-                const PointPlaneFeature &feature = all_corner_features[fid];
-                if (feature.type_ == 'n') continue;
-                Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Zero();
-                if (with_ua_flag)
-                    extractCov(laser_cloud_corner_cov->points[feature.idx_], cov_matrix);
-                else
-                    cov_matrix = COV_MEASUREMENT;
-                LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
-                ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
-                res_ids_proj.push_back(res_id);
+                {
+                    const PointPlaneFeature &feature = all_corner_features[fid];
+                    // if (feature.type_ == 'n') continue;
+                    Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Zero();
+                    if (with_ua_flag)
+                        extractCov(laser_cloud_corner_cov->points[feature.idx_], cov_matrix);
+                    else
+                        cov_matrix = COV_MEASUREMENT;
+                    LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
+                    ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
+                    res_ids_proj.push_back(res_id);
+                }
+                {
+                    const PointPlaneFeature &feature = all_corner_features[fid + laser_cloud_corner_cov->size()];
+                    // if (feature.type_ == 'n') continue;
+                    Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Zero();
+                    if (with_ua_flag)
+                        extractCov(laser_cloud_corner_cov->points[feature.idx_], cov_matrix);
+                    else
+                        cov_matrix = COV_MEASUREMENT;
+                    LidarMapPlaneNormFactor *f = new LidarMapPlaneNormFactor(feature.point_, feature.coeffs_, cov_matrix);
+                    ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_pose);
+                    res_ids_proj.push_back(res_id);
+                }
             }
             // printf("add constraints: %fms\n", t_add_constraints.toc());
 
@@ -581,7 +600,7 @@ void scan2MapOptimization()
             ceres::Solver::Summary summary;
             ceres::Solver::Options options;
             options.linear_solver_type = ceres::DENSE_SCHUR;
-            options.max_num_iterations = 4;
+            options.max_num_iterations = 30;
             options.minimizer_progress_to_stdout = false;
             options.check_gradients = false;
             options.gradient_check_relative_precision = 1e-4;
@@ -595,7 +614,7 @@ void scan2MapOptimization()
                 common::timing::Timer eval_deg_timer("mapping_eval_deg");
                 problem.Evaluate(e_option, nullptr, nullptr, nullptr, &jaco);
                 evalHessian(jaco, mat_H);
-                if (pose_keyframes_6d.size() <= 10)
+                if (pose_keyframes_6d.size() <= 5)
                     cov_mapping.setZero();
                 else
                     cov_mapping = (mat_H / 134).inverse();
@@ -809,7 +828,7 @@ void pubGlobalMap()
                 *laser_cloud_map += outlier_trans;
             }
 
-            if ((abs(pose_wmap_curr.t.x()) >= 1000) || ((abs(pose_wmap_curr.t.y()) >= 1000) || ((abs(pose_wmap_curr.t.z()) >= 1000))            
+            if ((abs(pose_wmap_curr.t_.x()) >= 1000) || (abs(pose_wmap_curr.t_.y()) >= 1000) || (abs(pose_wmap_curr.t_.z()) >= 1000))
             {
                 down_size_filter_global_map_cov.setLeafSize(2.0, 2.0, 2.0);
                 down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
@@ -858,7 +877,7 @@ void saveGlobalMap()
     }
 
     // adpatively change the resolution of the global map by checking the range
-    if ((abs(pose_wmap_curr.t.x()) >= 1000) || ((abs(pose_wmap_curr.t.y()) >= 1000) || ((abs(pose_wmap_curr.t.z()) >= 1000))
+    if ((abs(pose_wmap_curr.t_.x()) >= 1000) || (abs(pose_wmap_curr.t_.y()) >= 1000) || (abs(pose_wmap_curr.t_.z()) >= 1000))
     {
         down_size_filter_global_map_cov.setLeafSize(2.0, 2.0, 2.0);
         down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
@@ -895,6 +914,8 @@ void clearCloud()
 {
     laser_cloud_surf_from_map_cov->clear();
     laser_cloud_corner_from_map_cov->clear();
+    laser_cloud_surf_from_map_cov_ds->clear();
+    laser_cloud_corner_from_map_cov_ds->clear();
 }
 
 void process()
@@ -905,8 +926,6 @@ void process()
 		while (!surf_last_buf.empty() && !corner_last_buf.empty() &&
                !outlier_buf.empty() && !full_res_buf.empty() &&
                !ext_buf.empty() && !odometry_buf.empty())
-
-            //     &&
 		{
 			//********************* * 100******************************************************
 			// step 1: pop up subscribed data
@@ -1071,7 +1090,7 @@ void process()
 
             pubOdometry();
 
-            clearCloud();
+            if (save_new_keyframe) clearCloud(); // if save new keyframe, clear the map point cloud
 
             double process_time = process_timer.Stop() * 1000;
             std::cout << common::RED << "frame: " << frame_cnt

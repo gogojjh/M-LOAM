@@ -79,7 +79,7 @@ public:
     void matchCornerFromScan(const typename pcl::KdTreeFLANN<PointType>::Ptr &kdtree_corner_from_scan,
                              const typename pcl::PointCloud<PointType> &cloud_scan, 
                              const typename pcl::PointCloud<PointType> &cloud_data,
-                             const Pose &pose_local, 
+                             const Pose &pose_local,
                              std::vector<PointPlaneFeature> &features);
     
     template <typename PointType>
@@ -94,7 +94,7 @@ public:
                             const typename pcl::PointCloud<PointType> &cloud_map, 
                             const typename pcl::PointCloud<PointType> &cloud_data,
                             const Pose &pose_local, 
-                            std::vector<PointPlaneFeature> &features, 
+                            std::vector<PointPlaneFeature> &features,
                             const size_t &N_NEIGH = 5, 
                             const bool &CHECK_FOV = true);
 
@@ -112,7 +112,8 @@ public:
                                  const typename pcl::PointCloud<PointType> &cloud_map,
                                  const PointType &point_ori,
                                  const Pose &pose_local,
-                                 PointPlaneFeature &feature,
+                                 PointPlaneFeature &feature1,
+                                 PointPlaneFeature &feature2,
                                  const size_t &idx,
                                  const size_t &N_NEIGH = 5,
                                  const bool &CHECK_FOV = true);
@@ -140,7 +141,10 @@ void FeatureExtract::matchCornerFromScan(const typename pcl::KdTreeFLANN<PointTy
         std::cerr << "[FeatureExtract] Point does not have intensity field!" << std::endl;
         exit(EXIT_FAILURE);
     }
-    features.clear();
+
+    size_t cloud_size = cloud_data.points.size();
+    features.resize(cloud_size * 2);
+    size_t cloud_cnt = 0;
     PointType point_sel;
     std::vector<int> point_search_ind;
     std::vector<float> point_search_sqdis;
@@ -197,15 +201,16 @@ void FeatureExtract::matchCornerFromScan(const typename pcl::KdTreeFLANN<PointTy
                 }
             }
         }
+
         if (min_point_ind2 >= 0) // both closest_point_ind and min_point_ind2 is valid
         {
             Eigen::Vector3f X0(point_sel.x, point_sel.y, point_sel.z);
             Eigen::Vector3f X1(cloud_scan.points[closest_point_ind].x,
-                               cloud_scan.points[closest_point_ind].y,
-                               cloud_scan.points[closest_point_ind].z);
+                            cloud_scan.points[closest_point_ind].y,
+                            cloud_scan.points[closest_point_ind].z);
             Eigen::Vector3f X2(cloud_scan.points[min_point_ind2].x,
-                               cloud_scan.points[min_point_ind2].y,
-                               cloud_scan.points[min_point_ind2].z);
+                            cloud_scan.points[min_point_ind2].y,
+                            cloud_scan.points[min_point_ind2].z);
             Eigen::Vector3f n = (X1 - X0).cross(X2 - X0);
             Eigen::Vector3f w2 = n.normalized();
             Eigen::Vector3f w1 = (w2.cross(X2 - X1)).normalized();
@@ -215,28 +220,34 @@ void FeatureExtract::matchCornerFromScan(const typename pcl::KdTreeFLANN<PointTy
             float ld_p2 = -(w2.x() * point_sel.x + w2.y() * point_sel.y + w2.z() * point_sel.z - ld_2);
             float s = 1 - 0.9f * fabs(ld_1);
 
-            // Eigen::Vector4d coeff1(w1.x(), w1.y(), w1.z(), ld_p1);
-            // Eigen::Vector4d coeff2(w2.x(), w2.y(), w2.z(), ld_p2);
+            Eigen::Vector4d coeff1(w1.x(), w1.y(), w1.z(), ld_p1);
+            Eigen::Vector4d coeff2(w2.x(), w2.y(), w2.z(), ld_p2);
 
-            // PointPlaneFeature feature1, feature2;
-            // feature1.idx_ = i;
-            // feature1.point_ = Eigen::Vector3d{cloud_data.points[i].x, cloud_data.points[i].y, cloud_data.points[i].z};
-            // feature1.coeffs_ = coeff1 * 0.5;
-            // features.push_back(feature1);
+            PointPlaneFeature feature1, feature2;
+            feature1.idx_ = i;
+            feature1.point_ = Eigen::Vector3d{cloud_data.points[i].x, cloud_data.points[i].y, cloud_data.points[i].z};
+            feature1.coeffs_ = coeff1 * 0.5;
+            feature1.type_ = 'c';
+            features[cloud_cnt] = feature1;
+            cloud_cnt++;
 
-            // feature2.idx_ = i;
-            // feature2.point_ = Eigen::Vector3d{cloud_data.points[i].x, cloud_data.points[i].y, cloud_data.points[i].z};
-            // feature2.coeffs_ = coeff2 * 0.5;
-            // features.push_back(feature2);
+            feature2.idx_ = i;
+            feature2.point_ = Eigen::Vector3d{cloud_data.points[i].x, cloud_data.points[i].y, cloud_data.points[i].z};
+            feature2.coeffs_ = coeff2 * 0.5;
+            feature2.type_ = 'c';
+            features[cloud_cnt] = feature1;
+            cloud_cnt++;
 
-            Eigen::Vector4d coeff(w1.x(), w1.y(), w1.z(), ld_p1);
-            PointPlaneFeature feature;
-            feature.idx_ = i;
-            feature.point_ = Eigen::Vector3d{cloud_data.points[i].x, cloud_data.points[i].y, cloud_data.points[i].z};
-            feature.coeffs_ = coeff;
-            features.push_back(feature);
+            // Eigen::Vector4d coeff(w1.x(), w1.y(), w1.z(), ld_p1);
+            // PointPlaneFeature feature;
+            // feature.idx_ = i;
+            // feature.point_ = Eigen::Vector3d{cloud_data.points[i].x, cloud_data.points[i].y, cloud_data.points[i].z};
+            // feature.coeffs_ = coeff;
+            // features[cloud_cnt] = feature;
+            // cloud_cnt++;
         }
     }
+    features.resize(cloud_cnt);
 }
 
 template <typename PointType>
@@ -276,8 +287,8 @@ void FeatureExtract::matchSurfFromScan(const typename pcl::KdTreeFLANN<PointType
                 if (int(cloud_scan.points[j].intensity) > (closest_point_scan_id + NEARBY_SCAN))
                     break;
                 float point_sqdis = sqrSum(cloud_scan.points[j].x - point_sel.x,
-                                            cloud_scan.points[j].y - point_sel.y,
-                                            cloud_scan.points[j].z - point_sel.z);
+                                           cloud_scan.points[j].y - point_sel.y,
+                                           cloud_scan.points[j].z - point_sel.z);
                 // if in the same or lower scan line
                 if (int(cloud_scan.points[j].intensity) <= closest_point_scan_id && point_sqdis < min_point_sqdis2)
                 {
@@ -299,8 +310,8 @@ void FeatureExtract::matchSurfFromScan(const typename pcl::KdTreeFLANN<PointType
                 if (int(cloud_scan.points[j].intensity) < (closest_point_scan_id - NEARBY_SCAN))
                     break;
                 float point_sqdis = sqrSum(cloud_scan.points[j].x - point_sel.x,
-                                            cloud_scan.points[j].y - point_sel.y,
-                                            cloud_scan.points[j].z - point_sel.z);
+                                           cloud_scan.points[j].y - point_sel.y,
+                                           cloud_scan.points[j].z - point_sel.z);
                 // if in the same or higher scan line
                 if (int(cloud_scan.points[j].intensity) >= closest_point_scan_id && point_sqdis < min_point_sqdis2)
                 {
@@ -337,6 +348,7 @@ void FeatureExtract::matchSurfFromScan(const typename pcl::KdTreeFLANN<PointType
                 feature.idx_ = i;
                 feature.point_ = Eigen::Vector3d{cloud_data.points[i].x, cloud_data.points[i].y, cloud_data.points[i].z};
                 feature.coeffs_ = coeff;
+                feature.type_ = 's';
                 features.push_back(feature);
             }
         }
@@ -603,7 +615,8 @@ bool FeatureExtract::matchCornerPointFromMap(const typename pcl::KdTreeFLANN<Poi
                                              const typename pcl::PointCloud<PointType> &cloud_map,
                                              const PointType &point_ori,
                                              const Pose &pose_local,
-                                             PointPlaneFeature &feature,
+                                             PointPlaneFeature &feature1,
+                                             PointPlaneFeature &feature2,
                                              const size_t &idx,
                                              const size_t &N_NEIGH,
                                              const bool &CHECK_FOV)
@@ -688,27 +701,27 @@ bool FeatureExtract::matchCornerPointFromMap(const typename pcl::KdTreeFLANN<Poi
             }
             if (is_in_laser_fov)
             {
-                // Eigen::Vector4d coeff1(w1.x(), w1.y(), w1.z(), ld_p1);
-                // Eigen::Vector4d coeff2(w2.x(), w2.y(), w2.z(), ld_p2);
-
-                // feature1.idx_ = i;
-                // feature1.point_ = Eigen::Vector3f{point_ori.x, point_ori.y, point_ori.z};
-                // feature1.coeffs_ = coeff1 * 0.5;
-                // feature1.laser_idx_ = (size_t)point_ori.intensity;
-                // feature1.type_ = 'c';
-
-                // feature2.idx_ = i;
-                // feature2.point_ = Eigen::Vector3f{point_ori.x, point_ori.y, point_ori.z};
-                // feature2.coeffs_ = coeff2 * 0.5;
-                // feature2.laser_idx_ = (size_t)point_ori.intensity;
-                // feature2.type_ = 'c';
-
                 Eigen::Vector4d coeff1(w1.x(), w1.y(), w1.z(), ld_p1);
-                feature.idx_ = idx;
-                feature.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
-                feature.coeffs_ = coeff1;
-                feature.laser_idx_ = (size_t)point_ori.intensity;
-                feature.type_ = 'c';
+                Eigen::Vector4d coeff2(w2.x(), w2.y(), w2.z(), ld_p2);
+
+                feature1.idx_ = idx;
+                feature1.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
+                feature1.coeffs_ = coeff1 * 0.5;
+                feature1.laser_idx_ = (size_t)point_ori.intensity;
+                feature1.type_ = 'c';
+
+                feature2.idx_ = idx;
+                feature2.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
+                feature2.coeffs_ = coeff2 * 0.5;
+                feature2.laser_idx_ = (size_t)point_ori.intensity;
+                feature2.type_ = 'c';
+
+                // Eigen::Vector4d coeff1(w1.x(), w1.y(), w1.z(), ld_p1);
+                // feature.idx_ = idx;
+                // feature.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
+                // feature.coeffs_ = coeff1;
+                // feature.laser_idx_ = (size_t)point_ori.intensity;
+                // feature.type_ = 'c';
                 return true;
             }
         }

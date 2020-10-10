@@ -40,7 +40,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
     double para_pose[SIZE_POSE] = {pose_ini.t_(0), pose_ini.t_(1), pose_ini.t_(2),
                                    pose_ini.q_.x(), pose_ini.q_.y(), pose_ini.q_.z(), pose_ini.q_.w()};
 
-    for (size_t iter_cnt = 0; iter_cnt < 2; iter_cnt++)
+    for (size_t iter_cnt = 0; iter_cnt < 1; iter_cnt++)
     {
         ceres::Problem problem;
         ceres::Solver::Summary summary;
@@ -90,8 +90,6 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
             // else
             //     s = 1.0;
             LidarScanPlaneNormFactor *f = new LidarScanPlaneNormFactor(feature.point_, feature.coeffs_, s);
-            // ceres::ResidualBlockId res_id = problem.AddResidualBlock(f, loss_function, para_pose);
-            // res_ids_proj.push_back(res_id);
             problem.AddResidualBlock(f, loss_function, para_pose);
             if (CHECK_JACOBIAN)
             {
@@ -111,8 +109,6 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
             // else
             //     s = 1.0;
             LidarScanPlaneNormFactor *f = new LidarScanPlaneNormFactor(feature.point_, feature.coeffs_, s);
-            // ceres::ResidualBlockId res_id = problem.AddResidualBlock(f, loss_function, para_pose);
-            // res_ids_proj.push_back(res_id);
             problem.AddResidualBlock(f, loss_function, para_pose);
         }
 

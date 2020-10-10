@@ -659,6 +659,7 @@ void Estimator::optimizeMap()
     std::vector<ceres::internal::ResidualBlock *> res_ids_proj;
     if (ESTIMATE_EXTRINSIC == 1)
     {
+        buildCalibMap();
         std::cout << common::YELLOW << "optimization with online calibration" << common::RESET << std::endl;
         
         if (PRIOR_FACTOR)
@@ -673,7 +674,6 @@ void Estimator::optimizeMap()
             }
         }
 
-        buildCalibMap();
         if (POINT_PLANE_FACTOR)
         {
             CHECK_JACOBIAN = 1;
@@ -781,8 +781,8 @@ void Estimator::optimizeMap()
     }
     else if (ESTIMATE_EXTRINSIC == 0)
     {
-        std::cout << common::YELLOW << "optimization with pure odometry" << common::RESET << std::endl;
         buildLocalMap();
+        std::cout << common::YELLOW << "optimization with pure odometry" << common::RESET << std::endl;
         if (POINT_PLANE_FACTOR)
         {
             for (size_t n = 0; n < NUM_OF_LASER; n++)
@@ -792,7 +792,7 @@ void Estimator::optimizeMap()
                     for (const size_t &fid : sel_surf_feature_idx_[n][i])
                     {
                         const PointPlaneFeature &feature = surf_map_features_[n][i][fid];
-                        if (feature.type_ == 'n') continue;
+                        // if (feature.type_ == 'n') continue;
                         LidarPureOdomFactor *f = new LidarPureOdomFactor(feature.point_, feature.coeffs_, 1.0);
                         ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f,
                                                                                           loss_function,
@@ -813,15 +813,28 @@ void Estimator::optimizeMap()
                 {
                     for (const size_t &fid : sel_corner_feature_idx_[n][i])
                     {
-                        const PointPlaneFeature &feature = corner_map_features_[n][i][fid];
-                        if (feature.type_ == 'n') continue;
-                        LidarPureOdomFactor *f = new LidarPureOdomFactor(feature.point_, feature.coeffs_, 1.0);
-                        ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f,
-                                                                                          loss_function,
-                                                                                          para_pose_[0],
-                                                                                          para_pose_[i - pivot_idx],
-                                                                                          para_ex_pose_[n]);
-                        res_ids_proj.push_back(res_id);
+                        {
+                            const PointPlaneFeature &feature = corner_map_features_[n][i][fid];
+                            if (feature.type_ == 'n') continue;
+                            LidarPureOdomFactor *f = new LidarPureOdomFactor(feature.point_, feature.coeffs_, 1.0);
+                            ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f,
+                                                                                              loss_function,
+                                                                                              para_pose_[0],
+                                                                                              para_pose_[i - pivot_idx],
+                                                                                              para_ex_pose_[n]);
+                            res_ids_proj.push_back(res_id);
+                        }
+                        {
+                            const PointPlaneFeature &feature = corner_map_features_[n][i][fid + corner_points_stack_[n][i].size()];
+                            if (feature.type_ == 'n') continue;
+                            LidarPureOdomFactor *f = new LidarPureOdomFactor(feature.point_, feature.coeffs_, 1.0);
+                            ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f,
+                                                                                              loss_function,
+                                                                                              para_pose_[0],
+                                                                                              para_pose_[i - pivot_idx],
+                                                                                              para_ex_pose_[n]);
+                            res_ids_proj.push_back(res_id);
+                        }
                     }
                 }
             }
@@ -977,14 +990,26 @@ void Estimator::optimizeMap()
                     {
                         for (const size_t &fid : sel_corner_feature_idx_[n][i])
                         {
-                            const PointPlaneFeature &feature = corner_map_features_[n][i][fid];
-                            if (feature.type_ == 'n') continue;
-                            LidarPureOdomFactor *f = new LidarPureOdomFactor(feature.point_, feature.coeffs_, 1.0);
-                            ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f,
-                                                                                           loss_function,
-                                                                                           vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]},
-                                                                                           std::vector<int>{0});
-                            marginalization_info->addResidualBlockInfo(residual_block_info);
+                            {
+                                const PointPlaneFeature &feature = corner_map_features_[n][i][fid];
+                                // if (feature.type_ == 'n') continue;
+                                LidarPureOdomFactor *f = new LidarPureOdomFactor(feature.point_, feature.coeffs_, 1.0);
+                                ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f,
+                                                                                               loss_function,
+                                                                                               vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]},
+                                                                                               std::vector<int>{0});
+                                marginalization_info->addResidualBlockInfo(residual_block_info);
+                            }
+                            {
+                                const PointPlaneFeature &feature = corner_map_features_[n][i][fid + corner_points_stack_[n][i].size()];
+                                // if (feature.type_ == 'n') continue;
+                                LidarPureOdomFactor *f = new LidarPureOdomFactor(feature.point_, feature.coeffs_, 1.0);
+                                ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f,
+                                                                                               loss_function,
+                                                                                               vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]},
+                                                                                               std::vector<int>{0});
+                                marginalization_info->addResidualBlockInfo(residual_block_info);
+                            }
                         }
                     }
                 }
@@ -1202,6 +1227,8 @@ void Estimator::buildLocalMap()
         {
             Pose pose_i(Qs_[i], Ts_[i]);
             if (POINT_PLANE_FACTOR)
+            {
+                surf_map_features_[n][i].resize(surf_points_stack_[n][i].size());
                 goodFeatureMatching(kdtree_surf_points_local_map,
                                     surf_points_local_map_filtered_[n],
                                     surf_points_stack_[n][i],
@@ -1212,7 +1239,10 @@ void Estimator::buildLocalMap()
                                     pose_i,
                                     pose_ext,
                                     ODOM_GF_RATIO);
+            }
             if (POINT_EDGE_FACTOR)
+            {
+                corner_map_features_[n][i].resize(corner_points_stack_[n][i].size() * 2);
                 goodFeatureMatching(kdtree_corner_points_local_map,
                                     corner_points_local_map_filtered_[n],
                                     corner_points_stack_[n][i],
@@ -1223,6 +1253,7 @@ void Estimator::buildLocalMap()
                                     pose_i,
                                     pose_ext,
                                     ODOM_GF_RATIO);
+            }
         }
     }
     // LOG_EVERY_N(INFO, 20) << "build map(extract map): " << t_build_map.toc() << "ms("
@@ -1308,7 +1339,6 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
     Pose pose_local(pose_pivot.T_.inverse() * pose_i.T_ * pose_ext.T_);
 
     size_t num_all_features = laser_cloud.size();
-    all_features.resize(num_all_features);
     std::vector<size_t> all_feature_idx(num_all_features);
     std::vector<int> feature_visited(num_all_features, -1);
     std::iota(all_feature_idx.begin(), all_feature_idx.end(), 0);
@@ -1349,6 +1379,7 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
                                                              laser_cloud.points[que_idx],
                                                              pose_local,
                                                              all_features[que_idx],
+                                                             all_features[que_idx + num_all_features],
                                                              que_idx,
                                                              n_neigh,
                                                              false);
@@ -1406,13 +1437,14 @@ void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_
                     else if (feature_type == 'c')
                     {
                         b_match = f_extract_.matchCornerPointFromMap(kdtree_from_map,
-                                                                    laser_map,
-                                                                    laser_cloud.points[que_idx],
-                                                                    pose_local,
-                                                                    all_features[que_idx],
-                                                                    que_idx,
-                                                                    n_neigh,
-                                                                    false);
+                                                                     laser_map,
+                                                                     laser_cloud.points[que_idx],
+                                                                     pose_local,
+                                                                     all_features[que_idx],
+                                                                     all_features[que_idx + num_all_features],
+                                                                     que_idx,
+                                                                     n_neigh,
+                                                                     false);
                     }
                     if (b_match)
                     {
