@@ -511,7 +511,8 @@ void Estimator::process()
         {
             // local optimization: optimize the relative LiDAR measurments
             printf("[NON_LINEAR]\n");
-            optimizeMap(); 
+            if (N_SCANS <= 32) optimizeMap(); 
+            // optimizeMap();
             slideWindow();
             if (ESTIMATE_EXTRINSIC) evalCalib();
             break;

@@ -10,7 +10,7 @@ roslaunch mloam mloam_realvehicle_kitti.launch \
     result_save:=true \
     bag_file:=$data_path \
     output_path:=$result_path
-# sleep 5
+sleep 5
 
 # roslaunch mloam mloam_realvehicle_kitti.launch \
 #     run_mloam:=false \
@@ -39,15 +39,15 @@ roslaunch mloam mloam_realvehicle_kitti.launch \
 #     output_path:=$result_path
 # sleep 5
 
-# roslaunch mloam mloam_realvehicle_kitti.launch \
-#     run_mloam:=true \
-#     run_mloam_mapping:=true \
-#     gf_method:=gd_float \
-#     gf_ratio_ini:=0.4 \
-#     result_save:=true \
-#     bag_file:=$data_path \
-#     output_path:=$result_path
-# sleep 5
+roslaunch mloam mloam_realvehicle_kitti.launch \
+    run_mloam:=true \
+    run_mloam_mapping:=true \
+    gf_method:=gd_float \
+    gf_ratio_ini:=0.4 \
+    result_save:=true \
+    bag_file:=$data_path \
+    output_path:=$result_path
+sleep 5
 
 # roslaunch mloam mloam_realvehicle_kitti.launch \
 #     run_mloam:=true \
@@ -70,15 +70,15 @@ roslaunch mloam mloam_realvehicle_kitti.launch \
 #     output_path:=$result_path
 # sleep 5
 
-# roslaunch mloam mloam_realvehicle_kitti.launch \
-#     run_mloam:=true \
-#     run_mloam_mapping:=true \
-#     gf_method:=fps \
-#     gf_ratio_ini:=0.4 \
-#     result_save:=true \
-#     bag_file:=$data_path \
-#     output_path:=$result_path
-# sleep 5
+roslaunch mloam mloam_realvehicle_kitti.launch \
+    run_mloam:=true \
+    run_mloam_mapping:=true \
+    gf_method:=fps \
+    gf_ratio_ini:=0.4 \
+    result_save:=true \
+    bag_file:=$data_path \
+    output_path:=$result_path
+sleep 5
 
 # roslaunch mloam mloam_realvehicle_kitti.launch \
 #     run_mloam:=true \
@@ -91,12 +91,12 @@ roslaunch mloam mloam_realvehicle_kitti.launch \
 # sleep 5
 
 ################## different LiDAR SLAM
-# roslaunch mloam mloam_realvehicle_kitti.launch \
-#     run_mloam:=false \
-#     run_aloam:=true \
-#     bag_file:=$data_path \
-#     output_path:=$result_path
-# sleep 5
+roslaunch mloam mloam_realvehicle_kitti.launch \
+    run_mloam:=false \
+    run_aloam:=true \
+    bag_file:=$data_path \
+    output_path:=$result_path
+sleep 5
 
 # roslaunch mloam mloam_realvehicle_kitti.launch \
 #     run_mloam:=false \
