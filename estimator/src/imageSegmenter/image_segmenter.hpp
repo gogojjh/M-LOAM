@@ -92,8 +92,7 @@ void ImageSegmenter::projectCloud(const typename pcl::PointCloud<PointType> &las
     for (size_t i = 0; i < laser_cloud_in.size(); i++)
     {
         const PointType &point = laser_cloud_in.points[i];
-        vertical_angle = atan2(point.z, sqrt(point.x * point.x + point.y * point.y)) * 180 / M_PI;
-        horizon_angle = atan2(point.x, point.y) * 180 / M_PI;
+        vertical_angle = atan(point.z / sqrt(point.x * point.x + point.y * point.y)) * 180 / M_PI;
 
         if ((vertical_scans_ == 64) && (ang_res_y_ == FLT_MAX)) // VLP-64
         {
@@ -110,6 +109,7 @@ void ImageSegmenter::projectCloud(const typename pcl::PointCloud<PointType> &las
                 continue;
         }
        
+        horizon_angle = atan2(point.x, point.y) * 180 / M_PI;
         column_id = -round((horizon_angle - 90.0) / ang_res_x_) + horizon_scans_ / 2;
         if (column_id >= horizon_scans_)
             column_id -= horizon_scans_;
@@ -355,7 +355,7 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
             if (label_mat(i, j) > 0)
             {
                 PointType point = cloud_matrix.points[j + i * horizon_scans_];
-                point.intensity += float(i); // intensity = scan_id.timestamp
+                point.intensity += i; // intensity = scan_id.timestamp
                 bool ground_flag = (label_mat(i, j) == 1) ? true : false;
                 if (scan_info.segment_flag_) 
                 {
@@ -368,8 +368,7 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
                     {
                         laser_cloud_outlier.push_back(point);
                     }
-                }
-                else if (!scan_info.segment_flag_)
+                } else 
                 {
                     laser_cloud_out.push_back(point);
                     if (laser_cloud_outlier.size() == 0) laser_cloud_outlier.push_back(point);

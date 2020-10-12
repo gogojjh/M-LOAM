@@ -60,7 +60,7 @@ inline void TransformToStart(const PointType &pi, PointType &po, const Pose &pos
         std::cerr << "[TransformToStart] Point does not have intensity field!" << std::endl;
         exit(EXIT_FAILURE);
     }
-    float s = 1.0; //interpolation ratio
+    double s = 1.0; //interpolation ratio
     if (b_distortion)
         s = (pi.intensity - int(pi.intensity)) / scan_period;
     po = pi;
@@ -69,6 +69,7 @@ inline void TransformToStart(const PointType &pi, PointType &po, const Pose &pos
     Eigen::Vector3d t_point_last = s * pose.t_;
     Eigen::Vector3d point(pi.x, pi.y, pi.z);
     Eigen::Vector3d un_point = q_point_last * point + t_point_last;
+    
     po.x = un_point.x();
     po.y = un_point.y();
     po.z = un_point.z();
@@ -91,6 +92,7 @@ inline void TransformToEnd(const PointType &pi, PointType &po, const Pose &pose,
     TransformToStart(pi, un_point_tmp, pose, b_distortion, scan_period);
     Eigen::Vector3d un_point(un_point_tmp.x, un_point_tmp.y, un_point_tmp.z);
     Eigen::Vector3d point_end = pose.q_.inverse() * (un_point - pose.t_);
+    
     po.x = point_end.x();
     po.y = point_end.y();
     po.z = point_end.z();
