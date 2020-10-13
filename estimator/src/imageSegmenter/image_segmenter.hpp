@@ -82,6 +82,7 @@ private:
     std::vector<pair<int8_t, int8_t> > neighbor_iterator_;
 };
 
+// TODO: this part rearrange the point order, which will influence the feature extraction
 // project point cloud onto a range image and rearrange the order
 template <typename PointType>
 void ImageSegmenter::projectCloud(const typename pcl::PointCloud<PointType> &laser_cloud_in,
@@ -92,7 +93,6 @@ void ImageSegmenter::projectCloud(const typename pcl::PointCloud<PointType> &las
 {
     // convert point cloud to a range image
     float vertical_angle, horizon_angle, range;
-    float start_horizon_angle;
     int row_id, column_id;
     for (size_t i = 0; i < laser_cloud_in.size(); i++)
     {
@@ -121,6 +121,8 @@ void ImageSegmenter::projectCloud(const typename pcl::PointCloud<PointType> &las
         if (column_id >= horizon_scans_)
             column_id -= horizon_scans_;
         if (column_id < 0 || column_id >= horizon_scans_)
+            continue;
+        if (range_mat(row_id, column_id) != FLT_MAX)
             continue;
 
         point.intensity += row_id;
@@ -355,44 +357,7 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
         }
     }
 
-    // convert segmented points to point cloud, and rearrange the order
-    // laser_cloud_out.clear();
-    // laser_cloud_outlier.clear();
-    // for (size_t i = 0; i < vertical_scans_; i++)
-    // {
-    //     scan_info.scan_start_ind_[i] = laser_cloud_out.size() + 5;
-    //     for (size_t j = 0; j < horizon_scans_; j++)
-    //     {
-    //         if (label_mat(i, j) > 0)
-    //         {
-    //             int index = j + i * horizon_scans_;
-    //             PointType point = cloud_matrix.points[index];
-    //             point.intensity += i; // intensity = scan_id.timestamp
-    //             bool ground_flag = (label_mat(i, j) == 1) ? true : false;
-    //             if (scan_info.segment_flag_) 
-    //             {
-    //                 if (label_mat(i, j) != 999999)
-    //                 {
-    //                     laser_cloud_out.push_back(point);
-    //                     scan_info.ground_flag_.push_back(ground_flag);
-    //                 }
-    //                 else if ((label_mat(i, j) == 999999) && (j % 5 == 0))
-    //                 {
-    //                     laser_cloud_outlier.push_back(point);
-    //                 }
-    //             } 
-    //             else 
-    //             {
-    //                 laser_cloud_out.push_back(point);
-    //                 if (laser_cloud_outlier.size() == 0) laser_cloud_outlier.push_back(point);
-    //                 scan_info.ground_flag_.push_back(ground_flag);
-    //             }
-    //         }
-    //     }
-    //     scan_info.scan_end_ind_[i] = laser_cloud_out.size() - 6;
-    //     // std::cout << i << " " << scan_info.scan_start_ind_[i] << " " << scan_info.scan_end_ind_[i] << std::endl;
-    // }
-
+    // filter out outliers from the original point cloud
     laser_cloud_out.clear();
     laser_cloud_outlier.clear();
     if (scan_info.segment_flag_)
@@ -423,5 +388,6 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
         // std::cout << i << " " << scan_info.scan_start_ind_[i] << " " << scan_info.scan_end_ind_[i] << std::endl;
     }
     // std::cout << laser_cloud_out.size() << std::endl;
+
 }
 

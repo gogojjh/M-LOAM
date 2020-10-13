@@ -24,15 +24,15 @@
 class LidarScanPlaneNormFactor : public ceres::SizedCostFunction<1, 7>
 {
 public:
-    LidarScanPlaneNormFactor(const Eigen::Vector3d &point, const Eigen::Vector4d &coeff, const double &s)
+    LidarScanPlaneNormFactor(const Eigen::Vector3d &point, const Eigen::Vector4d &coeff, const double &s = 1.0)
         : point_(point), coeff_(coeff), s_(s) {}
 
     bool Evaluate(double const *const *param, double *residuals, double **jacobians) const
     {
         Eigen::Quaterniond q_last_curr(param[0][6], param[0][3], param[0][4], param[0][5]);
         Eigen::Vector3d t_last_curr(param[0][0], param[0][1], param[0][2]);
-        // q_last_curr = Eigen::Quaterniond::Identity().slerp(s_, q_last_curr);
-        // t_last_curr = s_ * t_last_curr;
+        q_last_curr = Eigen::Quaterniond::Identity().slerp(s_, q_last_curr);
+        t_last_curr = s_ * t_last_curr;
 
         Eigen::Vector3d w(coeff_(0), coeff_(1), coeff_(2));
         double d = coeff_(3);
