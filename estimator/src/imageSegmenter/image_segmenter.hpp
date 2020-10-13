@@ -63,7 +63,9 @@ public:
     template <typename PointType>
     void projectCloud(const typename pcl::PointCloud<PointType> &laser_cloud_in,
                       typename pcl::PointCloud<PointType> &cloud_matrix,
-                      Eigen::MatrixXf &range_mat);
+                      Eigen::MatrixXf &range_mat,
+                      std::vector<pcl::PointCloud<PointType>> &cloud_scan,
+                      std::vector<int> &cloud_scan_order);
 
     template <typename PointType>
     void segmentCloud(const typename pcl::PointCloud<PointType> &laser_cloud_in,
@@ -84,31 +86,36 @@ private:
 template <typename PointType>
 void ImageSegmenter::projectCloud(const typename pcl::PointCloud<PointType> &laser_cloud_in,
                                   typename pcl::PointCloud<PointType> &cloud_matrix,
-                                  Eigen::MatrixXf &range_mat)
+                                  Eigen::MatrixXf &range_mat,
+                                  std::vector<pcl::PointCloud<PointType>> &cloud_scan,
+                                  std::vector<int> &cloud_scan_order)
 {
     // convert point cloud to a range image
     float vertical_angle, horizon_angle, range;
-    size_t row_id, column_id;
+    float start_horizon_angle;
+    int row_id, column_id;
     for (size_t i = 0; i < laser_cloud_in.size(); i++)
     {
-        const PointType &point = laser_cloud_in.points[i];
-        vertical_angle = atan(point.z / sqrt(point.x * point.x + point.y * point.y)) * 180 / M_PI;
+        PointType point = laser_cloud_in.points[i];
+        range = sqrt(point.x * point.x + point.y * point.y + point.z * point.z);
+        if (range < ROI_RANGE) continue;
 
+        vertical_angle = atan(point.z / sqrt(point.x * point.x + point.y * point.y)) * 180 / M_PI;
         if ((vertical_scans_ == 64) && (ang_res_y_ == FLT_MAX)) // VLP-64
         {
             if (vertical_angle >= -8.83)
-                row_id = static_cast<size_t>((2 - vertical_angle) * 3.0 + 0.5);
+                row_id = static_cast<int>((2 - vertical_angle) * 3.0 + 0.5);
             else
-                row_id = static_cast<size_t>(vertical_scans_ / 2) + static_cast<size_t>((-8.83 - vertical_angle) * 2.0 + 0.5);
+                row_id = static_cast<int>(vertical_scans_ / 2) + static_cast<int>((-8.83 - vertical_angle) * 2.0 + 0.5);
             if (vertical_angle > 2 || vertical_angle < -24.33 || row_id > 50 || row_id < 0) 
                 continue;
         } else
         {
-            row_id = static_cast<size_t>((vertical_angle + ang_bottom_) / ang_res_y_);
+            row_id = static_cast<int>((vertical_angle + ang_bottom_) / ang_res_y_);
             if (row_id < 0 || row_id >= vertical_scans_) 
                 continue;
         }
-       
+
         horizon_angle = atan2(point.x, point.y) * 180 / M_PI;
         column_id = -round((horizon_angle - 90.0) / ang_res_x_) + horizon_scans_ / 2;
         if (column_id >= horizon_scans_)
@@ -116,13 +123,14 @@ void ImageSegmenter::projectCloud(const typename pcl::PointCloud<PointType> &las
         if (column_id < 0 || column_id >= horizon_scans_)
             continue;
 
-        range = sqrt(point.x * point.x + point.y * point.y + point.z * point.z);
-        if (range < ROI_RANGE) continue;
-
+        point.intensity += row_id;
         int index = column_id + row_id * horizon_scans_;
         cloud_matrix.points[index] = point;
         range_mat(row_id, column_id) = range;
-    }    
+
+        cloud_scan[row_id].push_back(point); // without changing the point order
+        cloud_scan_order[index] = cloud_scan[row_id].size() - 1;
+    }
 }
 
 template <typename PointType>
@@ -137,7 +145,9 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
 
     pcl::PointCloud<PointType> cloud_matrix;
     cloud_matrix.resize(vertical_scans_ * horizon_scans_);
-    projectCloud(laser_cloud_in, cloud_matrix, range_mat);
+    std::vector<pcl::PointCloud<PointType>> cloud_scan(vertical_scans_);
+    std::vector<int> cloud_scan_order(vertical_scans_ * horizon_scans_);
+    projectCloud(laser_cloud_in, cloud_matrix, range_mat, cloud_scan, cloud_scan_order);
 
     std::vector<uint16_t> all_pushed_indx(vertical_scans_ * horizon_scans_);
     std::vector<uint16_t> all_pushed_indy(vertical_scans_ * horizon_scans_);
@@ -184,7 +194,8 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
                 }
             }
         }
-    } else
+    } 
+    else
     {
         for (size_t i = 0; i < ground_scan_id_; i++)
         {
@@ -345,41 +356,72 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
     }
 
     // convert segmented points to point cloud, and rearrange the order
+    // laser_cloud_out.clear();
+    // laser_cloud_outlier.clear();
+    // for (size_t i = 0; i < vertical_scans_; i++)
+    // {
+    //     scan_info.scan_start_ind_[i] = laser_cloud_out.size() + 5;
+    //     for (size_t j = 0; j < horizon_scans_; j++)
+    //     {
+    //         if (label_mat(i, j) > 0)
+    //         {
+    //             int index = j + i * horizon_scans_;
+    //             PointType point = cloud_matrix.points[index];
+    //             point.intensity += i; // intensity = scan_id.timestamp
+    //             bool ground_flag = (label_mat(i, j) == 1) ? true : false;
+    //             if (scan_info.segment_flag_) 
+    //             {
+    //                 if (label_mat(i, j) != 999999)
+    //                 {
+    //                     laser_cloud_out.push_back(point);
+    //                     scan_info.ground_flag_.push_back(ground_flag);
+    //                 }
+    //                 else if ((label_mat(i, j) == 999999) && (j % 5 == 0))
+    //                 {
+    //                     laser_cloud_outlier.push_back(point);
+    //                 }
+    //             } 
+    //             else 
+    //             {
+    //                 laser_cloud_out.push_back(point);
+    //                 if (laser_cloud_outlier.size() == 0) laser_cloud_outlier.push_back(point);
+    //                 scan_info.ground_flag_.push_back(ground_flag);
+    //             }
+    //         }
+    //     }
+    //     scan_info.scan_end_ind_[i] = laser_cloud_out.size() - 6;
+    //     // std::cout << i << " " << scan_info.scan_start_ind_[i] << " " << scan_info.scan_end_ind_[i] << std::endl;
+    // }
+
     laser_cloud_out.clear();
     laser_cloud_outlier.clear();
-    for (size_t i = 0; i < vertical_scans_; i++)
+    if (scan_info.segment_flag_)
     {
-        scan_info.scan_start_ind_[i] = laser_cloud_out.size() + 5;
-        for (size_t j = 0; j < horizon_scans_; j++)
+        for (size_t i = 0; i < vertical_scans_; i++)
         {
-            if (label_mat(i, j) > 0)
+            for (size_t j = 0; j < horizon_scans_; j++)
             {
-                PointType point = cloud_matrix.points[j + i * horizon_scans_];
-                point.intensity += i; // intensity = scan_id.timestamp
-                bool ground_flag = (label_mat(i, j) == 1) ? true : false;
-                if (scan_info.segment_flag_) 
+                if (label_mat(i, j) > 0) // if non-empty points
                 {
-                    if (label_mat(i, j) != 999999)
+                    int index = j + i * horizon_scans_;
+                    if (label_mat(i, j) == 999999)
                     {
-                        laser_cloud_out.push_back(point);
-                        scan_info.ground_flag_.push_back(ground_flag);
+                        cloud_scan[i].erase(cloud_scan[i].begin() + cloud_scan_order[index]);
+                        if (j % 5 == 0)
+                            laser_cloud_outlier.push_back(cloud_matrix.points[index]);
                     }
-                    else if ((label_mat(i, j) == 999999) && (j % 5 == 0))
-                    {
-                        laser_cloud_outlier.push_back(point);
-                    }
-                } else 
-                {
-                    laser_cloud_out.push_back(point);
-                    if (laser_cloud_outlier.size() == 0) laser_cloud_outlier.push_back(point);
-                    scan_info.ground_flag_.push_back(ground_flag);
                 }
             }
         }
+    }
+
+    for (size_t i = 0; i < vertical_scans_; i++)
+    {
+        scan_info.scan_start_ind_[i] = laser_cloud_out.size() + 5;
+        laser_cloud_out += cloud_scan[i];
         scan_info.scan_end_ind_[i] = laser_cloud_out.size() - 6;
         // std::cout << i << " " << scan_info.scan_start_ind_[i] << " " << scan_info.scan_end_ind_[i] << std::endl;
     }
     // std::cout << laser_cloud_out.size() << std::endl;
-    assert(laser_cloud_out.size() == scan_info.ground_flag_.size());
 }
 

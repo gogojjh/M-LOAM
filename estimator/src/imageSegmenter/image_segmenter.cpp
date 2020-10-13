@@ -52,7 +52,7 @@ void ImageSegmenter::setParameter(const int &vertical_scans,
     {
         ang_res_x_ = 360.0 / horizon_scans_;
         ang_res_y_ = FLT_MAX;
-        ground_scan_id_ = 64; // 7-64 is ground
+        ground_scan_id_ = 63; // 7-64 is ground
         
         segment_alphax_ = ang_res_x_ / 180.0 * M_PI;
         segment_valid_point_num_ = segment_valid_point_num;
