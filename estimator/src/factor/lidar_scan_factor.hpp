@@ -126,7 +126,7 @@ private:
 };
 
 // ****************************************************************
-// calculate distrance from point to plane (using normal)
+// calculate distrance from point to edge
 class LidarScanEdgeFactor : public ceres::SizedCostFunction<1, 7>
 {
 public:
@@ -184,12 +184,12 @@ public:
         delete[] jaco;
         delete[] res;
 
-        Eigen::Quaterniond q_w_curr(param[0][6], param[0][3], param[0][4], param[0][5]);
-        Eigen::Vector3d t_w_curr(param[0][0], param[0][1], param[0][2]);
+        Eigen::Quaterniond q_last_curr(param[0][6], param[0][3], param[0][4], param[0][5]);
+        Eigen::Vector3d t_last_curr(param[0][0], param[0][1], param[0][2]);
 
         Eigen::Vector3d lpa(coeff_(0), coeff_(1), coeff_(2));
         Eigen::Vector3d lpb(coeff_(3), coeff_(4), coeff_(5));
-        Eigen::Vector3d lp = q_w_curr * point_ + t_w_curr;
+        Eigen::Vector3d lp = q_last_curr * point_ + t_last_curr;
 
         Eigen::Vector3d nu = (lp - lpa).cross(lp - lpb);
         Eigen::Vector3d de = lpa - lpb;
@@ -204,18 +204,18 @@ public:
         // add random perturbation
         for (int k = 0; k < 6; k++)
         {
-            Eigen::Quaterniond q_w_curr(param[0][6], param[0][3], param[0][4], param[0][5]);
-            Eigen::Vector3d t_w_curr(param[0][0], param[0][1], param[0][2]);
+            Eigen::Quaterniond q_last_curr(param[0][6], param[0][3], param[0][4], param[0][5]);
+            Eigen::Vector3d t_last_curr(param[0][0], param[0][1], param[0][2]);
             int a = k / 3, b = k % 3;
             Eigen::Vector3d delta = Eigen::Vector3d(b == 0, b == 1, b == 2) * eps;
             if (a == 0)
-                t_w_curr += delta;
+                t_last_curr += delta;
             else if (a == 1)
-                q_w_curr = q_w_curr * Utility::deltaQ(delta);
+                q_last_curr = q_last_curr * Utility::deltaQ(delta);
 
             Eigen::Vector3d lpa(coeff_(0), coeff_(1), coeff_(2));
             Eigen::Vector3d lpb(coeff_(3), coeff_(4), coeff_(5));
-            Eigen::Vector3d lp = q_w_curr * point_ + t_w_curr;
+            Eigen::Vector3d lp = q_last_curr * point_ + t_last_curr;
 
             Eigen::Vector3d nu = (lp - lpa).cross(lp - lpb);
             Eigen::Vector3d de = lpa - lpb;
@@ -233,12 +233,12 @@ private:
 
 // ****************************************************************
 // calculate distrance from point to edge (using 3*1 vector)
-class LidarScanEdgeFactor_bck : public ceres::SizedCostFunction<3, 7>
+class LidarScanEdgeFactorVector : public ceres::SizedCostFunction<3, 7>
 {
 public:
-    LidarScanEdgeFactor_bck(const Eigen::Vector3d &point,
-                        const Eigen::VectorXd &coeff,
-                        const double &s = 1.0)
+    LidarScanEdgeFactorVector(const Eigen::Vector3d &point,
+                              const Eigen::VectorXd &coeff,
+                              const double &s = 1.0)
         : point_(point), coeff_(coeff), s_(s) {}
 
     bool Evaluate(double const *const *param, double *residuals, double **jacobians) const
@@ -293,12 +293,12 @@ public:
         delete[] jaco;
         delete[] res;
 
-        Eigen::Quaterniond q_w_curr(param[0][6], param[0][3], param[0][4], param[0][5]);
-        Eigen::Vector3d t_w_curr(param[0][0], param[0][1], param[0][2]);
+        Eigen::Quaterniond q_last_curr(param[0][6], param[0][3], param[0][4], param[0][5]);
+        Eigen::Vector3d t_last_curr(param[0][0], param[0][1], param[0][2]);
 
         Eigen::Vector3d lpa(coeff_(0), coeff_(1), coeff_(2));
         Eigen::Vector3d lpb(coeff_(3), coeff_(4), coeff_(5));
-        Eigen::Vector3d lp = q_w_curr * point_ + t_w_curr;
+        Eigen::Vector3d lp = q_last_curr * point_ + t_last_curr;
 
         Eigen::Vector3d nu = (lp - lpa).cross(lp - lpb);
         Eigen::Vector3d de = lpa - lpb;
@@ -313,18 +313,18 @@ public:
         // add random perturbation
         for (int k = 0; k < 6; k++)
         {
-            Eigen::Quaterniond q_w_curr(param[0][6], param[0][3], param[0][4], param[0][5]);
-            Eigen::Vector3d t_w_curr(param[0][0], param[0][1], param[0][2]);
+            Eigen::Quaterniond q_last_curr(param[0][6], param[0][3], param[0][4], param[0][5]);
+            Eigen::Vector3d t_last_curr(param[0][0], param[0][1], param[0][2]);
             int a = k / 3, b = k % 3;
             Eigen::Vector3d delta = Eigen::Vector3d(b == 0, b == 1, b == 2) * eps;
             if (a == 0)
-                t_w_curr += delta;
+                t_last_curr += delta;
             else if (a == 1)
-                q_w_curr = q_w_curr * Utility::deltaQ(delta);
+                q_last_curr = q_last_curr * Utility::deltaQ(delta);
 
             Eigen::Vector3d lpa(coeff_(0), coeff_(1), coeff_(2));
             Eigen::Vector3d lpb(coeff_(3), coeff_(4), coeff_(5));
-            Eigen::Vector3d lp = q_w_curr * point_ + t_w_curr;
+            Eigen::Vector3d lp = q_last_curr * point_ + t_last_curr;
 
             Eigen::Vector3d nu = (lp - lpa).cross(lp - lpb);
             Eigen::Vector3d de = lpa - lpb;

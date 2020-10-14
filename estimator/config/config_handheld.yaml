@@ -22,8 +22,8 @@ cloud_topic:
    - "/right/velodyne_points"
 
 # window sizes
-window_size: 10
-opt_window_size: 4
+window_size: 4
+opt_window_size: 2
 
 ############################## For normal use
 # # Extrinsic parameter between multiple LiDARs.
@@ -105,7 +105,7 @@ laser_sync_threshold: 0.07
 
 ######################################################## odometry
 # optimization 
-max_solver_time: 0.02  # max solver itration time (s), to guarantee real time
+max_solver_time: 0.015  # max solver itration time (s), to guarantee real time
 max_num_iterations: 5   # max solver itrations, to guarantee real time
 
 roi_range: 0.5
@@ -137,7 +137,7 @@ lambda_thre_calib: 70
 n_calib: 25
 
 # good feature
-odom_gf_ratio: 1.0
+odom_gf_ratio: 0.8
 
 skip_num_odom_pub: 2
 

@@ -36,7 +36,7 @@
 #include "../estimator/parameters.h"
 #include "../featureExtract/feature_extract.hpp"
 #include "../factor/pose_local_parameterization.h"
-#include "../factor/lidar_scan_plane_norm_factor.hpp"
+#include "../factor/lidar_scan_factor.hpp"
 #include "../factor/impl_loss_function.hpp"
 #include "../utility/tic_toc.h"
 #include "../utility/utility.h"

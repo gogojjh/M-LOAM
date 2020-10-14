@@ -53,7 +53,7 @@ laser_sync_threshold: 0.07
 ######################################################## odometry
 # optimization 
 max_solver_time: 0.015  # max solver itration time (s), to guarantee real time
-max_num_iterations: 5   # max solver itrations, to guarantee real time
+max_num_iterations: 4   # max solver itrations, to guarantee real time
 
 roi_range: 1
 distance_sq_threshold: 25
@@ -84,7 +84,7 @@ lambda_thre_calib: 1000
 n_calib: 30
 
 # good feature
-odom_gf_ratio: 0.6
+odom_gf_ratio: 0.8
 
 skip_num_odom_pub: 2
 
@@ -92,7 +92,7 @@ skip_num_odom_pub: 2
 map_corner_res: 0.4
 map_surf_res: 0.8
 map_outlier_res: 0.8
-map_sur_kf_res: 1.0
+map_sur_kf_res: 5.0
 map_eig_thre: 100
 
 # uncertainty parameter

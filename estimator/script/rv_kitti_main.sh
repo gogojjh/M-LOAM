@@ -1,23 +1,17 @@
 # !/bin/bash
 
-################## M-LOAM-GF with different good feature ratio
+################# M-LOAM-GF with different good feature ratio
 roslaunch mloam mloam_realvehicle_kitti.launch \
     run_mloam:=true \
-    run_mloam_mapping:=false \
-    run_aloam:=true \
+    run_mloam_mapping:=true \
+    with_ua:=true \
+    run_aloam:=false \
     gf_method:=wo_gf \
     gf_ratio_ini:=1.0 \
     result_save:=true \
     bag_file:=$data_path \
     output_path:=$result_path
 # sleep 5
-
-# roslaunch mloam mloam_realvehicle_kitti.launch \
-#     run_mloam:=false \
-#     run_aloam:=true \
-#     bag_file:=$data_path \
-#     result_save:=true \
-#     output_path:=$result_path
 
 # roslaunch mloam mloam_realvehicle_kitti.launch \
 #     run_mloam:=true \

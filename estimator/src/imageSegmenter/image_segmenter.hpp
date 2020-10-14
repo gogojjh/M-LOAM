@@ -378,7 +378,7 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
                 }
             }
         }
-    }
+    } 
 
     for (size_t i = 0; i < vertical_scans_; i++)
     {
@@ -387,6 +387,7 @@ void ImageSegmenter::segmentCloud(const typename pcl::PointCloud<PointType> &las
         scan_info.scan_end_ind_[i] = laser_cloud_out.size() - 6;
         // std::cout << i << " " << scan_info.scan_start_ind_[i] << " " << scan_info.scan_end_ind_[i] << std::endl;
     }
+    laser_cloud_outlier.push_back(laser_cloud_out.points[0]);
     // std::cout << laser_cloud_out.size() << std::endl;
 
 }

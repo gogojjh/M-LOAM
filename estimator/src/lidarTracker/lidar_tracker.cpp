@@ -24,11 +24,12 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
                               const cloudFeature &cur_cloud_feature,
                               const Pose &pose_ini)
 {
-    // step 1: prev feature and kdtree
-    PointICloudPtr corner_points_last = boost::make_shared<PointICloud>(prev_cloud_feature.find("corner_points_less_sharp")->second);
-    PointICloudPtr surf_points_last = boost::make_shared<PointICloud>(prev_cloud_feature.find("surf_points_less_flat")->second);
     pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_last(new pcl::KdTreeFLANN<PointI>());
     pcl::KdTreeFLANN<PointI>::Ptr kdtree_surf_last(new pcl::KdTreeFLANN<PointI>());
+
+    // step 1: prev feature
+    PointICloudPtr corner_points_last = boost::make_shared<PointICloud>(prev_cloud_feature.find("corner_points_less_sharp")->second);
+    PointICloudPtr surf_points_last = boost::make_shared<PointICloud>(prev_cloud_feature.find("surf_points_less_flat")->second);
     kdtree_corner_last->setInputCloud(corner_points_last);
     kdtree_surf_last->setInputCloud(surf_points_last);
 
@@ -40,28 +41,13 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
     double para_pose[SIZE_POSE] = {pose_ini.t_(0), pose_ini.t_(1), pose_ini.t_(2),
                                    pose_ini.q_.x(), pose_ini.q_.y(), pose_ini.q_.z(), pose_ini.q_.w()};
 
-    for (size_t iter_cnt = 0; iter_cnt < 1; iter_cnt++)
+    for (size_t iter_cnt = 0; iter_cnt < 2; iter_cnt++)
     {
         ceres::Problem problem;
-        ceres::Solver::Summary summary;
         ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1);
-        // ceres::LossFunction *loss_function = new ceres::GemanMcClureLoss(1.0);
-
-        ceres::Solver::Options options;
-        options.linear_solver_type = ceres::DENSE_SCHUR;
-        options.max_num_iterations = 4;
-        // options.max_solver_time_in_seconds = 0.005;
-        options.minimizer_progress_to_stdout = false;
-        // options.check_gradients = false;
-        // options.gradient_check_relative_precision = 1e-4;
-
         PoseLocalParameterization *local_parameterization = new PoseLocalParameterization();      
         local_parameterization->setParameter();
-
-        // std::vector<double *> para_ids;
-        // std::vector<ceres::ResidualBlockId> res_ids_proj;
         problem.AddParameterBlock(para_pose, SIZE_POSE, local_parameterization);
-        // para_ids.push_back(para_pose);
 
         // prepare feature data
         TicToc t_prepare;
@@ -74,31 +60,11 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
         
         size_t corner_num = corner_scan_features.size();
         size_t surf_num = surf_scan_features.size();
-        // printf("iter:%d, use_corner:%d, use_surf:%d\n", iter_cnt, corner_num, surf_num);
+        // printf("[mloam] iter:%d, use_corner:%d, use_surf:%d\n", iter_cnt, corner_num, surf_num);
         if (corner_num + surf_num < 10)
         {
             printf("[lidar_tracker] less correspondence! *************************************************\n");
             continue;
-        }
-
-        CHECK_JACOBIAN = 0;
-        for (const PointPlaneFeature &feature : corner_scan_features)
-        {
-            double s = 1.0;
-            // if (DISTORTION)
-            //     s = (corner_points_sharp->points[feature.idx_].intensity - int(corner_points_sharp->points[idx].intensity)) / SCAN_PERIOD;
-            // else
-            //     s = 1.0;
-            LidarScanPlaneNormFactor *f = new LidarScanPlaneNormFactor(feature.point_, feature.coeffs_, s);
-            problem.AddResidualBlock(f, loss_function, para_pose);
-            if (CHECK_JACOBIAN)
-            {
-                double **tmp_param = new double *[1];
-                tmp_param[0] = para_pose;
-                f->check(tmp_param);
-                CHECK_JACOBIAN = 0;
-                delete[] tmp_param;
-            }
         }
 
         for (const PointPlaneFeature &feature : surf_scan_features)
@@ -112,6 +78,26 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
             problem.AddResidualBlock(f, loss_function, para_pose);
         }
 
+        CHECK_JACOBIAN = 0;
+        for (const PointPlaneFeature &feature : corner_scan_features)
+        {
+            double s = 1.0;
+            // if (DISTORTION)
+            //     s = (corner_points_sharp->points[feature.idx_].intensity - int(corner_points_sharp->points[idx].intensity)) / SCAN_PERIOD;
+            // else
+            //     s = 1.0;
+            LidarScanEdgeFactor *f = new LidarScanEdgeFactor(feature.point_, feature.coeffs_, s);
+            problem.AddResidualBlock(f, loss_function, para_pose);
+            if (CHECK_JACOBIAN)
+            {
+                double **tmp_param = new double *[1];
+                tmp_param[0] = para_pose;
+                f->check(tmp_param);
+                CHECK_JACOBIAN = 0;
+                // delete[] tmp_param;
+            }
+        }
+
         // double cost = 0.0;
         // ceres::CRSMatrix jaco;
         // ceres::Problem::EvaluateOptions e_option;
@@ -123,6 +109,14 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
 
         // step 3: optimization
         TicToc t_solver;
+        ceres::Solver::Options options;
+        options.linear_solver_type = ceres::DENSE_SCHUR;
+        options.max_num_iterations = 4;
+        // options.max_solver_time_in_seconds = 0.005;
+        options.minimizer_progress_to_stdout = false;
+        // options.check_gradients = false;
+        // options.gradient_check_relative_precision = 1e-4;
+        ceres::Solver::Summary summary;
         ceres::Solve(options, &problem, &summary);
         // std::cout << summary.BriefReport() << std::endl;
         // std::cout << summary.FullReport() << std::endl;

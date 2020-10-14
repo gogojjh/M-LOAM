@@ -72,14 +72,13 @@
 #include "../estimator/pose.h"
 #include "../estimator/parameters.h"
 #include "../featureExtract/feature_extract.hpp"
-#include "../factor/lidar_map_plane_norm_factor.hpp"
-#include "../factor/lidar_plane_norm_factor.hpp"
+#include "../factor/lidar_map_factor.hpp"
 #include "../factor/pose_local_parameterization.h"
 #include "../factor/impl_loss_function.hpp"
 #include "../factor/impl_callback.hpp"
 #include "associate_uct.hpp"
 
-#define SURROUNDING_KF_RADIUS 100.0
+#define SURROUNDING_KF_RADIUS 100.0 // 100: >120ms, 70: <100ms
 #define GLOBALMAP_KF_RADIUS 1000.0
 #define DISTANCE_KEYFRAMES 2
 #define ORIENTATION_KEYFRAMES 2
@@ -130,132 +129,6 @@ void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameteri
 class ActiveFeatureSelection
 {
 public:
-    // ******************************* evaluate loss of problem
-    // void evaluateLoss(const std::vector<PointPlaneFeature> &all_surf_features,
-    //                   const std::vector<size_t> &sel_surf_feature_idx,
-    //                   const std::vector<PointPlaneFeature> &all_corner_features,
-    //                   const std::vector<size_t> &sel_corner_feature_idx,
-    //                   const Pose &pose_local,
-    //                   const size_t &frame_cnt)
-    // {
-    //     Eigen::MatrixXd mat_result(6400, 10);
-    //     mat_result.setZero();
-    //     size_t row_cnt = 0;
-    //     for (double x = -2; x <= 2; x+=0.2)
-    //     {
-    //         for (double y = -2; y <= 2; y+=0.2)
-    //         {
-    //             for (double theta = -0.5235; theta <= 0.5235; theta+=0.08)
-    //             {
-    //                 double sum_null = 0;
-    //                 double sum_huber = 0;
-    //                 double sum_gmc = 0;
-
-    //                 double **param = new double *[1];
-    //                 param[0] = new double [SIZE_POSE];
-    //                 param[0][0] = pose_local.t_(0) + x;
-    //                 param[0][1] = pose_local.t_(1) + y;
-    //                 param[0][2] = pose_local.t_(2);
-    //                 Eigen::Quaterniond q = Eigen::AngleAxisd(theta, Eigen::Vector3d::UnitZ())
-    //                                     * pose_local.q_;
-    //                 param[0][3] = q.x();
-    //                 param[0][4] = q.y();
-    //                 param[0][5] = q.z();
-    //                 param[0][6] = q.w();
-    //                 for (const size_t &fid : sel_surf_feature_idx)
-    //                 {
-    //                     const PointPlaneFeature &feature = all_surf_features[fid];
-    //                     if (feature.type_ == 'n') continue;
-    //                     Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
-    //                     LidarMapPlaneNormFactor f(feature.point_, feature.coeffs_, cov_matrix);
-                        
-    //                     double *res = new double[1];
-    //                     double **jaco = new double *[1];
-    //                     jaco[0] = new double[3 * 7];
-    //                     f.Evaluate(param, res, jaco);
-
-    //                     ceres::LossFunction *loss_function;
-    //                     double r = res[0] * res[0] + res[1] * res[1] + res[2] * res[2];
-    //                     sum_null += r;
-    //                     {
-    //                         double rho[3];
-    //                         loss_function = new ceres::HuberLoss(0.1);
-    //                         loss_function->Evaluate(r, rho);
-    //                         sum_huber += rho[0];
-    //                     }
-    //                     {
-    //                         double rho[3];
-    //                         loss_function = new ceres::SurrogateGemanMcClureLoss(1.0, 3.0);
-    //                         loss_function->Evaluate(r, rho);
-    //                         sum_gmc += rho[0];
-    //                     }
-    //                     delete[] jaco[0];
-    //                     delete[] jaco;
-    //                     delete[] res;
-    //                 }
-    //                 for (const size_t &fid : sel_corner_feature_idx)
-    //                 {
-    //                     const PointPlaneFeature &feature = all_corner_features[fid];
-    //                     if (feature.type_ == 'n') continue;
-    //                     Eigen::Matrix3d cov_matrix = Eigen::Matrix3d::Identity();
-    //                     LidarMapPlaneNormFactor f(feature.point_, feature.coeffs_, cov_matrix);
-
-    //                     double *res = new double[1];
-    //                     double **jaco = new double *[1];
-    //                     jaco[0] = new double[3 * 7];
-    //                     f.Evaluate(param, res, jaco);
-
-    //                     ceres::LossFunction *loss_function;
-    //                     double r = res[0] * res[0] + res[1] * res[1] + res[2] * res[2];
-    //                     sum_null += r;
-    //                     {
-    //                         double rho[3];
-    //                         loss_function = new ceres::HuberLoss(0.1);
-    //                         loss_function->Evaluate(r, rho);
-    //                         sum_huber += rho[0];
-    //                     }
-    //                     {
-    //                         double rho[3];
-    //                         loss_function = new ceres::SurrogateGemanMcClureLoss(1.0, 3.0);
-    //                         loss_function->Evaluate(r, rho);
-    //                         sum_gmc += rho[0];
-    //                     }
-    //                     delete[] jaco[0];
-    //                     delete[] jaco;
-    //                     delete[] res;
-    //                 }
-    //                 delete[] param[0];
-    //                 delete[] param;
-
-    //                 mat_result(row_cnt, 0) = param[0][0];
-    //                 mat_result(row_cnt, 1) = param[0][1];
-    //                 mat_result(row_cnt, 2) = param[0][2];
-    //                 mat_result(row_cnt, 3) = param[0][3];
-    //                 mat_result(row_cnt, 4) = param[0][4];
-    //                 mat_result(row_cnt, 5) = param[0][5];
-    //                 mat_result(row_cnt, 6) = param[0][6];
-    //                 mat_result(row_cnt, 7) = sum_null;
-    //                 mat_result(row_cnt, 8) = sum_huber;
-    //                 mat_result(row_cnt, 9) = sum_gmc;
-    //                 row_cnt++;
-    //             }
-    //         }
-    //     }
-
-    //     std::stringstream ss;
-    //     ss << OUTPUT_FOLDER << "loss_record/loss_" << frame_cnt << ".txt";
-    //     std::ofstream fout(ss.str().c_str(), std::ios::out);
-    //     fout.setf(ios::fixed, ios::floatfield);
-    //     fout.precision(8);
-    //     for (size_t i = 0; i < mat_result.rows(); i++)
-    //     {
-    //         for (size_t j = 0; j < mat_result.cols(); j++)
-    //             fout << mat_result(i, j) << " ";
-    //         fout << std::endl;
-    //     }
-    //     fout.close();
-    // }
-
     // // ****************** good feature selection
     // void evaluateFeatJacobian(const double *para_pose,
     //                           const PointPlaneFeature &feature,
@@ -292,9 +165,6 @@ public:
                                       PointPlaneFeature &feature,
                                       const Eigen::Matrix3d &cov_matrix)
     {
-
-        LidarMapPlaneNormFactor f(feature.point_, feature.coeffs_, cov_matrix);
-        
         double **param = new double *[1];
         param[0] = new double [SIZE_POSE];
         param[0][0] = pose_local.t_(0);
@@ -305,25 +175,34 @@ public:
         param[0][5] = pose_local.q_.z();
         param[0][6] = pose_local.q_.w();
 
-        double *res = new double[3];
+        double *res = new double[1];
         double **jaco = new double *[1];
-        jaco[0] = new double[3 * 7];
-        f.Evaluate(param, res, jaco);
-        
+        jaco[0] = new double[1 * 7];
+        if (feature.type_ == 's')
+        {
+            LidarMapPlaneNormFactor f(feature.point_, feature.coeffs_, cov_matrix);      
+            f.Evaluate(param, res, jaco);
+        } 
+        else if (feature.type_ == 'c')
+        {
+            LidarMapEdgeFactor f(feature.point_, feature.coeffs_, cov_matrix);
+            f.Evaluate(param, res, jaco);
+        }
+
         double *rho = new double[3];
         double sqr_error = res[0] * res[0] + res[1] * res[1] + res[0] * res[0];
         loss_function_->Evaluate(sqr_error, rho);
 
-        Eigen::Map<Eigen::Matrix<double, 3, 7, Eigen::RowMajor>> mat_jacobian(jaco[0]);
-        feature.jaco_ = mat_jacobian.topLeftCorner<3, 6>();
+        Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor>> mat_jacobian(jaco[0]);
+        feature.jaco_ = mat_jacobian.topLeftCorner<1, 6>();
         feature.jaco_ *= sqrt(std::max(0.0, rho[1])); // TODO
         // LOG_EVERY_N(INFO, 2000) << "error: " << sqrt(sqr_error) << ", rho_der: " << rho[1] 
         //                         << ", logd: " << common::logDet(feature.jaco_.transpose() * feature.jaco_, true);
 
+        delete[] res;
         delete[] rho;
         delete[] jaco[0];
         delete[] jaco;
-        delete[] res;
         delete[] param[0];
         delete[] param;
     }
@@ -352,7 +231,7 @@ public:
                                                         all_features[i],
                                                         i,
                                                         n_neigh,
-                                                        true);
+                                                        false);
             } else if (feature_type == 'c')
             {
                 b_match = f_extract.matchCornerPointFromMap(kdtree_from_map,
@@ -360,10 +239,9 @@ public:
                                                             laser_cloud.points[i],
                                                             pose_local,
                                                             all_features[i],
-                                                            all_features[i + num_all_features],
                                                             i,
                                                             n_neigh,
-                                                            true);
+                                                            false);
             }
             if (!b_match) continue;
             Eigen::Matrix3d cov_matrix;
@@ -394,6 +272,7 @@ public:
                              Eigen::Matrix<double, 6, 6> &sub_mat_H)
     {
         size_t num_all_features = laser_cloud.size();
+        all_features.resize(num_all_features);
 
         std::vector<size_t> all_feature_idx(num_all_features);
         std::vector<int> feature_visited(num_all_features, -1);
@@ -433,7 +312,6 @@ public:
                                                                 laser_cloud.points[que_idx],
                                                                 pose_local,
                                                                 all_features[que_idx],
-                                                                all_features[que_idx + num_all_features],
                                                                 que_idx,
                                                                 n_neigh,
                                                                 false);
@@ -482,7 +360,6 @@ public:
                                                                 laser_cloud.points[que_idx],
                                                                 pose_local,
                                                                 all_features[que_idx],
-                                                                all_features[que_idx + num_all_features],
                                                                 que_idx,
                                                                 n_neigh,
                                                                 false);
@@ -571,7 +448,6 @@ public:
                                                                 point_old,
                                                                 pose_local,
                                                                 all_features[que_idx],
-                                                                all_features[que_idx + num_all_features],
                                                                 que_idx,
                                                                 n_neigh,
                                                                 false);
@@ -645,7 +521,6 @@ public:
                                                                         laser_cloud.points[que_idx],
                                                                         pose_local,
                                                                         all_features[que_idx],
-                                                                        all_features[que_idx + num_all_features],
                                                                         que_idx,
                                                                         n_neigh,
                                                                         false);
