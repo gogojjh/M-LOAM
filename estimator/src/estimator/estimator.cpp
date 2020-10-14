@@ -231,6 +231,17 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
         feature_frame[0].insert(pair<std::string, PointICloud>("laser_cloud_outlier", laser_cloud_outlier));
         total_corner_feature_ += feature_frame[0]["corner_points_less_sharp"].size();
         total_surf_feature_ += feature_frame[0]["surf_points_less_flat"].size();
+
+        // PointICloud laser_cloud_segment, laser_cloud_outlier;
+        // ScanInfo scan_info(N_SCANS, SEGMENT_CLOUD);
+        // if (ESTIMATE_EXTRINSIC != 0) scan_info.segment_flag_ = false;
+        // img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, laser_cloud_outlier, scan_info);
+
+        // f_extract_.extractCloud_aloam(laser_cloud, scan_info, feature_frame[0]);
+        // laser_cloud_outlier.push_back(laser_cloud[0]);
+        // feature_frame[0].insert(pair<std::string, PointICloud>("laser_cloud_outlier", laser_cloud_outlier));
+        // total_corner_feature_ += feature_frame[0]["corner_points_less_sharp"].size();
+        // total_surf_feature_ += feature_frame[0]["surf_points_less_flat"].size();        
     } 
     else 
     {
@@ -682,7 +693,7 @@ void Estimator::optimizeMap()
                 std::vector<PointPlaneFeature> &features_frame = surf_map_features_[IDX_REF][i];
                 for (const PointPlaneFeature &feature : features_frame)
                 {
-                    LidarPureOdomFactor *f = new LidarPureOdomFactor(feature.point_, feature.coeffs_, 1.0);
+                    LidarPureOdomPlaneNormFactor *f = new LidarPureOdomPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
                     ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f,
                                                                                       loss_function,
                                                                                       para_pose_[0],
@@ -720,7 +731,7 @@ void Estimator::optimizeMap()
                     if (n == IDX_REF) continue;
                     for (const PointPlaneFeature &feature : cumu_surf_map_features_[n])
                     {
-                        LidarOnlineCalibFactor *f = new LidarOnlineCalibFactor(feature.point_, feature.coeffs_);
+                        LidarOnlineCalibPlaneNormFactor *f = new LidarOnlineCalibPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
                         ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f,
                                                                                           loss_function,
                                                                                           para_ex_pose_[n]);
@@ -742,7 +753,8 @@ void Estimator::optimizeMap()
                 std::vector<PointPlaneFeature> &features_frame = corner_map_features_[IDX_REF][i];
                 for (const PointPlaneFeature &feature : features_frame)
                 {
-                    LidarPureOdomFactor *f = new LidarPureOdomFactor(feature.point_, feature.coeffs_, 1.0);
+                    // LidarPureOdomEdgeFactor *f = new LidarPureOdomEdgeFactor(feature.point_, feature.coeffs_, 1.0);
+                    ceres::CostFunction *f = LidarPureOdomEdgeFactor::Create(feature.point_, feature.coeffs_, 1.0);
                     ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f,
                                                                                       loss_function,
                                                                                       para_pose_[0],
@@ -766,7 +778,7 @@ void Estimator::optimizeMap()
                     if (n == IDX_REF) continue;
                     for (const PointPlaneFeature &feature : cumu_corner_map_features_[n])
                     {
-                        LidarOnlineCalibFactor *f = new LidarOnlineCalibFactor(feature.point_, feature.coeffs_);
+                        LidarOnlineCalibEdgeFactor *f = new LidarOnlineCalibEdgeFactor(feature.point_, feature.coeffs_, 1.0);
                         ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f, loss_function, para_ex_pose_[n]);
                         res_ids_proj.push_back(res_id);
                     }
@@ -783,6 +795,7 @@ void Estimator::optimizeMap()
     {
         buildLocalMap();
         std::cout << common::YELLOW << "optimization with pure odometry" << common::RESET << std::endl;
+
         if (POINT_PLANE_FACTOR)
         {
             for (size_t n = 0; n < NUM_OF_LASER; n++)
@@ -793,7 +806,7 @@ void Estimator::optimizeMap()
                     {
                         const PointPlaneFeature &feature = surf_map_features_[n][i][fid];
                         // if (feature.type_ == 'n') continue;
-                        LidarPureOdomFactor *f = new LidarPureOdomFactor(feature.point_, feature.coeffs_, 1.0);
+                        LidarPureOdomPlaneNormFactor *f = new LidarPureOdomPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
                         ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f,
                                                                                           loss_function,
                                                                                           para_pose_[0],
@@ -815,12 +828,13 @@ void Estimator::optimizeMap()
                     {
                         const PointPlaneFeature &feature = corner_map_features_[n][i][fid];
                         // if (feature.type_ == 'n') continue;
-                        LidarPureOdomFactor *f = new LidarPureOdomFactor(feature.point_, feature.coeffs_, 1.0);
+                        // LidarPureOdomEdgeFactor *f = new LidarPureOdomEdgeFactor(feature.point_, feature.coeffs_, 1.0);
+                        ceres::CostFunction *f = LidarPureOdomEdgeFactor::Create(feature.point_, feature.coeffs_, 1.0);
                         ceres::internal::ResidualBlock *res_id = problem.AddResidualBlock(f,
-                                                                                            loss_function,
-                                                                                            para_pose_[0],
-                                                                                            para_pose_[i - pivot_idx],
-                                                                                            para_ex_pose_[n]);
+                                                                                          loss_function,
+                                                                                          para_pose_[0],
+                                                                                          para_pose_[i - pivot_idx],
+                                                                                          para_ex_pose_[n]);
                         res_ids_proj.push_back(res_id);
                     }
                 }
@@ -889,7 +903,7 @@ void Estimator::optimizeMap()
                     std::vector<PointPlaneFeature> &features_frame = surf_map_features_[IDX_REF][i];
                     for (const PointPlaneFeature &feature: features_frame)
                     {
-                        LidarPureOdomFactor *f = new LidarPureOdomFactor(feature.point_, feature.coeffs_, 1.0);
+                        LidarPureOdomPlaneNormFactor *f = new LidarPureOdomPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
                         ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
                             std::vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[IDX_REF]}, std::vector<int>{0});
                         marginalization_info->addResidualBlockInfo(residual_block_info);
@@ -903,7 +917,7 @@ void Estimator::optimizeMap()
                         if (n == IDX_REF) continue;
                         for (const PointPlaneFeature &feature : cumu_surf_map_features_[n])
                         {
-                            LidarOnlineCalibFactor *f = new LidarOnlineCalibFactor(feature.point_, feature.coeffs_);
+                            LidarOnlineCalibPlaneNormFactor *f = new LidarOnlineCalibPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
                             ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
                                 std::vector<double *>{para_ex_pose_[n]}, std::vector<int>{});
                             marginalization_info->addResidualBlockInfo(residual_block_info);
@@ -921,7 +935,8 @@ void Estimator::optimizeMap()
                     std::vector<PointPlaneFeature> &features_frame = corner_map_features_[IDX_REF][i];
                     for (const PointPlaneFeature &feature: features_frame)
                     {
-                        LidarPureOdomFactor *f = new LidarPureOdomFactor(feature.point_, feature.coeffs_, 1.0);
+                        // LidarPureOdomEdgeFactor *f = new LidarPureOdomEdgeFactor(feature.point_, feature.coeffs_, 1.0);
+                        ceres::CostFunction *f = LidarPureOdomEdgeFactor::Create(feature.point_, feature.coeffs_, 1.0);
                         ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
                             std::vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[IDX_REF]}, std::vector<int>{0});
                         marginalization_info->addResidualBlockInfo(residual_block_info);
@@ -935,7 +950,7 @@ void Estimator::optimizeMap()
                         if (n == IDX_REF) continue;
                         for (const PointPlaneFeature &feature : cumu_corner_map_features_[n])
                         {
-                            LidarOnlineCalibFactor *f = new LidarOnlineCalibFactor(feature.point_, feature.coeffs_);
+                            LidarOnlineCalibEdgeFactor *f = new LidarOnlineCalibEdgeFactor(feature.point_, feature.coeffs_, 1.0);
                             ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
                                                                                            std::vector<double *>{para_ex_pose_[n]},
                                                                                            std::vector<int>{});
@@ -958,8 +973,8 @@ void Estimator::optimizeMap()
                         for (const size_t &fid : sel_surf_feature_idx_[n][i])
                         {
                             const PointPlaneFeature &feature = surf_map_features_[n][i][fid];
-                            if (feature.type_ == 'n') continue;
-                            LidarPureOdomFactor *f = new LidarPureOdomFactor(feature.point_, feature.coeffs_, 1.0);
+                            // if (feature.type_ == 'n') continue;
+                            LidarPureOdomPlaneNormFactor *f = new LidarPureOdomPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
                             ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f,
                                                                                            loss_function,
                                                                                            vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]},
@@ -979,11 +994,12 @@ void Estimator::optimizeMap()
                         {
                             const PointPlaneFeature &feature = corner_map_features_[n][i][fid];
                             // if (feature.type_ == 'n') continue;
-                            LidarPureOdomFactor *f = new LidarPureOdomFactor(feature.point_, feature.coeffs_, 1.0);
+                            // LidarPureOdomEdgeFactor *f = new LidarPureOdomEdgeFactor(feature.point_, feature.coeffs_, 1.0);
+                            ceres::CostFunction *f = LidarPureOdomEdgeFactor::Create(feature.point_, feature.coeffs_, 1.0);
                             ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f,
-                                                                                            loss_function,
-                                                                                            vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]},
-                                                                                            std::vector<int>{0});
+                                                                                           loss_function,
+                                                                                           vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]},
+                                                                                           std::vector<int>{0});
                             marginalization_info->addResidualBlockInfo(residual_block_info);
                         }
                     }
@@ -1162,7 +1178,7 @@ void Estimator::buildLocalMap()
         down_size_filter.setLeafSize(ratio, ratio, ratio);
         down_size_filter.setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_[n]));
         down_size_filter.filter(surf_points_local_map_filtered_[n]);
-        ratio = 0.2 * std::min(2.0, std::max(0.75, 1.0 / 192 * float(N_SCANS * NUM_OF_LASER * WINDOW_SIZE)));
+        ratio = 0.4 * std::min(2.0, std::max(0.75, 1.0 / 192 * float(N_SCANS * NUM_OF_LASER * WINDOW_SIZE)));
         down_size_filter.setLeafSize(ratio, ratio, ratio);
         down_size_filter.setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_[n]));
         down_size_filter.filter(corner_points_local_map_filtered_[n]);
@@ -1240,62 +1256,73 @@ void Estimator::evaluateFeatJacobian(const Pose &pose_pivot,
                                      const Pose &pose_ext,
                                      PointPlaneFeature &feature)
 {
-    LidarPureOdomFactor f(feature.point_, feature.coeffs_, 1.0);
+    if (feature.type_ == 's')
+    {
+        LidarPureOdomPlaneNormFactor f(feature.point_, feature.coeffs_, 1.0);
 
-    double **param = new double *[3];
+        double **param = new double *[3];
 
-    param[0] = new double[SIZE_POSE];
-    param[0][0] = pose_pivot.t_(0);
-    param[0][1] = pose_pivot.t_(1);
-    param[0][2] = pose_pivot.t_(2);
-    param[0][3] = pose_pivot.q_.x();
-    param[0][4] = pose_pivot.q_.y();
-    param[0][5] = pose_pivot.q_.z();
-    param[0][6] = pose_pivot.q_.w();
+        param[0] = new double[SIZE_POSE];
+        param[0][0] = pose_pivot.t_(0);
+        param[0][1] = pose_pivot.t_(1);
+        param[0][2] = pose_pivot.t_(2);
+        param[0][3] = pose_pivot.q_.x();
+        param[0][4] = pose_pivot.q_.y();
+        param[0][5] = pose_pivot.q_.z();
+        param[0][6] = pose_pivot.q_.w();
 
-    param[1] = new double[SIZE_POSE];
-    param[1][0] = pose_i.t_(0);
-    param[1][1] = pose_i.t_(1);
-    param[1][2] = pose_i.t_(2);
-    param[1][3] = pose_i.q_.x();
-    param[1][4] = pose_i.q_.y();
-    param[1][5] = pose_i.q_.z();
-    param[1][6] = pose_i.q_.w();
+        param[1] = new double[SIZE_POSE];
+        param[1][0] = pose_i.t_(0);
+        param[1][1] = pose_i.t_(1);
+        param[1][2] = pose_i.t_(2);
+        param[1][3] = pose_i.q_.x();
+        param[1][4] = pose_i.q_.y();
+        param[1][5] = pose_i.q_.z();
+        param[1][6] = pose_i.q_.w();
 
-    param[2] = new double[SIZE_POSE];
-    param[2][0] = pose_ext.t_(0);
-    param[2][1] = pose_ext.t_(1);
-    param[2][2] = pose_ext.t_(2);
-    param[2][3] = pose_ext.q_.x();
-    param[2][4] = pose_ext.q_.y();
-    param[2][5] = pose_ext.q_.z();
-    param[2][6] = pose_ext.q_.w();
+        param[2] = new double[SIZE_POSE];
+        param[2][0] = pose_ext.t_(0);
+        param[2][1] = pose_ext.t_(1);
+        param[2][2] = pose_ext.t_(2);
+        param[2][3] = pose_ext.q_.x();
+        param[2][4] = pose_ext.q_.y();
+        param[2][5] = pose_ext.q_.z();
+        param[2][6] = pose_ext.q_.w();
 
-    double *res = new double[1];
-    double **jaco = new double *[3];
-    jaco[0] = new double[1 * 7];
-    jaco[1] = new double[1 * 7];
-    jaco[2] = new double[1 * 7];
-    f.Evaluate(param, res, jaco);
+        double *res = new double[1];
+        double **jaco = new double *[3];
+        jaco[0] = new double[1 * 7];
+        jaco[1] = new double[1 * 7];
+        jaco[2] = new double[1 * 7];
+        f.Evaluate(param, res, jaco);
 
-    Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor>> mat_jacobian_1(jaco[0]);
-    Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor>> mat_jacobian_2(jaco[1]);
-    Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor>> mat_jacobian_3(jaco[2]);
-    Eigen::Matrix<double, 3, 7> mat_jacobian;
-    mat_jacobian.row(0) = mat_jacobian_1;
-    mat_jacobian.row(1) = mat_jacobian_2;
-    mat_jacobian.row(2) = mat_jacobian_3;
-    feature.jaco_ = mat_jacobian.topLeftCorner<3, 6>();
+        // Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor>> mat_jacobian_1(jaco[0]);
+        // Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor>> mat_jacobian_2(jaco[1]);
+        // Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor>> mat_jacobian_3(jaco[2]);
+        // Eigen::Matrix<double, 3, 7> mat_jacobian;
+        // mat_jacobian.row(0) = mat_jacobian_1;
+        // mat_jacobian.row(1) = mat_jacobian_2;
+        // mat_jacobian.row(2) = mat_jacobian_3;
+        // feature.jaco_ = mat_jacobian.topLeftCorner<3, 6>();
 
-    delete[] jaco[0];
-    delete[] jaco[1];
-    delete[] jaco[2];
-    delete[] jaco;
-    delete[] res;
-    delete[] param[0];
-    delete[] param[1];
-    delete[] param[2];
-    delete[] param;
+        Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor>> mat_jacobian(jaco[1]);
+        feature.jaco_ = mat_jacobian.topLeftCorner<1, 6>();
+
+        delete[] jaco[0];
+        delete[] jaco[1];
+        delete[] jaco[2];
+        delete[] jaco;
+        delete[] res;
+        delete[] param[0];
+        delete[] param[1];
+        delete[] param[2];
+        delete[] param;
+    } 
+    else if (feature.type_ == 'c')
+    {
+        feature.jaco_ = Eigen::Matrix<double, 1, 6>::Identity();
+    }
+
 }
 
 void Estimator::goodFeatureMatching(const pcl::KdTreeFLANN<PointI>::Ptr &kdtree_from_map,

@@ -25,7 +25,9 @@
 class LidarMapPlaneNormFactor : public ceres::SizedCostFunction<1, 7>
 {
 public:
-	LidarMapPlaneNormFactor(const Eigen::Vector3d &point, const Eigen::Vector4d &coeff, const Eigen::Matrix3d &cov_matrix = Eigen::Matrix3d::Identity())
+	LidarMapPlaneNormFactor(const Eigen::Vector3d &point,
+							const Eigen::Vector4d &coeff,
+							const Eigen::Matrix3d &cov_matrix = Eigen::Matrix3d::Identity())
 		: point_(point),
 		  coeff_(coeff),
 		  sqrt_info_(sqrt(1 / cov_matrix.trace()))

@@ -24,7 +24,9 @@
 class LidarScanPlaneNormFactor : public ceres::SizedCostFunction<1, 7>
 {
 public:
-    LidarScanPlaneNormFactor(const Eigen::Vector3d &point, const Eigen::Vector4d &coeff, const double &s = 1.0)
+    LidarScanPlaneNormFactor(const Eigen::Vector3d &point,
+                             const Eigen::Vector4d &coeff,
+                             const double &s = 1.0)
         : point_(point), coeff_(coeff), s_(s) {}
 
     bool Evaluate(double const *const *param, double *residuals, double **jacobians) const

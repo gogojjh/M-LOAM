@@ -23,13 +23,16 @@
 
 using namespace common;
 
-class LidarPureOdomFactor : public ceres::SizedCostFunction<1, 7, 7, 7>
+// pure odom planar factor
+class LidarPureOdomPlaneNormFactor : public ceres::SizedCostFunction<1, 7, 7, 7>
 {
 public:
-	LidarPureOdomFactor(const Eigen::Vector3d &point,
-						const Eigen::Vector4d &coeff, 
-						const double sqrt_info = 1.0)
-		: point_(point), coeff_(coeff), sqrt_info_(sqrt_info) {}
+	LidarPureOdomPlaneNormFactor(const Eigen::Vector3d &point,
+								 const Eigen::Vector4d &coeff,
+								 const double sqrt_info = 1.0)
+		: point_(point),
+		  coeff_(coeff),
+		  sqrt_info_(sqrt_info) {}
 
 	// residual = sum(w^(T) * (R * p + t) + d)
 	bool Evaluate(double const *const *param, double *residuals, double **jacobians) const
@@ -60,8 +63,8 @@ public:
             if (jacobians[0])
             {
                 Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> > jacobian_pose_pivot(jacobians[0]);
-                Eigen::Matrix<double, 1, 6> jaco_pivot;
 
+                Eigen::Matrix<double, 1, 6> jaco_pivot;
 				jaco_pivot.leftCols<3>() = -w.transpose() * Rp.transpose();
 				jaco_pivot.rightCols<3>() = w.transpose() * (Rp.transpose() *
 															 Utility::skewSymmetric(Ri * Rext * point_ + Ri * t_ext + t_i - t_pivot));
@@ -74,8 +77,8 @@ public:
             if (jacobians[1])
             {
                 Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> > jacobian_pose_i(jacobians[1]);
-                Eigen::Matrix<double, 1, 6> jaco_i;
 
+                Eigen::Matrix<double, 1, 6> jaco_i;
 				jaco_i.leftCols<3>() = w.transpose() * Rp.transpose();
 				jaco_i.rightCols<3>() = -w.transpose() * Rp.transpose() *
 										Ri * Utility::skewSymmetric(Rext * point_ + t_ext);
@@ -88,7 +91,6 @@ public:
             if (jacobians[2])
             {
                 Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> > jacobian_pose_ex(jacobians[2]);
-                jacobian_pose_ex.setZero();
 
 				Eigen::Matrix<double, 1, 6> jaco_ex;
 				jaco_ex.leftCols<3>() = w.transpose() * Rp.transpose() * Ri;
@@ -111,7 +113,7 @@ public:
         jaco[1] = new double[1 * 7];
         jaco[2] = new double[1 * 7];
         Evaluate(param, res, jaco);
-		std::cout << "[LidarPureOdomFactor] check begins" << std::endl;
+		std::cout << "[LidarPureOdomPlaneNormFactor] check begins" << std::endl;
         std::cout << "analytical:" << std::endl;
 
         std::cout << res[0] << std::endl;
@@ -195,5 +197,60 @@ private:
 	const double sqrt_info_;
 };
 
+// pure odom edge factor
+class LidarPureOdomEdgeFactor
+{
+public:
+	LidarPureOdomEdgeFactor(const Eigen::Vector3d &point,
+							const Eigen::VectorXd &coeff,
+							const double sqrt_info = 1.0)
+		: point_(point),
+		  coeff_(coeff),
+		  sqrt_info_(sqrt_info) {}
+
+	template <typename T>
+	bool operator()(const T *param1, const T *param2, const T *param3, T *residuals) const
+	{
+		Eigen::Quaternion<T> Q_pivot(param1[6], param1[3], param1[4], param1[5]);
+		Eigen::Matrix<T, 3, 1> t_pivot(param1[0], param1[1], param1[2]);
+		Eigen::Quaternion<T> Q_i(param2[6], param2[3], param2[4], param2[5]);
+		Eigen::Matrix<T, 3, 1> t_i(param2[0], param2[1], param2[2]);
+		Eigen::Quaternion<T> Q_ext(param3[6], param3[3], param3[4], param3[5]);
+		Eigen::Matrix<T, 3, 1> t_ext(param3[0], param3[1], param3[2]);
+
+		Eigen::Quaternion<T> Q_pi = Q_pivot.conjugate() * Q_i;
+		Eigen::Matrix<T, 3, 1> t_pi = Q_pivot.conjugate() * (t_i - t_pivot);
+		Eigen::Quaternion<T> Q_ext_pi = Q_pi * Q_ext;
+		Eigen::Matrix<T, 3, 1> t_ext_pi = Q_pi * t_ext + t_pi;
+
+		Eigen::Matrix<T, 3, 1> cp(T(point_.x()), T(point_.y()), T(point_.z()));
+		Eigen::Matrix<T, 3, 1> lpa(T(coeff_(0)), T(coeff_(1)), T(coeff_(2)));
+		Eigen::Matrix<T, 3, 1> lpb(T(coeff_(3)), T(coeff_(4)), T(coeff_(5)));
+		Eigen::Matrix<T, 3, 1> lp = Q_ext_pi * cp + t_ext_pi;
+
+		Eigen::Matrix<T, 3, 1> nu = (lp - lpa).cross(lp - lpb);
+		Eigen::Matrix<T, 3, 1> de = lpa - lpb;
+		// residuals[0] = T(sqrt_info_) * nu.x() / de.norm();
+		// residuals[1] = T(sqrt_info_) * nu.y() / de.norm();
+		// residuals[2] = T(sqrt_info_) * nu.z() / de.norm();
+		residuals[0] = T(sqrt_info_) * nu.norm() / de.norm();
+
+		return true;
+	}
+
+	static ceres::CostFunction *Create(const Eigen::Vector3d &point,
+									   const Eigen::VectorXd &coeff,
+									   const double sqrt_info)
+	{
+		return (new ceres::AutoDiffCostFunction<
+				LidarPureOdomEdgeFactor, 1, 7, 7, 7>(
+			new LidarPureOdomEdgeFactor(point, coeff, sqrt_info)));
+	}
+
+private: 
+	const Eigen::Vector3d point_;
+	const Eigen::VectorXd coeff_;
+	const double sqrt_info_;
+};
 
 //

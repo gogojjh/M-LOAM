@@ -25,7 +25,9 @@
 class LidarMapEdgeFactor : public ceres::SizedCostFunction<3, 7>
 {
 public:
-	LidarMapEdgeFactor(const Eigen::Vector3d &point, const Eigen::VectorXd &coeff, const Eigen::Matrix3d &cov_matrix = Eigen::Matrix3d::Identity())
+	LidarMapEdgeFactor(const Eigen::Vector3d &point,
+					   const Eigen::VectorXd &coeff,
+					   const Eigen::Matrix3d &cov_matrix = Eigen::Matrix3d::Identity())
 		: point_(point),
 		  coeff_(coeff),
 		  sqrt_info_(sqrt(1 / cov_matrix.trace())) {}
@@ -41,16 +43,13 @@ public:
 
 		Eigen::Vector3d nu = (lp - lpa).cross(lp - lpb);
 		Eigen::Vector3d de = lpa - lpb;
-		residuals = sqrt_info_ * nu / de.norm();
+		residuals[0] = sqrt_info_ * nu.x() / de.norm();
+		residuals[1] = sqrt_info_ * nu.y() / de.norm();
+		residuals[2] = sqrt_info_ * nu.z() / de.norm();
 		// or
-		// residual[0] = nu.norm() / de.norm();
-
-		// Eigen::Vector3d w2 = (lpa - lp).cross(lpb - lp);
-		// w2.normalize();
-		// Eigen::Vector3d w1 = w2.cross(lpb - lpa);
-		// w1.normalize();
-		// double ld_p = -w1.dot(lpa);
-		// residuals[0] = sqrt_info * (w1.dot(lp) + ld_p);
+		// Eigen::Vector3d w2 = (lpa - lp).cross(lpb - lp).normalize();
+		// Eigen::Vector3d w1 = w2.cross(lpb - lpa).normalize();
+		// residuals[0] = sqrt_info * (w1.dot(lp) - w1.dot(lpa));
 
 		if (jacobians)
 		{
@@ -122,7 +121,7 @@ public:
 			Eigen::Vector3d nu = (lp - lpa).cross(lp - lpb);
 			Eigen::Vector3d de = lpa - lpb;
 			Eigen::Vector3d tmp_r = sqrt_info_ * nu / de.norm();
-			num_jacobian(k) = (tmp_r - r) / eps;
+			num_jacobian.col(k) = (tmp_r - r) / eps;
 		}
 		std::cout << num_jacobian.block<1, 6>(0, 0) << std::endl;
 		std::cout << num_jacobian.block<1, 6>(1, 0) << std::endl;

@@ -113,6 +113,311 @@ void FeatureExtract::calTimestamp(const PointCloud &laser_cloud_in,
     }
 }
 
+bool comp(int i, int j) { return (cloudCurvature[i] < cloudCurvature[j]); }
+
+void FeatureExtract::extractCloud_aloam(const PointICloud &laserCloudIn,
+                                        const ScanInfo &scan_info,
+                                        cloudFeature &cloud_feature)
+{
+    typedef pcl::PointXYZI PointType;
+
+    TicToc t_whole;
+    TicToc t_prepare;
+    std::vector<int> scanStartInd(N_SCANS, 0);
+    std::vector<int> scanEndInd(N_SCANS, 0);
+
+    // step 1: cloud_rearrange
+    int cloudSize = laserCloudIn.points.size();
+    // float startOri = -atan2(laserCloudIn.points[0].y, laserCloudIn.points[0].x);
+    // float endOri = -atan2(laserCloudIn.points[cloudSize - 1].y,
+    //                       laserCloudIn.points[cloudSize - 1].x) +
+    //                2 * M_PI;
+
+    // if (endOri - startOri > 3 * M_PI)
+    // {
+    //     endOri -= 2 * M_PI;
+    // }
+    // else if (endOri - startOri < M_PI)
+    // {
+    //     endOri += 2 * M_PI;
+    // }
+    //printf("end Ori %f\n", endOri);
+
+    float scanPeriod = 0.1;
+
+    bool halfPassed = false;
+    int count = cloudSize;
+    PointType point;
+    std::vector<pcl::PointCloud<PointType>> laserCloudScans(N_SCANS);
+    for (int i = 0; i < cloudSize; i++)
+    {
+        point.x = laserCloudIn.points[i].x;
+        point.y = laserCloudIn.points[i].y;
+        point.z = laserCloudIn.points[i].z;
+
+        float angle = atan(point.z / sqrt(point.x * point.x + point.y * point.y)) * 180 / M_PI;
+        int scanID = 0;
+
+        if (N_SCANS == 16)
+        {
+            scanID = int((angle + 15) / 2 + 0.5);
+            if (scanID > (N_SCANS - 1) || scanID < 0)
+            {
+                count--;
+                continue;
+            }
+        }
+        else if (N_SCANS == 32)
+        {
+            scanID = int((angle + 92.0 / 3.0) * 3.0 / 4.0);
+            if (scanID > (N_SCANS - 1) || scanID < 0)
+            {
+                count--;
+                continue;
+            }
+        }
+        else if (N_SCANS == 64)
+        {
+            if (angle >= -8.83)
+                scanID = int((2 - angle) * 3.0 + 0.5);
+            else
+                scanID = N_SCANS / 2 + int((-8.83 - angle) * 2.0 + 0.5);
+
+            // use [0 50]  > 50 remove outlies
+            if (angle > 2 || angle < -24.33 || scanID > 50 || scanID < 0)
+            {
+                count--;
+                continue;
+            }
+        }
+        else
+        {
+            printf("wrong scan number\n");
+            ROS_BREAK();
+        }
+        //printf("angle %f scanID %d \n", angle, scanID);
+
+        // float ori = -atan2(point.y, point.x);
+        // if (!halfPassed)
+        // {
+        //     if (ori < startOri - M_PI / 2)
+        //     {
+        //         ori += 2 * M_PI;
+        //     }
+        //     else if (ori > startOri + M_PI * 3 / 2)
+        //     {
+        //         ori -= 2 * M_PI;
+        //     }
+
+        //     if (ori - startOri > M_PI)
+        //     {
+        //         halfPassed = true;
+        //     }
+        // }
+        // else
+        // {
+        //     ori += 2 * M_PI;
+        //     if (ori < endOri - M_PI * 3 / 2)
+        //     {
+        //         ori += 2 * M_PI;
+        //     }
+        //     else if (ori > endOri + M_PI / 2)
+        //     {
+        //         ori -= 2 * M_PI;
+        //     }
+        // }
+
+        // float relTime = (ori - startOri) / (endOri - startOri);
+        // point.intensity = scanID + scanPeriod * relTime;
+        point.intensity = scanID + laserCloudIn.points[i].intensity;
+        laserCloudScans[scanID].push_back(point);
+    }
+
+    cloudSize = count;
+
+    // step 2: cloud_feature_extractor
+    pcl::PointCloud<PointType>::Ptr laserCloud(new pcl::PointCloud<PointType>());
+    for (int i = 0; i < N_SCANS; i++)
+    {
+        scanStartInd[i] = laserCloud->size() + 5;
+        *laserCloud += laserCloudScans[i];
+        scanEndInd[i] = laserCloud->size() - 6;
+        // std::cout << i << " " << scanStartInd[i] << " " << scanEndInd[i] << std::endl;
+    }
+    printf("points size %d \n", cloudSize);
+
+    printf("prepare time %f \n", t_prepare.toc());
+
+    for (int i = 5; i < cloudSize - 5; i++)
+    {
+        float diffX = laserCloud->points[i - 5].x + laserCloud->points[i - 4].x + laserCloud->points[i - 3].x + laserCloud->points[i - 2].x + laserCloud->points[i - 1].x - 10 * laserCloud->points[i].x + laserCloud->points[i + 1].x + laserCloud->points[i + 2].x + laserCloud->points[i + 3].x + laserCloud->points[i + 4].x + laserCloud->points[i + 5].x;
+        float diffY = laserCloud->points[i - 5].y + laserCloud->points[i - 4].y + laserCloud->points[i - 3].y + laserCloud->points[i - 2].y + laserCloud->points[i - 1].y - 10 * laserCloud->points[i].y + laserCloud->points[i + 1].y + laserCloud->points[i + 2].y + laserCloud->points[i + 3].y + laserCloud->points[i + 4].y + laserCloud->points[i + 5].y;
+        float diffZ = laserCloud->points[i - 5].z + laserCloud->points[i - 4].z + laserCloud->points[i - 3].z + laserCloud->points[i - 2].z + laserCloud->points[i - 1].z - 10 * laserCloud->points[i].z + laserCloud->points[i + 1].z + laserCloud->points[i + 2].z + laserCloud->points[i + 3].z + laserCloud->points[i + 4].z + laserCloud->points[i + 5].z;
+        cloudCurvature[i] = diffX * diffX + diffY * diffY + diffZ * diffZ;
+        cloudSortInd[i] = i;
+        cloudNeighborPicked[i] = 0;
+        cloudLabel[i] = 0;
+    }
+
+    TicToc t_pts;
+
+    pcl::PointCloud<PointType> cornerPointsSharp;
+    pcl::PointCloud<PointType> cornerPointsLessSharp;
+    pcl::PointCloud<PointType> surfPointsFlat;
+    pcl::PointCloud<PointType> surfPointsLessFlat;
+
+    float t_q_sort = 0;
+    for (int i = 0; i < N_SCANS; i++)
+    {
+        if (scanEndInd[i] - scanStartInd[i] < 6)
+            continue;
+        pcl::PointCloud<PointType>::Ptr surfPointsLessFlatScan(new pcl::PointCloud<PointType>);
+        for (int j = 0; j < 6; j++)
+        {
+            // step 3: extract point feature
+            int sp = scanStartInd[i] + (scanEndInd[i] - scanStartInd[i]) * j / 6;
+            int ep = scanStartInd[i] + (scanEndInd[i] - scanStartInd[i]) * (j + 1) / 6 - 1;
+
+            TicToc t_tmp;
+            std::sort(cloudSortInd + sp, cloudSortInd + ep + 1, comp);
+            t_q_sort += t_tmp.toc();
+
+            int largestPickedNum = 0;
+            for (int k = ep; k >= sp; k--)
+            {
+                int ind = cloudSortInd[k];
+                if (cloudNeighborPicked[ind] == 0 && cloudCurvature[ind] > 0.1)
+                {
+                    largestPickedNum++;
+                    if (largestPickedNum <= 2)
+                    {
+                        cloudLabel[ind] = 2;
+                        cornerPointsSharp.push_back(laserCloud->points[ind]);
+                        cornerPointsLessSharp.push_back(laserCloud->points[ind]);
+                    }
+                    else if (largestPickedNum <= 20)
+                    {
+                        cloudLabel[ind] = 1;
+                        cornerPointsLessSharp.push_back(laserCloud->points[ind]);
+                    }
+                    else
+                    {
+                        break;
+                    }
+
+                    cloudNeighborPicked[ind] = 1;
+
+                    for (int l = 1; l <= 5; l++)
+                    {
+                        float diffX = laserCloud->points[ind + l].x - laserCloud->points[ind + l - 1].x;
+                        float diffY = laserCloud->points[ind + l].y - laserCloud->points[ind + l - 1].y;
+                        float diffZ = laserCloud->points[ind + l].z - laserCloud->points[ind + l - 1].z;
+                        if (diffX * diffX + diffY * diffY + diffZ * diffZ > 0.05)
+                        {
+                            break;
+                        }
+
+                        cloudNeighborPicked[ind + l] = 1;
+                    }
+                    for (int l = -1; l >= -5; l--)
+                    {
+                        float diffX = laserCloud->points[ind + l].x - laserCloud->points[ind + l + 1].x;
+                        float diffY = laserCloud->points[ind + l].y - laserCloud->points[ind + l + 1].y;
+                        float diffZ = laserCloud->points[ind + l].z - laserCloud->points[ind + l + 1].z;
+                        if (diffX * diffX + diffY * diffY + diffZ * diffZ > 0.05)
+                        {
+                            break;
+                        }
+
+                        cloudNeighborPicked[ind + l] = 1;
+                    }
+                }
+            }
+
+            // step 4: extract plane feature
+            int smallestPickedNum = 0;
+            for (int k = sp; k <= ep; k++)
+            {
+                int ind = cloudSortInd[k];
+                if (cloudNeighborPicked[ind] == 0 && cloudCurvature[ind] < 0.1)
+                {
+                    cloudLabel[ind] = -1;
+                    surfPointsFlat.push_back(laserCloud->points[ind]);
+                    smallestPickedNum++;
+                    if (smallestPickedNum >= 4)
+                    {
+                        break;
+                    }
+                    cloudNeighborPicked[ind] = 1;
+                    for (int l = 1; l <= 5; l++)
+                    {
+                        float diffX = laserCloud->points[ind + l].x - laserCloud->points[ind + l - 1].x;
+                        float diffY = laserCloud->points[ind + l].y - laserCloud->points[ind + l - 1].y;
+                        float diffZ = laserCloud->points[ind + l].z - laserCloud->points[ind + l - 1].z;
+                        if (diffX * diffX + diffY * diffY + diffZ * diffZ > 0.05)
+                        {
+                            break;
+                        }
+
+                        cloudNeighborPicked[ind + l] = 1;
+                    }
+                    for (int l = -1; l >= -5; l--)
+                    {
+                        float diffX = laserCloud->points[ind + l].x - laserCloud->points[ind + l + 1].x;
+                        float diffY = laserCloud->points[ind + l].y - laserCloud->points[ind + l + 1].y;
+                        float diffZ = laserCloud->points[ind + l].z - laserCloud->points[ind + l + 1].z;
+                        if (diffX * diffX + diffY * diffY + diffZ * diffZ > 0.05)
+                        {
+                            break;
+                        }
+
+                        cloudNeighborPicked[ind + l] = 1;
+                    }
+                }
+            }
+
+            for (int k = sp; k <= ep; k++)
+            {
+                if (cloudLabel[k] <= 0)
+                {
+                    surfPointsLessFlatScan->push_back(laserCloud->points[k]);
+                }
+            }
+        }
+
+        pcl::PointCloud<PointType> surfPointsLessFlatScanDS;
+        pcl::VoxelGrid<PointType> downSizeFilter;
+        downSizeFilter.setInputCloud(surfPointsLessFlatScan);
+        downSizeFilter.setLeafSize(0.2, 0.2, 0.2);
+        downSizeFilter.filter(surfPointsLessFlatScanDS);
+        surfPointsLessFlat += surfPointsLessFlatScanDS;
+    }
+    // printf("sort q time %fms\n", t_q_sort);
+    // printf("seperate points time %fms\n", t_pts.toc());
+    // printf("whole scan registration time %fms \n", t_whole.toc());
+    if (t_whole.toc() > 100)
+        ROS_WARN("whole scan registration process over 100ms");
+
+    cloud_feature.clear();
+    // cloud_feature.find("key")->first/ second
+    // cloud_feature.erase("key")/ cloud_feature.erase(cloud_feature.find("key"))
+    cloud_feature.insert(pair<std::string, PointICloud>("laser_cloud", *laserCloud));
+    cloud_feature.insert(pair<std::string, PointICloud>("corner_points_sharp", cornerPointsSharp));          // subset: the most distinctive edge points
+    cloud_feature.insert(pair<std::string, PointICloud>("corner_points_less_sharp", cornerPointsLessSharp)); // more corner points
+    cloud_feature.insert(pair<std::string, PointICloud>("surf_points_flat", surfPointsFlat));                // subset: the most distinctive planar points
+    cloud_feature.insert(pair<std::string, PointICloud>("surf_points_less_flat", surfPointsLessFlat));       // more planar points
+
+    std::cout << "feature size: " << laserCloud->size() << " "
+              << cornerPointsSharp.size() << " " << cornerPointsLessSharp.size() << " "
+              << surfPointsFlat.size() << " " << surfPointsLessFlat.size() << std::endl;
+
+    // pcl::PCDWriter pcd_writer;
+    // pcd_writer.write("/tmp/mloam_less_surf.pcd", surfPointsLessFlat);
+    // pcd_writer.write("/tmp/mloam_less_edge.pcd", cornerPointsLessSharp);
+    // pcd_writer.write("/tmp/mloam_surf.pcd", surfPointsFlat);
+    // pcd_writer.write("/tmp/mloam_edge.pcd", cornerPointsSharp);
+}
+
 void FeatureExtract::extractCloud(const PointICloud &laser_cloud_in,
                                   const ScanInfo &scan_info,
                                   cloudFeature &cloud_feature)

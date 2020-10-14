@@ -71,6 +71,10 @@ public:
     void calTimestamp(const PointITimeCloud &laser_cloud_in,
                       PointICloud &laser_cloud_out);
 
+    void extractCloud_aloam(const PointICloud &laserCloudIn,
+                            const ScanInfo &scan_info,
+                            cloudFeature &cloud_feature);
+
     void extractCloud(const PointICloud &laser_cloud_in,
                       const ScanInfo &scan_info,
                       cloudFeature &cloud_feature);
@@ -204,22 +208,24 @@ void FeatureExtract::matchCornerFromScan(const typename pcl::KdTreeFLANN<PointTy
 
         if (min_point_ind2 >= 0) // both closest_point_ind and min_point_ind2 is valid
         {
-            Eigen::Vector3f X0(point_sel.x, point_sel.y, point_sel.z);
-            Eigen::Vector3f X1(cloud_scan.points[closest_point_ind].x,
-                               cloud_scan.points[closest_point_ind].y,
-                               cloud_scan.points[closest_point_ind].z);
-            Eigen::Vector3f X2(cloud_scan.points[min_point_ind2].x,
-                               cloud_scan.points[min_point_ind2].y,
-                               cloud_scan.points[min_point_ind2].z);
-            Eigen::Vector3f n = (X1 - X0).cross(X2 - X0);
-            Eigen::Vector3f w2 = n.normalized();
-            Eigen::Vector3f w1 = (w2.cross(X2 - X1)).normalized();
-            float ld_1 = n.norm() / (X1 - X2).norm(); // distance
-            float ld_2 = 0.0;
-            float s = 1 - 0.9f * fabs(ld_1);
+            // Eigen::Vector3f X0(point_sel.x, point_sel.y, point_sel.z);
+            // Eigen::Vector3f X1(cloud_scan.points[closest_point_ind].x,
+            //                    cloud_scan.points[closest_point_ind].y,
+            //                    cloud_scan.points[closest_point_ind].z);
+            // Eigen::Vector3f X2(cloud_scan.points[min_point_ind2].x,
+            //                    cloud_scan.points[min_point_ind2].y,
+            //                    cloud_scan.points[min_point_ind2].z);
+            // Eigen::Vector3f n = (X1 - X0).cross(X2 - X0);
+            // Eigen::Vector3f w2 = n / n.norm();
+            // Eigen::Vector3f w1 = w2.cross(X2 - X1);
+            // w1.normalized();
 
-            float ld_p1 = -w1.dot(X1);
-            float ld_p2 = -w2.dot(X1);
+            // float ld_1 = n.norm() / (X1 - X2).norm(); // distance
+            // float ld_2 = 0.0;
+            // float s = 1 - 0.9f * fabs(ld_1);
+
+            // float ld_p1 = -w1.dot(X1);
+            // float ld_p2 = -w2.dot(X1);
 
             // float ld_p1 = -(w1.x() * point_sel.x + w1.y() * point_sel.y + w1.z() * point_sel.z - ld_1);
             // float ld_p2 = -(w2.x() * point_sel.x + w2.y() * point_sel.y + w2.z() * point_sel.z - ld_2);
@@ -242,7 +248,21 @@ void FeatureExtract::matchCornerFromScan(const typename pcl::KdTreeFLANN<PointTy
             // features[cloud_cnt] = feature2;
             // cloud_cnt++;
 
-            Eigen::Vector4d coeff(w1.x(), w1.y(), w1.z(), ld_p1);
+            // Eigen::Vector4d coeff(w1.x(), w1.y(), w1.z(), ld_p1);
+            // PointPlaneFeature feature;
+            // feature.idx_ = i;
+            // feature.point_ = Eigen::Vector3d{cloud_data.points[i].x, cloud_data.points[i].y, cloud_data.points[i].z};
+            // feature.coeffs_ = coeff;
+            // features[cloud_cnt] = feature;
+            // cloud_cnt++;
+
+            Eigen::Matrix<double, 6, 1> coeff;
+            coeff(0) = cloud_scan.points[closest_point_ind].x,
+            coeff(1) = cloud_scan.points[closest_point_ind].y,
+            coeff(2) = cloud_scan.points[closest_point_ind].z;
+            coeff(3) = cloud_scan.points[min_point_ind2].x,
+            coeff(4) = cloud_scan.points[min_point_ind2].y,
+            coeff(5) = cloud_scan.points[min_point_ind2].z;
             PointPlaneFeature feature;
             feature.idx_ = i;
             feature.point_ = Eigen::Vector3d{cloud_data.points[i].x, cloud_data.points[i].y, cloud_data.points[i].z};
@@ -442,21 +462,23 @@ void FeatureExtract::matchCornerFromMap(const typename pcl::KdTreeFLANN<PointTyp
                 }
                 if (is_in_laser_fov)
                 {
-                    Eigen::Vector3f X0(point_sel.x, point_sel.y, point_sel.z);
-                    Eigen::Vector3f point_on_line = center;
-                    Eigen::Vector3f X1, X2;
-                    X1 = 0.1 * unit_direction + point_on_line;
-                    X2 = -0.1 * unit_direction + point_on_line;
+                    // Eigen::Vector3f X0(point_sel.x, point_sel.y, point_sel.z);
+                    // Eigen::Vector3f point_on_line = center;
+                    // Eigen::Vector3f X1, X2;
+                    // X1 = 0.1 * unit_direction + point_on_line;
+                    // X2 = -0.1 * unit_direction + point_on_line;
 
-                    Eigen::Vector3f n = (X1 - X0).cross(X2 - X0);
-                    Eigen::Vector3f w2 = n.normalized();
-                    Eigen::Vector3f w1 = (w2.cross(X2 - X1)).normalized();
-                    float ld_1 = n.norm() / (X1 - X2).norm(); // the point-to-edge distance between point to plane
-                    float ld_2 = 0.0;
-                    float s = 1 - 0.9f * fabs(ld_1);
+                    // Eigen::Vector3f n = (X1 - X0).cross(X2 - X0);
+                    // Eigen::Vector3f w2 = n / n.norm();
+                    // Eigen::Vector3f w1 = w2.cross(X2 - X1);
+                    // w1.normalized();
 
-                    float ld_p1 = -w1.dot(X1);
-                    float ld_p2 = -w2.dot(X1);
+                    // float ld_1 = n.norm() / (X1 - X2).norm(); // the point-to-edge distance between point to plane
+                    // float ld_2 = 0.0;
+                    // float s = 1 - 0.9f * fabs(ld_1);
+
+                    // float ld_p1 = -w1.dot(X1);
+                    // float ld_p2 = -w2.dot(X1);
 
                     // float ld_p1 = -(w1.x() * point_sel.x + w1.y() * point_sel.y + w1.z() * point_sel.z - ld_1);
                     // float ld_p2 = -(w2.x() * point_sel.x + w2.y() * point_sel.y + w2.z() * point_sel.z - ld_2);
@@ -482,7 +504,28 @@ void FeatureExtract::matchCornerFromMap(const typename pcl::KdTreeFLANN<PointTyp
                     // features[cloud_cnt] = feature2;
                     // cloud_cnt++;
 
-                    Eigen::Vector4d coeff(w1.x(), w1.y(), w1.z(), ld_p1);
+                    // Eigen::Vector4d coeff(w1.x(), w1.y(), w1.z(), ld_p1);
+                    // PointPlaneFeature feature;
+                    // feature.idx_ = i;
+                    // feature.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
+                    // feature.coeffs_ = coeff;
+                    // feature.laser_idx_ = (size_t)point_ori.intensity;
+                    // feature.type_ = 'c';
+                    // features[cloud_cnt] = feature;
+                    // cloud_cnt++;
+
+                    Eigen::Vector3f point_on_line = center;
+                    Eigen::Vector3f X1, X2;
+                    X1 = 0.1 * unit_direction + point_on_line;
+                    X2 = -0.1 * unit_direction + point_on_line;
+
+                    Eigen::Matrix<double, 6, 1> coeff;
+                    coeff(0) = X1.x(),
+                    coeff(1) = X1.y(),
+                    coeff(2) = X1.z();
+                    coeff(3) = X2.x(),
+                    coeff(4) = X2.y(),
+                    coeff(5) = X2.z();
                     PointPlaneFeature feature;
                     feature.idx_ = i;
                     feature.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
@@ -531,33 +574,8 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
         kdtree_surf_from_map->nearestKSearch(point_sel, num_neighbors, point_search_idx, point_search_sq_dis);
         if (point_search_sq_dis[num_neighbors - 1] < MIN_MATCH_SQ_DIS)
         {
-            // TODO: may use uncertainty to extract features
-            // std::vector<bool> point_select(num_neighbors, true);
-            // size_t field_size = boost::mpl::size<typename pcl::traits::fieldList<PointType>::type>::value;
-            // if (field_size == 11)
-            // {
-            //     std::vector<float> v_trace(num_neighbors, 0);
-            //     for (int j = 0; j < num_neighbors; j++)
-            //     {
-            //         Eigen::VectorXf temporary = Eigen::VectorXf::Zero(field_size);
-            //         pcl::for_each_type<typename pcl::traits::fieldList<PointType>::type>(typename pcl::NdCopyPointEigenFunctor<PointType>(cloud_map.points[point_search_idx[j]], temporary));
-            //         v_trace[j] = temporary[10];
-            //     }
-            //     // sort idx according to trace: the before idx with smaller trace
-            //     for (size_t a = 0; a < num_neighbors - 1; a++)
-            //         for (size_t b = a + 1; b < num_neighbors; b++)
-            //             if (v_trace[a] > v_trace[b])
-            //             {
-            //                 std::swap(v_trace[a], v_trace[b]);
-            //                 std::swap(point_search_idx[a], point_search_idx[b]);
-            //             }
-            //     for (size_t j = floor(num_neighbors / 2); j < num_neighbors; j++) point_select[j] = false;
-            // }
-
             for (int j = 0; j < num_neighbors; j++)
             {
-                // if (!point_select[j])
-                //     continue;
                 mat_A(j, 0) = cloud_map.points[point_search_idx[j]].x;
                 mat_A(j, 1) = cloud_map.points[point_search_idx[j]].y;
                 mat_A(j, 2) = cloud_map.points[point_search_idx[j]].z;
@@ -570,8 +588,6 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
             bool plane_valid = true;
             for (int j = 0; j < num_neighbors; j++)
             {
-                // if (!point_select[j])
-                //     continue;
                 if (fabs(norm(0) * cloud_map.points[point_search_idx[j]].x +
                          norm(1) * cloud_map.points[point_search_idx[j]].y +
                          norm(2) * cloud_map.points[point_search_idx[j]].z + negative_OA_dot_norm) > MIN_PLANE_DIS)
@@ -666,6 +682,7 @@ bool FeatureExtract::matchCornerPointFromMap(const typename pcl::KdTreeFLANN<Poi
             near_corners.push_back(tmp);
         }
         center /= (1.0 * num_neighbors);
+
         Eigen::Matrix3f cov_mat = Eigen::Matrix3f::Zero();
         for (int j = 0; j < num_neighbors; j++)
         {
@@ -704,43 +721,64 @@ bool FeatureExtract::matchCornerPointFromMap(const typename pcl::KdTreeFLANN<Poi
             {
                 is_in_laser_fov = true;
             }
-            if (is_in_laser_fov)
+            if (is_in_laser_fov) // TODO
             {
-                Eigen::Vector3f X0(point_sel.x, point_sel.y, point_sel.z);
+                // Eigen::Vector3f point_on_line = center;
+                // Eigen::Vector3f X0(point_sel.x, point_sel.y, point_sel.z);
+                // Eigen::Vector3f X1, X2;
+                // X1 = 0.1 * unit_direction + point_on_line;
+                // X2 = -0.1 * unit_direction + point_on_line;
+
+                // Eigen::Vector3f n = (X1 - X0).cross(X2 - X0);
+                // Eigen::Vector3f w2 = n / n.norm();
+                // Eigen::Vector3f w1 = w2.cross(X2 - X1);
+                // w1.normalized();
+
+                // float ld_1 = n.norm() / (X1 - X2).norm(); // the distance between point to plane
+                // float ld_2 = 0.0;
+                // float s = 1 - 0.9f * fabs(ld_1);
+
+                // float ld_p1 = -w1.dot(X1);
+                // float ld_p2 = -w2.dot(X1);
+
+                // // float ld_p1 = -(w1.x() * point_sel.x + w1.y() * point_sel.y + w1.z() * point_sel.z - ld_1);
+                // // float ld_p2 = -(w2.x() * point_sel.x + w2.y() * point_sel.y + w2.z() * point_sel.z - ld_2);
+
+                // // Eigen::Vector4d coeff1(w1.x(), w1.y(), w1.z(), ld_p1);
+                // // Eigen::Vector4d coeff2(w2.x(), w2.y(), w2.z(), ld_p2);
+
+                // // feature1.idx_ = idx;
+                // // feature1.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
+                // // feature1.coeffs_ = coeff1 * 0.5;
+                // // feature1.laser_idx_ = (size_t)point_ori.intensity;
+                // // feature1.type_ = 'c';
+
+                // // feature2.idx_ = idx;
+                // // feature2.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
+                // // feature2.coeffs_ = coeff2 * 0.5;
+                // // feature2.laser_idx_ = (size_t)point_ori.intensity;
+                // // feature2.type_ = 'c';
+
+                // Eigen::Vector4d coeff(w1.x(), w1.y(), w1.z(), ld_p1);
+                // feature.idx_ = idx;
+                // feature.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
+                // feature.coeffs_ = coeff;
+                // feature.laser_idx_ = (size_t)point_ori.intensity;
+                // feature.type_ = 'c';
+                // return true;
+
                 Eigen::Vector3f point_on_line = center;
                 Eigen::Vector3f X1, X2;
                 X1 = 0.1 * unit_direction + point_on_line;
                 X2 = -0.1 * unit_direction + point_on_line;
 
-                Eigen::Vector3f n = (X1 - X0).cross(X2 - X0);
-                Eigen::Vector3f w2 = n.normalized();
-                Eigen::Vector3f w1 = (w2.cross(X2 - X1)).normalized();
-                float ld_1 = n.norm() / (X1 - X2).norm(); // the distance between point to plane
-                float ld_2 = 0.0;
-                float s = 1 - 0.9f * fabs(ld_1);
-
-                float ld_p1 = -w1.dot(X1);
-                float ld_p2 = -w2.dot(X1);
-
-                // float ld_p1 = -(w1.x() * point_sel.x + w1.y() * point_sel.y + w1.z() * point_sel.z - ld_1);
-                // float ld_p2 = -(w2.x() * point_sel.x + w2.y() * point_sel.y + w2.z() * point_sel.z - ld_2);
-
-                // Eigen::Vector4d coeff1(w1.x(), w1.y(), w1.z(), ld_p1);
-                // Eigen::Vector4d coeff2(w2.x(), w2.y(), w2.z(), ld_p2);
-
-                // feature1.idx_ = idx;
-                // feature1.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
-                // feature1.coeffs_ = coeff1 * 0.5;
-                // feature1.laser_idx_ = (size_t)point_ori.intensity;
-                // feature1.type_ = 'c';
-
-                // feature2.idx_ = idx;
-                // feature2.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
-                // feature2.coeffs_ = coeff2 * 0.5;
-                // feature2.laser_idx_ = (size_t)point_ori.intensity;
-                // feature2.type_ = 'c';
-
-                Eigen::Vector4d coeff(w1.x(), w1.y(), w1.z(), ld_p1);
+                Eigen::Matrix<double, 6, 1> coeff;
+                coeff(0) = X1.x(),
+                coeff(1) = X1.y(),
+                coeff(2) = X1.z();
+                coeff(3) = X2.x(),
+                coeff(4) = X2.y(),
+                coeff(5) = X2.z();
                 feature.idx_ = idx;
                 feature.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
                 feature.coeffs_ = coeff;

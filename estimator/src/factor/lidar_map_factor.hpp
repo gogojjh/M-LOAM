@@ -15,76 +15,81 @@
 
 #include <ceres/ceres.h>
 #include <ceres/rotation.h>
-#include <Eigen/Eigen>
-#include <Eigen/Dense>
+
+#include <eigen3/Eigen/Dense>
+#include <unsupported/Eigen/MatrixFunctions>
 
 #include "../utility/utility.h"
 
-// *******************************************************************
-class LidarOnlineCalibPlaneNormFactor: public ceres::SizedCostFunction<1, 7>
+// ****************************************************************
+// calculate distrance from point to plane (using normal)
+class LidarMapPlaneNormFactor : public ceres::SizedCostFunction<1, 7>
 {
 public:
-	LidarOnlineCalibPlaneNormFactor(const Eigen::Vector3d &point,
-									const Eigen::Vector4d &coeff,
-									const double &sqrt_info = 1.0)
+	LidarMapPlaneNormFactor(const Eigen::Vector3d &point,
+							const Eigen::Vector4d &coeff,
+							const Eigen::Matrix3d &cov_matrix = Eigen::Matrix3d::Identity())
 		: point_(point),
 		  coeff_(coeff),
-		  sqrt_info_(sqrt_info) {}
+		  sqrt_info_(sqrt(1 / cov_matrix.trace()))
+	{
+		// is a upper triangular matrix
+		// std::cout << sqrt_info_ << std::endl << std::endl;
+		// Eigen::matrix_sqrt_triangular(sqrt_info_, sqrt_info_);
+		// std::cout << sqrt_info_ << std::endl;
+		// exit(EXIT_FAILURE);
+	}
 
-	// TODO: jacobian derivation
 	bool Evaluate(double const *const *param, double *residuals, double **jacobians) const
 	{
-		Eigen::Quaterniond Q_ext(param[0][6], param[0][3], param[0][4], param[0][5]);
-		Eigen::Vector3d t_ext(param[0][0], param[0][1], param[0][2]);
+		Eigen::Quaterniond q_w_curr(param[0][6], param[0][3], param[0][4], param[0][5]);
+		Eigen::Vector3d t_w_curr(param[0][0], param[0][1], param[0][2]);
 
 		Eigen::Vector3d w(coeff_(0), coeff_(1), coeff_(2));
 		double d = coeff_(3);
-		double r = w.dot(Q_ext * point_ + t_ext) + d;
-		residuals[0] = sqrt_info_ * r;
+		double a = w.dot(q_w_curr * point_ + t_w_curr) + d;
+		residuals[0] = sqrt_info_ * a;
 
 		if (jacobians)
 		{
-			Eigen::Matrix3d Rext = Q_ext.toRotationMatrix();
+			Eigen::Matrix3d R = q_w_curr.toRotationMatrix();
 			if (jacobians[0])
-            {
-                Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> > jacobian_pose_ext(jacobians[0]);
-                Eigen::Matrix<double, 1, 6> jaco_ext;
+			{
+				Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> > jacobian_pose(jacobians[0]);
+				Eigen::Matrix<double, 1, 6> jaco; // [dy/dt, dy/dq, 1]
 
-                jaco_ext.leftCols<3>() = w.transpose();
-				jaco_ext.rightCols<3>() = -w.transpose() * Rext * Utility::skewSymmetric(point_);
+				jaco.leftCols<3>() = w.transpose();
+				jaco.rightCols<3>() = -w.transpose() * R * Utility::skewSymmetric(point_);
 
-				jacobian_pose_ext.setZero();
-                jacobian_pose_ext.leftCols<6>() = sqrt_info_ * jaco_ext;
-                jacobian_pose_ext.rightCols<1>().setZero();
-            }
+				jacobian_pose.setZero();
+				jacobian_pose.leftCols<6>() = sqrt_info_ * jaco;
+			}
 		}
-        return true;
+		return true;
 	}
 
-	// TODO: check the jacobian derivation
 	void check(double **param)
-    {
+	{
 		double *res = new double[1];
-        double **jaco = new double *[1];
-        jaco[0] = new double[1 * 7];
-        Evaluate(param, res, jaco);
-        std::cout << "[LidarOnlineCalibEdgeFactor] check begins" << std::endl;
+		double **jaco = new double *[1];
+		jaco[0] = new double[1 * 7];
+		Evaluate(param, res, jaco);
+		std::cout << "[LidarMapPlaneNormFactor] check begins" << std::endl;
         std::cout << "analytical:" << std::endl;
-
         std::cout << res[0] << std::endl;
         std::cout << Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> >(jaco[0]) << std::endl;
 
 		delete[] jaco[0];
 		delete[] jaco;
-		delete[] res;		
+		delete[] res;	
 
-		Eigen::Quaterniond Q_ext(param[0][6], param[0][3], param[0][4], param[0][5]);
-		Eigen::Vector3d t_ext(param[0][0], param[0][1], param[0][2]);
+		Eigen::Quaterniond q_w_curr(param[0][6], param[0][3], param[0][4], param[0][5]);
+		Eigen::Vector3d t_w_curr(param[0][0], param[0][1], param[0][2]);
 
 		Eigen::Vector3d w(coeff_(0), coeff_(1), coeff_(2));
 		double d = coeff_(3);
-		double r = w.dot(Q_ext * point_ + t_ext) + d;
-        r *= sqrt_info_;
+		double a = w.dot(q_w_curr * point_ + t_w_curr) + d;
+		double r = sqrt_info_ * a;
 
         std::cout << "perturbation:" << std::endl;
         std::cout << r << std::endl;
@@ -93,26 +98,25 @@ public:
         Eigen::Matrix<double, 1, 6> num_jacobian;
 
 		// add random perturbation
-        for (int k = 0; k < 6; k++)
-        {
-			Eigen::Quaterniond Q_ext(param[0][6], param[0][3], param[0][4], param[0][5]);
-			Eigen::Vector3d t_ext(param[0][0], param[0][1], param[0][2]);
-            int a = k / 3, b = k % 3;
-            Eigen::Vector3d delta = Eigen::Vector3d(b == 0, b == 1, b == 2) * eps;
-
-         	if (a == 0)
-                t_ext += delta;
-            else if (a == 1)
-                Q_ext = Q_ext * Utility::deltaQ(delta);
+		for (int k = 0; k < 6; k++)
+		{
+			Eigen::Quaterniond q_w_curr(param[0][6], param[0][3], param[0][4], param[0][5]);
+			Eigen::Vector3d t_w_curr(param[0][0], param[0][1], param[0][2]);
+			int a = k / 3, b = k % 3;
+			Eigen::Vector3d delta = Eigen::Vector3d(b == 0, b == 1, b == 2) * eps;
+			if (a == 0)
+				t_w_curr += delta;
+			else if (a == 1)
+				q_w_curr = q_w_curr * Utility::deltaQ(delta);
 
 			Eigen::Vector3d w(coeff_(0), coeff_(1), coeff_(2));
 			double d = coeff_(3);
-			double tmp_r = w.dot(Q_ext * point_ + t_ext) + d;
-	        tmp_r *= sqrt_info_;
-            num_jacobian(k) = (tmp_r - r) / eps;
-        }
+			double tmp_r = w.dot(q_w_curr * point_ + t_w_curr) + d;
+			tmp_r *= sqrt_info_;
+			num_jacobian(k) = (tmp_r - r) / eps;
+		}
         std::cout << num_jacobian.block<1, 6>(0, 0) << std::endl;
-	}
+    }
 
 private:
 	const Eigen::Vector3d point_;
@@ -120,36 +124,40 @@ private:
 	const double sqrt_info_;
 };
 
-// *******************************************************************
-class LidarOnlineCalibEdgeFactor : public ceres::SizedCostFunction<3, 7>
+// ****************************************************************
+// calculate distrance from point to plane (using normal)
+class LidarMapEdgeFactor : public ceres::SizedCostFunction<3, 7>
 {
 public:
-	LidarOnlineCalibEdgeFactor(const Eigen::Vector3d &point,
-							   const Eigen::VectorXd &coeff,
-							   const double &sqrt_info = 1.0)
+	LidarMapEdgeFactor(const Eigen::Vector3d &point,
+					   const Eigen::VectorXd &coeff,
+					   const Eigen::Matrix3d &cov_matrix = Eigen::Matrix3d::Identity())
 		: point_(point),
 		  coeff_(coeff),
-		  sqrt_info_(sqrt_info) {}
+		  sqrt_info_(sqrt(1 / cov_matrix.trace())) {}
 
-	// TODO: jacobian derivation
 	bool Evaluate(double const *const *param, double *residuals, double **jacobians) const
 	{
-		Eigen::Quaterniond Q_ext(param[0][6], param[0][3], param[0][4], param[0][5]);
-		Eigen::Vector3d t_ext(param[0][0], param[0][1], param[0][2]);
+		Eigen::Quaterniond q_w_curr(param[0][6], param[0][3], param[0][4], param[0][5]);
+		Eigen::Vector3d t_w_curr(param[0][0], param[0][1], param[0][2]);
 
 		Eigen::Vector3d lpa(coeff_(0), coeff_(1), coeff_(2));
 		Eigen::Vector3d lpb(coeff_(3), coeff_(4), coeff_(5));
-		Eigen::Vector3d lp = Q_ext * point_ + t_ext;
+		Eigen::Vector3d lp = q_w_curr * point_ + t_w_curr;
 
 		Eigen::Vector3d nu = (lp - lpa).cross(lp - lpb);
 		Eigen::Vector3d de = lpa - lpb;
 		residuals[0] = sqrt_info_ * nu.x() / de.norm();
 		residuals[1] = sqrt_info_ * nu.y() / de.norm();
 		residuals[2] = sqrt_info_ * nu.z() / de.norm();
+		// or
+		// Eigen::Vector3d w2 = (lpa - lp).cross(lpb - lp).normalize();
+		// Eigen::Vector3d w1 = w2.cross(lpb - lpa).normalize();
+		// residuals[0] = sqrt_info * (w1.dot(lp) - w1.dot(lpa));
 
 		if (jacobians)
 		{
-			Eigen::Matrix3d Rext = Q_ext.toRotationMatrix();
+			Eigen::Matrix3d R = q_w_curr.toRotationMatrix();
 			if (jacobians[0])
 			{
 				Eigen::Map<Eigen::Matrix<double, 3, 7, Eigen::RowMajor>> jacobian_pose(jacobians[0]);
@@ -157,7 +165,7 @@ public:
 
 				double eta = 1.0 / de.norm();
 				jaco.leftCols<3>() = -eta * Utility::skewSymmetric(lpa - lpb);
-				jaco.rightCols<3>() = eta * Utility::skewSymmetric(lpa - lpb) * Utility::skewSymmetric(Rext * point_);
+				jaco.rightCols<3>() = eta * Utility::skewSymmetric(lpa - lpb) * Utility::skewSymmetric(R * point_);
 
 				jacobian_pose.setZero();
 				jacobian_pose.leftCols<6>() = sqrt_info_ * jaco;
@@ -172,7 +180,7 @@ public:
 		double **jaco = new double *[1];
 		jaco[0] = new double[3 * 7];
 		Evaluate(param, res, jaco);
-		std::cout << "[LidarOnlineCalibEdgeFactor] check begins" << std::endl;
+		std::cout << "[LidarMapEdgeFactor] check begins" << std::endl;
 		std::cout << "analytical:" << std::endl;
 		std::cout << res[0] << " " << res[1] << " " << res[2] << std::endl;
 		std::cout << Eigen::Map<Eigen::Matrix<double, 3, 7, Eigen::RowMajor>>(jaco[0]) << std::endl;

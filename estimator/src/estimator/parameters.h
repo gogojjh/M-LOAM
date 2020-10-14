@@ -161,7 +161,7 @@ public:
     size_t idx_;
     size_t laser_idx_;
     Eigen::Vector3d point_;
-    Eigen::Vector4d coeffs_;
+    Eigen::VectorXd coeffs_;
     Eigen::MatrixXd jaco_;
     char type_;
 
