@@ -83,7 +83,6 @@ pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_surf_map_cov;
 pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_corner_map_cov;
 pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_outlier_map_cov;
 pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_global_map_cov;
-
 pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_surrounding_keyframes;
 pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_global_map_keyframes;
 
@@ -428,7 +427,7 @@ void scan2MapOptimization()
     printf("map surf num: %lu, corner num: %lu\n", laser_cloud_surf_from_map_num, laser_cloud_corner_from_map_num);
     if ((laser_cloud_surf_from_map_num > 50) && (laser_cloud_corner_from_map_num > 10))
     {
-        pose_wmap_prev = pose_wmap_curr;
+        // pose_wmap_prev = pose_wmap_curr;
         common::timing::Timer t_timer("mapping_kdtree");
         kdtree_surf_from_map->setInputCloud(laser_cloud_surf_from_map_cov_ds);
         kdtree_corner_from_map->setInputCloud(laser_cloud_corner_from_map_cov_ds);
@@ -566,7 +565,7 @@ void scan2MapOptimization()
                     tmp_param[0] = para_pose;
                     f->check(tmp_param);
                     CHECK_JACOBIAN = 0;
-                    // delete[] tmp_param;
+                    // delete[] tmp_param; 
                 }
             }
             // printf("add constraints: %fms\n", t_add_constraints.toc());
@@ -612,10 +611,9 @@ void scan2MapOptimization()
                 LOG_EVERY_N(INFO, 20) << "trace: " << tr;
                 std::cout << common::YELLOW << "trace: " << tr << common::RESET << std::endl;
                 printf("evaluate H: %fms\n", eval_deg_timer.Stop() * 1000);
-            }         
+            }
 
             double2Vector();
-            // std::cout << iter_cnt << "th optimized pose:" << pose_wmap_curr << std::endl;
             printf("-------------------------------------\n");
         }
         std::cout << "optimization result: " << pose_wmap_curr << std::endl;
@@ -817,15 +815,17 @@ void pubGlobalMap()
                 *laser_cloud_map += outlier_trans;
             }
 
-            if ((abs(pose_wmap_curr.t_.x()) >= 1000) || (abs(pose_wmap_curr.t_.y()) >= 1000) || (abs(pose_wmap_curr.t_.z()) >= 1000))
-            {
-                down_size_filter_global_map_cov.setLeafSize(2.0, 2.0, 2.0);
-                down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
-            } else
-            {
-                down_size_filter_global_map_cov.setLeafSize(0.8, 0.8, 0.8);
-                down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
-            }
+            // if ((abs(pose_wmap_curr.t_.x()) >= 1000) || (abs(pose_wmap_curr.t_.y()) >= 1000) || (abs(pose_wmap_curr.t_.z()) >= 1000))
+            // {
+            //     down_size_filter_global_map_cov.setLeafSize(2.0, 2.0, 2.0);
+            //     down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
+            // } else
+            // {
+            //     down_size_filter_global_map_cov.setLeafSize(0.8, 0.8, 0.8);
+            //     down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
+            // }
+            down_size_filter_global_map_cov.setLeafSize(1.0, 1.0, 1.0);
+            down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
             down_size_filter_global_map_cov.setInputCloud(laser_cloud_map);
             down_size_filter_global_map_cov.filter(*laser_cloud_map_ds);
 
@@ -849,33 +849,40 @@ void saveGlobalMap()
     PointICovCloud::Ptr laser_cloud_corner_map(new PointICovCloud());
     PointICovCloud::Ptr laser_cloud_corner_map_ds(new PointICovCloud());
 
-    printf("global keyframes num: %lu\n", surf_cloud_keyframes_cov.size());
-    for (size_t i = 0; i < surf_cloud_keyframes_cov.size(); i++)
+    printf("global keyframes num: %lu\n", pose_keyframes_3d->size());
+    for (size_t i = 0; i < pose_keyframes_3d->size(); i++)
+        global_map_keyframes->points.push_back(pose_keyframes_3d->points[i]);
+    down_size_filter_global_map_keyframes.setInputCloud(global_map_keyframes);
+    down_size_filter_global_map_keyframes.filter(*global_map_keyframes_ds);
+    for (int i = 0; i < global_map_keyframes_ds->size(); i++)
     {
+        int key_ind = (int)global_map_keyframes_ds->points[i].intensity;
         PointICovCloud surf_trans;
-        cloudUCTAssociateToMap(*surf_cloud_keyframes_cov[i], surf_trans, pose_keyframes_6d[i].second, pose_ext);
+        cloudUCTAssociateToMap(*surf_cloud_keyframes_cov[key_ind], surf_trans, pose_keyframes_6d[key_ind].second, pose_ext);
         *laser_cloud_surf_map += surf_trans;
 
         PointICovCloud outlier_trans;
-        cloudUCTAssociateToMap(*outlier_cloud_keyframes_cov[i], outlier_trans, pose_keyframes_6d[i].second, pose_ext);
+        cloudUCTAssociateToMap(*outlier_cloud_keyframes_cov[key_ind], outlier_trans, pose_keyframes_6d[key_ind].second, pose_ext);
         *laser_cloud_surf_map += outlier_trans;
 
         PointICovCloud corner_trans;
-        cloudUCTAssociateToMap(*corner_cloud_keyframes_cov[i], corner_trans, pose_keyframes_6d[i].second, pose_ext);
+        cloudUCTAssociateToMap(*corner_cloud_keyframes_cov[key_ind], corner_trans, pose_keyframes_6d[key_ind].second, pose_ext);
         *laser_cloud_corner_map += corner_trans;
     }
 
     // adpatively change the resolution of the global map by checking the range
-    if ((abs(pose_wmap_curr.t_.x()) >= 1000) || (abs(pose_wmap_curr.t_.y()) >= 1000) || (abs(pose_wmap_curr.t_.z()) >= 1000))
-    {
-        down_size_filter_global_map_cov.setLeafSize(2.0, 2.0, 2.0);
-        down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
-    }
-    else
-    {
-        down_size_filter_global_map_cov.setLeafSize(0.8, 0.8, 0.8);
-        down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
-    }
+    // if ((abs(pose_wmap_curr.t_.x()) >= 1000) || (abs(pose_wmap_curr.t_.y()) >= 1000) || (abs(pose_wmap_curr.t_.z()) >= 1000))
+    // {
+    //     down_size_filter_global_map_cov.setLeafSize(2.0, 2.0, 2.0);
+    //     down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
+    // }
+    // else
+    // {
+    //     down_size_filter_global_map_cov.setLeafSize(0.8, 0.8, 0.8);
+    //     down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
+    // }
+    down_size_filter_global_map_cov.setLeafSize(1.0, 1.0, 1.0);
+    down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_global_map_cov.setInputCloud(laser_cloud_surf_map);
     down_size_filter_global_map_cov.filter(*laser_cloud_surf_map_ds);
     down_size_filter_global_map_cov.setInputCloud(laser_cloud_corner_map);
@@ -895,7 +902,7 @@ void saveGlobalMap()
         pcd_writer.write("/tmp/mloam_mapping_corner_cloud_wo_ua.pcd", *laser_cloud_corner_map_ds);
         // *laser_cloud_map += *laser_cloud_surf_map_ds;
         // *laser_cloud_map += *laser_cloud_corner_map_ds;
-        // pcd_writer.write("/tmp/mloam_mapping_cloud.pcd", *laser_cloud_map);
+        // pcd_writer.write("/tmp/mloam_mapping_cloud_wo_ua.pcd", *laser_cloud_map);
     }
 }
 

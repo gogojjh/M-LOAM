@@ -280,11 +280,11 @@ public:
         sel_feature_idx.resize(num_use_features);
         size_t num_sel_features = 0;
 
-        size_t n_neigh = 5;
         bool b_match;
         double cur_det;
         size_t num_rnd_que;
         TicToc t_sel_feature;
+        size_t n_neigh = 5;
         if (gf_method == "wo_gf")
         {
             for (size_t j = 0; j < all_feature_idx.size(); j++)
