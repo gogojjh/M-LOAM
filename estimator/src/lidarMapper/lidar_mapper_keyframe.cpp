@@ -76,15 +76,25 @@ std::vector<PointICovCloud::Ptr> corner_cloud_keyframes_cov;
 std::vector<PointICovCloud::Ptr> outlier_cloud_keyframes_cov;
 
 // downsampling voxel grid
-pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_surf;
-pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_corner;
-pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_outlier;
-pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_surf_map_cov;
-pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_corner_map_cov;
-pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_outlier_map_cov;
-pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_global_map_cov;
-pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_surrounding_keyframes;
-pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_global_map_keyframes;
+// pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_surf;
+// pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_corner;
+// pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_outlier;
+// pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_surf_map_cov;
+// pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_corner_map_cov;
+// pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_outlier_map_cov;
+// pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_global_map_cov;
+// pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_surrounding_keyframes;
+// pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_global_map_keyframes;
+
+pcl::VoxelGrid<PointI> down_size_filter_surf;
+pcl::VoxelGrid<PointI> down_size_filter_corner;
+pcl::VoxelGrid<PointI> down_size_filter_outlier;
+pcl::VoxelGrid<PointIWithCov> down_size_filter_surf_map_cov;
+pcl::VoxelGrid<PointIWithCov> down_size_filter_corner_map_cov;
+pcl::VoxelGrid<PointIWithCov> down_size_filter_outlier_map_cov;
+pcl::VoxelGrid<PointIWithCov> down_size_filter_global_map_cov;
+pcl::VoxelGrid<PointI> down_size_filter_surrounding_keyframes;
+pcl::VoxelGrid<PointI> down_size_filter_global_map_keyframes;
 
 std::vector<int> point_search_ind;
 std::vector<float> point_search_sq_dis;
@@ -825,7 +835,7 @@ void pubGlobalMap()
             //     down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
             // }
             down_size_filter_global_map_cov.setLeafSize(1.0, 1.0, 1.0);
-            down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
+            // down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
             down_size_filter_global_map_cov.setInputCloud(laser_cloud_map);
             down_size_filter_global_map_cov.filter(*laser_cloud_map_ds);
 
@@ -882,7 +892,7 @@ void saveGlobalMap()
     //     down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     // }
     down_size_filter_global_map_cov.setLeafSize(1.0, 1.0, 1.0);
-    down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
+    // down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_global_map_cov.setInputCloud(laser_cloud_surf_map);
     down_size_filter_global_map_cov.filter(*laser_cloud_surf_map_ds);
     down_size_filter_global_map_cov.setInputCloud(laser_cloud_corner_map);
@@ -1272,18 +1282,18 @@ int main(int argc, char **argv)
     pub_keyframes_6d = nh.advertise<mloam_msgs::Keyframes>("/laser_map_keyframes_6d", 10);
 
     down_size_filter_surf.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
-    down_size_filter_surf.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
+    // down_size_filter_surf.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_corner.setLeafSize(MAP_CORNER_RES, MAP_CORNER_RES, MAP_CORNER_RES);
-    down_size_filter_corner.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
+    // down_size_filter_corner.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_outlier.setLeafSize(MAP_OUTLIER_RES, MAP_OUTLIER_RES, MAP_OUTLIER_RES);
-    down_size_filter_outlier.setTraceThreshold(TRACE_THRESHOLD_MAPPING);    
+    // down_size_filter_outlier.setTraceThreshold(TRACE_THRESHOLD_MAPPING);    
 
     down_size_filter_surf_map_cov.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
-    down_size_filter_surf_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
+    // down_size_filter_surf_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_corner_map_cov.setLeafSize(MAP_CORNER_RES, MAP_CORNER_RES, MAP_CORNER_RES);
-    down_size_filter_corner_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
+    // down_size_filter_corner_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_outlier_map_cov.setLeafSize(MAP_OUTLIER_RES, MAP_OUTLIER_RES, MAP_OUTLIER_RES);
-    down_size_filter_outlier_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
+    // down_size_filter_outlier_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_surrounding_keyframes.setLeafSize(MAP_SUR_KF_RES, MAP_SUR_KF_RES, MAP_SUR_KF_RES);
     down_size_filter_global_map_keyframes.setLeafSize(MAP_SUR_KF_RES, MAP_SUR_KF_RES, MAP_SUR_KF_RES);
 
