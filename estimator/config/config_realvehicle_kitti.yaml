@@ -79,7 +79,7 @@ pcl_viewer_normal_ratio: 10
 
 # calibration converage parameters
 n_cumu_feature: 10
-lambda_initial: 100
+lambda_initial: 10
 lambda_thre_calib: 1000
 n_calib: 30
 
@@ -97,6 +97,7 @@ map_eig_thre: 10
 
 distance_keyframes: 2.0
 orientation_keyframes: 2.0 
+surrounding_kf_radius: 150.0
 
 # uncertainty parameter
 # translation, rotation, point (s, phi, zeta)

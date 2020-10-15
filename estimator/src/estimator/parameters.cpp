@@ -92,8 +92,10 @@ float MAP_SURF_RES;
 float MAP_OUTLIER_RES;
 float MAP_SUR_KF_RES;
 float MAP_EIG_THRE;
+
 float DISTANCE_KEYFRAMES;
 float ORIENTATION_KEYFRAMES;
+float SURROUNDING_KF_RADIUS;
 
 float UCT_EXT_RATIO;
 std::vector<Eigen::Matrix<double, 6, 6> > COV_EXT;
@@ -260,7 +262,8 @@ void readParameters(std::string config_file)
 
     DISTANCE_KEYFRAMES = fsSettings["distance_keyframes"];
     ORIENTATION_KEYFRAMES = fsSettings["orientation_keyframes"];
-    printf("map kf dis:%f, ori:%f\n", DISTANCE_KEYFRAMES, ORIENTATION_KEYFRAMES);
+    SURROUNDING_KF_RADIUS = fsSettings["surrounding_kf_radius"];
+    printf("map kf radius: %f, kf dis:%f, ori:%f\n", SURROUNDING_KF_RADIUS, DISTANCE_KEYFRAMES, ORIENTATION_KEYFRAMES);
 
     UCT_EXT_RATIO = fsSettings["uct_ext_ratio"];
     printf("uct ext ratio: %f\n", UCT_EXT_RATIO);

@@ -78,7 +78,6 @@
 #include "../factor/impl_callback.hpp"
 #include "associate_uct.hpp"
 
-#define SURROUNDING_KF_RADIUS 100.0 // 100: >120ms, 70: <100ms
 #define GLOBALMAP_KF_RADIUS 1000.0
 #define MAX_FEATURE_SELECT_TIME 15  // 10ms
 #define MAX_RANDOM_QUEUE_TIME 20

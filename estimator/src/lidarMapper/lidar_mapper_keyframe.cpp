@@ -267,7 +267,7 @@ void extractSurroundingKeyFrames()
 
     surrounding_keyframes->clear();
     kdtree_surrounding_keyframes->setInputCloud(pose_keyframes_3d);
-    kdtree_surrounding_keyframes->radiusSearch(pose_point_cur, (double)SURROUNDING_KF_RADIUS, point_search_ind, point_search_sq_dis, 0);
+    kdtree_surrounding_keyframes->radiusSearch(pose_point_cur, SURROUNDING_KF_RADIUS, point_search_ind, point_search_sq_dis, 0);
     for (size_t i = 0; i < point_search_ind.size(); i++)
         surrounding_keyframes->push_back(pose_keyframes_3d->points[point_search_ind[i]]);
     
@@ -1149,6 +1149,7 @@ void evalHessian(const ceres::CRSMatrix &jaco, Eigen::Matrix<double, 6, 6> &mat_
 	mat_H = mat_JtJ.block(0, 0, 6, 6);  // normalized the hessian matrix for pair uncertainty evaluation
 }
 
+// TODO: still have some bugs
 void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameterization *local_parameterization)
 {
 	Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6> > esolver(mat_H);
