@@ -92,7 +92,7 @@ std::vector<float> point_search_sq_dis;
 
 PointICloud::Ptr pose_keyframes_3d(new PointICloud());
 PointI pose_point_cur, pose_point_prev;
-Eigen::Quaterniond pose_ori_cur, pose_ori_prev;
+Eigen::Quaterniond q_ori_cur, q_ori_prev;
 std::vector<std::pair<double, Pose> > pose_keyframes_6d;
 mloam_msgs::Keyframes laser_keyframes_6d;
 
@@ -341,8 +341,8 @@ void extractSurroundingKeyFrames()
     }
 
     common::timing::Timer filter_timer("mapping_filter");
-    down_size_filter_corner_map_cov.setInputCloud(laser_cloud_surf_from_map_cov);
-    down_size_filter_corner_map_cov.filter(*laser_cloud_surf_from_map_cov_ds);
+    down_size_filter_surf_map_cov.setInputCloud(laser_cloud_surf_from_map_cov);
+    down_size_filter_surf_map_cov.filter(*laser_cloud_surf_from_map_cov_ds);
     down_size_filter_corner_map_cov.setInputCloud(laser_cloud_corner_from_map_cov);
     down_size_filter_corner_map_cov.filter(*laser_cloud_corner_from_map_cov_ds);
     // laser_cloud_surf_from_map_cov_ds = laser_cloud_surf_from_map_cov;
@@ -435,7 +435,8 @@ void scan2MapOptimization()
         printf("build time %fms\n", t_timer.Stop() * 1000);
         printf("********************************\n");
 
-        int max_iter = pose_keyframes_6d.size() <= 5 ? 5 : 2; // should have more iterations at the initial stage
+        // int max_iter = pose_keyframes_6d.size() <= 5 ? 5 : 2; // should have more iterations at the initial stage
+        int max_iter = 2;
         for (int iter_cnt = 0; iter_cnt < max_iter; iter_cnt++)
         {
             ceres::Problem problem;
@@ -589,6 +590,7 @@ void scan2MapOptimization()
             options.minimizer_progress_to_stdout = false;
             options.check_gradients = false;
             options.gradient_check_relative_precision = 1e-4;
+            // options.update_state_every_iteration = false;
             // options.max_solver_time_in_seconds = 0.04;
             ceres::Solve(options, &problem, &summary);
             std::cout << summary.BriefReport() << std::endl;
@@ -599,7 +601,7 @@ void scan2MapOptimization()
                 common::timing::Timer eval_deg_timer("mapping_eval_deg");
                 problem.Evaluate(e_option, nullptr, nullptr, nullptr, &jaco);
                 evalHessian(jaco, mat_H);
-                if (pose_keyframes_6d.size() <= 5)
+                if (pose_keyframes_6d.size() <= 10)
                     cov_mapping.setZero();
                 else
                     cov_mapping = (mat_H / 134).inverse();
@@ -613,6 +615,7 @@ void scan2MapOptimization()
             }         
 
             double2Vector();
+            // std::cout << iter_cnt << "th optimized pose:" << pose_wmap_curr << std::endl;
             printf("-------------------------------------\n");
         }
         std::cout << "optimization result: " << pose_wmap_curr << std::endl;
@@ -630,13 +633,13 @@ void saveKeyframe()
     pose_point_cur.x = pose_wmap_curr.t_[0];
     pose_point_cur.y = pose_wmap_curr.t_[1];
     pose_point_cur.z = pose_wmap_curr.t_[2];
-    pose_ori_cur = pose_wmap_curr.q_;
+    q_ori_cur = pose_wmap_curr.q_;
 
     save_new_keyframe = false;
     if (sqrt((pose_point_cur.x - pose_point_prev.x) * (pose_point_cur.x - pose_point_prev.x)
            + (pose_point_cur.y - pose_point_prev.y) * (pose_point_cur.y - pose_point_prev.y) 
            + (pose_point_cur.z - pose_point_prev.z) * (pose_point_cur.z - pose_point_prev.z)) > DISTANCE_KEYFRAMES ||
-        pose_ori_cur.angularDistance(pose_ori_prev) / M_PI * 180 > ORIENTATION_KEYFRAMES || 
+        q_ori_cur.angularDistance(q_ori_prev) / M_PI * 180 > ORIENTATION_KEYFRAMES || 
         pose_keyframes_6d.size() == 0)
     {
         save_new_keyframe = true;
@@ -644,7 +647,7 @@ void saveKeyframe()
 
     if (!save_new_keyframe) return;
     pose_point_prev = pose_point_cur;
-    pose_ori_prev = pose_ori_cur;
+    q_ori_prev = q_ori_cur;
 
     PointI pose_3d;
     pose_3d.x = pose_wmap_curr.t_[0];
@@ -773,7 +776,8 @@ void pubGlobalMap()
         if (pub_laser_cloud_surrounding.getNumSubscribers() != 0)
         {
             sensor_msgs::PointCloud2 laser_cloud_surround_msg;
-            pcl::toROSMsg(*laser_cloud_surf_from_map_cov_ds, laser_cloud_surround_msg);
+            pcl::toROSMsg(*laser_cloud_surf_from_map_cov_ds + *laser_cloud_corner_from_map_cov_ds, laser_cloud_surround_msg);
+            // pcl::toROSMsg(*laser_cloud_surf_from_map_cov_ds, laser_cloud_surround_msg);
             laser_cloud_surround_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
             laser_cloud_surround_msg.header.frame_id = "/world";
             pub_laser_cloud_surrounding.publish(laser_cloud_surround_msg);
@@ -1163,10 +1167,10 @@ void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameteri
 			break;
 		}
 	}
-	// d_factor_list.push_back(mat_E);
-	// d_eigvec_list.push_back(mat_V_f);
+	d_factor_list.push_back(mat_E);
+	d_eigvec_list.push_back(mat_V_f);
  	mat_P = mat_V_f.transpose().inverse() * mat_V_p.transpose(); // 6*6
-    LOG_EVERY_N(INFO, 20) << "D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose();
+    LOG(INFO) << "D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose();
 	if (local_parameterization->is_degenerate_)
 	{
 		local_parameterization->V_update_ = mat_P;
@@ -1282,12 +1286,12 @@ int main(int argc, char **argv)
     pose_point_prev.x = 0.0;
     pose_point_prev.y = 0.0;
     pose_point_prev.z = 0.0;
-    pose_ori_prev.setIdentity();
+    q_ori_prev.setIdentity();
 
     pose_point_cur.x = 0.0;
     pose_point_cur.y = 0.0;
     pose_point_cur.z = 0.0;
-    pose_ori_cur.setIdentity();
+    q_ori_cur.setIdentity();
 
     pose_keyframes_6d.clear();
     pose_keyframes_3d->clear();

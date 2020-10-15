@@ -120,6 +120,8 @@ extern float MAP_SURF_RES;
 extern float MAP_OUTLIER_RES;
 extern float MAP_SUR_KF_RES;
 extern float MAP_EIG_THRE;
+extern float DISTANCE_KEYFRAMES;
+extern float ORIENTATION_KEYFRAMES;
 
 extern float UCT_EXT_RATIO;
 extern std::vector<Eigen::Matrix<double, 6, 6> > COV_EXT;

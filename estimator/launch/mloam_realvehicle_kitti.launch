@@ -22,7 +22,7 @@
                 args="-config_file=$(arg config_file)
                     -data_source=$(arg data_source)
                     -result_save=$(arg result_save)
-                    -output_path=$(arg output_path)" output="screen">
+                    -output_path=$(arg output_path)" >
                 <remap from="/base_pose_gt" to="/odometry_gt" />
             </node>
         </group>
@@ -63,7 +63,7 @@
         args="0 0 0 0 0 0 1 /world /camera_init 10"/>
 
     <!-- run aloam  -->
-    <group if="$(arg run_aloam)">
+    <group if="$(arg run_aloam)" ns="aloam">
         <include file="$(find aloam_velodyne)/launch/aloam_exp.launch">
             <arg name="output_path" value="$(arg output_path)"/>
             <arg name="skip_frame" value="2" />
@@ -75,7 +75,7 @@
    </group>        
 
     <!-- run floam  -->
-    <group if="$(arg run_floam)">
+    <group if="$(arg run_floam)" ns="floam">
         <include file="$(find floam)/launch/floam_exp.launch">
             <arg name="output_path" value="$(arg output_path)"/>
             <arg name="s_line" value="64" />

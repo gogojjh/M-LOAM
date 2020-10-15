@@ -92,9 +92,8 @@ float MAP_SURF_RES;
 float MAP_OUTLIER_RES;
 float MAP_SUR_KF_RES;
 float MAP_EIG_THRE;
-float MAP_GF_RATIO;
-float LAMBDA_1;
-float LAMBDA_2;
+float DISTANCE_KEYFRAMES;
+float ORIENTATION_KEYFRAMES;
 
 float UCT_EXT_RATIO;
 std::vector<Eigen::Matrix<double, 6, 6> > COV_EXT;
@@ -258,6 +257,10 @@ void readParameters(std::string config_file)
     MAP_EIG_THRE = fsSettings["map_eig_thre"];
     printf("map corner resolution:%f, surf resolution:%f, surround kf resolution:%f\n", 
         MAP_CORNER_RES, MAP_SURF_RES, MAP_SUR_KF_RES);
+
+    DISTANCE_KEYFRAMES = fsSettings["distance_keyframes"];
+    ORIENTATION_KEYFRAMES = fsSettings["orientation_keyframes"];
+    printf("map kf dis:%f, ori:%f\n", DISTANCE_KEYFRAMES, ORIENTATION_KEYFRAMES);
 
     UCT_EXT_RATIO = fsSettings["uct_ext_ratio"];
     printf("uct ext ratio: %f\n", UCT_EXT_RATIO);
