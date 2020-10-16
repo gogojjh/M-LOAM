@@ -116,3 +116,10 @@ matching feature time      | 8.67ms     | 14.52ms
 whole optimization time    | 60-100ms   | 100-200ms
 save keyframes time        | 0.3913ms   | 0.000172ms
  -->
+
+### 9. Recent modifications
+1. **2020-10-16**: fix some bugs including: 
+   * the correspondence matching and computation of edge residuals;
+   * radius of surrdouning keyframes (50m->150m); 
+   * weight for optimization (w<=3); 
+   * not perform sliding window optimization in odometry since the 64-beam LiDAR is good

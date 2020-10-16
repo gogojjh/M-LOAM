@@ -38,6 +38,7 @@ public:
 		// Eigen::matrix_sqrt_triangular(sqrt_info_, sqrt_info_);
 		// std::cout << sqrt_info_ << std::endl;
 		// exit(EXIT_FAILURE);
+		// sqrt_info_ = sqrt_info_ > 3 ? 3 : sqrt_info_;
 	}
 
 	bool Evaluate(double const *const *param, double *residuals, double **jacobians) const
@@ -121,7 +122,7 @@ public:
 private:
 	const Eigen::Vector3d point_;
 	const Eigen::Vector4d coeff_;
-	const double sqrt_info_;
+	double sqrt_info_;
 };
 
 // ****************************************************************
@@ -134,7 +135,10 @@ public:
                        const Eigen::Matrix3d &cov_matrix = Eigen::Matrix3d::Identity())
         : point_(point),
 		  coeff_(coeff),
-		  sqrt_info_(sqrt(1 / cov_matrix.trace())) {}
+		  sqrt_info_(sqrt(1 / cov_matrix.trace())) 
+	{
+		// sqrt_info_ = sqrt_info_ > 3 ? 3 : sqrt_info_;
+	}
 
     bool Evaluate(double const *const *param, double *residuals, double **jacobians) const
     {
@@ -227,7 +231,7 @@ public:
 private:
     const Eigen::Vector3d point_;
     const Eigen::VectorXd coeff_;
-    const double sqrt_info_;
+    double sqrt_info_;
 };
 
 
@@ -241,7 +245,10 @@ public:
 					   const Eigen::Matrix3d &cov_matrix = Eigen::Matrix3d::Identity())
 		: point_(point),
 		  coeff_(coeff),
-		  sqrt_info_(sqrt(1 / cov_matrix.trace())) {}
+		  sqrt_info_(sqrt(1 / cov_matrix.trace())) 
+	{
+		// sqrt_info_ = sqrt_info_ > 3 ? 3 : sqrt_info_;
+	}
 
 	bool Evaluate(double const *const *param, double *residuals, double **jacobians) const
 	{
@@ -342,5 +349,5 @@ public:
 private:
 	const Eigen::Vector3d point_;
 	const Eigen::VectorXd coeff_;
-	const double sqrt_info_;
+	double sqrt_info_;
 };

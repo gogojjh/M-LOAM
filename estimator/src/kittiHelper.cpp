@@ -39,11 +39,12 @@ std::vector<float> read_lidar_data(const std::string lidar_data_path)
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "kitti_helper");
-    ros::NodeHandle n("~");
+    ros::NodeHandle n("");
     std::string dataset_folder, sequence_number, output_bag_file;
     n.getParam("dataset_folder", dataset_folder);
     n.getParam("sequence_number", sequence_number);
     std::cout << "Reading sequence " << sequence_number << " from " << dataset_folder << '\n';
+    std::cout << sequence_number << std::endl;
     bool to_bag;
     n.getParam("to_bag", to_bag);
     if (to_bag)

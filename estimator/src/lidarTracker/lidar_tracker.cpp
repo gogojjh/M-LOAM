@@ -86,7 +86,7 @@ Pose LidarTracker::trackCloud(const cloudFeature &prev_cloud_feature,
             //     s = (corner_points_sharp->points[feature.idx_].intensity - int(corner_points_sharp->points[idx].intensity)) / SCAN_PERIOD;
             // else
             //     s = 1.0;
-            LidarScanEdgeFactor *f = new LidarScanEdgeFactor(feature.point_, feature.coeffs_, s);
+            LidarScanEdgeFactorVector *f = new LidarScanEdgeFactorVector(feature.point_, feature.coeffs_, s);
             problem.AddResidualBlock(f, loss_function, para_pose);
             if (CHECK_JACOBIAN)
             {

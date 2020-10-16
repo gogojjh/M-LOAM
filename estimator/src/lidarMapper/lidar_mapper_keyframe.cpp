@@ -86,15 +86,15 @@ std::vector<PointICovCloud::Ptr> outlier_cloud_keyframes_cov;
 // pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_surrounding_keyframes;
 // pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_global_map_keyframes;
 
-pcl::VoxelGrid<PointI> down_size_filter_surf;
-pcl::VoxelGrid<PointI> down_size_filter_corner;
-pcl::VoxelGrid<PointI> down_size_filter_outlier;
-pcl::VoxelGrid<PointIWithCov> down_size_filter_surf_map_cov;
-pcl::VoxelGrid<PointIWithCov> down_size_filter_corner_map_cov;
-pcl::VoxelGrid<PointIWithCov> down_size_filter_outlier_map_cov;
-pcl::VoxelGrid<PointIWithCov> down_size_filter_global_map_cov;
-pcl::VoxelGrid<PointI> down_size_filter_surrounding_keyframes;
-pcl::VoxelGrid<PointI> down_size_filter_global_map_keyframes;
+pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_surf;
+pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_corner;
+pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_outlier;
+pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_surrounding_keyframes;
+pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_global_map_keyframes;
+pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_surf_map_cov;
+pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_corner_map_cov;
+pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_outlier_map_cov;
+pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_global_map_cov;
 
 std::vector<int> point_search_ind;
 std::vector<float> point_search_sq_dis;
@@ -588,7 +588,7 @@ void scan2MapOptimization()
             problem.Evaluate(e_option, nullptr, nullptr, nullptr, &jaco);
             Eigen::Matrix<double, 6, 6> mat_H; // mat_H / 134 = normlized_mat_H
             evalHessian(jaco, mat_H);
-            evalDegenracy(mat_H / 134, local_parameterization); // the hessian matrix is already normized to evaluate degeneracy
+            evalDegenracy(mat_H, local_parameterization); // the hessian matrix is already normized to evaluate degeneracy
 
             // *********************************************************
             common::timing::Timer solver_timer("mapping_solver");
@@ -613,7 +613,8 @@ void scan2MapOptimization()
                 if (pose_keyframes_6d.size() <= 10)
                     cov_mapping.setZero();
                 else
-                    cov_mapping = (mat_H / 134).inverse();
+                    cov_mapping = (mat_H).inverse();
+                cov_mapping.setZero();
 
                 double tr = cov_mapping.trace();
                 std::vector<double> sp{tr};
@@ -835,7 +836,7 @@ void pubGlobalMap()
             //     down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
             // }
             down_size_filter_global_map_cov.setLeafSize(1.0, 1.0, 1.0);
-            // down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
+            down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
             down_size_filter_global_map_cov.setInputCloud(laser_cloud_map);
             down_size_filter_global_map_cov.filter(*laser_cloud_map_ds);
 
@@ -892,7 +893,7 @@ void saveGlobalMap()
     //     down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     // }
     down_size_filter_global_map_cov.setLeafSize(1.0, 1.0, 1.0);
-    // down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
+    down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_global_map_cov.setInputCloud(laser_cloud_surf_map);
     down_size_filter_global_map_cov.filter(*laser_cloud_surf_map_ds);
     down_size_filter_global_map_cov.setInputCloud(laser_cloud_corner_map);
@@ -1188,6 +1189,7 @@ void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameteri
 	d_factor_list.push_back(mat_E);
 	d_eigvec_list.push_back(mat_V_f);
  	mat_P = mat_V_f.transpose().inverse() * mat_V_p.transpose(); // 6*6
+    // std::cout << "D factor: " << mat_E(0, 0) << std::endl;
     LOG(INFO) << "D factor: " << mat_E(0, 0) << ", D vector: " << mat_V_f.col(0).transpose();
 	if (local_parameterization->is_degenerate_)
 	{
@@ -1282,18 +1284,18 @@ int main(int argc, char **argv)
     pub_keyframes_6d = nh.advertise<mloam_msgs::Keyframes>("/laser_map_keyframes_6d", 10);
 
     down_size_filter_surf.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
-    // down_size_filter_surf.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
+    down_size_filter_surf.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_corner.setLeafSize(MAP_CORNER_RES, MAP_CORNER_RES, MAP_CORNER_RES);
-    // down_size_filter_corner.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
+    down_size_filter_corner.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_outlier.setLeafSize(MAP_OUTLIER_RES, MAP_OUTLIER_RES, MAP_OUTLIER_RES);
-    // down_size_filter_outlier.setTraceThreshold(TRACE_THRESHOLD_MAPPING);    
+    down_size_filter_outlier.setTraceThreshold(TRACE_THRESHOLD_MAPPING);    
 
     down_size_filter_surf_map_cov.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
-    // down_size_filter_surf_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
+    down_size_filter_surf_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_corner_map_cov.setLeafSize(MAP_CORNER_RES, MAP_CORNER_RES, MAP_CORNER_RES);
-    // down_size_filter_corner_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
+    down_size_filter_corner_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_outlier_map_cov.setLeafSize(MAP_OUTLIER_RES, MAP_OUTLIER_RES, MAP_OUTLIER_RES);
-    // down_size_filter_outlier_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
+    down_size_filter_outlier_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_surrounding_keyframes.setLeafSize(MAP_SUR_KF_RES, MAP_SUR_KF_RES, MAP_SUR_KF_RES);
     down_size_filter_global_map_keyframes.setLeafSize(MAP_SUR_KF_RES, MAP_SUR_KF_RES, MAP_SUR_KF_RES);
 
