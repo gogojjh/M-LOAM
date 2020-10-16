@@ -1,5 +1,10 @@
 <launch>
 
+    <!-- <include file="$(find rviz_car_model)/launch/default.launch" >
+        <arg name="fixed_frame" value="base_link" />
+        <arg name="transform" value="0 0 0 -0.1131 -0.0433 -0.0049 0.9926" />
+    </include>     -->
+
     <arg name="run_mloam" default="true" />
     <arg name="run_mloam_odom" default="true" />
     <arg name="run_mloam_mapping" default="true" />    
@@ -12,10 +17,7 @@
     <arg name="output_path" default="/home/jjiao/trajectory_results/handheld/xxxxx"/>
     <arg name="with_ua" default="true" /> <!-- awareness of uncertainty propagation-->    
     <arg name="gf_method" default="wo_gf" /> <!-- gd_fix, gd_float, rnd, fps, wo_gf-->
-    <arg name="gf_ratio_ini" default="1" />
-    <arg name="gnc" default="false" />
-    <arg name="debug_mode" default="false" />
-    <arg name="loss_mode" default="huber" /> <!-- huber, gmc-->
+    <arg name="gf_ratio_ini" default="1.0" />
 
     <arg name="config_file" default="$(find mloam)/config/config_handheld.yaml" />
     <group if="$(arg run_mloam)">
@@ -23,7 +25,7 @@
             <node pkg="mloam" type="mloam_node_rhd" name="mloam_node_rhd" 
                 args="-config_file=$(arg config_file)
                     -result_save=$(arg result_save)
-                    -output_path=$(arg output_path)" output="screen">
+                    -output_path=$(arg output_path)" >
             </node>
         </group>
         <group if="$(arg run_mloam_mapping)">
@@ -33,19 +35,9 @@
                       -output_path=$(arg output_path)
                       -with_ua=$(arg with_ua)
                       -gf_method=$(arg gf_method)
-                      -gf_ratio_ini=$(arg gf_ratio_ini)
-                      -gnc=$(arg gnc)
-                      -debug_mode=$(arg debug_mode)
-                      -loss_mode=$(arg loss_mode)" output="screen">
+                      -gf_ratio_ini=$(arg gf_ratio_ini)" output="screen">
                 <remap from="/laser_odom" to="/laser_odom_0"/>
             </node>
-            <!-- <node pkg="mloam" type="lidar_mapper_only_surf" name="lidar_mapper_only_surf"
-                args="$(arg config_file)
-                      1 
-                      $(arg output_path)
-                      0" output="screen">
-                <remap from="/laser_odom" to="/laser_odom_0"/>
-            </node> -->
         </group>
     </group>
     
@@ -88,7 +80,7 @@
         <include file="$(find floam)/launch/floam_exp.launch">
             <arg name="output_path" value="$(arg output_path)"/>
             <arg name="s_line" value="16" />
-            <arg name="map_res" value="0.4" />
+            <arg name="map_res" value="0.2" />
         </include>       
    </group>        
 
@@ -105,13 +97,7 @@
     <param name="use_sim_time" value="true" />
     <group if="$(arg bag_file_use)">
         <node pkg="rosbag" type="play" name="rosbag" 
-            args="--clock -r 1 $(arg bag_file)" required="true"/>    
+            args="--clock -r 1.0 $(arg bag_file)" required="true"/>    
     </group>    
-
-    <include file="$(find rviz_car_model)/launch/default.launch" >
-        <arg name="fixed_frame" value="base_link" />
-        <arg name="transform" value="0 0 0 -0.1131 -0.0433 -0.0049 0.9926" />
-    </include>    
-
 
  </launch>

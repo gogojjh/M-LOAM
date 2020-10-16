@@ -76,16 +76,6 @@ std::vector<PointICovCloud::Ptr> corner_cloud_keyframes_cov;
 std::vector<PointICovCloud::Ptr> outlier_cloud_keyframes_cov;
 
 // downsampling voxel grid
-// pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_surf;
-// pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_corner;
-// pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_outlier;
-// pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_surf_map_cov;
-// pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_corner_map_cov;
-// pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_outlier_map_cov;
-// pcl::VoxelGridCovarianceMLOAM<PointIWithCov> down_size_filter_global_map_cov;
-// pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_surrounding_keyframes;
-// pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_global_map_keyframes;
-
 pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_surf;
 pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_corner;
 pcl::VoxelGridCovarianceMLOAM<PointI> down_size_filter_outlier;
@@ -589,6 +579,7 @@ void scan2MapOptimization()
             Eigen::Matrix<double, 6, 6> mat_H; // mat_H / 134 = normlized_mat_H
             evalHessian(jaco, mat_H);
             evalDegenracy(mat_H, local_parameterization); // the hessian matrix is already normized to evaluate degeneracy
+            // evalDegenracy(mat_H / 25, local_parameterization); // the hessian matrix is already normized to evaluate degeneracy
 
             // *********************************************************
             common::timing::Timer solver_timer("mapping_solver");
@@ -607,21 +598,27 @@ void scan2MapOptimization()
 
             if (iter_cnt == max_iter - 1)
             {
-                common::timing::Timer eval_deg_timer("mapping_eval_deg");
-                problem.Evaluate(e_option, nullptr, nullptr, nullptr, &jaco);
-                evalHessian(jaco, mat_H);
-                if (pose_keyframes_6d.size() <= 10)
-                    cov_mapping.setZero();
-                else
-                    cov_mapping = (mat_H).inverse();
-                cov_mapping.setZero();
+                if (with_ua_flag)
+                {
+                    common::timing::Timer eval_deg_timer("mapping_eval_deg");
+                    problem.Evaluate(e_option, nullptr, nullptr, nullptr, &jaco);
+                    evalHessian(jaco, mat_H);
+                    if (pose_keyframes_6d.size() <= 10)
+                        cov_mapping.setZero();
+                    else
+                        cov_mapping = (mat_H).inverse();
 
-                double tr = cov_mapping.trace();
-                std::vector<double> sp{tr};
-                mapping_sp_list.push_back(sp);
-                LOG_EVERY_N(INFO, 20) << "trace: " << tr;
-                std::cout << common::YELLOW << "trace: " << tr << common::RESET << std::endl;
-                printf("evaluate H: %fms\n", eval_deg_timer.Stop() * 1000);
+                    double tr = cov_mapping.trace();
+                    std::vector<double> sp{tr};
+                    mapping_sp_list.push_back(sp);
+                    LOG_EVERY_N(INFO, 20) << "trace: " << tr;
+                    std::cout << common::YELLOW << "trace: " << tr << common::RESET << std::endl;
+                    printf("evaluate H: %fms\n", eval_deg_timer.Stop() * 1000);
+                }
+                else
+                {
+                    cov_mapping.setZero();
+                } 
             }
 
             double2Vector();

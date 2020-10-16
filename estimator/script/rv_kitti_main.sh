@@ -4,7 +4,7 @@
 roslaunch mloam mloam_realvehicle_kitti.launch \
     run_mloam:=true \
     run_mloam_mapping:=true \
-    with_ua:=true \
+    with_ua:=false \
     run_aloam:=false \
     gf_method:=wo_gf \
     gf_ratio_ini:=1.0 \

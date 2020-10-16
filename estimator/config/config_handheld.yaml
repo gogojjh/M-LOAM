@@ -7,7 +7,6 @@ multiple_thread: 0
 segment_cloud: 1 # RHD02lab: 1, RHD03garden: 1, RHD04building: 1
 horizon_scan: 1800
 min_cluster_size: 30
-min_line_size: 10
 segment_valid_point_num: 5
 segment_valid_line_num: 3
 segment_theta: 0.53 # Lego-loam: 1.0
@@ -26,24 +25,24 @@ window_size: 4
 opt_window_size: 2
 
 ############################## For normal use
-# # Extrinsic parameter between multiple LiDARs.
-# estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
-#                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
-#                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
+# Extrinsic parameter between multiple LiDARs.
+estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+                        # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
+                        # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
 
-# # qx qy qz qw px py pz
-# body_T_laser: !!opencv-matrix
-#    rows: 2
-#    cols: 7
-#    dt: d
+# qx qy qz qw px py pz
+body_T_laser: !!opencv-matrix
+   rows: 2
+   cols: 7
+   dt: d
 #    data: [0, 0, 0, 1, 0, 0, 0,
 #           0, 0, 0, 1, 0, 0, 0] # w/o initialization
 #    data: [0, 0, 0, 1, 0, 0, 0,
 #           0.3113, -0.0103, -0.03334, 0.94956, 0.1130, -0.47195, -0.10341] # initialization (old)
 #    data: [0, 0, 0, 1, 0, 0, 0,
 #           0.31744, -0.00431, 0.01186, 0.9468, 0.0308, -0.56911, -0.12243] # initialization (new)
-   # data: [0, 0, 0, 1, 0, 0, 0,
-   #        0.32182, -0.00094, 0.00744, 0.94677, 0.06641, -0.49424, -0.11251] # refinement
+   data: [0, 0, 0, 1, 0, 0, 0,
+          0.32182, -0.00094, 0.00744, 0.94677, 0.06641, -0.49424, -0.11251] # refinement
    # data: [0, 0, 0, 1, 0, 0, 0,
    #        0.34087, -0.0101817, 0.0147921, 0.945613, 0.0334837, -0.540249, -0.141798] # PS-Calib
 
@@ -51,17 +50,17 @@ opt_window_size: 2
 # 1
 # parameters for testing the online calibration
 # The extrinsics here are for different-level initialization
-estimate_extrinsic: 1 
-body_T_laser: !!opencv-matrix
-   rows: 2
-   cols: 7
-   dt: d
+# estimate_extrinsic: 1 
+# body_T_laser: !!opencv-matrix
+#    rows: 2
+#    cols: 7
+#    dt: d
 #    data: [0, 0, 0, 1, 0, 0, 0,
 #           0, 0, 0, 1, 0, 0, 0] # w/o initialization
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
    #        0.21644, 0.0, 0.0, 0.9763, 0.0, 0.0, 0.0] # rough rotation: 25deg 
-   data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
-          0.30071, 0.0, 0.0, 0.95372, 0.0, 0.0, 0.0] # rough rotation: 35deg
+   # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
+   #        0.30071, 0.0, 0.0, 0.95372, 0.0, 0.0, 0.0] # rough rotation: 35deg
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
    #        0.00000, 0.0, 0.0, 1.0, 0, -0.5, -0.1] # rough translation: 0deg
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
@@ -106,7 +105,7 @@ laser_sync_threshold: 0.07
 ######################################################## odometry
 # optimization 
 max_solver_time: 0.015  # max solver itration time (s), to guarantee real time
-max_num_iterations: 5   # max solver itrations, to guarantee real time
+max_num_iterations: 4   # max solver itrations, to guarantee real time
 
 roi_range: 0.5
 distance_sq_threshold: 25
@@ -143,8 +142,14 @@ skip_num_odom_pub: 2
 
 ######################################################## mapping
 map_corner_res: 0.2
-map_surf_res: 0.4 # RHD02:0.4, RHD03:0.4, RHD04:0.4
+map_surf_res: 0.4
+map_outlier_res: 0.8
+map_sur_kf_res: 1.0
 map_eig_thre: 100
+
+distance_keyframes: 1.0
+orientation_keyframes: 1.0 
+surrounding_kf_radius: 30.0
 
 # uncertainty parameter
 # translation, rotation, point (rho, phi, zeta)
@@ -167,7 +172,7 @@ uct_measurement: !!opencv-matrix
 uct_ext_ratio: 1.0 # small or other RHD: 0.1, little: 0.5, medium: 1, large: 15
 
 # RHD02: 10, RHD03: 10, RHD04: 10
-trace_threshold_mapping: 10 # min_d: 20
+trace_threshold_mapping: 100 # min_d: 20
 
 # 1. 10m: 1.25
 # 2. 20m: 7.8

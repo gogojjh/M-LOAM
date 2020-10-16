@@ -37,15 +37,6 @@
                 <remap from="/laser_odom" to="/laser_odom_0"/>
             </node>
         </group>
-        <!-- <group if="$(arg run_mloam_mapping)">
-            <node pkg="mloam" type="lidar_mapper_only_surf" name="lidar_mapper_only_surf"
-                args="$(arg config_file)
-                      0 
-                      $(arg output_path)
-                      1" output="screen">
-                <remap from="/laser_odom" to="/laser_odom_0"/>
-            </node>
-        </group>         -->
     </group>
 
     <!-- publish static tf -->

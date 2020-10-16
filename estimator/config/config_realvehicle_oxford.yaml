@@ -4,12 +4,12 @@
 multiple_thread: 0
 
 # segmmentation
-segment_cloud: 1
+segment_cloud: 0
 horizon_scan: 1800
 min_cluster_size: 30
 segment_valid_point_num: 5
 segment_valid_line_num: 3
-segment_theta: 1.0 # Lego-loam: 1.047
+segment_theta: 1.047 # Lego-loam: 1.047
 
 # laser parameters
 idx_ref: 0
@@ -61,8 +61,8 @@ laser_sync_threshold: 0.07
 
 ######################################################## odometry
 # optimization 
-max_solver_time: 0.02  # max solver itration time (s), to guarantee real time
-max_num_iterations: 10   # max solver itrations, to guarantee real time
+max_solver_time: 0.015  # max solver itration time (s), to guarantee real time
+max_num_iterations: 4   # max solver itrations, to guarantee real time
 
 roi_range: 1
 distance_sq_threshold: 25
@@ -88,7 +88,7 @@ pcl_viewer_normal_ratio: 10
 
 # calibration converage parameters
 n_cumu_feature: 10
-lambda_initial: 400
+lambda_initial: 100
 lambda_thre_calib: 1000
 n_calib: 30
 
@@ -101,7 +101,12 @@ skip_num_odom_pub: 2
 map_corner_res: 0.2
 map_surf_res: 0.4
 map_outlier_res: 0.8
+map_sur_kf_res: 5.0
 map_eig_thre: 100
+
+distance_keyframes: 2.0
+orientation_keyframes: 2.0 
+surrounding_kf_radius: 70.0
 
 # uncertainty parameter
 # translation, rotation, point (s, phi, zeta)

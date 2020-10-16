@@ -3,19 +3,25 @@
 # ours
 roslaunch mloam mloam_handheld.launch \
     run_mloam:=true \
-    run_mloam_mapping:=false \
+    run_mloam_mapping:=true \
+    with_ua:=true \
+    gf_method:=wo_gf \
+    gf_ratio_ini:=1.0 \
     result_save:=true \
     bag_file:=$data_path \
     output_path:=$result_path
-# sleep 10
+# sleep 5
 
 # without uncertainty-aware
 # roslaunch mloam mloam_handheld.launch \
-#    run_mloam:=true \
-#    with_ua:=false \
-#    result_save:=true \
-#    bag_file:=$data_path \
-#    output_path:=$result_path
+#     run_mloam:=true \
+#     run_mloam_mapping:=true \
+#     with_ua:=false \
+#     gf_method:=wo_gf \
+#     gf_ratio_ini:=1.0 \
+#     result_save:=true \
+#     bag_file:=$data_path \
+#     output_path:=$result_path
 # sleep 10
 
 # different LiDAR SLAM

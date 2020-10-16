@@ -38,7 +38,7 @@ public:
 		// Eigen::matrix_sqrt_triangular(sqrt_info_, sqrt_info_);
 		// std::cout << sqrt_info_ << std::endl;
 		// exit(EXIT_FAILURE);
-		// sqrt_info_ = sqrt_info_ > 3 ? 3 : sqrt_info_;
+		sqrt_info_ = sqrt_info_ >= 5.0 ? 1.0 : sqrt_info_ / 5.0;
 	}
 
 	bool Evaluate(double const *const *param, double *residuals, double **jacobians) const
@@ -137,7 +137,7 @@ public:
 		  coeff_(coeff),
 		  sqrt_info_(sqrt(1 / cov_matrix.trace())) 
 	{
-		// sqrt_info_ = sqrt_info_ > 3 ? 3 : sqrt_info_;
+		sqrt_info_ = sqrt_info_ > 5.0 ? 1.0 : sqrt_info_ / 5.0;
 	}
 
     bool Evaluate(double const *const *param, double *residuals, double **jacobians) const
@@ -247,7 +247,7 @@ public:
 		  coeff_(coeff),
 		  sqrt_info_(sqrt(1 / cov_matrix.trace())) 
 	{
-		// sqrt_info_ = sqrt_info_ > 3 ? 3 : sqrt_info_;
+		sqrt_info_ = sqrt_info_ > 5.0 ? 1.0 : sqrt_info_ / 5.0;
 	}
 
 	bool Evaluate(double const *const *param, double *residuals, double **jacobians) const
