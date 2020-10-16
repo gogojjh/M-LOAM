@@ -120,6 +120,7 @@ extern float MAP_SURF_RES;
 extern float MAP_OUTLIER_RES;
 extern float MAP_SUR_KF_RES;
 extern float MAP_EIG_THRE;
+extern float MAP_DEG_THRE;
 
 extern float DISTANCE_KEYFRAMES;
 extern float ORIENTATION_KEYFRAMES;

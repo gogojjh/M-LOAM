@@ -92,6 +92,7 @@ float MAP_SURF_RES;
 float MAP_OUTLIER_RES;
 float MAP_SUR_KF_RES;
 float MAP_EIG_THRE;
+float MAP_DEG_THRE;
 
 float DISTANCE_KEYFRAMES;
 float ORIENTATION_KEYFRAMES;
@@ -257,8 +258,9 @@ void readParameters(std::string config_file)
     MAP_OUTLIER_RES = fsSettings["map_outlier_res"];
     MAP_SUR_KF_RES = fsSettings["map_sur_kf_res"];
     MAP_EIG_THRE = fsSettings["map_eig_thre"];
-    printf("map corner resolution:%f, surf resolution:%f, surround kf resolution:%f\n", 
-        MAP_CORNER_RES, MAP_SURF_RES, MAP_SUR_KF_RES);
+    map_deg_thre = fsSettings["map_deg_thre"];
+    printf("map corner resolution:%f, surf resolution:%f, surround kf resolution:%f\n",
+            MAP_CORNER_RES, MAP_SURF_RES, MAP_SUR_KF_RES);
 
     DISTANCE_KEYFRAMES = fsSettings["distance_keyframes"];
     ORIENTATION_KEYFRAMES = fsSettings["orientation_keyframes"];

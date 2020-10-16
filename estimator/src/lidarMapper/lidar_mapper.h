@@ -222,13 +222,13 @@ public:
             if (feature_type == 's')
             {
                 b_match = f_extract.matchSurfPointFromMap(kdtree_from_map,
-                                                        laser_map,
-                                                        laser_cloud.points[i],
-                                                        pose_local,
-                                                        all_features[i],
-                                                        i,
-                                                        n_neigh,
-                                                        false);
+                                                          laser_map,
+                                                          laser_cloud.points[i],
+                                                          pose_local,
+                                                          all_features[i],
+                                                          i,
+                                                          n_neigh,
+                                                          false);
             } else if (feature_type == 'c')
             {
                 b_match = f_extract.matchCornerPointFromMap(kdtree_from_map,
@@ -404,9 +404,6 @@ public:
                     (all_feature_idx.size() == 0) ||
                     (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
                         break;
-                // if ((num_sel_features >= num_use_features) ||
-                //     (all_feature_idx.size() == 0))
-                //         break;
 
                 float best_d = -1;
                 size_t best_j = 1;

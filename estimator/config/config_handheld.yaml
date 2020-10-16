@@ -44,7 +44,7 @@ body_T_laser: !!opencv-matrix
    data: [0, 0, 0, 1, 0, 0, 0,
           0.32182, -0.00094, 0.00744, 0.94677, 0.06641, -0.49424, -0.11251] # refinement
    # data: [0, 0, 0, 1, 0, 0, 0,
-   #        0.34087, -0.0101817, 0.0147921, 0.945613, 0.0334837, -0.540249, -0.141798] # PS-Calib
+         #  0.34087, -0.0101817, 0.0147921, 0.945613, 0.0334837, -0.540249, -0.141798] # PS-Calib
 
 ############################## For Journal experiments
 # 1
@@ -146,6 +146,7 @@ map_surf_res: 0.4
 map_outlier_res: 0.8
 map_sur_kf_res: 1.0
 map_eig_thre: 100
+map_deg_thre: 40
 
 distance_keyframes: 1.0
 orientation_keyframes: 1.0 

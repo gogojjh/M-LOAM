@@ -1,18 +1,29 @@
 # !/bin/bash
 
 # ours
-roslaunch mloam mloam_handheld.launch \
+# roslaunch mloam mloam_handheld.launch \
+#     run_mloam:=true \
+#     run_mloam_mapping:=true \
+#     with_ua:=true \
+#     gf_method:=wo_gf \
+#     gf_ratio_ini:=1.0 \
+#     result_save:=true \
+#     bag_file:=$data_path \
+#     output_path:=$result_path
+# sleep 5
+
+roslaunch mloam mloam_realvehicle_handheld.launch \
     run_mloam:=true \
     run_mloam_mapping:=true \
     with_ua:=true \
-    gf_method:=wo_gf \
-    gf_ratio_ini:=1.0 \
+    gf_method:=gd_float \
+    gf_ratio_ini:=0.5 \
     result_save:=true \
     bag_file:=$data_path \
     output_path:=$result_path
 # sleep 5
 
-# without uncertainty-aware
+# # without uncertainty-aware
 # roslaunch mloam mloam_handheld.launch \
 #     run_mloam:=true \
 #     run_mloam_mapping:=true \
@@ -22,7 +33,7 @@ roslaunch mloam mloam_handheld.launch \
 #     result_save:=true \
 #     bag_file:=$data_path \
 #     output_path:=$result_path
-# sleep 10
+# sleep 5
 
 # different LiDAR SLAM
 # roslaunch mloam mloam_handheld.launch \
@@ -30,11 +41,11 @@ roslaunch mloam mloam_handheld.launch \
 #     run_aloam:=true \
 #     bag_file:=$data_path \
 #     output_path:=$result_path
-# sleep 10
+# sleep 5
 
 # roslaunch mloam mloam_handheld.launch \
 #     run_mloam:=false \
 #     run_floam:=true \
 #     bag_file:=$data_path \
 #     output_path:=$result_path
-# sleep 10
+# sleep 5

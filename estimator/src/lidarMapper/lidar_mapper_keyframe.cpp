@@ -452,42 +452,46 @@ void scan2MapOptimization()
 
             // ******************************************************
             // evaluate the full hessian matrix
-            // if (iter_cnt == 0)
-            // {
-            //     if (frame_cnt % 20 == 0)
-            //     {
-            //         int total_feat_num = 0;
-            //         Eigen::Matrix<double, 6, 6> mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
-            //         if (POINT_PLANE_FACTOR)
-            //             afs.evalFullHessian(kdtree_surf_from_map, *laser_cloud_surf_from_map_cov_ds,
-            //                                 *laser_cloud_surf_cov, pose_wmap_curr, 's', mat_H, total_feat_num);
-            //         if (POINT_EDGE_FACTOR)
-            //             afs.evalFullHessian(kdtree_corner_from_map, *laser_cloud_corner_from_map_cov_ds,
-            //                                 *laser_cloud_surf_cov, pose_wmap_curr, 'c', mat_H, total_feat_num);
-            //         double gf_deg_factor = common::logDet(mat_H, true) - mat_H.rows() * std::log(1.0 * total_feat_num);
-            //         gf_deg_factor_list.push_back(gf_deg_factor);
-            //         if (FLAGS_gf_method == "wo_gf") 
-            //         {
-            //             gf_ratio_cur = 1.0;
-            //         }
-            //         if (FLAGS_gf_method == "gd_fix") 
-            //         {
-            //             gf_ratio_cur = FLAGS_gf_ratio_ini;
-            //         }
-            //         else if (FLAGS_gf_method == "rnd" || FLAGS_gf_method == "fps" || FLAGS_gf_method == "gd_float")
-            //         {
-            //             if (gf_deg_factor > 25)
-            //             {
-            //                 gf_ratio_cur = FLAGS_gf_ratio_ini;
-            //             } 
-            //             else if (gf_deg_factor <= 25)
-            //             {
-            //                 gf_ratio_cur = 0.8;
-            //             }
-            //         }
-            //         std::cout << common::YELLOW << "gf_deg_factor: " << gf_deg_factor << ", gf_ratio: " << gf_ratio_cur << common::RESET << std::endl;
-            //     }
-            // }
+            if (iter_cnt == 0)
+            {
+                if (frame_cnt % 10 == 0)
+                {
+                    int total_feat_num = 0;
+                    Eigen::Matrix<double, 6, 6> mat_H = Eigen::Matrix<double, 6, 6>::Identity() * 1e-6;
+                    if (POINT_PLANE_FACTOR)
+                        afs.evalFullHessian(kdtree_surf_from_map, *laser_cloud_surf_from_map_cov_ds,
+                                            *laser_cloud_surf_cov, pose_wmap_curr, 's', mat_H, total_feat_num);
+                    if (POINT_EDGE_FACTOR)
+                        afs.evalFullHessian(kdtree_corner_from_map, *laser_cloud_corner_from_map_cov_ds,
+                                            *laser_cloud_corner_cov, pose_wmap_curr, 'c', mat_H, total_feat_num);
+                    // std::cout << mat_H << std::endl;
+                    // std::cout << common::logDet(mat_H, true) << std::endl;
+                    // std::cout << total_feat_num << " " << std::log(1.0 * total_feat_num) << std::endl;
+                    // double gf_deg_factor = common::logDet(mat_H, true) - mat_H.rows() * std::log(1.0 * total_feat_num);
+                    double gf_deg_factor = common::logDet(mat_H, true);
+                    gf_deg_factor_list.push_back(gf_deg_factor);
+                    if (FLAGS_gf_method == "wo_gf") 
+                    {
+                        gf_ratio_cur = 1.0;
+                    }
+                    else if(FLAGS_gf_method == "gd_fix")
+                    {
+                        gf_ratio_cur = FLAGS_gf_ratio_ini;
+                    }
+                    else if (FLAGS_gf_method == "rnd" || FLAGS_gf_method == "fps" || FLAGS_gf_method == "gd_float")
+                    {
+                        if (gf_deg_factor > MAP_DEG_THRE)
+                        {
+                            gf_ratio_cur = FLAGS_gf_ratio_ini;
+                        } 
+                        else if (gf_deg_factor <= MAP_DEG_THRE)
+                        {
+                            gf_ratio_cur = 0.8;
+                        }
+                    }
+                    std::cout << common::YELLOW << "gf_deg_factor: " << gf_deg_factor << ", gf_ratio: " << gf_ratio_cur << common::RESET << std::endl;
+                }
+            }
 
             // ******************************************************
             std::vector<PointPlaneFeature> all_surf_features, all_corner_features;
@@ -528,9 +532,9 @@ void scan2MapOptimization()
             gf_logdet_H_list.push_back(common::logDet(sub_mat_H, true));
             printf("matching features time: %fms\n", gfs_timer.Stop() * 1000);
             
-            // if (MLOAM_RESULT_SAVE && frame_cnt == 1000)
-            //     afs.writeFeature(*laser_cloud_surf_cov, sel_surf_feature_idx, all_surf_features);
-            // printf("matching surf & corner num: %lu, %lu\n", surf_num, corner_num);
+            if (MLOAM_RESULT_SAVE && frame_cnt == 1000)
+                afs.writeFeature(*laser_cloud_surf_cov, sel_surf_feature_idx, all_surf_features);
+            printf("matching surf & corner num: %lu, %lu\n", surf_num, corner_num);
 
             for (const size_t &fid : sel_surf_feature_idx)
             {
@@ -775,7 +779,7 @@ void pubOdometry()
 
 void pubGlobalMap()
 {
-    ros::Rate rate(1);
+    ros::Rate rate(0.5);
     while (ros::ok())
     {
         rate.sleep();
@@ -1268,17 +1272,17 @@ int main(int argc, char **argv)
     // ros::Subscriber sub_extrinsic = nh.subscribe<mloam_msgs::Extrinsics>("/extrinsics", 10, extrinsicsHandler);
     // ros::Subscriber sub_loop_info = nh.subscribe<mloam_msgs::Keyframes>("/loop_info", 10, loopInfoHandler);
 
-	pub_laser_cloud_full_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_registered", 10);
-	pub_laser_cloud_surf_last_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surf_registered", 10);
-	pub_laser_cloud_corner_last_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_corner_registered", 10);
-	pub_laser_cloud_surrounding = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surround", 10);
-	pub_laser_cloud_map = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_map", 10);
+	pub_laser_cloud_full_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_registered", 5);
+	pub_laser_cloud_surf_last_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surf_registered", 5);
+	pub_laser_cloud_corner_last_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_corner_registered", 5);
+	pub_laser_cloud_surrounding = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surround", 5);
+	pub_laser_cloud_map = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_map", 5);
 
-	pub_odom_aft_mapped = nh.advertise<nav_msgs::Odometry>("/laser_map", 10); // raw pose from odometry in the world
-	pub_odom_aft_mapped_high_frec = nh.advertise<nav_msgs::Odometry>("/laser_map_high_frec", 10); // optimized pose in the world
-	pub_laser_after_mapped_path = nh.advertise<nav_msgs::Path>("/laser_map_path", 10);
-    pub_keyframes = nh.advertise<sensor_msgs::PointCloud2>("/laser_map_keyframes", 10);
-    pub_keyframes_6d = nh.advertise<mloam_msgs::Keyframes>("/laser_map_keyframes_6d", 10);
+	pub_odom_aft_mapped = nh.advertise<nav_msgs::Odometry>("/laser_map", 5); // raw pose from odometry in the world
+	pub_odom_aft_mapped_high_frec = nh.advertise<nav_msgs::Odometry>("/laser_map_high_frec", 5); // optimized pose in the world
+	pub_laser_after_mapped_path = nh.advertise<nav_msgs::Path>("/laser_map_path", 5);
+    pub_keyframes = nh.advertise<sensor_msgs::PointCloud2>("/laser_map_keyframes", 5);
+    pub_keyframes_6d = nh.advertise<mloam_msgs::Keyframes>("/laser_map_keyframes_6d", 5);
 
     down_size_filter_surf.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
     down_size_filter_surf.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
