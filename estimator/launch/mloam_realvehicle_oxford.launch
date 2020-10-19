@@ -69,8 +69,8 @@
             <arg name="output_path" value="$(arg output_path)"/>
             <arg name="skip_frame" value="2" />
             <arg name="s_line" value="32" />
-            <arg name="mapping_line_res" value="0.4" />
-            <arg name="mapping_plane_res" value="0.8" />
+            <arg name="mapping_line_res" value="0.2" />
+            <arg name="mapping_plane_res" value="0.4" />
         </include>       
    </group>        
 
@@ -79,7 +79,7 @@
         <include file="$(find floam)/launch/floam_exp.launch">
             <arg name="output_path" value="$(arg output_path)"/>
             <arg name="s_line" value="32" />
-            <arg name="map_res" value="0.4" />
+            <arg name="map_res" value="0.2" />
         </include>       
    </group>        
 

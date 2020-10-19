@@ -79,7 +79,7 @@
 #include "associate_uct.hpp"
 
 #define GLOBALMAP_KF_RADIUS 1000.0
-#define MAX_FEATURE_SELECT_TIME 15  // 10ms
+#define MAX_FEATURE_SELECT_TIME 20  // 10ms
 #define MAX_RANDOM_QUEUE_TIME 20
 
 DEFINE_bool(result_save, true, "save or not save the results");
@@ -192,7 +192,7 @@ public:
 
         Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor>> mat_jacobian(jaco[0]);
         feature.jaco_ = mat_jacobian.topLeftCorner<1, 6>();
-        feature.jaco_ *= sqrt(std::max(0.0, rho[1])); // TODO
+        // feature.jaco_ *= sqrt(std::max(0.0, rho[1])); // TODO
         // LOG_EVERY_N(INFO, 2000) << "error: " << sqrt(sqr_error) << ", rho_der: " << rho[1] 
         //                         << ", logd: " << common::logDet(feature.jaco_.transpose() * feature.jaco_, true);
 
@@ -332,10 +332,14 @@ public:
         {
             while (true)
             {
-                if (num_sel_features >= num_use_features ||
-                    t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME ||
-                    all_feature_idx.size() == 0)
-                        break;
+                if ((num_sel_features >= num_use_features) ||
+                    (all_feature_idx.size() == 0) ||
+                    (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
+                    break;
+                // if (num_sel_features >= num_use_features ||
+                //     all_feature_idx.size() == 0)
+                //     break;
+                    
                 size_t j = rgi_.geneRandUniform(0, all_feature_idx.size() - 1);
                 size_t que_idx = all_feature_idx[j];
                 b_match = false;
@@ -373,8 +377,8 @@ public:
 
                     sel_feature_idx[num_sel_features] = que_idx;
                     num_sel_features++;
-                    all_feature_idx.erase(all_feature_idx.begin() + j);
                 }
+                all_feature_idx.erase(all_feature_idx.begin() + j);
             }
         }
         else if (gf_method == "fps")
@@ -382,6 +386,7 @@ public:
             size_t que_idx;
             size_t k = rgi_.geneRandUniform(0, all_feature_idx.size() - 1); // randomly select a starting point
             feature_visited[k] = 1;
+            size_t cnt_visited = 1;
             PointIWithCov point_old = laser_cloud.points[k]; 
             b_match = f_extract.matchSurfPointFromMap(kdtree_from_map,
                                                       laser_map,
@@ -403,7 +408,11 @@ public:
                 if ((num_sel_features >= num_use_features) ||
                     (all_feature_idx.size() == 0) ||
                     (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
-                        break;
+                    break;
+                // if ((num_sel_features >= num_use_features) ||
+                //     (all_feature_idx.size() == 0) ||
+                //     (cnt_visited == num_all_features))
+                //     break;
 
                 float best_d = -1;
                 size_t best_j = 1;
@@ -422,6 +431,7 @@ public:
                 que_idx = best_j;
                 point_old = laser_cloud.points[que_idx];
                 feature_visited[que_idx] = 1;
+                cnt_visited++;
 
                 b_match = false;
                 if (feature_type == 's')
@@ -467,9 +477,15 @@ public:
             while (true)
             {
                 if ((num_sel_features >= num_use_features) ||
-                    (all_feature_idx.size() == 0) ||
+                    (all_feature_idx.size() == 0) || 
                     (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
-                        break;
+                    break;
+                // if ((num_sel_features >= num_use_features * 0.8) && 
+                //     (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
+                //     break;
+                // if ((num_sel_features >= num_use_features) ||
+                //     (all_feature_idx.size() == 0))
+                //     break;
 
                 size_t size_rnd_subset = static_cast<size_t>(1.0 * num_all_features / num_use_features); // 1.0/2.3
                 // LOG_EVERY_N(INFO, 20) << "[goodFeatureMatching] size of matrix subset: " << size_rnd_subset;

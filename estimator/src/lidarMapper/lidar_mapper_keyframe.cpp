@@ -474,11 +474,11 @@ void scan2MapOptimization()
                     {
                         gf_ratio_cur = 1.0;
                     }
-                    else if(FLAGS_gf_method == "gd_fix")
+                    else if (FLAGS_gf_method == "rnd" || FLAGS_gf_method == "fps" || FLAGS_gf_method == "gd_fix")
                     {
                         gf_ratio_cur = FLAGS_gf_ratio_ini;
                     }
-                    else if (FLAGS_gf_method == "rnd" || FLAGS_gf_method == "fps" || FLAGS_gf_method == "gd_float")
+                    else if (FLAGS_gf_method == "gd_float")
                     {
                         if (gf_deg_factor > MAP_DEG_THRE)
                         {
@@ -532,7 +532,7 @@ void scan2MapOptimization()
             gf_logdet_H_list.push_back(common::logDet(sub_mat_H, true));
             printf("matching features time: %fms\n", gfs_timer.Stop() * 1000);
             
-            if (MLOAM_RESULT_SAVE && frame_cnt == 1000)
+            if (MLOAM_RESULT_SAVE && frame_cnt == 500)
                 afs.writeFeature(*laser_cloud_surf_cov, sel_surf_feature_idx, all_surf_features);
             printf("matching surf & corner num: %lu, %lu\n", surf_num, corner_num);
 
@@ -836,7 +836,7 @@ void pubGlobalMap()
             //     down_size_filter_global_map_cov.setLeafSize(0.8, 0.8, 0.8);
             //     down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
             // }
-            down_size_filter_global_map_cov.setLeafSize(1.0, 1.0, 1.0);
+            down_size_filter_global_map_cov.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
             down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
             down_size_filter_global_map_cov.setInputCloud(laser_cloud_map);
             down_size_filter_global_map_cov.filter(*laser_cloud_map_ds);
@@ -893,7 +893,7 @@ void saveGlobalMap()
     //     down_size_filter_global_map_cov.setLeafSize(0.8, 0.8, 0.8);
     //     down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     // }
-    down_size_filter_global_map_cov.setLeafSize(1.0, 1.0, 1.0);
+    down_size_filter_global_map_cov.setLeafSize(MAP_SURF_RES * 2, MAP_SURF_RES * 2, MAP_SURF_RES * 2);
     down_size_filter_global_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_global_map_cov.setInputCloud(laser_cloud_surf_map);
     down_size_filter_global_map_cov.filter(*laser_cloud_surf_map_ds);
@@ -1298,7 +1298,7 @@ int main(int argc, char **argv)
     down_size_filter_outlier_map_cov.setLeafSize(MAP_OUTLIER_RES, MAP_OUTLIER_RES, MAP_OUTLIER_RES);
     down_size_filter_outlier_map_cov.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
     down_size_filter_surrounding_keyframes.setLeafSize(MAP_SUR_KF_RES, MAP_SUR_KF_RES, MAP_SUR_KF_RES);
-    down_size_filter_global_map_keyframes.setLeafSize(MAP_SUR_KF_RES, MAP_SUR_KF_RES, MAP_SUR_KF_RES);
+    down_size_filter_global_map_keyframes.setLeafSize(10, 10, 10);
 
     cov_mapping.setZero();
 

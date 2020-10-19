@@ -258,7 +258,7 @@ void readParameters(std::string config_file)
     MAP_OUTLIER_RES = fsSettings["map_outlier_res"];
     MAP_SUR_KF_RES = fsSettings["map_sur_kf_res"];
     MAP_EIG_THRE = fsSettings["map_eig_thre"];
-    map_deg_thre = fsSettings["map_deg_thre"];
+    MAP_DEG_THRE = fsSettings["map_deg_thre"];
     printf("map corner resolution:%f, surf resolution:%f, surround kf resolution:%f\n",
             MAP_CORNER_RES, MAP_SURF_RES, MAP_SUR_KF_RES);
 

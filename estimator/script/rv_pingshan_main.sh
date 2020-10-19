@@ -6,7 +6,7 @@ export data_source=bag
 roslaunch mloam mloam_realvehicle_hercules.launch \
     run_mloam:=true \
     run_mloam_mapping:=true \
-    result_save:=false \
+    result_save:=true \
     bag_file:=$data_path \
     data_source:=$data_source \
     output_path:=$result_path
