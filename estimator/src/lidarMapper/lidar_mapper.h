@@ -486,7 +486,7 @@ public:
                 // if ((num_sel_features >= num_use_features) ||
                 //     (all_feature_idx.size() == 0))
                 //     break;
-
+                // 2.3 = log(1\epi)
                 size_t size_rnd_subset = static_cast<size_t>(1.0 * num_all_features / num_use_features); // 1.0/2.3
                 // LOG_EVERY_N(INFO, 20) << "[goodFeatureMatching] size of matrix subset: " << size_rnd_subset;
                 std::priority_queue<FeatureWithScore, std::vector<FeatureWithScore>, std::less<FeatureWithScore>> heap_subset;

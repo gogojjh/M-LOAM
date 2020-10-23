@@ -10,7 +10,7 @@ min_cluster_size: 30
 min_line_size: 10
 segment_valid_point_num: 5
 segment_valid_line_num: 3
-segment_theta: 1.0 # Lego-loam: 1.0
+segment_theta: 1.047 # Lego-loam: 1.0
 
 # laser parameters
 idx_ref: 0
@@ -24,8 +24,8 @@ cloud_topic:
    - "/right/rslidar_points"
 
 # window sizes
-window_size: 4
-opt_window_size: 2
+window_size: 3
+opt_window_size: 1
 
 # Extrinsic parameter between multiple LiDARs.
 estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
@@ -136,11 +136,11 @@ skip_num_odom_pub: 2
 map_corner_res: 0.2
 map_surf_res: 0.4
 map_outlier_res: 0.8
-map_sur_kf_res: 5.0
+map_sur_kf_res: 1.0
 map_eig_thre: 100
 
-distance_keyframes: 2.0
-orientation_keyframes: 2.0 
+distance_keyframes: 1.0
+orientation_keyframes: 1.0 
 surrounding_kf_radius: 50.0
 
 # uncertainty parameter
@@ -163,6 +163,6 @@ uct_measurement: !!opencv-matrix
    dt: d
    data: [0.0025, 0.0025, 0.0025]
 
-uct_ext_ratio: 0.1 # small: 0.1, medium: 1, large: 10
+uct_ext_ratio: 1.0 # small: 0.1, medium: 1, large: 10
 
-trace_threshold_mapping: 100 # small: 10, large: 5, long distance: 100
+trace_threshold_mapping: 200 # small: 10, large: 5, long distance: 100

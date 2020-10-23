@@ -48,7 +48,10 @@ def main(path, sequences, est_types, eval_type, err_type):
                 rpe_rmse_rot = []
                 rpe_std_rot = []
                 filename = os.listdir(os.path.join(path, seq, 'traj/saved_results', est_type))
-                filename = [f for f in filename if 'relative_error_statistics' in f]
+                if eval_type == 'single':
+                    filename = [f for f in filename if 'relative_error_statistics' in f]
+                elif eval_type == 'mc':
+                    filename = [f for f in filename if 'mt_rel_err' in f]
                 filename.sort()
                 str_meter = []
                 for file in filename:

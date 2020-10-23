@@ -85,6 +85,7 @@ int N_CALIB;
 float ODOM_GF_RATIO;
 
 int SKIP_NUM_ODOM_PUB;
+int LM_OPT_ENABLE;
 
 // mapping
 float MAP_CORNER_RES;
@@ -251,6 +252,8 @@ void readParameters(std::string config_file)
 
     SKIP_NUM_ODOM_PUB = fsSettings["skip_num_odom_pub"];
     if (SKIP_NUM_ODOM_PUB == 0) SKIP_NUM_ODOM_PUB = 1;
+
+    LM_OPT_ENABLE = fsSettings["lm_opt_enable"];
 
     // mapping 
     MAP_CORNER_RES = fsSettings["map_corner_res"];

@@ -145,8 +145,8 @@ map_corner_res: 0.2
 map_surf_res: 0.4
 map_outlier_res: 0.8
 map_sur_kf_res: 1.0
-map_eig_thre: 10
-map_deg_thre: 50
+map_eig_thre: 100
+map_deg_thre: 42
 
 distance_keyframes: 1.0
 orientation_keyframes: 1.0 

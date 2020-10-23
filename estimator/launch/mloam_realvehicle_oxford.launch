@@ -97,7 +97,7 @@
     <param name="use_sim_time" value="true" />
     <group if="$(arg bag_file_use)">
         <node pkg="rosbag" type="play" name="rosbag" 
-            args="--clock -r 1.0 $(arg bag_file)" required="true"/>
+            args="--clock -r 0.6 $(arg bag_file)" required="true"/>
     </group>    
 
 
