@@ -113,6 +113,7 @@ extern int N_CALIB;
 extern float ODOM_GF_RATIO;
 
 extern int SKIP_NUM_ODOM_PUB;
+extern int LM_OPT_ENABLE;
 
 // mapping
 extern float MAP_CORNER_RES;

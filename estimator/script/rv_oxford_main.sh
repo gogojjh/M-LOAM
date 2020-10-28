@@ -1,4 +1,4 @@
-# !/bin/bash
+!/bin/bash
 
 ################## M-LOAM-GF with different good feature ratio
 roslaunch mloam mloam_realvehicle_oxford.launch \
@@ -21,7 +21,7 @@ sleep 20
 #     result_save:=true \
 #     bag_file:=$data_path \
 #     output_path:=$result_path \
-#        bag_record:=true
+#     bag_record:=true
 # sleep 20
 
 # roslaunch mloam mloam_realvehicle_oxford.launch \
@@ -32,7 +32,7 @@ sleep 20
 #     result_save:=true \
 #     bag_file:=$data_path \
 #     output_path:=$result_path \
-#        bag_record:=true
+#     bag_record:=true
 # sleep 20
 
 # roslaunch mloam mloam_realvehicle_oxford.launch \
@@ -44,7 +44,7 @@ sleep 20
 #     result_save:=true \
 #     bag_file:=$data_path \
 #     output_path:=$result_path \
-#        bag_record:=true
+#     bag_record:=true
 # sleep 20
 
 # roslaunch mloam mloam_realvehicle_oxford.launch \
@@ -79,7 +79,7 @@ sleep 20
 #     result_save:=true \
 #     bag_file:=$data_path \
 #     output_path:=$result_path \
-    #    bag_record:=true
+#     bag_record:=true
 # sleep 20
 
 # roslaunch mloam mloam_realvehicle_oxford.launch \
@@ -118,3 +118,9 @@ roslaunch mloam mloam_realvehicle_oxford.launch \
     bag_record:=true
 sleep 20
 
+roslaunch mloam mloam_realvehicle_oxford.launch \
+    run_mloam:=false \
+    run_legoloam:=true \
+    bag_file:=$data_path \
+    output_path:=$result_path
+sleep 5
