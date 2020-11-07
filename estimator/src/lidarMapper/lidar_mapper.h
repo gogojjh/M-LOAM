@@ -615,6 +615,32 @@ public:
         pcd_writer.write(filename2.c_str(), sel_map_feature);
     }
 
+    void pubFeature(const PointICovCloud &laser_cloud,
+                    const std::vector<size_t> &sel_feature_idx,
+                    const std::vector<PointPlaneFeature> &surf_map_features,
+                    const ros::Publisher &pub_laser_cloud,
+                    const double &time_laser_odometry)
+    {
+        common::PointICloud sel_map_feature;
+        for (const size_t &idx : sel_feature_idx)
+        {
+            const PointPlaneFeature &feature = surf_map_features[idx];
+            common::PointI point;
+            point.x = feature.point_[0];
+            point.y = feature.point_[1];
+            point.z = feature.point_[2];
+            point.intensity = feature.laser_idx_;
+            sel_map_feature.points.push_back(point);
+        }
+        sel_map_feature.height = 1;
+        sel_map_feature.width = sel_map_feature.points.size();
+        sensor_msgs::PointCloud2 cloud_msg;
+        pcl::toROSMsg(sel_map_feature, cloud_msg);
+        cloud_msg.header.stamp = ros::Time().fromSec(time_laser_odometry);
+        cloud_msg.header.frame_id = "/world";
+        pub_laser_cloud.publish(cloud_msg);       
+    }    
+
     ceres::LossFunction *loss_function_;
     common::RandomGeneratorInt<size_t> rgi_;
 

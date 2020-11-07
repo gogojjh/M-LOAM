@@ -105,6 +105,7 @@ Pose pose_wmap_prev, pose_wmap_curr, pose_wmap_wodom, pose_wodom_curr;
 ros::Publisher pub_laser_cloud_surrounding, pub_laser_cloud_map;
 ros::Publisher pub_laser_cloud_full_res;
 ros::Publisher pub_laser_cloud_surf_last_res, pub_laser_cloud_corner_last_res;
+ros::Publisher pub_good_surf_feature;
 ros::Publisher pub_odom_aft_mapped, pub_odom_aft_mapped_high_frec, pub_laser_after_mapped_path;
 ros::Publisher pub_keyframes, pub_keyframes_6d;
 
@@ -531,10 +532,7 @@ void scan2MapOptimization()
             }
             gf_logdet_H_list.push_back(common::logDet(sub_mat_H, true));
             printf("matching features time: %fms\n", gfs_timer.Stop() * 1000);
-            
-            if (MLOAM_RESULT_SAVE && frame_cnt == 500)
-                afs.writeFeature(*laser_cloud_surf_cov, sel_surf_feature_idx, all_surf_features);
-            printf("matching surf & corner num: %lu, %lu\n", surf_num, corner_num);
+            // printf("matching surf & corner num: %lu, %lu\n", surf_num, corner_num);
 
             for (const size_t &fid : sel_surf_feature_idx)
             {
@@ -623,6 +621,9 @@ void scan2MapOptimization()
                 {
                     cov_mapping.setZero();
                 } 
+                // if (MLOAM_RESULT_SAVE && frame_cnt == 500)
+                //     afs.writeFeature(*laser_cloud_surf_cov, sel_surf_feature_idx, all_surf_features);                
+                afs.pubFeature(*laser_cloud_surf_cov, sel_surf_feature_idx, all_surf_features, pub_good_surf_feature, time_laser_odometry);
             }
 
             double2Vector();
@@ -1277,12 +1278,14 @@ int main(int argc, char **argv)
 	pub_laser_cloud_corner_last_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_corner_registered", 5);
 	pub_laser_cloud_surrounding = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surround", 5);
 	pub_laser_cloud_map = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_map", 5);
+    pub_good_surf_feature = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surf_good", 5);
 
 	pub_odom_aft_mapped = nh.advertise<nav_msgs::Odometry>("/laser_map", 5); // raw pose from odometry in the world
 	pub_odom_aft_mapped_high_frec = nh.advertise<nav_msgs::Odometry>("/laser_map_high_frec", 5); // optimized pose in the world
 	pub_laser_after_mapped_path = nh.advertise<nav_msgs::Path>("/laser_map_path", 5);
     pub_keyframes = nh.advertise<sensor_msgs::PointCloud2>("/laser_map_keyframes", 5);
     pub_keyframes_6d = nh.advertise<mloam_msgs::Keyframes>("/laser_map_keyframes_6d", 5);
+
 
     down_size_filter_surf.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
     down_size_filter_surf.setTraceThreshold(TRACE_THRESHOLD_MAPPING);
