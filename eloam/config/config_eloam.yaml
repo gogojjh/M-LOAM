@@ -1,0 +1,3 @@
+%YAML:1.0
+
+spatio_temporal_window_size: 30  # 30ms
