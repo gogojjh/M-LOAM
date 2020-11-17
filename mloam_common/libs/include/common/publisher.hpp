@@ -6,6 +6,7 @@
 #include <sensor_msgs/PointCloud2.h>            /* std_msgs, sensor_msgs */
 #include <std_msgs/ColorRGBA.h>                 /* std_msgs::ColorRGBA */
 #include <visualization_msgs/MarkerArray.h>     /* visualization_msgs::MarkerArray */
+#include <tf/transform_broadcaster.h>
 
 #include <pcl/common/common.h>                  /* pcl::getMinMax3D */
 #include <pcl_conversions/pcl_conversions.h>

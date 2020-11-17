@@ -1,3 +1,7 @@
 %YAML:1.0
 
-spatio_temporal_window_size: 30  # 30ms
+spatio_temporal_window_size: 10000  # maximum number of events in an event frame
+
+median_blur_kernel_size: 0 # the size of the median blur kernel, 0: no filter
+
+visualize_polarity: 0

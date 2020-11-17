@@ -19,8 +19,10 @@
 #include <stdio.h>
 #include <ros/ros.h>
 #include <geometry_msgs/PointStamped.h>
+#include <sensor_msgs/image_encodings.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
+#include <cv_bridge/cv_bridge.h>
 #include <image_transport/image_transport.h>
 
 #include <opencv2/opencv.hpp>
@@ -37,6 +39,7 @@
 #include "utility/pose.h"
 #include "utility/utility.h"
 #include "utility/tic_toc.h"
+#include "utility/event.hpp"
 // #include "mloam_msgs/Keyframes.h"
 // #include "keyframe.h"
 // #include "loop_registration.hpp"
@@ -48,18 +51,23 @@
 #define SHOW_S_EDGE true
 #define SHOW_L_EDGE true
 
-class EventFrame
+using namespace eloam;
+
+class EventProcessor
 {
 public:
-	EventFrame();
-	~EventFrame();
+	EventProcessor();
+	~EventProcessor();
 	void registerPub(ros::NodeHandle &nh);
-	void setParameter();
+	void setParameter(const int &width, const int &height);
+
+	void inputEvent(const std::vector<Event> &event_cur);
+
 	// void addKeyFrame(KeyFrame* cur_kf, bool flag_detect_loop);
 	// void loadKeyFrame(KeyFrame* cur_kf, bool flag_detect_loop);
 	// KeyFrame* getKeyFrame(int index);
-	// void saveEventFrame();
-	// void loadEventFrame();
+	// void saveEventProcessor();
+	// void loadEventProcessor();
 	// void publishLoopInfo();
 	void publish();
 	// int getKeyFrameSize();
@@ -68,15 +76,22 @@ public:
 	// nav_msgs::Path pg_path_;
 	// CameraPoseVisualization *posegraph_visualization;
 
+	cv::Size sensor_size_;
+
+	size_t event_frame_cnt_;
+
+	cv::Mat event_frame_cur_, event_frame_last_;
+	double time_event_frame_cur_, time_event_frame_last_;
+
 private:
-	ros::Publisher pub_event_frame;
+	ros::Publisher pub_event_frame_;
 
 	// std::pair<int, double> detectLoop(const KeyFrame* keyframe, const int que_index);
 	// std::pair<bool, int> checkTemporalConsistency(const int &que_index, const int &match_index); 
 	// void constructLocalMap(const KeyFrame *cur_kf, const int &que_index, const int &match_index, const Pose &pose_ini);
 	// std::pair<bool, Pose> checkGeometricConsistency(const KeyFrame *cur_kf, const int &que_index, const int &match_index, const Pose &pose_ini);
 	// void addKeyFrameIntoDB(KeyFrame *keyframe);
-	// void optimizeEventFrame();
+	// void optimizeEventProcessor();
 	// void updatePath();
 	// list<KeyFrame*> keyframelist_;
 	// std::mutex m_keyframelist;

@@ -7,7 +7,7 @@
  * you may not use this file except in compliance with the License.
  *******************************************************/
 
-#include "mloam_loop/utility/utility.h"
+#include "eloam/utility/utility.h"
 
 Eigen::Matrix3d Utility::g2R(const Eigen::Vector3d &g)
 {

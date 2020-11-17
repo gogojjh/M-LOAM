@@ -9,9 +9,9 @@
  * Author: Qin Tong (qintonguav@gmail.com)
  *******************************************************/
 
-#include "eloam/event_frame.h"
+#include "eloam/event_processor.h"
 
-EventFrame::EventFrame()
+EventProcessor::EventProcessor()
 {
     // posegraph_visualization = new CameraPoseVisualization(1.0, 0.0, 0.0, 1.0);
     // posegraph_visualization->setScale(0.1);
@@ -38,27 +38,88 @@ EventFrame::EventFrame()
     // kdtree_corner_from_map_.reset(new pcl::KdTreeFLANN<pcl::PointXYZI>());
 }
 
-EventFrame::~EventFrame()
+EventProcessor::~EventProcessor()
 {
     // t_optimization.detach();
 }
 
-void EventFrame::registerPub(ros::NodeHandle &nh)
+void EventProcessor::registerPub(ros::NodeHandle &nh)
 {
-    pub_event_frame = nh.advertise<sensor_msgs::Image>("/event_frame", 1);
+    pub_event_frame_ = nh.advertise<sensor_msgs::Image>("/event_frame", 1);
 }
 
-void EventFrame::setParameter()
+void EventProcessor::setParameter(const int &width, const int &height)
 {
+    sensor_size_ = cv::Size(width, height);
+    printf("Sensor size: (%d * %d)\n", sensor_size_.width, sensor_size_.height);
+    time_event_frame_last_ = time_event_frame_cur_ = 0;
+    event_frame_cnt_ = 0;
 }
 
-// void EventFrame::setPGOTread()
+void EventProcessor::inputEvent(const std::vector<Event> &event_cur)
+{
+    time_event_frame_cur_ = event_cur[0].time_;
+    if (event_frame_cnt_ == 0) 
+        event_frame_last_ = time_event_frame_cur_;
+
+    event_frame_cur_ = cv::Mat::zeros(sensor_size_, CV_64F);
+    for (const Event &e : event_cur)
+    {
+        // rectified
+        // if (VISUALIZE_POLARITY)
+        //     event_frame_cur_.at<double>(e.y_, e.x_) += e.polarity_;
+        event_frame_cur_.at<double>(e.y_, e.x_) += 1.0;
+    }
+
+    // for (int y = 0; y < sensor_size_.height; ++y)
+    // {
+    //     for (int x = 0; x < sensor_size_.width; ++x)
+    //     {
+    //         double ity = event_frame_cur_.at<double>(y, x);
+    //         if (ity > 0)
+    //         {
+    //             event_frame_cur_.at<double>(y, x) = 1.0;
+    //         }
+    //         else if (ity < 0)
+    //         {
+    //             if (VISUALIZE_POLARITY)
+    //                 event_frame_cur_.at<double>(y, x) = -1.0;
+    //             else
+    //                 event_frame_cur_.at<double>(y, x) = 1.0;
+    //         }
+    //     }
+    // }
+    // event_frame_cur_ = 63.75 * event_frame_cur_ + 191.25;
+
+    event_frame_cur_ = 255.0 * event_frame_cur_;
+    event_frame_cur_.convertTo(event_frame_cur_, CV_8U);
+
+    if (MEDIAN_BLUR_KERNEL_SIZE)
+        cv::medianBlur(event_frame_cur_, event_frame_cur_, 2 * MEDIAN_BLUR_KERNEL_SIZE + 1);
+
+    // polarity
+    // if (!ignore_polarity_)
+    //     time_surface_map = 255.0 * (time_surface_map + 1.0) / 2.0;
+    // else
+    //     time_surface_map = 255.0 * time_surface_map;
+    // time_surface_map.convertTo(time_surface_map, CV_8U);
+
+    publish();
+
+    event_frame_cnt_++;
+    printf("%luth event frame, dt: %lfms\n", event_frame_cnt_, (time_event_frame_cur_ - time_event_frame_last_) * 1000);
+
+    event_frame_cur_.copyTo(event_frame_last_);
+    time_event_frame_last_ = time_event_frame_cur_;
+}
+
+// void EventProcessor::setPGOTread()
 // {
-//     printf("[EventFrame] set new pose graph thread, perfrom 6 DoF pose graph optimization\n");
-//     t_optimization = std::thread(&EventFrame::optimizeEventFrame, this);
+//     printf("[EventProcessor] set new pose graph thread, perfrom 6 DoF pose graph optimization\n");
+//     t_optimization = std::thread(&EventProcessor::optimizeEventProcessor, this);
 // }
 
-// void EventFrame::addKeyFrameIntoDB(KeyFrame *keyframe)
+// void EventProcessor::addKeyFrameIntoDB(KeyFrame *keyframe)
 // {
 //     pcl::PointCloud<pcl::PointXYZI>::Ptr raw_cloud(new pcl::PointCloud<pcl::PointXYZI>());
 //     *raw_cloud += *keyframe->full_cloud_;
@@ -73,7 +134,7 @@ void EventFrame::setParameter()
 //     // }
 // }
 
-// void EventFrame::addKeyFrame(KeyFrame *cur_kf, bool flag_detect_loop)
+// void EventProcessor::addKeyFrame(KeyFrame *cur_kf, bool flag_detect_loop)
 // {
 //     cur_kf->index_ = global_index_;
 //     global_index_++;
@@ -206,7 +267,7 @@ void EventFrame::setParameter()
 //     m_keyframelist.unlock();
 // }
 
-// void EventFrame::loadKeyFrame(KeyFrame *cur_kf, bool flag_detect_loop)
+// void EventProcessor::loadKeyFrame(KeyFrame *cur_kf, bool flag_detect_loop)
 // {
 //     cur_kf->index_ = global_index_;
 //     global_index_++;
@@ -262,7 +323,7 @@ void EventFrame::setParameter()
 //     m_keyframelist.unlock();
 // }
 
-// std::pair<int, double> EventFrame::detectLoop(const KeyFrame *keyframe, const int que_index)
+// std::pair<int, double> EventProcessor::detectLoop(const KeyFrame *keyframe, const int que_index)
 // {
 //     pcl::PointCloud<pcl::PointXYZI>::Ptr raw_cloud(new pcl::PointCloud<pcl::PointXYZI>());
 //     *raw_cloud += *keyframe->full_cloud_;
@@ -311,7 +372,7 @@ void EventFrame::setParameter()
 //     return detect_result;
 // }
 
-// std::pair<bool, int> EventFrame::checkTemporalConsistency(const int &que_index,
+// std::pair<bool, int> EventProcessor::checkTemporalConsistency(const int &que_index,
 //                                                          const int &match_index)
 // {
 //     bool tc_flag = true;
@@ -345,7 +406,7 @@ void EventFrame::setParameter()
 // }
 
 // // all point clouds are transformed into the map (local) frame
-// void EventFrame::constructLocalMap(const KeyFrame *cur_kf,
+// void EventProcessor::constructLocalMap(const KeyFrame *cur_kf,
 //                                   const int &que_index,
 //                                   const int &match_index,
 //                                   const Pose &pose_ini)
@@ -402,7 +463,7 @@ void EventFrame::setParameter()
 //     printf("[loop_closure] map surf num: %lu, corner num: %lu\n", laser_cloud_surf_from_map_num, laser_cloud_corner_from_map_num);
 // }
 
-// std::pair<bool, Pose> EventFrame::checkGeometricConsistency(const KeyFrame *cur_kf,
+// std::pair<bool, Pose> EventProcessor::checkGeometricConsistency(const KeyFrame *cur_kf,
 //                                                            const int &que_index,
 //                                                            const int &match_index,
 //                                                            const Pose &pose_ini)
@@ -457,7 +518,7 @@ void EventFrame::setParameter()
 //     return make_pair(true, pose_icp);
 // }
 
-// KeyFrame *EventFrame::getKeyFrame(int index)
+// KeyFrame *EventProcessor::getKeyFrame(int index)
 // {
 //     //    unique_lock<mutex> lock(m_keyframelist_);
 //     list<KeyFrame *>::iterator it = keyframelist_.begin();
@@ -472,7 +533,7 @@ void EventFrame::setParameter()
 //         return NULL;
 // }
 
-// void EventFrame::optimizeEventFrame()
+// void EventProcessor::optimizeEventProcessor()
 // {
 //     while(true)
 //     {
@@ -636,13 +697,13 @@ void EventFrame::setParameter()
 //     return;
 // }
 
-// void EventFrame::saveEventFrame()
+// void EventProcessor::saveEventProcessor()
 // {
 //     m_keyframelist.lock();
 //     TicToc t_save_pose_graph;
 //     FILE *pFile;
-//     printf("[EventFrame] pose graph path: %s\n", POSE_GRAPH_SAVE_PATH.c_str());
-//     printf("[EventFrame] pose graph saving %lu keyframes\n", keyframelist_.size());
+//     printf("[EventProcessor] pose graph path: %s\n", POSE_GRAPH_SAVE_PATH.c_str());
+//     printf("[EventProcessor] pose graph saving %lu keyframes\n", keyframelist_.size());
 //     string file_path = POSE_GRAPH_SAVE_PATH + "pose_graph.txt";
 //     pFile = fopen(file_path.c_str(),"w");
 //     // fprintf(pFile, "index time_stamp px py pz qx qy qz qw loop_index loop_info\n");
@@ -673,21 +734,21 @@ void EventFrame::setParameter()
 //                 loop_info.q_.x(), loop_info.q_.y(), loop_info.q_.z(), loop_info.q_.w());
 //     }
 //     fclose(pFile);
-//     printf("[EventFrame] save pose graph time: %fs\n", t_save_pose_graph.toc() / 1000);
+//     printf("[EventProcessor] save pose graph time: %fs\n", t_save_pose_graph.toc() / 1000);
 //     m_keyframelist.unlock();
 // }
 
-// void EventFrame::loadEventFrame()
+// void EventProcessor::loadEventProcessor()
 // {
 //     TicToc t_load_posegraph;
 //     FILE * pFile;
 //     string file_path = POSE_GRAPH_SAVE_PATH + "pose_graph.txt";
-//     printf("[EventFrame] load pose graph from: %s \n", file_path.c_str());
-//     printf("[EventFrame] pose graph loading...\n");
+//     printf("[EventProcessor] load pose graph from: %s \n", file_path.c_str());
+//     printf("[EventProcessor] pose graph loading...\n");
 //     pFile = fopen(file_path.c_str(),"r");
 //     if (pFile == NULL)
 //     {
-//         printf("[EventFrame] lode previous pose graph error: wrong previous pose graph path or no previous pose graph \n the system will start with new pose graph \n");
+//         printf("[EventProcessor] lode previous pose graph error: wrong previous pose graph path or no previous pose graph \n the system will start with new pose graph \n");
 //         return;
 //     }
 //     int index;
@@ -761,10 +822,10 @@ void EventFrame::setParameter()
 //         cnt++;
 //     }
 //     fclose (pFile);
-//     printf("[EventFrame] load pose graph time: %f s\n", t_load_posegraph.toc() / 1000);
+//     printf("[EventProcessor] load pose graph time: %f s\n", t_load_posegraph.toc() / 1000);
 // }
 
-// void EventFrame::updatePath()
+// void EventProcessor::updatePath()
 // {
 //     m_keyframelist.lock();
 //     list<KeyFrame *>::iterator it;
@@ -854,7 +915,7 @@ void EventFrame::setParameter()
 //     m_keyframelist.unlock();
 // }
 
-// void EventFrame::publishLoopInfo()
+// void EventProcessor::publishLoopInfo()
 // {
 //     m_keyframelist.lock();
 //     mloam_msgs::Keyframes kf_path;
@@ -893,8 +954,14 @@ void EventFrame::setParameter()
 //     m_keyframelist.unlock();
 // }
 
-void EventFrame::publish()
+void EventProcessor::publish()
 {
+    cv_bridge::CvImage cv_image;
+    cv_image.header.stamp = ros::Time().fromSec(time_event_frame_cur_);
+    cv_image.encoding = "mono8";
+    cv_image.image = event_frame_cur_.clone();
+    pub_event_frame_.publish(cv_image.toImageMsg());
+
     // pub_pg_path_.publish(pg_path_);
     // posegraph_visualization->publish_by(pub_pose_graph_, pg_path_.header);
 
@@ -917,12 +984,12 @@ void EventFrame::publish()
     //     pcl::toROSMsg(*laser_cloud_surf_from_map_ds_, msg_cloud);
     //     pub_loop_map_.publish(msg_cloud);
     // 
-    //     pub_event_frame
+    //     pub_event_frame_
     // }
 }
 
 
-// int EventFrame::getKeyFrameSize()
+// int EventProcessor::getKeyFrameSize()
 // {
 //     return keyframelist_.size();
 // }

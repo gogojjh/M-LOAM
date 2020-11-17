@@ -21,11 +21,24 @@ include_directories(
 )
 link_directories(${PCL_LIBRARY_DIRS})
 
-cs_add_executable(eloam_node
-	src/event_frame.cpp
-	src/eloam_node.cpp
-)
+set(HEADERS
+	include/eloam/utility/event.hpp
+	include/eloam/utility/tic_toc.h
+	include/eloam/utility/pose.h
+	include/eloam/utility/utility.h
+	include/eloam/event_processor.h)
+
+set(SOURCES
+	src/utility/pose.cpp
+	src/utility/utility.cpp
+	src/event_processor.cpp)
+
+cs_add_library(${PROJECT_NAME}_lib ${SOURCES} ${HEADERS})
+
+###################### eloam_node
+cs_add_executable(eloam_node src/eloam_node.cpp)
 target_link_libraries(eloam_node
+	${PROJECT_NAME}_lib
     ${catkin_LIBRARIES} 
 	${OpenCV_LIBS} 
 	${PCL_LIBRARIES} 
@@ -36,4 +49,4 @@ target_link_libraries(eloam_node
 # cs_add_executable(test_generate_data test/test_generate_data.cpp)
 # target_link_libraries(test_generate_data ${PCL_LIBRARIES})
 
-cs_install()
+#cs_install()

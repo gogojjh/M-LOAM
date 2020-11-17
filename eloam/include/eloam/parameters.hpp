@@ -27,7 +27,9 @@ extern int RESULT_SAVE;
 extern std::string OUTPUT_FOLDER;
 extern std::string ELOAM_PATH;
 
-extern float spatio_temporal_window_size;
+extern float SPATIO_TEMPORAL_WINDOW_SIZE;
+extern float MEDIAN_BLUR_KERNEL_SIZE; 
+extern int VISUALIZE_POLARITY;
 
 enum SIZE_PARAMETERIZATION
 {
