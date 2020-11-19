@@ -85,7 +85,7 @@ int VISUALIZE_POLARITY;
 
 // initialize class
 bool b_sensor_initialized = false;
-int event_frame_cnt = 0;
+bool b_camera_info = false;
 
 EventProcessor eventprocessor;
 std::mutex m_buf, m_process;
@@ -95,7 +95,6 @@ void eventCallback(const dvs_msgs::EventArray::ConstPtr &event_msg)
     m_buf.lock();
     if (!b_sensor_initialized) 
     {
-        eventprocessor.setParameter(event_msg->width, event_msg->height);
         b_sensor_initialized = true;
     }
     for (const dvs_msgs::Event &e : event_msg->events)
@@ -164,7 +163,20 @@ void process()
     while(1)
     {
 		if (!ros::ok()) break;
-        if (!event_buf.empty())
+
+        if (!camera_info_buf.empty())
+        {
+            m_buf.lock();
+            if (!b_camera_info)
+            {
+                eventprocessor.setCameraInfo(camera_info_buf.front());
+                b_camera_info = true;
+            }
+            camera_info_buf.pop();
+            m_buf.unlock();
+        }
+
+        if (!event_buf.empty() && b_camera_info)
         {
             m_buf.lock();
             if (event_buf.size() >= SPATIO_TEMPORAL_WINDOW_SIZE)
@@ -184,13 +196,6 @@ void process()
         {
             m_buf.lock();
             image_buf.pop();
-            m_buf.unlock();
-        }
-
-        if (!camera_info_buf.empty())
-        {
-            m_buf.lock();
-            camera_info_buf.pop();
             m_buf.unlock();
         }
 

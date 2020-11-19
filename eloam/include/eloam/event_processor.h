@@ -20,6 +20,7 @@
 #include <ros/ros.h>
 #include <geometry_msgs/PointStamped.h>
 #include <sensor_msgs/image_encodings.h>
+#include <sensor_msgs/CameraInfo.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
 #include <cv_bridge/cv_bridge.h>
@@ -59,7 +60,9 @@ public:
 	EventProcessor();
 	~EventProcessor();
 	void registerPub(ros::NodeHandle &nh);
-	void setParameter(const int &width, const int &height);
+
+	void setParameter(const int &width, const int &hight);
+	void setCameraInfo(const sensor_msgs::CameraInfo::ConstPtr &camera_info);
 
 	void inputEvent(const std::vector<Event> &event_cur);
 
@@ -80,11 +83,17 @@ public:
 
 	size_t event_frame_cnt_;
 
-	cv::Mat event_frame_cur_, event_frame_last_;
+	cv::Mat event_frame_cur_, event_frame_cur_vis_;
+	cv::Mat event_frame_last_, event_frame_last_vis_;
+	cv::Mat image_warp_events_, image_warp_events_vis_;
+
+	cv::Mat camera_matrix_, distortion_coeffs_, rectification_matrix_, projection_matrix_;
+	std::string distortion_model_;
+
 	double time_event_frame_cur_, time_event_frame_last_;
 
 private:
-	ros::Publisher pub_event_frame_;
+	ros::Publisher pub_iwe_, pub_event_frame_;
 
 	// std::pair<int, double> detectLoop(const KeyFrame* keyframe, const int que_index);
 	// std::pair<bool, int> checkTemporalConsistency(const int &que_index, const int &match_index); 

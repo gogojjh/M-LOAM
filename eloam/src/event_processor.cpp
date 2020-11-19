@@ -7,12 +7,16 @@
  * you may not use this file except in compliance with the License.
  *
  * Author: Qin Tong (qintonguav@gmail.com)
+ * CameraInfo: http://wiki.ros.org/image_pipeline/CameraInfo
  *******************************************************/
 
 #include "eloam/event_processor.h"
 
 EventProcessor::EventProcessor()
 {
+    time_event_frame_last_ = time_event_frame_cur_ = 0;
+    event_frame_cnt_ = 0;
+
     // posegraph_visualization = new CameraPoseVisualization(1.0, 0.0, 0.0, 1.0);
     // posegraph_visualization->setScale(0.1);
     // posegraph_visualization->setLineWidth(0.1);
@@ -48,12 +52,31 @@ void EventProcessor::registerPub(ros::NodeHandle &nh)
     pub_event_frame_ = nh.advertise<sensor_msgs::Image>("/event_frame", 1);
 }
 
-void EventProcessor::setParameter(const int &width, const int &height)
+void EventProcessor::setCameraInfo(const sensor_msgs::CameraInfo::ConstPtr &camera_info)
 {
-    sensor_size_ = cv::Size(width, height);
+    sensor_size_ = cv::Size(camera_info->width, camera_info->height);
     printf("Sensor size: (%d * %d)\n", sensor_size_.width, sensor_size_.height);
-    time_event_frame_last_ = time_event_frame_cur_ = 0;
-    event_frame_cnt_ = 0;
+
+    camera_matrix_ = cv::Mat(3, 3, CV_64F);
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
+            camera_matrix_.at<double>(cv::Point(i, j)) = camera_info->K[i + j * 3];
+
+    distortion_model_ = camera_info->distortion_model;
+    distortion_coeffs_ = cv::Mat(camera_info->D.size(), 1, CV_64F);
+    for (int i = 0; i < camera_info->D.size(); i++)
+        distortion_coeffs_.at<double>(i) = camera_info->D[i];
+
+    rectification_matrix_ = cv::Mat(3, 3, CV_64F);
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
+            rectification_matrix_.at<double>(cv::Point(i, j)) = camera_info->R[i + j * 3];
+
+    // may be redundant
+    projection_matrix_ = cv::Mat(3, 4, CV_64F);
+    for (int i = 0; i < 4; i++)
+        for (int j = 0; j < 3; j++)
+            projection_matrix_.at<double>(cv::Point(i, j)) = camera_info->P[i + j * 4];
 }
 
 void EventProcessor::inputEvent(const std::vector<Event> &event_cur)
@@ -62,53 +85,48 @@ void EventProcessor::inputEvent(const std::vector<Event> &event_cur)
     if (event_frame_cnt_ == 0) 
         event_frame_last_ = time_event_frame_cur_;
 
-    event_frame_cur_ = cv::Mat::zeros(sensor_size_, CV_64F);
+    cv::Mat tmp_event_frame = cv::Mat::zeros(sensor_size_, CV_64F);
     for (const Event &e : event_cur)
     {
         // rectified
         // if (VISUALIZE_POLARITY)
         //     event_frame_cur_.at<double>(e.y_, e.x_) += e.polarity_;
-        event_frame_cur_.at<double>(e.y_, e.x_) += 1.0;
+        tmp_event_frame.at<double>(e.y_, e.x_) += 1.0;
     }
 
     // for (int y = 0; y < sensor_size_.height; ++y)
     // {
     //     for (int x = 0; x < sensor_size_.width; ++x)
     //     {
-    //         double ity = event_frame_cur_.at<double>(y, x);
+    //         double ity = tmp_event_frame.at<double>(y, x);
     //         if (ity > 0)
     //         {
-    //             event_frame_cur_.at<double>(y, x) = 1.0;
+    //             tmp_event_frame.at<double>(y, x) = 1.0;
     //         }
     //         else if (ity < 0)
     //         {
     //             if (VISUALIZE_POLARITY)
-    //                 event_frame_cur_.at<double>(y, x) = -1.0;
+    //                 tmp_event_frame.at<double>(y, x) = -1.0;
     //             else
-    //                 event_frame_cur_.at<double>(y, x) = 1.0;
+    //                 tmp_event_frame.at<double>(y, x) = 1.0;
     //         }
     //     }
     // }
-    // event_frame_cur_ = 63.75 * event_frame_cur_ + 191.25;
 
-    event_frame_cur_ = 255.0 * event_frame_cur_;
-    event_frame_cur_.convertTo(event_frame_cur_, CV_8U);
+    if (distortion_model_ == "plumb_bob")
+        cv::undistort(tmp_event_frame, event_frame_cur_, camera_matrix_, distortion_coeffs_);
+    else if (distortion_model_ == "equidistant")
+        cv::fisheye::undistortImage(event_frame_cur_, event_frame_cur_, camera_matrix_, distortion_coeffs_);
 
+    cv::normalize(event_frame_cur_, event_frame_cur_vis_, 0, 255, cv::NORM_MINMAX);
+    event_frame_cur_vis_.convertTo(event_frame_cur_vis_, CV_8U);
     if (MEDIAN_BLUR_KERNEL_SIZE)
-        cv::medianBlur(event_frame_cur_, event_frame_cur_, 2 * MEDIAN_BLUR_KERNEL_SIZE + 1);
-
-    // polarity
-    // if (!ignore_polarity_)
-    //     time_surface_map = 255.0 * (time_surface_map + 1.0) / 2.0;
-    // else
-    //     time_surface_map = 255.0 * time_surface_map;
-    // time_surface_map.convertTo(time_surface_map, CV_8U);
+        cv::medianBlur(event_frame_cur_vis_, event_frame_cur_vis_, 2 * MEDIAN_BLUR_KERNEL_SIZE + 1);
 
     publish();
 
     event_frame_cnt_++;
     printf("%luth event frame, dt: %lfms\n", event_frame_cnt_, (time_event_frame_cur_ - time_event_frame_last_) * 1000);
-
     event_frame_cur_.copyTo(event_frame_last_);
     time_event_frame_last_ = time_event_frame_cur_;
 }
@@ -959,7 +977,7 @@ void EventProcessor::publish()
     cv_bridge::CvImage cv_image;
     cv_image.header.stamp = ros::Time().fromSec(time_event_frame_cur_);
     cv_image.encoding = "mono8";
-    cv_image.image = event_frame_cur_.clone();
+    cv_image.image = event_frame_cur_vis_.clone();
     pub_event_frame_.publish(cv_image.toImageMsg());
 
     // pub_pg_path_.publish(pg_path_);
