@@ -116,6 +116,7 @@ I have modified the code with several times and tried different new features dur
 1. Parameter tunning, and a more detailed tutorial .
 2. **loop closure**.
 3. **Docker** supplort. The initial Docker file is in the folder: ```docker/Dockerfile```
+4. etc.
 
 <!-- ----------------------------------------------------------- -->
 ### 6. Acknowledgements
