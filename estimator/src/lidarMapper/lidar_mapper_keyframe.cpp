@@ -567,7 +567,6 @@ void scan2MapOptimization()
                     tmp_param[0] = para_pose;
                     f->check(tmp_param);
                     CHECK_JACOBIAN = 0;
-                    // delete[] tmp_param; 
                 }
             }
             // printf("add constraints: %fms\n", t_add_constraints.toc());
@@ -1264,15 +1263,6 @@ int main(int argc, char **argv)
 	ros::Subscriber sub_extrinsic = nh.subscribe<mloam_msgs::Extrinsics>("/extrinsics", 10, extrinsicsHandler);
     ros::Subscriber sub_loop_info = nh.subscribe<mloam_msgs::Keyframes>("/loop_info", 10, loopInfoHandler);
 
-    // for aloam test
-    // ros::Subscriber sub_laser_cloud_full_res = nh.subscribe<sensor_msgs::PointCloud2>("/velodyne_cloud_3", 10, laserCloudFullResHandler);
-    // ros::Subscriber sub_laser_cloud_outlier = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud_outlier", 10, laserCloudOutlierResHandler);
-    // ros::Subscriber sub_laser_cloud_surf_last = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud_surf_last", 10, laserCloudSurfLastHandler);
-    // ros::Subscriber sub_laser_cloud_corner_last = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud_corner_last", 10, laserCloudCornerLastHandler);
-    // ros::Subscriber sub_laser_odometry = nh.subscribe<nav_msgs::Odometry>("/laser_odom", 10, laserOdometryHandler);
-    // ros::Subscriber sub_extrinsic = nh.subscribe<mloam_msgs::Extrinsics>("/extrinsics", 10, extrinsicsHandler);
-    // ros::Subscriber sub_loop_info = nh.subscribe<mloam_msgs::Keyframes>("/loop_info", 10, loopInfoHandler);
-
 	pub_laser_cloud_full_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_registered", 5);
 	pub_laser_cloud_surf_last_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surf_registered", 5);
 	pub_laser_cloud_corner_last_res = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_corner_registered", 5);
@@ -1285,7 +1275,6 @@ int main(int argc, char **argv)
 	pub_laser_after_mapped_path = nh.advertise<nav_msgs::Path>("/laser_map_path", 5);
     pub_keyframes = nh.advertise<sensor_msgs::PointCloud2>("/laser_map_keyframes", 5);
     pub_keyframes_6d = nh.advertise<mloam_msgs::Keyframes>("/laser_map_keyframes_6d", 5);
-
 
     down_size_filter_surf.setLeafSize(MAP_SURF_RES, MAP_SURF_RES, MAP_SURF_RES);
     down_size_filter_surf.setTraceThreshold(TRACE_THRESHOLD_MAPPING);

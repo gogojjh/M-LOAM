@@ -1,0 +1,6 @@
+@article{jiao2020robust,
+  title={Robust Odometry and Mapping for Multi-LiDAR Systems with Online Extrinsic Calibration},
+  author={Jiao, Jianhao and Ye, Haoyang and Zhu, Yilong and Liu, Ming},
+  journal={arXiv preprint arXiv:2010.14294},
+  year={2020}
+}

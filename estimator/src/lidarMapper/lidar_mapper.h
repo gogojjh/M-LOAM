@@ -126,37 +126,6 @@ void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameteri
 class ActiveFeatureSelection
 {
 public:
-    // // ****************** good feature selection
-    // void evaluateFeatJacobian(const double *para_pose,
-    //                           const PointPlaneFeature &feature,
-    //                           const Eigen::Matrix3d &cov_matrix,
-    //                           Eigen::MatrixXd &mat_jaco)
-    // {
-    //     LidarMapPlaneNormFactor f(feature.point_, feature.coeffs_, cov_matrix);
-    //     const double **param = new const double *[1];
-    //     param[0] = para_pose;
-
-    //     double *res = new double[3];
-    //     double **jaco = new double *[1];
-    //     jaco[0] = new double[3 * 7];
-    //     f.Evaluate(param, res, jaco);
-
-    //     double *rho = new double[3];
-    //     double sqr_error = res[0] * res[0] + res[1] * res[1] + res[0] * res[0];
-    //     loss_function_->Evaluate(sqr_error, rho);
-
-    //     Eigen::Map<Eigen::Matrix<double, 3, 7, Eigen::RowMajor> > mat_jacobian(jaco[0]);
-    //     mat_jaco = mat_jacobian.topLeftCorner<3, 6>();
-    //     mat_jaco *= sqrt(std::max(0.0, rho[1]));
-
-    //     delete[] rho;
-    //     delete[] jaco[0];
-    //     delete[] jaco;
-    //     delete[] res;
-    //     delete[] param[0];
-    //     delete[] param;
-    // }
-
     // ****************** good feature selection
     void evaluateFeatJacobianMatching(const Pose &pose_local,
                                       PointPlaneFeature &feature,

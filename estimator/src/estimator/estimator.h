@@ -57,7 +57,6 @@
 #include "../factor/marginalization_factor.h"
 #include "../factor/prior_factor.hpp"
 #include "../factor/impl_loss_function.hpp"
-
 #include "mloam_pcl/point_with_time.hpp"
 
 #define MAX_FEATURE_SELECT_TIME 7 // 7ms

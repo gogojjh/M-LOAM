@@ -599,7 +599,7 @@ void Estimator::optimizeMap()
     ceres::Solver::Summary summary;
     ceres::LossFunction *loss_function;
     // loss_function = new ceres::GemanMcClureLoss(1.0);
-    loss_function = new ceres::HuberLoss(0.1);
+    loss_function = new ceres::HuberLoss(1.0);
     // loss_function = new ceres::CauchyLoss(1.0);
     // ceres: set options and solve the non-linear equation
     ceres::Solver::Options options;
@@ -707,10 +707,6 @@ void Estimator::optimizeMap()
                         tmp_param[2] = para_ex_pose_[IDX_REF];
                         f->check(tmp_param);
                         CHECK_JACOBIAN = 0;
-                        // delete[] tmp_param[0];
-                        // delete[] tmp_param[1];
-                        // delete[] tmp_param[2];
-                        // delete[] tmp_param;
                     }
                 }
             }
@@ -844,10 +840,6 @@ void Estimator::optimizeMap()
                             tmp_param[2] = para_ex_pose_[n];
                             f->check(tmp_param);
                             CHECK_JACOBIAN = 0;
-                            // delete[] tmp_param[0];
-                            // delete[] tmp_param[1];
-                            // delete[] tmp_param[2];
-                            // delete[] tmp_param;
                         }
                     }
                 }
@@ -922,8 +914,7 @@ void Estimator::optimizeMap()
                                                                                        std::vector<double *>{para_pose_[0],
                                                                                                              para_pose_[i - pivot_idx],
                                                                                                              para_ex_pose_[IDX_REF]},
-                                                                                       std::vector<int>{0});
-                        marginalization_info->addResidualBlockInfo(residual_block_info);
+                                                                                       std::vector<int>{0});                        marginalization_info->addResidualBlockInfo(residual_block_info);
                     }
                 }
 
@@ -1775,42 +1766,6 @@ void Estimator::evalCalib()
             last_marginalization_parameter_blocks_.clear();
         }
     }
-}
-
-void Estimator::visualizePCL()
-{
-    // if (plane_normal_vis_.init_)
-    // {
-    //     PointCloud::Ptr point_world_xyz(new PointCloud);
-    //     pcl::copyPointCloud(surf_points_local_map_filtered_[1], *point_world_xyz);
-    //     plane_normal_vis_.UpdateCloud(point_world_xyz, "cloud_all");
-    // }
-    // int pivot_idx = WINDOW_SIZE - OPT_WINDOW_SIZE;
-    // std::vector<Eigen::Vector4d> plane_coeffs;
-    // PointCloud::Ptr tmp_cloud_sel(new PointCloud); // surf_points_stack_[n][i]
-    // NormalCloud::Ptr tmp_normals_sel(new NormalCloud); // surf_points_local_map_filtered_[n]
-    // printf("feature size: %u\n", surf_map_features_[1][WINDOW_SIZE].size());
-    // for (auto &f : surf_map_features_[1][WINDOW_SIZE])
-    // {
-    //     PointI p_ori;
-    //     p_ori.x = f.point_.x();
-    //     p_ori.y = f.point_.y();
-    //     p_ori.z = f.point_.z();
-    //     PointI p_sel;
-    //     pointAssociateToMap(p_ori, p_sel, pose_local_[1][WINDOW_SIZE]);
-    //     tmp_cloud_sel->push_back(Point{p_sel.x, p_sel.y, p_sel.z}); // target cloud
-    //     tmp_normals_sel->push_back(Normal{float(f.coeffs_.x()), float(f.coeffs_.y()), float(f.coeffs_.z())}); // reference cloud normal
-    //     // Eigen::Vector4d coeffs_normalized = f.coeffs;
-    //     // double s_normal = coeffs_normalized.head<3>().norm();
-    //     // coeffs_normalized = coeffs_normalized / s_normal;
-    //     // plane_coeffs.push_back(coeffs_normalized);
-    //     // LOG(INFO) << p_sel.x * f.coeffs.x() + p_sel.y * f.coeffs.y() + p_sel.z * f.coeffs.z() + f.coeffs.w();
-    // }
-    // if (plane_normal_vis_.init_)
-    // {
-    //     plane_normal_vis_.UpdateCloudAndNormals(tmp_cloud_sel, tmp_normals_sel, PCL_VIEWER_NORMAL_RATIO, "cloud1", "normal1");
-    // }
-    // std::cout << "pose pivot to j: " << pose_local_[1][WINDOW_SIZE] << std::endl;
 }
 
 void Estimator::printParameter()

@@ -71,10 +71,6 @@ public:
     void calTimestamp(const PointITimeCloud &laser_cloud_in,
                       PointICloud &laser_cloud_out);
 
-    void extractCloud_aloam(const PointICloud &laserCloudIn,
-                            const ScanInfo &scan_info,
-                            cloudFeature &cloud_feature);
-
     void extractCloud(const PointICloud &laser_cloud_in,
                       const ScanInfo &scan_info,
                       cloudFeature &cloud_feature);

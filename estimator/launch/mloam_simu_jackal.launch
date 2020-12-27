@@ -32,10 +32,7 @@
                       -output_path=$(arg output_path)
                       -with_ua=$(arg with_ua)
                       -gf_method=$(arg gf_method)
-                      -gf_ratio_ini=$(arg gf_ratio_ini)
-                      -gnc=$(arg gnc)
-                      -debug_mode=$(arg debug_mode)
-                      -loss_mode=$(arg loss_mode)" output="screen">
+                      -gf_ratio_ini=$(arg gf_ratio_ini)" output="screen">
                 <remap from="/laser_odom" to="/laser_odom_0"/>
             </node>
         </group>

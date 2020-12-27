@@ -3,8 +3,8 @@
 # ours
 roslaunch mloam mloam_simu_jackal.launch \
     run_mloam:=true \
-    run_mloam_mapping:=false \
-    result_save:=true \
+    run_mloam_mapping:=true \
+    result_save:=false \
     bag_file:=$data_path \
     output_path:=$result_path
 # sleep 10

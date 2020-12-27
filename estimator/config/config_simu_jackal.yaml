@@ -6,7 +6,7 @@ multiple_thread: 0
 # segmmentation
 segment_cloud: 1
 horizon_scan: 400
-min_cluster_size: 15
+min_cluster_size: 30
 min_line_size: 10
 segment_valid_point_num: 5
 segment_valid_line_num: 3
@@ -102,7 +102,7 @@ lambda_thre_calib: 70
 n_calib: 25
 
 # good feature
-odom_gf_ratio: 1.0
+odom_gf_ratio: 0.8
 
 skip_num_odom_pub: 2
 
@@ -110,7 +110,12 @@ skip_num_odom_pub: 2
 map_corner_res: 0.2
 map_surf_res: 0.4 # stable parameters: 0.2
 map_outlier_res: 0.8
+map_sur_kf_res: 1.0
 map_eig_thre: 100
+
+distance_keyframes: 1.0           # m
+orientation_keyframes: 1.0        # degree
+surrounding_kf_radius: 50         # m
 
 # uncertainty parameter
 # translation, rotation, point (rho, phi, zeta)

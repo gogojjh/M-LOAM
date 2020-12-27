@@ -1,7 +1,6 @@
 # M-LOAM
-### Multi-LiDAR Odometry and Mapping
-M-LOAM is a robust system for multi-LiDAR extrinsic calibration, real-time odometry, and mapping. Without manual intervention, our
-system can start with several extrinsic-uncalibrated LiDARs, automatically calibrate their extrinsics, and provide accurate poses as well as a globally consistent map.
+## Robust Odometry and Mapping for Multi-LiDAR Systems with Online Extrinsic Calibration
+M-LOAM is a robust system for multi-LiDAR extrinsic calibration, real-time odometry, and mapping. Without manual intervention, our system can start with several extrinsic-uncalibrated LiDARs, automatically calibrate their extrinsics, and provide accurate poses as well as a globally consistent map.
 
 **Authors:** 
 [Jianhao Jiao](http://gogojjh.github.io), 
@@ -13,37 +12,48 @@ from [RAM-LAB](https://www.ramlab.com), [HKUST](http://www.ust.hk/)
 
 **Project website:** https://ram-lab.com/file/site/m-loam
 
+**Videos:**
+
+<a href="https://www.youtube.com/watch?v=qFA_bVkh89Y" target="_blank"><img src="https://img.youtube.com/vi/qFA_bVkh89Y/0.jpg" 
+alt="mloam" width="360" height="270" border="10" /></a>
+
+**Related Papers**
+* **Robust Odometry and Mapping for Multi-LiDAR Systems with Online Extrinsic Calibration**, Jianhao Jiao, Haoyang Ye, Yilong Zhu, Ming Liu, [pdf](https://arxiv.org/pdf/2010.14294.pdf)
+
+*If you use M-LOAM for your academic research, please cite this paper.* 
+
 ### 1. Prerequisites
-#### 1.1 **Ubuntu** and **ROS**
+1.1 **Ubuntu** and **ROS**
 Ubuntu 64-bit 16.04 or 18.04.
 ROS Kinetic or Melodic. [ROS Installation](http://wiki.ros.org/ROS/Installation)
 
-#### 1.2. **Ceres Solver**
-Follow [Ceres Installation](http://ceres-solver.org/installation.html).
+1.2. **Ceres Solver**
+Follow [Ceres Installation](http://ceres-solver.org/installation.html), remember to **make install**.
+<!-- (Our testing environment: Ubuntu 18.04, ROS Melodic, PCL 1.8, Eigen 3.3.3)  -->
 
-#### 1.3. **PCL**
+1.3. **PCL**
 Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
-> NOTE: <br>
-> Starting with PCL-1.7 you need to define PCL_NO_PRECOMPILE before you include any PCL headers to include the templated algorithms as well.
-> Choose the right linear solver: http://ceres-solver.org/solving_faqs.html
 
-#### 1.4. **OpenMP**
-```sudo apt install libomp-dev```
-> NOTE: <br>
-> tutorial: https://bisqwit.iki.fi/story/howto/openmp/#IntroductionToOpenmpInC <br>
-> slide: https://www3.nd.edu/~zxu2/acms60212-40212-S12/Lec-11-01.pdf
+1.4. **OpenMP**
+```
+  sudo apt install libomp-dev
+```
 
-#### 1.5. **Eigen3**
-```sudo apt install libeigen-dev```
-> NOTE: to prevent Eigen error: <br> 
-> https://eigen.tuxfamily.org/dox/group__TopicUnalignedArrayAssert.html
+1.5. **Eigen3**
+```
+  sudo apt install libeigen-dev
+```
 
-#### 1.6. **GLOG, GFLAGS, GTEST**
-> NOTE: installation <br>
-> https://juejin.im/post/5dca40b9f265da4d226e397e
+1.6. **GLOG, GFLAGS, GTEST**
 
-### 2. Build M-LOAM
-```catkin build mloam```
+### 2. Build M-LOAM on ROS
+```
+  cd ~/catkin_ws/src
+  git clone https://github.com/gogojjh/M-LOAM.git
+  cd M-LOAM
+  catkin build mloam
+  source ~/catkin_ws/devel/setup.bash
+```
 
 ### 3. Example
 * Datasets collected with different platforms:
@@ -59,11 +69,11 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
   4. Modify the shell files for methods in ``xx_main.sh``
   5. Run the python script: ``python2 run_mloam.py -program=single_test -sequence=xx -start_idx=0 -end_idx=0``
 
-### 5. Results
+<!-- ### 5. Results -->
 <!-- **red**: odometry; **green**: mapping; **blue**: gt -->
 <!-- <a href="https://www.youtube.com/embed/WDpH80nfZes" target="_blank"><img src="http://img.youtube.com/vi/WDpH80nfZes/0.jpg" alt="cla" width="240" height="180" border="10" /></a> -->
 
-* Test with SR <br>
+<!-- * Test with SR <br>
 ![](./picture/sr_trajectory.png)
 
 * Test in HKUST with RHD <br>
@@ -74,21 +84,24 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 ![](./picture/rv01.png)
 
 * Test with Oxford RoboCar <br>
-![](./picture/oxford_traj.png)
+![](./picture/oxford_traj.png) -->
 
-### 6. Additional Features (have not fixed)
+<!-- ### 6. Additional Features (have not fixed)
 * Future research
   1. [on-going] Add a loop closure
   2. [] Object-centric SLAM
   3. [] Use more representative features
   4. [] Integrated with high-frequency sensors
-  5. [] cross-domain, cross-modal dataset (simulator) for autonomous driving
+  5. [] cross-domain, cross-modal dataset (simulator) for autonomous driving -->
 
-### 6. System pipeline
-* Pipeline <br>
+### 4. System pipeline
+This could help you to understand the pipeline of M-LOAM. Note that **mloam_loop** is in development.
 ![](picture/mloam_pipeline.png)
 
-### 7. Acknowledgements
+### 5. Issues
+I have modified the code with several times and tried different new features during the journal review process. The code style is not very perfect. Also in some sequeneces, M-LOAM may not achieve the best performence. Hope you can understand and I will try to fix them.
+
+### 6. Acknowledgements
 Thanks for these great works from which we learned to write M-LOAM
 
 * LOAM (J. Zhang and S. Singh. LOAM: Lidar Odometry and Mapping in Real-time) and its advanced version: [A-LOAM](https://github.com/HKUST-Aerial-Robotics/A-LOAM);
@@ -96,30 +109,10 @@ Thanks for these great works from which we learned to write M-LOAM
 * [LIO-MAPPING](https://github.com/hyye/lio-mapping)
 * [VINS-MONO](https://github.com/HKUST-Aerial-Robotics/VINS-Mono)
 
-### 8. Licence
+### 7. Licence
 The source code is released under GPLv3 license.
 
-We are still working on improving the code reliability. For any technical issues, please contact Jianhao JIAO \<jjiao@ust.hk>, Haoyang Ye \<hyeab@ust.hk>, and Yilong Zhu \<yzhubr@ust.hk>
+We are still working on improving the code reliability. For any technical issues, please contact Jianhao JIAO \<jjiao@ust.hk>.
 
 For commercial inquiries, please contact Prof.Ming Liu \<eelium@ust.hk>
 
-<!-- ### 8. Compared with LEGO-LOAM
-* Note: 0.2/0.4 (corner/surf resolution)
-Algorithm                  | LEGO-LOAM  | M-LOAM 
----------------            | ----       | ---  
-before ds                  | 18734/90578| 59494/78022
-after ds                   | 11934/28110| 27954/14719
-ds map time                | 6.63ms     | 12.08ms
-input surf/corner num      | 3387/736   | 3785/2244
-ds current scan time       | 0.5851ms   | 2.37ms
-matching feature time      | 8.67ms     | 14.52ms
-whole optimization time    | 60-100ms   | 100-200ms
-save keyframes time        | 0.3913ms   | 0.000172ms
- -->
-
-### 9. Recent modifications
-1. **2020-10-16**: fix some bugs including: 
-   * the correspondence matching and computation of edge residuals;
-   * radius of surrdouning keyframes (50m->150m); 
-   * weight for optimization (w<=3); 
-   * not perform sliding window optimization in odometry since the 64-beam LiDAR is good

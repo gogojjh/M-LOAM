@@ -53,28 +53,21 @@ catkin_package(
 )
 
 ######################################################## float libraries
-add_library(mloam_lib_1
+add_library(mloam_lib
+    src/initial/initial_extrinsics.cpp
     src/featureExtract/feature_extract.cpp
-    src/utility/utility.cpp
-    src/estimator/parameters.cpp
-    src/estimator/pose.cpp
-    src/factor/pose_local_parameterization.cpp
-)
-target_link_libraries(mloam_lib_1
-    ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
-    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
-)
-
-add_library(mloam_lib_2
-    src/estimator/estimator.cpp
     src/imageSegmenter/image_segmenter.cpp
     src/lidarTracker/lidar_tracker.cpp
+    src/estimator/parameters.cpp
+    src/estimator/pose.cpp
+    src/estimator/estimator.cpp
+    src/utility/utility.cpp
     src/utility/cloud_visualizer.cpp
     src/utility/visualization.cpp
-    src/initial/initial_extrinsics.cpp
+    src/factor/pose_local_parameterization.cpp
     src/factor/marginalization_factor.cpp
 )
-target_link_libraries(mloam_lib_2
+target_link_libraries(mloam_lib
     ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
     ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
 )
@@ -84,23 +77,20 @@ add_executable(kittiHelper src/kittiHelper.cpp)
 target_link_libraries(kittiHelper ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
 add_executable(mloam_node_sr src/rosNodeSR.cpp)
-target_link_libraries(mloam_node_sr mloam_lib_1 mloam_lib_2)
+target_link_libraries(mloam_node_sr mloam_lib)
 
 add_executable(mloam_node_rhd src/rosNodeRHD.cpp)
-target_link_libraries(mloam_node_rhd mloam_lib_1 mloam_lib_2)
+target_link_libraries(mloam_node_rhd mloam_lib)
 
 add_executable(mloam_node_rv_hercules src/rosNodeRVHercules.cpp)
-target_link_libraries(mloam_node_rv_hercules mloam_lib_1 mloam_lib_2)
+target_link_libraries(mloam_node_rv_hercules mloam_lib)
 
 add_executable(mloam_node_rv_oxford src/rosNodeRVOxford.cpp)
-target_link_libraries(mloam_node_rv_oxford mloam_lib_1 mloam_lib_2)
+target_link_libraries(mloam_node_rv_oxford mloam_lib)
 
 add_executable(mloam_node_rv_kitti src/rosNodeRVKITTI.cpp)
-target_link_libraries(mloam_node_rv_kitti mloam_lib_1 mloam_lib_2)
-
-# add_executable(lidar_mapper_only_surf src/lidarMapper/lidar_mapper_only_surf.cpp)
-# target_link_libraries(lidar_mapper_only_surf mloam_lib_1)
+target_link_libraries(mloam_node_rv_kitti mloam_lib)
 
 add_executable(lidar_mapper_keyframe src/lidarMapper/lidar_mapper_keyframe.cpp)
-target_link_libraries(lidar_mapper_keyframe mloam_lib_1)
+target_link_libraries(lidar_mapper_keyframe mloam_lib)
 
