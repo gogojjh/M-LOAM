@@ -18,20 +18,26 @@ from [RAM-LAB](https://www.ramlab.com), [HKUST](http://www.ust.hk/)
 alt="mloam" width="360" height="270" border="10" /></a>
 
 **Related Papers**
-* **Robust Odometry and Mapping for Multi-LiDAR Systems with Online Extrinsic Calibration**, Jianhao Jiao, Haoyang Ye, Yilong Zhu, Ming Liu, [pdf](https://arxiv.org/pdf/2010.14294.pdf)
+* **Robust Odometry and Mapping for Multi-LiDAR Systems with Online Extrinsic Calibration**, Jianhao Jiao, Haoyang Ye, Yilong Zhu, Ming Liu, under review. [pdf](https://arxiv.org/pdf/2010.14294.pdf)
+* **Greedy-Based Feature Selection for Efficient LiDAR SLAM**, Jianhao Jiao, Yilong Zhu, Haoyang Ye, Huaiyang Huang, Peng Yun, Linxin Jiang, Lujia Wang, Ming Liu, under review.
+* **MLOD: Awareness of Extrinsic Perturbation in Multi-LiDAR 3D Object Detection for Autonomous Driving**, Jianhao Jiao*, Peng Yun, Lei Tai, Ming Liu, IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS, 2020). [pdf](https://arxiv.org/abs/2010.11702.pdf)
 
 *If you use M-LOAM for your academic research, please cite this paper.* 
 
+<!-- ----------------------------------------------------------- -->
 ### 1. Prerequisites
 1.1 **Ubuntu** and **ROS**
+
 Ubuntu 64-bit 16.04 or 18.04.
 ROS Kinetic or Melodic. [ROS Installation](http://wiki.ros.org/ROS/Installation)
 
 1.2. **Ceres Solver**
+
 Follow [Ceres Installation](http://ceres-solver.org/installation.html), remember to **make install**.
 <!-- (Our testing environment: Ubuntu 18.04, ROS Melodic, PCL 1.8, Eigen 3.3.3)  -->
 
 1.3. **PCL**
+
 Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 
 1.4. **OpenMP**
@@ -46,6 +52,7 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 
 1.6. **GLOG, GFLAGS, GTEST**
 
+<!-- ----------------------------------------------------------- -->
 ### 2. Build M-LOAM on ROS
 ```
   cd ~/catkin_ws/src
@@ -55,6 +62,7 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
   source ~/catkin_ws/devel/setup.bash
 ```
 
+<!-- ----------------------------------------------------------- -->
 ### 3. Example
 * Datasets collected with different platforms:
   1. [Simulation Robot (SR)](http://gofile.me/4jm56/k8xoztYes)
@@ -94,13 +102,16 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
   4. [] Integrated with high-frequency sensors
   5. [] cross-domain, cross-modal dataset (simulator) for autonomous driving -->
 
+<!-- ----------------------------------------------------------- -->
 ### 4. System pipeline
 This could help you to understand the pipeline of M-LOAM. Note that **mloam_loop** is in development.
 ![](picture/mloam_pipeline.png)
 
+<!-- ----------------------------------------------------------- -->
 ### 5. Issues
 I have modified the code with several times and tried different new features during the journal review process. The code style is not very perfect. Also in some sequeneces, M-LOAM may not achieve the best performence. Hope you can understand and I will try to fix them.
 
+<!-- ----------------------------------------------------------- -->
 ### 6. Acknowledgements
 Thanks for these great works from which we learned to write M-LOAM
 
@@ -109,6 +120,7 @@ Thanks for these great works from which we learned to write M-LOAM
 * [LIO-MAPPING](https://github.com/hyye/lio-mapping)
 * [VINS-MONO](https://github.com/HKUST-Aerial-Robotics/VINS-Mono)
 
+<!-- ----------------------------------------------------------- -->
 ### 7. Licence
 The source code is released under GPLv3 license.
 
