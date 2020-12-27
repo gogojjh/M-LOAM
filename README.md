@@ -8,7 +8,7 @@ M-LOAM is a robust system for multi-LiDAR extrinsic calibration, real-time odome
 [Yilong Zhu](https://scholar.google.com/citations?user=x8n6v2oAAAAJ&hl=zh-CN),
 [Linxin Jiang](xxx),
 [Ming Liu](https://scholar.google.com/citations?user=CdV5LfQAAAAJ&hl=zh-CN)
-from [RAM-LAB](https://www.ramlab.com), [HKUST](http://www.ust.hk/)
+from [RAM-LAB](https://www.ram-lab.com), [HKUST](http://www.ust.hk)
 
 **Project website:** https://ram-lab.com/file/site/m-loam
 
@@ -20,9 +20,9 @@ alt="mloam" width="360" height="270" border="10" /></a>
 **Related Papers**
 * **Robust Odometry and Mapping for Multi-LiDAR Systems with Online Extrinsic Calibration**, Jianhao Jiao, Haoyang Ye, Yilong Zhu, Ming Liu, under review. [pdf](https://arxiv.org/pdf/2010.14294.pdf)
 * **Greedy-Based Feature Selection for Efficient LiDAR SLAM**, Jianhao Jiao, Yilong Zhu, Haoyang Ye, Huaiyang Huang, Peng Yun, Linxin Jiang, Lujia Wang, Ming Liu, under review.
-* **MLOD: Awareness of Extrinsic Perturbation in Multi-LiDAR 3D Object Detection for Autonomous Driving**, Jianhao Jiao*, Peng Yun, Lei Tai, Ming Liu, IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS, 2020). [pdf](https://arxiv.org/abs/2010.11702.pdf)
+* **MLOD: Awareness of Extrinsic Perturbation in Multi-LiDAR 3D Object Detection for Autonomous Driving**, Jianhao Jiao*, Peng Yun*, Lei Tai, Ming Liu, IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS, 2020). [pdf](https://arxiv.org/abs/2010.11702.pdf)
 
-*If you use M-LOAM for your academic research, please cite this paper.* 
+*If you use M-LOAM for your academic research, please cite one of our paper.* 
 
 <!-- ----------------------------------------------------------- -->
 ### 1. Prerequisites
@@ -112,6 +112,12 @@ This could help you to understand the pipeline of M-LOAM. Note that **mloam_loop
 I have modified the code with several times and tried different new features during the journal review process. The code style is not very perfect. Also in some sequeneces, M-LOAM may not achieve the best performence. Hope you can understand and I will try to fix them.
 
 <!-- ----------------------------------------------------------- -->
+### 6. TODO
+1. Parameter tunning, and a more detailed tutorial .
+2. **loop closure**.
+3. **Docker** supplort. The initial Docker file is in the folder: ```docker/Dockerfile```
+
+<!-- ----------------------------------------------------------- -->
 ### 6. Acknowledgements
 Thanks for these great works from which we learned to write M-LOAM
 
@@ -122,9 +128,9 @@ Thanks for these great works from which we learned to write M-LOAM
 
 <!-- ----------------------------------------------------------- -->
 ### 7. Licence
-The source code is released under GPLv3 license.
+The source code is released under [GPLv3](http://www.gnu.org/licenses/) license.
 
-We are still working on improving the code reliability. For any technical issues, please contact Jianhao JIAO \<jjiao@ust.hk>.
+We are still working on improving the code reliability. For any technical issues, please contact Jianhao Jiao <jjiao@ust.hk>.
 
-For commercial inquiries, please contact Prof.Ming Liu \<eelium@ust.hk>
+For commercial inquiries, please contact Prof.Ming Liu <eelium@ust.hk>.
 
