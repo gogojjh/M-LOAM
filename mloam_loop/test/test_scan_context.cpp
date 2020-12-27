@@ -122,8 +122,6 @@ int main(int argc, char *argv[])
     TREE_MAKING_PERIOD = fsSettings["tree_making_period"];
     fsSettings.release();
 
-
-
     sc_manager.setParameter(LIDAR_HEIGHT,
                             PC_NUM_RING,
                             PC_NUM_SECTOR,
@@ -143,6 +141,7 @@ int main(int argc, char *argv[])
         ref_filename.push_back(std::string(entry.path().c_str()));
     }
     std::sort(ref_filename.begin(), ref_filename.end());
+    
     pcl::PointCloud<pcl::PointXYZI> ref, ref_non_ground;
     std::vector<pcl::PointCloud<pcl::PointXYZI>> ref_list;
     for (size_t i = 0; i < ref_filename.size(); i++)

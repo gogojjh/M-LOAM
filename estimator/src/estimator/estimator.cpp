@@ -917,8 +917,12 @@ void Estimator::optimizeMap()
                     for (const PointPlaneFeature &feature: features_frame)
                     {
                         LidarPureOdomPlaneNormFactor *f = new LidarPureOdomPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
-                        ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
-                            std::vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[IDX_REF]}, std::vector<int>{0});
+                        ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f,
+                                                                                       loss_function,
+                                                                                       std::vector<double *>{para_pose_[0],
+                                                                                                             para_pose_[i - pivot_idx],
+                                                                                                             para_ex_pose_[IDX_REF]},
+                                                                                       std::vector<int>{0});
                         marginalization_info->addResidualBlockInfo(residual_block_info);
                     }
                 }
@@ -931,8 +935,10 @@ void Estimator::optimizeMap()
                         for (const PointPlaneFeature &feature : cumu_surf_map_features_[n])
                         {
                             LidarOnlineCalibPlaneNormFactor *f = new LidarOnlineCalibPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
-                            ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
-                                std::vector<double *>{para_ex_pose_[n]}, std::vector<int>{});
+                            ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f,
+                                                                                           loss_function,
+                                                                                           std::vector<double *>{para_ex_pose_[n]},
+                                                                                           std::vector<int>{});
                             marginalization_info->addResidualBlockInfo(residual_block_info);
                         }
                     }
@@ -950,9 +956,12 @@ void Estimator::optimizeMap()
                     {
                         // if (feature.type_ == 'n') continue;
                         LidarPureOdomEdgeFactor *f = new LidarPureOdomEdgeFactor(feature.point_, feature.coeffs_, 1.0);
-                        // ceres::CostFunction *f = LidarPureOdomEdgeFactor::Create(feature.point_, feature.coeffs_, 1.0);
-                        ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
-                            std::vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[IDX_REF]}, std::vector<int>{0});
+                        ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f,
+                                                                                       loss_function,
+                                                                                       std::vector<double *>{para_pose_[0],
+                                                                                                             para_pose_[i - pivot_idx],
+                                                                                                             para_ex_pose_[IDX_REF]},
+                                                                                       std::vector<int>{0});
                         marginalization_info->addResidualBlockInfo(residual_block_info);
                     }
                 }                
@@ -965,7 +974,8 @@ void Estimator::optimizeMap()
                         for (const PointPlaneFeature &feature : cumu_corner_map_features_[n])
                         {
                             LidarOnlineCalibEdgeFactor *f = new LidarOnlineCalibEdgeFactor(feature.point_, feature.coeffs_, 1.0);
-                            ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f, loss_function,
+                            ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f,
+                                                                                           loss_function,
                                                                                            std::vector<double *>{para_ex_pose_[n]},
                                                                                            std::vector<int>{});
                             marginalization_info->addResidualBlockInfo(residual_block_info);
@@ -991,7 +1001,9 @@ void Estimator::optimizeMap()
                             LidarPureOdomPlaneNormFactor *f = new LidarPureOdomPlaneNormFactor(feature.point_, feature.coeffs_, 1.0);
                             ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f,
                                                                                            loss_function,
-                                                                                           vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]},
+                                                                                           vector<double *>{para_pose_[0],
+                                                                                                            para_pose_[i - pivot_idx],
+                                                                                                            para_ex_pose_[n]},
                                                                                            std::vector<int>{0});
                             marginalization_info->addResidualBlockInfo(residual_block_info);
                         }
@@ -1012,7 +1024,9 @@ void Estimator::optimizeMap()
                             // ceres::CostFunction *f = LidarPureOdomEdgeFactor::Create(feature.point_, feature.coeffs_, 1.0);
                             ResidualBlockInfo *residual_block_info = new ResidualBlockInfo(f,
                                                                                            loss_function,
-                                                                                           vector<double *>{para_pose_[0], para_pose_[i - pivot_idx], para_ex_pose_[n]},
+                                                                                           vector<double *>{para_pose_[0],
+                                                                                                            para_pose_[i - pivot_idx],
+                                                                                                            para_ex_pose_[n]},
                                                                                            std::vector<int>{0});
                             marginalization_info->addResidualBlockInfo(residual_block_info);
                         }
