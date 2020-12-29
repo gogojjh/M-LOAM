@@ -126,7 +126,7 @@ Thanks for these great works from which we learned to write M-LOAM
 * [LEGO-LOAM](https://github.com/RobustFieldAutonomyLab/LeGO-LOAM)
 * [LIO-MAPPING](https://github.com/hyye/lio-mapping)
 * [VINS-MONO](https://github.com/HKUST-Aerial-Robotics/VINS-Mono)
-
+* [Lidar Perception Library](https://github.com/LidarPerception/common_lib)
 <!-- ----------------------------------------------------------- -->
 ### 7. Licence
 The source code is released under [GPLv3](http://www.gnu.org/licenses/) license.
