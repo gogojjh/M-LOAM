@@ -55,9 +55,9 @@ Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 <!-- ----------------------------------------------------------- -->
 ### 2. Build M-LOAM on ROS
 ```
+  mkdir -p ~/catkin_ws/src
   cd ~/catkin_ws/src
   git clone https://github.com/gogojjh/M-LOAM.git
-  cd M-LOAM
   catkin build mloam
   source ~/catkin_ws/devel/setup.bash
 ```
