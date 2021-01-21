@@ -31,26 +31,22 @@ alt="mloam" width="360" height="270" border="10" /></a>
 Ubuntu 64-bit 16.04 or 18.04.
 ROS Kinetic or Melodic. [ROS Installation](http://wiki.ros.org/ROS/Installation)
 
-1.2. **Ceres Solver**
+1.2. **Ceres Solver && Eigen3**
 
-Follow [Ceres Installation](http://ceres-solver.org/installation.html), remember to **make install**.
-<!-- (Our testing environment: Ubuntu 18.04, ROS Melodic, PCL 1.8, Eigen 3.3.3)  -->
+```
+ ./setup/install_eigen3_ceres.sh
+```
 
-1.3. **PCL**
-
-Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
-
-1.4. **OpenMP**
+1.3. **OpenMP**
 ```
   sudo apt install libomp-dev
 ```
 
-1.5. **Eigen3**
+1.4 **Libpointmarcher**
 ```
-  sudo apt install libeigen-dev
+ ./setup/install_libnabo.sh
+ ./setup/install_libpointmatcher.sh
 ```
-
-1.6. **GLOG, GFLAGS, GTEST**
 
 <!-- ----------------------------------------------------------- -->
 ### 2. Build M-LOAM on ROS
