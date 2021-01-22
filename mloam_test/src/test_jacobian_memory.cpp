@@ -2,7 +2,7 @@
 #include <iostream>
 
 #include "../../estimator/src/estimator/pose.h"
-#include "../../estimator/src/factor/lidar_pivot_plane_norm_factor.hpp"
+#include "../../estimator/src/factor/lidar_pure_odom_factor.hpp"
 
 int main() {
   Eigen::Vector3d point_;
@@ -12,8 +12,7 @@ int main() {
 
   Pose pose_pivot, pose_i, pose_ext;
 
-  LidarPivotPlaneNormFactor f(point_, coeffs_, 1.0);
-
+  LidarPureOdomPlaneNormFactor f(point_, coeffs_, 1.0);
   double **param = new double *[3];
   param[0] = new double[1 * 7];
   param[0][0] = pose_pivot.t_(0);
