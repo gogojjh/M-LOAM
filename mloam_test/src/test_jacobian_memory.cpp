@@ -13,7 +13,6 @@ int main() {
   Pose pose_pivot, pose_i, pose_ext;
 
   LidarPureOdomPlaneNormFactor f(point_, coeffs_, 1.0);
-
   double **param = new double *[3];
   param[0] = new double[1 * 7];
   param[0][0] = pose_pivot.t_(0);
