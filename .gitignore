@@ -13,3 +13,5 @@ build
 build_docker
 
 data/
+
+docs/doxygen_generated/

@@ -66,23 +66,23 @@ catkin_package(
 # add_executable(test_ceres test_ceres.cpp)
 # target_link_libraries(test_ceres ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-add_executable(test_pointiwithcov src/test_pointiwithcov.cpp)
-target_link_libraries(test_pointiwithcov ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+#add_executable(test_pointiwithcov src/test_pointiwithcov.cpp)
+#target_link_libraries(test_pointiwithcov ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-add_executable(test_merge_pointcloud_sr src/test_merge_pointcloud_sr.cpp)
-target_link_libraries(test_merge_pointcloud_sr ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
+#add_executable(test_merge_pointcloud_sr src/test_merge_pointcloud_sr.cpp)
+#target_link_libraries(test_merge_pointcloud_sr ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
-add_executable(test_merge_pointcloud_rhd src/test_merge_pointcloud_rhd.cpp)
-target_link_libraries(test_merge_pointcloud_rhd ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
+#add_executable(test_merge_pointcloud_rhd src/test_merge_pointcloud_rhd.cpp)
+#target_link_libraries(test_merge_pointcloud_rhd ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
-add_executable(test_merge_pointcloud_rv_hercules src/test_merge_pointcloud_rv_hercules.cpp)
-target_link_libraries(test_merge_pointcloud_rv_hercules ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
+#add_executable(test_merge_pointcloud_rv_hercules src/test_merge_pointcloud_rv_hercules.cpp)
+#target_link_libraries(test_merge_pointcloud_rv_hercules ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
-add_executable(test_generate_bag_from_data_hercules src/test_generate_bag_from_data_hercules.cpp)
-target_link_libraries(test_generate_bag_from_data_hercules ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+#add_executable(test_generate_bag_from_data_hercules src/test_generate_bag_from_data_hercules.cpp)
+#target_link_libraries(test_generate_bag_from_data_hercules ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-add_executable(test_generate_noisy_bag src/test_generate_noisy_bag.cpp)
-target_link_libraries(test_generate_noisy_bag ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+#add_executable(test_generate_noisy_bag src/test_generate_noisy_bag.cpp)
+#target_link_libraries(test_generate_noisy_bag ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 # add_executable(test_parse_bag test_parse_bag.cpp)
 # target_link_libraries(test_parse_bag ${catkin_LIBRARIES} ${PCL_LIBRARIES})
@@ -99,54 +99,57 @@ target_link_libraries(test_generate_noisy_bag ${catkin_LIBRARIES} ${PCL_LIBRARIE
 # add_executable(test_generate_full_map test_generate_full_map.cpp)
 # target_link_libraries(test_generate_full_map poseIO mloam_lib_1)
 
-add_executable(test_rnd src/test_rnd.cpp)
-target_link_libraries(test_rnd)
+#add_executable(test_rnd src/test_rnd.cpp)
+#target_link_libraries(test_rnd)
 
-add_executable(test_rgi src/test_rgi.cpp)
-target_link_libraries(test_rgi ${catkin_LIBRARIES})
+#add_executable(test_rgi src/test_rgi.cpp)
+#target_link_libraries(test_rgi ${catkin_LIBRARIES})
 
-add_executable(test_generate_bag_from_data_oxford 
-	src/test_generate_bag_from_data_oxford.cpp ../estimator/src/estimator/pose.cpp)
-target_link_libraries(test_generate_bag_from_data_oxford
-    ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
-    ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} 
-    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
-)
+#add_executable(test_generate_bag_from_data_oxford 
+#	src/test_generate_bag_from_data_oxford.cpp ../estimator/src/estimator/pose.cpp)
+#target_link_libraries(test_generate_bag_from_data_oxford
+#    ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
+#    ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} 
+#    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
+#)
 
-add_executable(test_merge_pointcloud_oxford 
-	src/test_merge_pointcloud_oxford.cpp ../estimator/src/estimator/pose.cpp)
-target_link_libraries(test_merge_pointcloud_oxford
-    ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
-    ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} 
-    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
-)
+#add_executable(test_merge_pointcloud_oxford 
+#	src/test_merge_pointcloud_oxford.cpp ../estimator/src/estimator/pose.cpp)
+#target_link_libraries(test_merge_pointcloud_oxford
+#    ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
+#    ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} 
+#    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
+#)
 
-add_executable(test_jacobian_memory 
-	src/test_jacobian_memory.cpp ../estimator/src/estimator/pose.cpp)
-target_link_libraries(test_jacobian_memory
-    ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
-    ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} 
-    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
-)
+#add_executable(test_jacobian_memory 
+#	src/test_jacobian_memory.cpp ../estimator/src/estimator/pose.cpp)
+#target_link_libraries(test_jacobian_memory
+#    ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES} 
+#    ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} 
+#    ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
+#)
 
 # add_executable(ceres_robust_curve_fitting 
 #     src/ceres_robust_curve_fitting.cpp src/impl_loss_function.cpp)
 # target_link_libraries(ceres_robust_curve_fitting ${catkin_LIBRARIES} 
 # 	${CERES_LIBRARIES} ${GLOG_LIBRARIES})
 
-add_executable(ceres_robust_curve_fitting_2 
-    src/ceres_robust_curve_fitting_2.cpp src/impl_loss_function.cpp)
-target_link_libraries(ceres_robust_curve_fitting_2 ${catkin_LIBRARIES} 
-	${CERES_LIBRARIES} ${GLOG_LIBRARIES})
+#add_executable(ceres_robust_curve_fitting_2 
+#    src/ceres_robust_curve_fitting_2.cpp src/impl_loss_function.cpp)
+#target_link_libraries(ceres_robust_curve_fitting_2 ${catkin_LIBRARIES} 
+#	${CERES_LIBRARIES} ${GLOG_LIBRARIES})
 
-add_executable(ceres_fitting_uct src/ceres_fitting_uct.cpp)
-target_link_libraries(ceres_fitting_uct ${catkin_LIBRARIES} 
-	${CERES_LIBRARIES} ${GLOG_LIBRARIES})
+#add_executable(ceres_fitting_uct src/ceres_fitting_uct.cpp)
+#target_link_libraries(ceres_fitting_uct ${catkin_LIBRARIES} 
+#	${CERES_LIBRARIES} ${GLOG_LIBRARIES})
 
 # add_executable(ceres_simple_bundle_adjustment
 #     src/ceres_simple_bundle_adjustment.cpp src/impl_loss_function.cpp)
 # target_link_libraries(ceres_simple_bundle_adjustment ${catkin_LIBRARIES} 
 # 	${CERES_LIBRARIES} ${GLOG_LIBRARIES})
 
-add_executable(test_timing src/test_timing.cpp)
-target_link_libraries(test_timing ${catkin_LIBRARIES})
+#add_executable(test_timing src/test_timing.cpp)
+#target_link_libraries(test_timing ${catkin_LIBRARIES})
+
+add_executable(test_quaternion src/test_quaternion.cpp)
+target_link_libraries(test_quaternion ${catkin_LIBRARIES})
