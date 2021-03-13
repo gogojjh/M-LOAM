@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
 	cv_bridge
 	image_transport
 	message_generation
+	visualization_msgs
 
 	pcl_ros
 	pcl_conversions
@@ -33,7 +34,7 @@ find_package(Ceres REQUIRED)
 find_package(Gflags REQUIRED)
 find_package(Glog REQUIRED)
 find_package(libpointmatcher REQUIRED)
-# find_package(G2O)
+find_package(G2O)
 
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
@@ -93,11 +94,15 @@ catkin_package(
 # add_executable(test_cuda_voxelgrid test_cuda_voxelgrid.cpp)
 # target_link_libraries(test_cuda_voxelgrid ${PCL_LIBRARIES})
 
-# add_library(poseIO SHARED g2oIO/PoseGraphIO.cpp)
-# target_link_libraries(poseIO g2o_core g2o_stuff g2o_types_slam3d)
+add_library(poseIO SHARED src/g2oIO/PoseGraphIO.cpp)
+target_link_libraries(poseIO g2o_core g2o_stuff g2o_types_slam3d)
 
 # add_executable(test_generate_full_map test_generate_full_map.cpp)
 # target_link_libraries(test_generate_full_map poseIO mloam_lib_1)
+
+add_executable(test_merge_pose_map src/test_merge_pose_map.cpp)
+target_link_libraries(test_merge_pose_map poseIO ${catkin_LIBRARIES}  ${PCL_LIBRARIES}  
+					  ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 #add_executable(test_rnd src/test_rnd.cpp)
 #target_link_libraries(test_rnd)
@@ -151,5 +156,5 @@ catkin_package(
 #add_executable(test_timing src/test_timing.cpp)
 #target_link_libraries(test_timing ${catkin_LIBRARIES})
 
-add_executable(test_quaternion src/test_quaternion.cpp)
-target_link_libraries(test_quaternion ${catkin_LIBRARIES})
+#add_executable(test_quaternion src/test_quaternion.cpp)
+#target_link_libraries(test_quaternion ${catkin_LIBRARIES})

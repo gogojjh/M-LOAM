@@ -66,9 +66,9 @@ void PoseGraphIO::insertPose(Eigen::Isometry3d pose)
 std::vector<Eigen::Isometry3d, Eigen::aligned_allocator<Eigen::Isometry3d>>
 PoseGraphIO::getEigenPoseFromg2oFile(std::string &g2ofilename)
 {
-    std::cout << "Reading the g2o file ~" << std::endl;
+    // std::cout << "Reading the g2o file ~" << std::endl;
     std::ifstream fin(g2ofilename);
-    std::cout << "G2o opened" << std::endl;
+    // std::cout << "G2o opened" << std::endl;
     if (!fin)
     {
         std::cerr << "file " << g2ofilename << " does not exist." << std::endl;
@@ -103,6 +103,6 @@ PoseGraphIO::getEigenPoseFromg2oFile(std::string &g2ofilename)
         if (!fin.good())
             break;
     }
-    std::cout << "read total " << vT.size() << " vertices\n";
+    // std::cout << "read total " << vT.size() << " vertices\n";
     return vT;
 }
