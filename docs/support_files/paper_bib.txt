@@ -4,3 +4,21 @@
   journal={arXiv preprint arXiv:2010.14294},
   year={2020}
 }
+
+@inproceedings{jiao2021greedy,
+  title={Greedy-Based Feature Selection for Efficient LiDAR SLAM},
+  author={Jiao, Jianhao and Zhu, Yilong and Ye, Haoyang and Huang, Huaiyang and Yun, Peng and Jiang, Linxin and Wang, Lujia and Liu, Ming},
+  booktitle={2021 IEEE International Conference on Robotics and Automation (ICRA)},
+  year={2021},
+  organization={IEEE}
+}
+
+@INPROCEEDINGS{jiao2020mlod,
+  author={Jiao, Jianhao and Yun, Peng and Tai, Lei and Liu, Ming},
+  booktitle={2020 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)}, 
+  title={MLOD: Awareness of Extrinsic Perturbation in Multi-LiDAR 3D Object Detection for Autonomous Driving}, 
+  year={2020},
+  volume={},
+  number={},
+  pages={10556-10563},
+  doi={10.1109/IROS45743.2020.9341254}}
