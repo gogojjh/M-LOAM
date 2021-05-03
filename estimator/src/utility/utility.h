@@ -165,6 +165,7 @@ inline void CRSMatrix2EigenMatrix(const ceres::CRSMatrix &crs_matrix, Eigen::Spa
     }
 }
 
+// this implementation follows the definition in "Quaternion kinematics for the error-state Kalman filter"
 class Utility
 {
   public:
@@ -208,8 +209,10 @@ class Utility
     {
         Eigen::Quaternion<typename Derived::Scalar> qq = positify(q);
         Eigen::Matrix<typename Derived::Scalar, 4, 4> ans;
-        ans(0, 0) = qq.w(), ans.template block<1, 3>(0, 1) = -qq.vec().transpose();
-        ans.template block<3, 1>(1, 0) = qq.vec(), ans.template block<3, 3>(1, 1) = qq.w() * Eigen::Matrix<typename Derived::Scalar, 3, 3>::Identity() + skewSymmetric(qq.vec());
+        ans(0, 0) = qq.w(), 
+        ans.template block<1, 3>(0, 1) = -qq.vec().transpose();
+        ans.template block<3, 1>(1, 0) = qq.vec(), 
+        ans.template block<3, 3>(1, 1) = qq.w() * Eigen::Matrix<typename Derived::Scalar, 3, 3>::Identity() + skewSymmetric(qq.vec());
         return ans;
     }
 
@@ -218,8 +221,10 @@ class Utility
     {
         Eigen::Quaternion<typename Derived::Scalar> pp = positify(p);
         Eigen::Matrix<typename Derived::Scalar, 4, 4> ans;
-        ans(0, 0) = pp.w(), ans.template block<1, 3>(0, 1) = -pp.vec().transpose();
-        ans.template block<3, 1>(1, 0) = pp.vec(), ans.template block<3, 3>(1, 1) = pp.w() * Eigen::Matrix<typename Derived::Scalar, 3, 3>::Identity() - skewSymmetric(pp.vec());
+        ans(0, 0) = pp.w(), 
+        ans.template block<1, 3>(0, 1) = -pp.vec().transpose();
+        ans.template block<3, 1>(1, 0) = pp.vec(), 
+        ans.template block<3, 3>(1, 1) = pp.w() * Eigen::Matrix<typename Derived::Scalar, 3, 3>::Identity() - skewSymmetric(pp.vec());
         return ans;
     }
 

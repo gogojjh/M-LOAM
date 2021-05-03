@@ -59,6 +59,7 @@ public:
                 Eigen::Matrix<double, 6, 6> jaco_prior;
                 jaco_prior.setIdentity();
 
+                // TODO: the jacobian seem to be wrong, please fix
                 jaco_prior.bottomRightCorner<3, 3>() = LeftQuatMatrix(Q.inverse() * rot_).topLeftCorner<3, 3>();
 
                 // FIXME: info

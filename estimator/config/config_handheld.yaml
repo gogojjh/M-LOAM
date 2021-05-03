@@ -153,7 +153,7 @@ orientation_keyframes: 1.0
 surrounding_kf_radius: 30.0
 
 # uncertainty parameter
-# translation, rotation, point (rho, phi, zeta)
+# translation, rotation, point (rho, phi, zeta) (in lie group)
 uct_ext: !!opencv-matrix
    rows: 2
    cols: 6

@@ -1558,10 +1558,6 @@ void Estimator::vector2Double()
         para_ex_pose_[i][5] = qbl_[i].z();
         para_ex_pose_[i][6] = qbl_[i].w();
     }
-    // for (size_t i = 0; i < NUM_OF_LASER; i++)
-    // {
-    //     para_td_[i] = tdbl_[i];
-    // }
 }
 
 void Estimator::double2Vector()
@@ -1577,10 +1573,6 @@ void Estimator::double2Vector()
         tbl_[i] = Eigen::Vector3d(para_ex_pose_[i][0], para_ex_pose_[i][1], para_ex_pose_[i][2]);
         qbl_[i] = Eigen::Quaterniond(para_ex_pose_[i][6], para_ex_pose_[i][3], para_ex_pose_[i][4], para_ex_pose_[i][5]);
     }
-    // for (size_t i = 0; i < NUM_OF_LASER; i++)
-    // {
-    //     tdbl_[i] = para_td_[i];
-    // }
 }
 
 void Estimator::evalResidual(ceres::Problem &problem,
@@ -1598,19 +1590,8 @@ void Estimator::evalResidual(ceres::Problem &problem,
 		e_option.parameter_blocks = para_ids;
 		e_option.residual_blocks = res_ids_proj;
         problem.Evaluate(e_option, &cost, nullptr, nullptr, &jaco);
-        // printf("cost res: %f\n", cost);
         evalDegenracy(local_param_ids, jaco);
     }
-	// if (MARGINALIZATION_FACTOR)
-	// {
-	// 	if (last_marginalization_info_ && !res_ids_marg.empty())
-	// 	{
-	// 		e_option.parameter_blocks = para_ids;
-	// 		e_option.residual_blocks = res_ids_marg;
-    //         problem.Evaluate(e_option, &cost, nullptr, nullptr, &jaco);
-    //         printf("cost marg: %f\n", cost);
-	// 	}
-	// }
 }
 
 // A^TA is not only symmetric and invertiable: https://math.stackexchange.com/questions/2352684/when-is-a-symmetric-matrix-invertible
@@ -1624,20 +1605,6 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
     CRSMatrix2EigenMatrix(jaco, mat_J);
     Eigen::SparseMatrix<double, Eigen::RowMajor> mat_Jt = mat_J.transpose();
     Eigen::MatrixXd mat_JtJ = mat_Jt * mat_J;
-    // bool b_vis = false; // to verify the structure of A^T*A
-    // if (b_vis)
-    // {
-    //     printf("visualize the structure of H(J^T*J)\n");
-    //     for (size_t i = 0; i < mat_JtJ.rows(); i++)
-    //     {
-    //         for (auto j = 0; j < mat_JtJ.cols(); j++)
-    //         {
-    //             if (mat_JtJ(i, j) == 0) std::cout << "0 ";
-    //                                else std::cout << "1 ";
-    //         }
-    //         std::cout << std::endl;
-    //     }
-    // }
 
     // calculate the degeneracy factor of poses
     for (size_t i = 0; i < OPT_WINDOW_SIZE + 1; i++)
@@ -1664,8 +1631,6 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
         if (local_param_ids[i]->is_degenerate_)
         {
             local_param_ids[i]->V_update_ = mat_P;
-            // std::cout << "param " << i << " is degenerate !" << std::endl;
-            // std::cout << mat_P << std::endl;
         }
     }
 
@@ -1793,11 +1758,6 @@ void Estimator::printParameter()
             para_ex_pose_[i][1] << " " <<
             para_ex_pose_[i][2] << std::endl;
     }
-    // for (size_t i = 0; i < NUM_OF_LASER; i++)
-    // {
-    //     std::cout << "dt: " <<
-    //         para_td_[i] << std::endl;
-    // }
 }
 
 void Estimator::printSlideWindow()

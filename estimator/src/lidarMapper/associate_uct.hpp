@@ -23,7 +23,7 @@ inline Eigen::Matrix3d covop1(const Eigen::Matrix3d &B)
 
 inline Eigen::Matrix3d covop2(const Eigen::Matrix3d &B, const Eigen::Matrix3d &C)
 {
-    Eigen::Matrix3d A = covop1(B) * covop1(C) * covop1(C * B);
+    Eigen::Matrix3d A = covop1(B) * covop1(C) + covop1(C * B);
     return A;
 }
 
@@ -62,7 +62,8 @@ inline void compoundPoseWithCov(const Pose &pose_1, const Eigen::Matrix<double, 
         A2.topRightCorner<3, 3>() = covop1(cov_2_rp + cov_2_rp.transpose());
         A2.bottomRightCorner<3, 3>() = covop1(cov_2_pp);
 
-        Eigen::Matrix3d Brr = covop2(cov_1_pp, cov_2_rr) + covop2(cov_1_rp.transpose(), cov_2_rp) + covop2(cov_1_rp, cov_2_rp.transpose()) + covop2(cov_1_rr, cov_2_pp);
+        Eigen::Matrix3d Brr = covop2(cov_1_pp, cov_2_rr) + covop2(cov_1_rp.transpose(), cov_2_rp) +
+                              covop2(cov_1_rp, cov_2_rp.transpose()) + covop2(cov_1_rr, cov_2_pp);
         Eigen::Matrix3d Brp = covop2(cov_1_pp, cov_2_rp.transpose()) + covop2(cov_1_rp.transpose(), cov_2_pp);
         Eigen::Matrix3d Bpp = covop2(cov_1_pp, cov_2_pp);
         Eigen::Matrix<double, 6, 6> B = Eigen::Matrix<double, 6, 6>::Zero();

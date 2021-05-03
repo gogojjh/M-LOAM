@@ -70,7 +70,10 @@
         "string": "cpp",
         "forward_list": "cpp",
         "filesystem": "cpp",
-        "matrixfunctions": "cpp"
+        "matrixfunctions": "cpp",
+        "geometry": "cpp",
+        "*.cuh": "cpp",
+        "*.txx": "cpp"
     },
     "cmake.configureOnOpen": true,
     "C_Cpp.errorSquiggles": "Disabled"

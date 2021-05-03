@@ -115,6 +115,7 @@ bool InitialExtrinsics::checkScrewMotion(const Pose &pose_ref, const Pose &pose_
     return (r_dis < EPSILON_R) && (t_dis < EPSILON_T);
 }
 
+// The quaternion is used in the Hamilton formula
 bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx_data, Pose &calib_result)
 {
     assert(idx_ref < NUM_OF_LASER);
@@ -136,7 +137,7 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
         Eigen::Matrix4d L, R; // Q1 and Q2 to represent the quaternion representation
         double w = pose_ref.q_.w();
         Eigen::Vector3d q = pose_ref.q_.vec();
-        L.block<3, 3>(0, 0) = w * Eigen::Matrix3d::Identity() + Utility::skewSymmetric(q);
+        L.block<3, 3>(0, 0) = w * Eigen::Matrix3d::Identity() + Utility::skewSymmetric(q); // LeftQuatMatrix
         L.block<3, 1>(0, 3) = q;
         L.block<1, 3>(3, 0) = -q.transpose();
         L(3, 3) = w;
@@ -190,7 +191,7 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
     //     Eigen::Matrix<double, 4, 1> x = svd.matrixV().col(3);
     //     calib_ext_[idx_data].q_ = Eigen::Quaterniond(x);
     // }
-    Eigen::Matrix<double, 4, 1> x = svd.matrixV().col(3);
+    Eigen::Matrix<double, 4, 1> x = svd.matrixV().col(3); // [w, x, y, z]
     if (x[0] < 0) x = -x; // use the standard quaternion
     calib_ext_[idx_data].q_ = Eigen::Quaterniond(x);
 

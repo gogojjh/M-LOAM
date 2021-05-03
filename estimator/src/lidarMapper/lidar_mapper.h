@@ -357,14 +357,29 @@ public:
             feature_visited[k] = 1;
             size_t cnt_visited = 1;
             PointIWithCov point_old = laser_cloud.points[k]; 
-            b_match = f_extract.matchSurfPointFromMap(kdtree_from_map,
-                                                      laser_map,
-                                                      point_old,
-                                                      pose_local,
-                                                      all_features[k],
-                                                      k,
-                                                      n_neigh,
-                                                      false);
+            b_match = false;
+            if (feature_type == 's')
+            {            
+                b_match = f_extract.matchSurfPointFromMap(kdtree_from_map,
+                                                          laser_map,
+                                                          point_old,
+                                                          pose_local,
+                                                          all_features[k],
+                                                          k,
+                                                          n_neigh,
+                                                          false);
+            }
+            else if (feature_type == 'c')
+            {
+                b_match = f_extract.matchCornerPointFromMap(kdtree_from_map,
+                                                            laser_map,
+                                                            point_old,
+                                                            pose_local,
+                                                            all_features[k],
+                                                            k,
+                                                            n_neigh,
+                                                            false);
+            }
             if (b_match)
             {
                 sel_feature_idx[num_sel_features] = k;

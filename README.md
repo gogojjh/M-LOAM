@@ -15,9 +15,9 @@ from [RAM-LAB](https://www.ram-lab.com), [HKUST](http://www.ust.hk)
 **Videos:**
 
 <a href="https://www.youtube.com/watch?v=VqaIb3GaCmE" target="_blank"><img src="https://img.youtube.com/vi/VqaIb3GaCmE/0.jpg" 
-alt="mloam" width="280" height="200" border="10" /></a>
+alt="mloam" width="320" height="210" border="10" /></a>
 
-(Video link in for mainland China friends: <a href="https://www.bilibili.com/video/BV1ur4y1K7FR/">Video</a>)
+(Video link for mainland China friends: <a href="https://www.bilibili.com/video/BV1ur4y1K7FR/">Video</a>)
 
 **Related Papers**
 * **Robust Odometry and Mapping for Multi-LiDAR Systems with Online Extrinsic Calibration**, Jianhao Jiao, Haoyang Ye, Yilong Zhu, Ming Liu, under review. [pdf](https://arxiv.org/pdf/2010.14294.pdf)
