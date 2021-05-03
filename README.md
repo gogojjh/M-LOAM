@@ -19,13 +19,16 @@ alt="mloam" width="320" height="210" border="10" /></a>
 
 (Video link for mainland China friends: <a href="https://www.bilibili.com/video/BV1ur4y1K7FR/">Video</a>)
 
-**Related Papers**
-* **Robust Odometry and Mapping for Multi-LiDAR Systems with Online Extrinsic Calibration**, Jianhao Jiao, Haoyang Ye, Yilong Zhu, Ming Liu, IEEE Transactions on Robotics (*T-RO*), 2021. [pdf](https://arxiv.org/pdf/2010.14294.pdf)
+**Related Papers in Solving Different Subproblems for Multi-LiDAR Systems**
+* **Robust Odometry and Mapping for Multi-LiDAR Systems with Online Extrinsic Calibration**, **Jianhao Jiao**, Haoyang Ye, Yilong Zhu, Ming Liu, IEEE Transactions on Robotics (*T-RO*), 2021. [pdf](https://arxiv.org/pdf/2010.14294.pdf)
+  - Tackle the extrinsic calibration, multi-LiDAR fusion, pose drift, and mapping uncertainty.
 
-* **Greedy-Based Feature Selection for Efficient LiDAR SLAM**, Jianhao Jiao, Yilong Zhu, Haoyang Ye, Huaiyang Huang, Peng Yun, Linxin Jiang, Lujia Wang, Ming Liu, 
+* **Greedy-Based Feature Selection for Efficient LiDAR SLAM**, **Jianhao Jiao**, Yilong Zhu, Haoyang Ye, Huaiyang Huang, Peng Yun, Linxin Jiang, Lujia Wang, Ming Liu, 
 International Conference on Robotics and Automation (*ICRA*) 2021 , Xi An, China. [pdf](https://www.ram-lab.com/papers/2021/jiao2021greedy.pdf)
+  - Tackle the algorithm latency issue.
 
-* **MLOD: Awareness of Extrinsic Perturbation in Multi-LiDAR 3D Object Detection for Autonomous Driving**, Jianhao Jiao*, Peng Yun*, Lei Tai, Ming Liu, IEEE/RSJ International Conference on Intelligent Robots and Systems (*IROS*) 2020. [pdf](https://arxiv.org/abs/2010.11702.pdf)
+* **MLOD: Awareness of Extrinsic Perturbation in Multi-LiDAR 3D Object Detection for Autonomous Driving**, **Jianhao Jiao***, Peng Yun*, Lei Tai, Ming Liu, IEEE/RSJ International Conference on Intelligent Robots and Systems (*IROS*) 2020. [pdf](https://arxiv.org/abs/2010.11702.pdf)
+  - Tackle the multi-LiDAR-based 3D object detection against the hardware failure (injected large extrinsic perturbation).
 
 *If you use M-LOAM for your academic research, please cite one of our paper.* [bib](https://github.com/gogojjh/M-LOAM/blob/mloam_gf/docs/support_files/paper_bib.txt)
 
