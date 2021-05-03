@@ -1626,7 +1626,7 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
             }
         }
         std::cout << i << " D factor: " << mat_E(0, 0) << ": " << mat_V_f.col(0).transpose() << std::endl;
-        LOG(INFO) << i << " D factor: " << mat_E(0, 0) << ": " << mat_V_f.col(0).transpose();
+        // LOG(INFO) << i << " D factor: " << mat_E(0, 0) << ": " << mat_V_f.col(0).transpose();
         Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6
         if (local_param_ids[i]->is_degenerate_)
         {
@@ -1717,7 +1717,7 @@ void Estimator::evalCalib()
                 {
                     LOG(INFO) << n << ":";
                     Eigen::Matrix<double, 6, 6> pose_cov;
-                    computeMeanPose(pose_calib_[n], pose_mean, pose_cov); // compute the mean calibration parameters
+                    computeMeanPose(pose_calib_[n], pose_mean, pose_cov); // compute the mean calibration parameters on lie algebra
                     qbl_[n] = pose_mean.q_;
                     tbl_[n] = pose_mean.t_;
                     covbl_[n] = pose_cov.diagonal().asDiagonal();
