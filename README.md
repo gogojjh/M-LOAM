@@ -20,9 +20,12 @@ alt="mloam" width="320" height="210" border="10" /></a>
 (Video link for mainland China friends: <a href="https://www.bilibili.com/video/BV1ur4y1K7FR/">Video</a>)
 
 **Related Papers**
-* **Robust Odometry and Mapping for Multi-LiDAR Systems with Online Extrinsic Calibration**, Jianhao Jiao, Haoyang Ye, Yilong Zhu, Ming Liu, under review. [pdf](https://arxiv.org/pdf/2010.14294.pdf)
-* **Greedy-Based Feature Selection for Efficient LiDAR SLAM**, Jianhao Jiao, Yilong Zhu, Haoyang Ye, Huaiyang Huang, Peng Yun, Linxin Jiang, Lujia Wang, Ming Liu, under review.
-* **MLOD: Awareness of Extrinsic Perturbation in Multi-LiDAR 3D Object Detection for Autonomous Driving**, Jianhao Jiao*, Peng Yun*, Lei Tai, Ming Liu, IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS, 2020). [pdf](https://arxiv.org/abs/2010.11702.pdf)
+* **Robust Odometry and Mapping for Multi-LiDAR Systems with Online Extrinsic Calibration**, Jianhao Jiao, Haoyang Ye, Yilong Zhu, Ming Liu, IEEE Transactions on Robotics (*T-RO*), 2021. [pdf](https://arxiv.org/pdf/2010.14294.pdf)
+
+* **Greedy-Based Feature Selection for Efficient LiDAR SLAM**, Jianhao Jiao, Yilong Zhu, Haoyang Ye, Huaiyang Huang, Peng Yun, Linxin Jiang, Lujia Wang, Ming Liu, 
+International Conference on Robotics and Automation (*ICRA*) 2021 , Xi An, China. [pdf](https://www.ram-lab.com/papers/2021/jiao2021greedy.pdf)
+
+* **MLOD: Awareness of Extrinsic Perturbation in Multi-LiDAR 3D Object Detection for Autonomous Driving**, Jianhao Jiao*, Peng Yun*, Lei Tai, Ming Liu, IEEE/RSJ International Conference on Intelligent Robots and Systems (*IROS*) 2020. [pdf](https://arxiv.org/abs/2010.11702.pdf)
 
 *If you use M-LOAM for your academic research, please cite one of our paper.* [bib](https://github.com/gogojjh/M-LOAM/blob/mloam_gf/support_files/paper_bib.txt)
 
@@ -73,7 +76,13 @@ ROS Kinetic or Melodic. [ROS Installation](http://wiki.ros.org/ROS/Installation)
   2. Enter the script folder: ``roscd mloam/script/``
   3. Modify the python script: ``run_mloam.py`` for specific platforms with correct path
   4. Modify the shell files for methods in ``xx_main.sh``
-  5. Run the python script: ``python2 run_mloam.py -program=single_test -sequence=xx -start_idx=0 -end_idx=0``
+  5. Run the python script: 
+  * ``python2 run_mloam.py -program=single_test -sequence=SR -start_idx=0 -end_idx=4`` 
+    * You will broadcast the SR01.bag, SR02.bag, SR03.bag, SR04.bag, SR05.bag respectively to test the M-LOAM system.
+  * ``python2 run_mloam.py -program=single_test -sequence=RHD -start_idx=0 -end_idx=2`` 
+    * You will broadcast the RHD02lab.bag, RHD03garden.bag, RHD04building.bag respectively to test the M-LOAM system.
+  * ``python2 run_mloam.py -program=single_test -sequence=RHD -start_idx=1 -end_idx=1`` 
+    * You will broadcast the RV01.bag to test the M-LOAM system.
 
 <!-- ### 5. Results -->
 <!-- **red**: odometry; **green**: mapping; **blue**: gt -->
@@ -106,11 +115,11 @@ This could help you to understand the pipeline of M-LOAM. Note that **mloam_loop
 ![](picture/mloam_pipeline.png)
 
 <!-- ----------------------------------------------------------- -->
-### 5. Issues
-I have modified the code with several times and tried different new features during the journal review process. The code style is not very perfect. Also in some sequeneces, M-LOAM may not achieve the best performence. Hope you can understand and I will try to fix them.
+<!-- ### 5. Issues
+I have modified the code with several times and tried different new features during the journal review process. The code style is not very perfect. Also in some sequeneces, M-LOAM may not achieve the best performence. Hope you can understand and I will try to fix them. -->
 
 <!-- ----------------------------------------------------------- -->
-### 6. TODO
+### 5. TODO
 1. Parameter tunning, and a more detailed tutorial .
 2. **loop closure**.
 3. **Docker** support. The initial Docker file is in the folder: ```docker/Dockerfile```
@@ -125,6 +134,7 @@ Thanks for these great works from which we learned to write M-LOAM
 * [LIO-MAPPING](https://github.com/hyye/lio-mapping)
 * [VINS-MONO](https://github.com/HKUST-Aerial-Robotics/VINS-Mono)
 * [Lidar Perception Library](https://github.com/LidarPerception/common_lib)
+
 <!-- ----------------------------------------------------------- -->
 ### 7. Licence
 The source code is released under [GPLv3](http://www.gnu.org/licenses/) license.
