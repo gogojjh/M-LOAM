@@ -27,7 +27,7 @@ International Conference on Robotics and Automation (*ICRA*) 2021 , Xi An, China
 
 * **MLOD: Awareness of Extrinsic Perturbation in Multi-LiDAR 3D Object Detection for Autonomous Driving**, Jianhao Jiao*, Peng Yun*, Lei Tai, Ming Liu, IEEE/RSJ International Conference on Intelligent Robots and Systems (*IROS*) 2020. [pdf](https://arxiv.org/abs/2010.11702.pdf)
 
-*If you use M-LOAM for your academic research, please cite one of our paper.* [bib](https://github.com/gogojjh/M-LOAM/blob/mloam_gf/support_files/paper_bib.txt)
+*If you use M-LOAM for your academic research, please cite one of our paper.* [bib](https://github.com/gogojjh/M-LOAM/blob/mloam_gf/docs/support_files/paper_bib.txt)
 
 <!-- ----------------------------------------------------------- -->
 ### 1. Prerequisites
