@@ -50,6 +50,8 @@ ROS Kinetic or Melodic. [ROS Installation](http://wiki.ros.org/ROS/Installation)
   sudo apt install libomp-dev
 ```
 
+1.4. **PCL-1.8**
+
 <!-- 1.4 **Libpointmarcher**
 ```
  ./setup/install_libnabo.sh
