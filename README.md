@@ -1,7 +1,6 @@
 ### NOTE:
 2025-Feb-6: The dataset download link is updated [here](https://drive.google.com/drive/folders/1e4lZ8c-ChWvuYtw1Q46A3eByeotQ6cTP?usp=sharing)
 
-### Dataset download link is [here](https://drive.google.com/drive/folders/1e4lZ8c-ChWvuYtw1Q46A3eByeotQ6cTP?usp=sharing)
 ---
 # M-LOAM
 ## Robust Odometry and Mapping for Multi-LiDAR Systems with Online Extrinsic Calibration
